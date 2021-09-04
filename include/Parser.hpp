@@ -19,6 +19,7 @@
 #include "Args.hpp"
 #include "Lex.hpp"
 #include "Parser/Stmts.hpp"
+#include "Passes/Base.hpp"
 // #include "parser/TypeMgr.hpp"
 // #include "parser/ValueMgr.hpp"
 
@@ -42,6 +43,7 @@ public:
 
 	bool tokenize();
 	bool parseTokens();
+	bool executePasses(PassManager &pm);
 	// bool assignType(TypeMgr &types);
 	// performs rearrangement of ptree to make all imports in order
 	void rearrangeParseTree();
@@ -82,7 +84,9 @@ public:
 	Module *getModule(const std::string &path);
 	const std::vector<std::string> &getModuleStack();
 
-	bool parse(const std::string &path);
+	bool parse(const std::string &path, const bool &main_module = false);
+	bool executeDefaultPasses();
+	bool executePasses(PassManager &pm);
 	void cleanupParseTrees();
 
 	args::ArgParser &getCommandArgs();
