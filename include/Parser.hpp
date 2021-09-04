@@ -17,6 +17,7 @@
 #include <cstddef>
 
 #include "Args.hpp"
+#include "Context.hpp"
 #include "Lex.hpp"
 #include "Parser/Stmts.hpp"
 #include "Passes/Base.hpp"
@@ -29,6 +30,7 @@ namespace sc
 class Module
 {
 	ErrMgr &err;
+	Context &ctx;
 
 	std::string id;
 	std::string path;
@@ -37,7 +39,7 @@ class Module
 	Stmt *ptree;
 
 public:
-	Module(ErrMgr &err, const std::string &id, const std::string &path,
+	Module(ErrMgr &err, Context &ctx, const std::string &id, const std::string &path,
 	       const std::string &code);
 	~Module();
 
@@ -64,6 +66,7 @@ class RAIIParser
 	args::ArgParser &args;
 
 	ErrMgr err;
+	Context ctx;
 
 	// TypeMgr types;
 	// ValueMgr values;

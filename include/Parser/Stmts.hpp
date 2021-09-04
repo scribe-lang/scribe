@@ -15,6 +15,7 @@
 #define PARSER_STMTS_HPP
 
 #include "Lex.hpp"
+#include "ScopeMgr.hpp"
 
 namespace sc
 {
@@ -49,6 +50,8 @@ class Stmt
 	Stmts stype;
 	ModuleLoc loc;
 
+	TypeValue tv;
+
 public:
 	Stmt(const Stmts &stmt_type, const ModuleLoc &loc);
 	virtual ~Stmt();
@@ -66,21 +69,39 @@ public:
 	{
 		return loc;
 	}
+
+	inline void setTypeValue(Type *t, Value *v)
+	{
+		tv = {t, v};
+	}
+	inline void setType(Type *t)
+	{
+		tv.setType(t);
+	}
+	inline void setVal(Value *v)
+	{
+		tv.setVal(v);
+	}
+
+	inline Type *getType()
+	{
+		return tv.getType();
+	}
+	inline Value *getValue()
+	{
+		return tv.getValue();
+	}
+
+	inline bool isTypeValNull() const
+	{
+		return tv.isNull();
+	}
 };
 
 template<typename T> T *as(Stmt *data)
 {
 	return static_cast<T *>(data);
 }
-
-enum TypeInfoMask
-{
-	REF	 = 1 << 0, // is a reference
-	STATIC	 = 1 << 1, // is static
-	CONST	 = 1 << 2, // is const
-	VOLATILE = 1 << 3, // is volatile
-	VARIADIC = 1 << 4, // is variadic
-};
 
 class StmtType : public Stmt
 {

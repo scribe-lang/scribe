@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Context.hpp"
 #include "Parser/Stmts.hpp"
 
 namespace sc
@@ -26,9 +27,10 @@ namespace sc
 class Pass
 {
 	ErrMgr &err;
+	Context &ctx;
 
 public:
-	Pass(ErrMgr &err);
+	Pass(ErrMgr &err, Context &ctx);
 	virtual ~Pass();
 
 	virtual bool visit(Stmt *stmt, Stmt **source) = 0;
@@ -59,15 +61,17 @@ public:
 class PassManager
 {
 	ErrMgr &err;
+	Context &ctx;
 	std::vector<Pass *> passes;
 
 public:
-	PassManager(ErrMgr &err);
+	PassManager(ErrMgr &err, Context &ctx);
+	PassManager(const PassManager &pm) = delete;
 	~PassManager();
 	template<class T, typename... Args>
 	typename std::enable_if<std::is_base_of<Pass, T>::value, void>::type add(Args... args)
 	{
-		passes.push_back(new T(err, args...));
+		passes.push_back(new T(err, ctx, args...));
 	}
 	bool visit(Stmt *&ptree);
 };

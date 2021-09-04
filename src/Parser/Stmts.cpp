@@ -23,7 +23,9 @@ namespace sc
 /////////////////////////////////////////////// Stmt //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc &loc) : stype(stmt_type), loc(loc) {}
+Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc &loc)
+	: stype(stmt_type), loc(loc), tv(nullptr, nullptr)
+{}
 Stmt::~Stmt()
 {
 	// if(type) delete type;

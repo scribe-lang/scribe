@@ -28,8 +28,9 @@ namespace sc
 //////////////////////////////////////////// Module ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Module::Module(ErrMgr &err, const std::string &id, const std::string &path, const std::string &code)
-	: err(err), id(id), path(path), code(code), tokens(), ptree(nullptr)
+Module::Module(ErrMgr &err, Context &ctx, const std::string &id, const std::string &path,
+	       const std::string &code)
+	: err(err), ctx(ctx), id(id), path(path), code(code), tokens(), ptree(nullptr)
 {}
 Module::~Module()
 {
@@ -136,7 +137,7 @@ RAIIParser::~RAIIParser()
 
 bool RAIIParser::executeDefaultPasses()
 {
-	PassManager pm(err);
+	PassManager pm(err, ctx);
 	// setup PM
 	// pm.add<CleanupParseTree>();
 	return executePasses(pm);
@@ -151,7 +152,7 @@ Module *RAIIParser::addModule(const std::string &path)
 		return nullptr;
 	}
 
-	Module *mod = new Module(err, std::to_string(modulestack.size()), path, code);
+	Module *mod = new Module(err, ctx, std::to_string(modulestack.size()), path, code);
 	Pointer<Module> mptr(mod);
 
 	modulestack.push_back(path);
