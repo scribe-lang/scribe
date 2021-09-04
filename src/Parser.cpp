@@ -38,22 +38,18 @@ Module::~Module()
 bool Module::tokenize()
 {
 	lex::Tokenizer tokenizer(this, err);
-	if(!tokenizer.tokenize(code, tokens)) {
-		err.show(stderr);
-		return false;
-	}
-	return true;
+	return tokenizer.tokenize(code, tokens);
 }
 bool Module::parseTokens()
 {
 	ParseHelper p(this, tokens);
 	Parsing parsing(err);
-	if(!parsing.parse_block(p, (StmtBlock *&)ptree, false)) {
-		err.show(stderr);
-		return false;
-	}
+	return parsing.parse_block(p, (StmtBlock *&)ptree, false);
 	// ptree->setParent(nullptr);
-	return true;
+}
+bool Module::executePasses(PassManager &pm)
+{
+	return pm.visit(ptree);
 }
 // bool Module::assignType(TypeMgr &types)
 // {
@@ -132,12 +128,19 @@ void Module::dumpParseTree() const
 ////////////////////////////////////////// RAIIParser /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-RAIIParser::RAIIParser(args::ArgParser &args) : args(args) /*, types(this), values(this)*/ {}
+RAIIParser::RAIIParser(args::ArgParser &args) : args(args) {}
 RAIIParser::~RAIIParser()
 {
 	for(auto &m : modules) delete m.second;
 }
 
+bool RAIIParser::executeDefaultPasses()
+{
+	PassManager pm(err);
+	// setup PM
+	// pm.add<CleanupParseTree>();
+	return executePasses(pm);
+}
 Module *RAIIParser::addModule(const std::string &path)
 {
 	auto res = modules.find(path);
@@ -154,6 +157,7 @@ Module *RAIIParser::addModule(const std::string &path)
 	modulestack.push_back(path);
 
 	if(!mod->tokenize() || !mod->parseTokens() /* || !mod->assignType(types)*/) {
+		err.show(stderr);
 		modulestack.pop_back();
 		return nullptr;
 	}
@@ -179,7 +183,7 @@ const std::vector<std::string> &RAIIParser::getModuleStack()
 {
 	return modulestack;
 }
-bool RAIIParser::parse(const std::string &path)
+bool RAIIParser::parse(const std::string &path, const bool &main_module)
 {
 	if(hasModule(path)) {
 		fprintf(stderr, "cannot parse an existing source: %s\n", path.c_str());
@@ -191,6 +195,14 @@ bool RAIIParser::parse(const std::string &path)
 	size_t src_id = 0;
 	if(!addModule(path)) return false;
 	fs::setCWD(wd);
+	if(!main_module) return true;
+	return executeDefaultPasses();
+}
+bool RAIIParser::executePasses(PassManager &pm)
+{
+	for(auto file = modulestack.rbegin(); file != modulestack.rend(); ++file) {
+		if(!modules[*file]->executePasses(pm)) return false;
+	}
 	return true;
 }
 void RAIIParser::cleanupParseTrees()

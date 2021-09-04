@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 	file = fs::absPath(file);
 
 	RAIIParser parser(args);
-	if(!parser.parse(file)) return 1;
+	if(!parser.parse(file, true)) return 1;
 	// parser.cleanupParseTrees();
 	// parser.dumpTokens(false);
 	parser.dumpParseTree(false);

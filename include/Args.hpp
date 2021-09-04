@@ -22,9 +22,8 @@ namespace sc
 {
 namespace args
 {
-struct ArgInfo
+class ArgInfo
 {
-private:
 	std::string shrt, lng; // short and long names
 	std::string val;       // value for argument
 	std::string help;      // help string for argument
