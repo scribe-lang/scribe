@@ -15,10 +15,10 @@
 
 namespace sc
 {
-Pass::Pass(ErrMgr &err) : err(err) {}
+Pass::Pass(ErrMgr &err, Context &ctx) : err(err), ctx(ctx) {}
 Pass::~Pass() {}
 
-PassManager::PassManager(ErrMgr &err) : err(err) {}
+PassManager::PassManager(ErrMgr &err, Context &ctx) : err(err), ctx(ctx) {}
 PassManager::~PassManager()
 {
 	for(auto &p : passes) delete p;
