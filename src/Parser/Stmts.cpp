@@ -102,23 +102,35 @@ void StmtBlock::StmtBlock::disp(const bool &has_next) const
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtType::StmtType(const ModuleLoc &loc, const size_t &ptr, const size_t &info,
-		   const std::vector<lex::Lexeme> &name, const std::vector<lex::Lexeme> &templates)
-	: Stmt(TYPE, loc), ptr(ptr), info(info), name(name), templates(templates), fn(nullptr)
+		   const std::vector<Stmt *> &array_counts, const std::vector<lex::Lexeme> &name,
+		   const std::vector<lex::Lexeme> &templates)
+	: Stmt(TYPE, loc), ptr(ptr), info(info), array_counts(array_counts), name(name),
+	  templates(templates), fn(nullptr)
 {}
-StmtType::StmtType(const ModuleLoc &loc, Stmt *fn)
-	: Stmt(TYPE, loc), ptr(0), info(0), name({}), fn(fn)
+StmtType::StmtType(const ModuleLoc &loc, const std::vector<Stmt *> &array_counts, Stmt *fn)
+	: Stmt(TYPE, loc), ptr(0), info(0), array_counts(array_counts), fn(fn)
 {}
 StmtType::~StmtType()
 {
+	for(auto &ac : array_counts) delete ac;
 	if(fn) delete fn;
 }
 
 void StmtType::disp(const bool &has_next) const
 {
 	if(fn) {
-		tio::taba(has_next);
-		tio::print(has_next, "Type: <Function>%s\n", getTypeString().c_str());
+		tio::taba(!array_counts.empty() || has_next);
+		tio::print(!array_counts.empty() || has_next, "Type: <Function>%s\n",
+			   getTypeString().c_str());
 		fn->disp(false);
+		if(array_counts.size() > 0) {
+			tio::tabr();
+			tio::taba(has_next);
+			tio::print(has_next, "Array Counts:\n");
+			for(size_t i = 0; i < array_counts.size(); ++i) {
+				array_counts[i]->disp(i != array_counts.size() - 1);
+			}
+		}
 		tio::tabr();
 		return;
 	}
@@ -138,8 +150,17 @@ void StmtType::disp(const bool &has_next) const
 		tname.pop_back();
 		tname += ">";
 	}
-	tio::taba(has_next);
-	tio::print(false, "Type: %s%s\n", tname.c_str(), getTypeString().c_str());
+	tio::taba(!array_counts.empty() || has_next);
+	tio::print(!array_counts.empty() || has_next, "Type: %s%s\n", tname.c_str(),
+		   getTypeString().c_str());
+	if(array_counts.size() > 0) {
+		tio::tabr();
+		tio::taba(has_next);
+		tio::print(has_next, "Array Counts:\n");
+		for(size_t i = 0; i < array_counts.size(); ++i) {
+			array_counts[i]->disp(i != array_counts.size() - 1);
+		}
+	}
 	tio::tabr();
 }
 

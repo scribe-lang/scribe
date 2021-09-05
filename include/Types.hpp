@@ -43,6 +43,7 @@ enum Types
 	TF64,
 
 	TPTR,
+	TARRAY,
 	TFUNC,
 	TSTRUCT,
 	TENUM,
@@ -147,6 +148,18 @@ public:
 	~PtrTy();
 
 	static PtrTy *create(Context &c, Type *ptr_to);
+};
+
+class ArrayTy : public Type
+{
+	size_t count;
+	Type *of;
+
+public:
+	ArrayTy(const size_t &count, Type *of);
+	~ArrayTy();
+
+	static ArrayTy *create(Context &c, const size_t &arr_count, Type *arr_of);
 };
 } // namespace sc
 
