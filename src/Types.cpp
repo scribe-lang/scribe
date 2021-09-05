@@ -47,4 +47,12 @@ PtrTy *PtrTy::create(Context &c, Type *ptr_to)
 {
 	return c.allocType<PtrTy>(ptr_to);
 }
+
+ArrayTy::ArrayTy(const size_t &count, Type *of) : Type(TARRAY, 0), count(count), of(of) {}
+ArrayTy::~ArrayTy() {}
+
+ArrayTy *ArrayTy::create(Context &c, const size_t &arr_count, Type *arr_of)
+{
+	return c.allocType<ArrayTy>(arr_count, arr_of);
+}
 } // namespace sc

@@ -107,14 +107,17 @@ class StmtType : public Stmt
 {
 	size_t ptr;  // number of ptrs
 	size_t info; // all from TypeInfoMask
+
+	std::vector<Stmt *> array_counts; // all array counts (if any)
 	std::vector<lex::Lexeme> name;
 	std::vector<lex::Lexeme> templates;
 	Stmt *fn;
 
 public:
 	StmtType(const ModuleLoc &loc, const size_t &ptr, const size_t &info,
-		 const std::vector<lex::Lexeme> &name, const std::vector<lex::Lexeme> &templates);
-	StmtType(const ModuleLoc &loc, Stmt *fn);
+		 const std::vector<Stmt *> &array_counts, const std::vector<lex::Lexeme> &name,
+		 const std::vector<lex::Lexeme> &templates);
+	StmtType(const ModuleLoc &loc, const std::vector<Stmt *> &array_counts, Stmt *fn);
 	~StmtType();
 
 	void disp(const bool &has_next) const;
@@ -130,6 +133,10 @@ public:
 
 	bool hasModifier(const size_t &tim) const;
 
+	inline const std::vector<Stmt *> &getArrayCounts() const
+	{
+		return array_counts;
+	}
 	inline const std::vector<lex::Lexeme> &getName() const
 	{
 		return name;
