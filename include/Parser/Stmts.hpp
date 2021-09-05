@@ -15,7 +15,8 @@
 #define PARSER_STMTS_HPP
 
 #include "Lex.hpp"
-#include "ScopeMgr.hpp"
+#include "Types.hpp"
+#include "Values.hpp"
 
 namespace sc
 {
@@ -50,7 +51,14 @@ class Stmt
 	Stmts stype;
 	ModuleLoc loc;
 
-	TypeValue tv;
+	Type *type;
+	Type *cast_from;
+	Value *value;
+	// generally used by intrinsics, causes values to never be erased or modified
+	// can be overridden by calling setPermaValue() again
+	bool is_value_perma;
+
+	bool is_comptime;
 
 public:
 	Stmt(const Stmts &stmt_type, const ModuleLoc &loc);
@@ -62,45 +70,69 @@ public:
 	{
 		return stype;
 	}
-	std::string getStmtTypeString() const;
+	const char *getStmtTypeCString() const;
+	inline std::string getStmtTypeString() const
+	{
+		return getStmtTypeCString();
+	}
+
 	std::string getTypeString() const;
 
-	inline const ModuleLoc &getLoc() const
+	inline ModuleLoc &getLoc()
 	{
 		return loc;
 	}
-
-	inline void setTypeValue(Type *t, Value *v)
+	inline Module *getMod() const
 	{
-		tv = {t, v};
+		return loc.getMod();
 	}
+
 	inline void setType(Type *t)
 	{
-		tv.setType(t);
+		type = t;
+	}
+	inline void castTo(Type *t)
+	{
+		cast_from = type;
+		type	  = t;
 	}
 	inline void setVal(Value *v)
 	{
-		tv.setVal(v);
+		if(is_value_perma) return;
+		value = v;
+	}
+	inline void setPermaVal(Value *v)
+	{
+		value	       = v;
+		is_value_perma = true;
+	}
+	inline void setComptime(const bool &comptime)
+	{
+		is_comptime = comptime;
 	}
 
-	inline Type *getType()
+	inline Type *&getType()
 	{
-		return tv.getType();
+		return type;
 	}
-	inline Value *getValue()
+	inline Value *&getValue()
 	{
-		return tv.getValue();
+		return value;
 	}
-
-	inline bool isTypeValNull() const
+	inline bool isComptime() const
 	{
-		return tv.isNull();
+		return is_comptime;
 	}
 };
 
 template<typename T> T *as(Stmt *data)
 {
 	return static_cast<T *>(data);
+}
+
+template<typename T> Stmt **asStmt(T **data)
+{
+	return (Stmt **)(data);
 }
 
 class StmtType : public Stmt
@@ -130,14 +162,18 @@ public:
 	{
 		return ptr;
 	}
+	inline const size_t &getInfoMask() const
+	{
+		return info;
+	}
 
 	bool hasModifier(const size_t &tim) const;
 
-	inline const std::vector<Stmt *> &getArrayCounts() const
+	inline std::vector<Stmt *> &getArrayCounts()
 	{
 		return array_counts;
 	}
-	inline const std::vector<lex::Lexeme> &getName() const
+	inline std::vector<lex::Lexeme> &getName()
 	{
 		return name;
 	}
@@ -167,9 +203,10 @@ public:
 class StmtBlock : public Stmt
 {
 	std::vector<Stmt *> stmts;
+	bool is_top;
 
 public:
-	StmtBlock(const ModuleLoc &loc, const std::vector<Stmt *> &stmts);
+	StmtBlock(const ModuleLoc &loc, const std::vector<Stmt *> &stmts, const bool &is_top);
 	~StmtBlock();
 
 	void disp(const bool &has_next) const;
@@ -178,11 +215,17 @@ public:
 	{
 		return stmts;
 	}
+	inline bool isTop() const
+	{
+		return is_top;
+	}
 };
 
 class StmtSimple : public Stmt
 {
 	lex::Lexeme val;
+
+	bool applied_module_id;
 
 public:
 	StmtSimple(const ModuleLoc &loc, const lex::Lexeme &val);
@@ -190,9 +233,21 @@ public:
 
 	void disp(const bool &has_next) const;
 
-	inline lex::Lexeme &getValue()
+	inline void updateLexDataStr(const std::string &newdata)
+	{
+		val.setDataStr(newdata);
+	}
+	inline void setAppliedModuleID(const bool &apply)
+	{
+		applied_module_id = apply;
+	}
+	inline lex::Lexeme &getLexValue()
 	{
 		return val;
+	}
+	inline bool isAppliedModuleID() const
+	{
+		return applied_module_id;
 	}
 };
 
@@ -208,13 +263,21 @@ public:
 
 	void disp(const bool &has_next) const;
 
-	inline const std::vector<Stmt *> &getArgs() const
+	inline std::vector<Stmt *> &getArgs()
 	{
 		return args;
 	}
-	inline const std::vector<StmtType *> &getTemplates() const
+	inline Stmt *getArg(const size_t &idx)
+	{
+		return args[idx];
+	}
+	inline std::vector<StmtType *> &getTemplates()
 	{
 		return templates;
+	}
+	inline StmtType *getTemplate(const size_t &idx)
+	{
+		return templates[idx];
 	}
 };
 
@@ -280,12 +343,12 @@ class StmtVar : public Stmt
 {
 	lex::Lexeme name;
 	StmtType *vtype;
-	Stmt *val; // either of expr, funcdef, enumdef, or structdef
+	Stmt *vval; // either of expr, funcdef, enumdef, or structdef
 	bool is_comptime;
 
 public:
 	// at least one of type or val must be present
-	StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *val,
+	StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
 		const bool &is_comptime);
 	~StmtVar();
 
@@ -299,9 +362,9 @@ public:
 	{
 		return vtype;
 	}
-	inline Stmt *&getVal()
+	inline Stmt *&getVVal()
 	{
-		return val;
+		return vval;
 	}
 	inline bool isComptime() const
 	{
@@ -559,7 +622,7 @@ public:
 
 	void disp(const bool &has_next) const;
 
-	inline const std::vector<StmtVar *> &getDecls() const
+	inline std::vector<StmtVar *> &getDecls()
 	{
 		return decls;
 	}

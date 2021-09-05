@@ -26,6 +26,7 @@ namespace sc
 {
 class Pass
 {
+protected:
 	ErrMgr &err;
 	Context &ctx;
 

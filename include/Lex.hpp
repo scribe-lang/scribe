@@ -257,6 +257,11 @@ public:
 		return *this == other ? false : true;
 	}
 
+	inline void setDataStr(const std::string &str)
+	{
+		data.s = str;
+	}
+
 	inline const std::string &getDataStr() const
 	{
 		return data.s;

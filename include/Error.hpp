@@ -38,6 +38,10 @@ public:
 	ModuleLoc(Module *mod, const size_t &line, const size_t &col);
 
 	std::string getLocStr() const;
+	inline Module *getMod() const
+	{
+		return mod;
+	}
 
 	friend class ErrMgr;
 };
