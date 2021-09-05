@@ -11,83 +11,59 @@
 	furnished to do so.
 */
 
-#ifndef SCOPEMGR_HPP
-#define SCOPEMGR_HPP
+#ifndef TYPEMGR_HPP
+#define TYPEMGR_HPP
 
 #include <unordered_map>
 
-#include "Types.hpp"
-#include "Values.hpp"
+#include "Parser/Stmts.hpp"
 
 namespace sc
 {
-class TypeValue
+struct TypeDecl
 {
 	Type *ty;
-	Value *val;
-
-public:
-	TypeValue();
-	TypeValue(Type *ty, Value *val);
-	TypeValue(const TypeValue &tv);
-
-	inline void setType(Type *t)
-	{
-		ty = t;
-	}
-	inline void setVal(Value *v)
-	{
-		val = v;
-	}
-
-	inline Type *getType()
-	{
-		return ty;
-	}
-	inline Value *getValue()
-	{
-		return val;
-	}
-
-	inline bool isNull() const
-	{
-		return !ty && !val;
-	}
+	Stmt *decl;
 };
 class Layer
 {
-	std::unordered_map<std::string, TypeValue> items;
+	std::unordered_map<std::string, TypeDecl> items;
 
 public:
-	inline bool add(const std::string &name, const TypeValue &val)
+	inline bool add(const std::string &name, Type *val, Stmt *decl)
 	{
 		if(exists(name)) return false;
-		items.insert({name, val});
+		items[name] = {val, decl};
 		return true;
 	}
 	inline bool exists(const std::string &name)
 	{
 		return items.find(name) != items.end();
 	}
-	inline TypeValue get(const std::string &name)
+	inline Type *getTy(const std::string &name)
 	{
-		return items.find(name) == items.end() ? TypeValue(nullptr, nullptr) : items[name];
+		return items.find(name) == items.end() ? nullptr : items[name].ty;
 	}
-	inline std::unordered_map<std::string, TypeValue> &getItems()
+	inline Stmt *getDecl(const std::string &name)
+	{
+		return items.find(name) == items.end() ? nullptr : items[name].decl;
+	}
+	inline std::unordered_map<std::string, TypeDecl> &getItems()
 	{
 		return items;
 	}
 };
-class ScopeManager
+class TypeManager
 {
-	std::unordered_map<std::string, TypeValue> globals;
+	std::unordered_map<std::string, TypeDecl> globals;
 	std::vector<Layer> layers;
+	std::unordered_map<uint64_t, std::unordered_map<std::string, FuncTy *>> typefuncs;
 	std::vector<size_t> layerlock;
 
 public:
 	inline void pushLayer()
 	{
-		layers.push_back({});
+		layers.emplace_back();
 	}
 	inline void popLayer()
 	{
@@ -105,10 +81,14 @@ public:
 	{
 		layerlock.pop_back();
 	}
-	bool addVar(const std::string &var, const TypeValue &val, bool global = false);
+	bool addVar(const std::string &var, Type *val, Stmt *decl, bool global = false);
+	bool addTypeFn(Type *ty, const std::string &name, FuncTy *fn);
 	bool exists(const std::string &var, bool top_only, bool include_globals);
-	TypeValue get(const std::string &var, bool top_only, bool include_globals);
+	bool existsTypeFn(Type *ty, const std::string &name);
+	Type *getTy(const std::string &var, bool top_only, bool include_globals);
+	Stmt *getDecl(const std::string &var, bool top_only, bool include_globals);
+	FuncTy *getTypeFn(Type *ty, const std::string &name);
 };
 } // namespace sc
 
-#endif // SCOPEMGR_HPP
+#endif // TYPEMGR_HPP

@@ -24,7 +24,8 @@ namespace sc
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc &loc)
-	: stype(stmt_type), loc(loc), tv(nullptr, nullptr)
+	: stype(stmt_type), loc(loc), type(nullptr), cast_from(nullptr), value(nullptr),
+	  is_value_perma(false), is_comptime(false)
 {}
 Stmt::~Stmt()
 {
@@ -32,7 +33,7 @@ Stmt::~Stmt()
 	// if(cast_from) delete cast_from;
 }
 
-std::string Stmt::getStmtTypeString() const
+const char *Stmt::getStmtTypeCString() const
 {
 	switch(stype) {
 	case BLOCK: return "block";
@@ -63,15 +64,17 @@ std::string Stmt::getStmtTypeString() const
 
 std::string Stmt::getTypeString() const
 {
-	return "";
+	std::string res = type->toStr();
+	if(cast_from) res = cast_from->toStr() + " -> " + res;
+	return res;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtBlock ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtBlock::StmtBlock(const ModuleLoc &loc, const std::vector<Stmt *> &stmts)
-	: Stmt(BLOCK, loc), stmts(stmts)
+StmtBlock::StmtBlock(const ModuleLoc &loc, const std::vector<Stmt *> &stmts, const bool &is_top)
+	: Stmt(BLOCK, loc), stmts(stmts), is_top(is_top)
 {}
 StmtBlock::~StmtBlock()
 {
@@ -84,7 +87,7 @@ StmtBlock::~StmtBlock()
 void StmtBlock::StmtBlock::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Block:\n");
+	tio::print(has_next, "Block [top = %s]:\n", is_top ? "yes" : "no");
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(!stmts[i]) {
 			tio::taba(has_next);
@@ -296,14 +299,14 @@ void StmtExpr::disp(const bool &has_next) const
 //////////////////////////////////////////// StmtVar //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *val,
+StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
 		 const bool &is_comptime)
-	: Stmt(VAR, loc), name(name), vtype(vtype), val(val), is_comptime(is_comptime)
+	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval), is_comptime(is_comptime)
 {}
 StmtVar::~StmtVar()
 {
 	if(vtype) delete vtype;
-	if(val) delete val;
+	if(vval) delete vval;
 }
 
 void StmtVar::disp(const bool &has_next) const
@@ -312,15 +315,15 @@ void StmtVar::disp(const bool &has_next) const
 	tio::print(has_next, "Variable [comptime = %s]: %s%s\n", is_comptime ? "yes" : "no",
 		   name.getDataStr().c_str(), getTypeString().c_str());
 	if(vtype) {
-		tio::taba(val);
-		tio::print(val, "Type:\n");
+		tio::taba(vval);
+		tio::print(vval, "Type:\n");
 		vtype->disp(false);
 		tio::tabr();
 	}
-	if(val) {
+	if(vval) {
 		tio::taba(false);
 		tio::print(false, "Value:\n");
-		val->disp(false);
+		vval->disp(false);
 		tio::tabr();
 	}
 	tio::tabr();

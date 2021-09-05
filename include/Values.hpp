@@ -38,7 +38,17 @@ class Value
 public:
 	Value(const Values &type);
 	virtual ~Value();
+
+	inline Values getType() const
+	{
+		return type;
+	}
 };
+
+template<typename T> T *as(Value *v)
+{
+	return static_cast<T *>(v);
+}
 
 class IntVal : public Value
 {

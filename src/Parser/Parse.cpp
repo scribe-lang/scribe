@@ -103,7 +103,7 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_bra
 		}
 	}
 
-	tree = new StmtBlock(start.getLoc(), stmts);
+	tree = new StmtBlock(start.getLoc(), stmts, !with_brace);
 	return true;
 fail:
 	for(auto &stmt : stmts) delete stmt;
