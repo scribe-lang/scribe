@@ -24,13 +24,22 @@ namespace sc
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc &loc)
-	: stype(stmt_type), loc(loc), type(nullptr), cast_from(nullptr), value(nullptr),
-	  is_value_perma(false), is_comptime(false)
+	: stype(stmt_type), loc(loc), parent(nullptr), type(nullptr), cast_from(nullptr),
+	  value(nullptr), is_value_perma(false), is_comptime(false)
 {}
 Stmt::~Stmt()
 {
 	// if(type) delete type;
 	// if(cast_from) delete cast_from;
+}
+Stmt *Stmt::getParentWithType(const Stmts &ty, Stmt **childofparent)
+{
+	Stmt *res = this;
+	while(res && res->stype != ty) {
+		if(childofparent) *childofparent = res;
+		res = res->parent;
+	}
+	return res;
 }
 
 const char *Stmt::getStmtTypeCString() const

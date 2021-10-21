@@ -51,9 +51,14 @@ class Stmt
 	Stmts stype;
 	ModuleLoc loc;
 
+	Stmt *parent;
+
 	Type *type;
 	Type *cast_from;
 	Value *value;
+
+	size_t specialized_id;
+
 	// generally used by intrinsics, causes values to never be erased or modified
 	// can be overridden by calling setPermaValue() again
 	bool is_value_perma;
@@ -63,6 +68,7 @@ class Stmt
 public:
 	Stmt(const Stmts &stmt_type, const ModuleLoc &loc);
 	virtual ~Stmt();
+	Stmt *getParentWithType(const Stmts &ty, Stmt **childofparent = nullptr);
 
 	virtual void disp(const bool &has_next) const = 0;
 
@@ -86,7 +92,15 @@ public:
 	{
 		return loc.getMod();
 	}
+	inline Stmt *&getParent()
+	{
+		return parent;
+	}
 
+	inline void setParent(Stmt *par)
+	{
+		parent = par;
+	}
 	inline void setType(Type *t)
 	{
 		type = t;
@@ -100,6 +114,10 @@ public:
 	{
 		if(is_value_perma) return;
 		value = v;
+	}
+	inline void setSpecializedID(const size_t &id)
+	{
+		specialized_id = id;
 	}
 	inline void setPermaVal(Value *v)
 	{
@@ -118,6 +136,10 @@ public:
 	inline Value *&getValue()
 	{
 		return value;
+	}
+	inline const size_t &getSpecializedID() const
+	{
+		return specialized_id;
 	}
 	inline bool isComptime() const
 	{
