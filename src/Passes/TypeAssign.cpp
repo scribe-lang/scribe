@@ -130,11 +130,6 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 			err.set(stmt, "failed to determine type of array count");
 			return false;
 		}
-		// TODO: uncomment below
-		// if(!ValueAssign::visit(c, &c) || !c->getValue()) {
-		// 	err.set(stmt, "array count must be a compile time value");
-		// 	return false;
-		// }
 		IntVal *iv = as<IntVal>(c->getValue());
 		if(!c->getType()->isIntegral()) {
 			err.set(c, "index for an array must be integral");
@@ -185,7 +180,6 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 			decl = tmgr.getDecl(name, false, true);
 		}
 		stmt->setAppliedModuleID(true);
-		if(decl->isComptime()) stmt->setComptime(true);
 		break;
 	}
 	default: return false;
@@ -193,9 +187,6 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 	if(!stmt->getType()) {
 		err.set(stmt, "failed to determine type of this simple statement");
 		return false;
-	}
-	if(stmt->getLexValue().getTok().getVal() != lex::IDEN) {
-		stmt->setComptime(true);
 	}
 	return true;
 }
@@ -278,7 +269,6 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		}
 		rhs->setType(res);
 		stmt->setType(res);
-		if(lhs->isComptime()) stmt->setComptime(true);
 		break;
 	}
 	case lex::FNCALL: {
@@ -630,9 +620,19 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *&calledfn,
 {
 	if(calltemplates.empty() && !has_va) return true;
 	assert(calledfn && "LHS has no type assigned");
-	if(calledfn->isFunc()) {
-		FuncTy *cf = as<FuncTy>(calledfn);
-		if(!cf->getDef()) return true;
+	// nothing to do if function has no definition
+	if(!calledfn->isFunc()) return true;
+	FuncTy *cf = as<FuncTy>(calledfn);
+	if(!cf->getDef()) return true;
+	Stmt *calledfnblk = cf->getDef()->getParentWithType(BLOCK);
+	if(!calledfnblk) {
+		err.set(caller, "function definition for specialization is not in a block");
+		return false;
+	}
+	Stmt *fndefvar	      = cf->getDef()->getParentWithType(VAR);
+	static size_t spec_id = 1;
+	if(!fndefvar->getSpecializedID()) {
+		fndefvar->setSpecializedID(spec_id++);
 	}
 }
 } // namespace sc
