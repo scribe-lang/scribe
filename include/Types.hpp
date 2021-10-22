@@ -30,23 +30,12 @@ enum Types
 	TVOID,
 	// TNIL,  // = i1 (0)
 	// TBOOL, // = i1
+	TTYPE,
 	TANY,
 
-	TI1,
-	TI8,
-	TI16,
-	TI32,
-	TI64,
+	TINT,
+	TFLT,
 
-	TU8,
-	TU16,
-	TU32,
-	TU64,
-
-	TF32,
-	TF64,
-
-	TTEMPL,
 	TPTR,
 	TARRAY,
 	TFUNC,
@@ -85,7 +74,6 @@ public:
 	Type(const Types &type, const size_t &info, const uint64_t &id);
 	virtual ~Type();
 
-	bool isPrimitive();
 	bool isBaseCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
 
 	std::string infoToStr();
@@ -93,12 +81,7 @@ public:
 
 	virtual std::string toStr();
 	virtual Type *clone(Context &c) = 0;
-	virtual Type *specialize(Context &c,
-				 const std::unordered_map<std::string, Type *> &templates,
-				 std::unordered_set<std::string> &unresolved_templates);
 	virtual bool isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
-	virtual bool determineTemplateActuals(Context &c, Type *actual, ErrMgr &e, ModuleLoc &loc,
-					      std::unordered_map<std::string, Type *> &templates);
 
 	inline void setInfo(const size_t &inf)
 	{
@@ -112,10 +95,17 @@ public:
 	{
 		return info;
 	}
+	inline bool isPrimitive() const
+	{
+		return isInt() || isFlt();
+	}
 	inline bool isIntegral() const
 	{
-		return isInt1() || isInt8() || isInt16() || isInt32() || isInt64() || isUInt8() ||
-		       isUInt16() || isUInt32() || isUInt64();
+		return isInt();
+	}
+	inline bool isFloat() const
+	{
+		return isFlt();
 	}
 
 #define SetModifierX(Fn, Mod) \
@@ -145,20 +135,11 @@ public:
 	{                             \
 		return type == T##Ty; \
 	}
-	IsTyX(Templ, TEMPL);
 	IsTyX(Void, VOID);
+	IsTyX(TypeTy, TYPE);
 	IsTyX(Any, ANY);
-	IsTyX(Int1, I1);
-	IsTyX(Int8, I8);
-	IsTyX(Int16, I16);
-	IsTyX(Int32, I32);
-	IsTyX(Int64, I64);
-	IsTyX(UInt8, U8);
-	IsTyX(UInt16, U16);
-	IsTyX(UInt32, U32);
-	IsTyX(UInt64, U64);
-	IsTyX(Flt32, F32);
-	IsTyX(Flt64, F64);
+	IsTyX(Int, INT);
+	IsTyX(Flt, FLT);
 	IsTyX(Ptr, PTR);
 	IsTyX(Array, ARRAY);
 	IsTyX(Func, FUNC);
@@ -202,35 +183,58 @@ template<typename T> T *as(Type *t)
 
 BasicTypeDecl(VoidTy);
 BasicTypeDecl(AnyTy);
-BasicTypeDecl(Int1Ty);
-BasicTypeDecl(Int8Ty);
-BasicTypeDecl(Int16Ty);
-BasicTypeDecl(Int32Ty);
-BasicTypeDecl(Int64Ty);
-BasicTypeDecl(UInt8Ty);
-BasicTypeDecl(UInt16Ty);
-BasicTypeDecl(UInt32Ty);
-BasicTypeDecl(UInt64Ty);
-BasicTypeDecl(Flt32Ty);
-BasicTypeDecl(Flt64Ty);
 
-class TemplTy : public Type
+class IntTy : public Type
 {
-	std::string name;
+	size_t bits;
+	bool sign; // signed
 
 public:
-	TemplTy(const std::string &name);
-	TemplTy(const size_t &info, const uint64_t &id, const std::string &name);
-	~TemplTy();
+	IntTy(const size_t &bits, const bool &sign);
+	IntTy(const size_t &info, const uint64_t &id, const size_t &bits, const bool &sign);
+	~IntTy();
 
 	Type *clone(Context &c);
 	std::string toStr();
-	Type *specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			 std::unordered_set<std::string> &unresolved_templates);
 
-	static TemplTy *create(Context &c, const std::string &tname);
+	static IntTy *create(Context &c, const size_t &_bits, const bool &_sign);
 
-	std::string &getName();
+	const size_t &getBits() const;
+	const bool &isSigned() const;
+};
+
+class FltTy : public Type
+{
+	size_t bits;
+
+public:
+	FltTy(const size_t &bits);
+	FltTy(const size_t &info, const uint64_t &id, const size_t &bits);
+	~FltTy();
+
+	Type *clone(Context &c);
+	std::string toStr();
+
+	static FltTy *create(Context &c, const size_t &_bits);
+
+	const size_t &getBits() const;
+};
+
+class TypeTy : public Type
+{
+	Type *containedty;
+
+public:
+	TypeTy(Type *containedty);
+	TypeTy(const size_t &info, const uint64_t &id, Type *containedty);
+	~TypeTy();
+
+	Type *clone(Context &c);
+	std::string toStr();
+
+	static TypeTy *create(Context &c, Type *_containedty);
+
+	Type *getContainedTy();
 };
 
 class PtrTy : public Type
@@ -244,8 +248,6 @@ public:
 
 	Type *clone(Context &c);
 	std::string toStr();
-	Type *specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			 std::unordered_set<std::string> &unresolved_templates);
 
 	static PtrTy *create(Context &c, Type *ptr_to);
 
@@ -264,11 +266,7 @@ public:
 
 	Type *clone(Context &c);
 	std::string toStr();
-	Type *specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			 std::unordered_set<std::string> &unresolved_templates);
 	bool isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
-	bool determineTemplateActuals(Context &c, Type *actual, ErrMgr &e, ModuleLoc &loc,
-				      std::unordered_map<std::string, Type *> &templates);
 
 	static ArrayTy *create(Context &c, const uint64_t &arr_count, Type *arr_of);
 
@@ -280,39 +278,30 @@ class StructTy : public Type
 {
 	std::unordered_map<std::string, size_t> fieldpos;
 	std::vector<Type *> fields;
-	size_t templs;
 	bool is_def; // true by default
 
 public:
-	StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields,
-		 const size_t &templs);
+	StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields);
 	StructTy(const size_t &info, const uint64_t &id,
 		 const std::unordered_map<std::string, size_t> &fieldpos,
-		 const std::vector<Type *> &fields, const size_t &templs, const bool &is_def);
+		 const std::vector<Type *> &fields, const bool &is_def);
 	~StructTy();
 
 	Type *clone(Context &c);
 	std::string toStr();
-	Type *specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			 std::unordered_set<std::string> &unresolved_templates);
 	bool isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
-	bool determineTemplateActuals(Context &c, Type *actual, ErrMgr &e, ModuleLoc &loc,
-				      std::unordered_map<std::string, Type *> &templates);
 	// specializes a structure type using StmtFnCallInfo and returns a NON-def struct type
-	StructTy *instantiate(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo,
-			      std::unordered_map<std::string, Type *> &templates);
+	StructTy *instantiate(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo);
 
 	static StructTy *create(Context &c, const std::vector<std::string> &_fieldnames,
-				const std::vector<Type *> &_fields, const size_t &templs);
+				const std::vector<Type *> &_fields);
 
 	std::vector<Type *> &getFields();
 	Type *getField(const std::string &name);
 	Type *getField(const size_t &pos);
 
-	void setTemplates(const size_t &_templs);
 	void setDef(const bool &def);
 	bool isDef() const;
-	const size_t &getTemplates() const;
 };
 
 class FuncTy : public Type
@@ -321,29 +310,23 @@ class FuncTy : public Type
 	std::vector<Type *> args;
 	Type *ret;
 	IntrinsicFn intrin;
-	size_t templs;
 	bool externed;
 
 public:
 	FuncTy(Stmt *def, const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const size_t &templs, const bool &externed);
+	       const bool &externed);
 	FuncTy(Stmt *def, const size_t &info, const uint64_t &id, const std::vector<Type *> &args,
-	       Type *ret, IntrinsicFn intrin, const size_t &templs, const bool &externed);
+	       Type *ret, IntrinsicFn intrin, const bool &externed);
 	~FuncTy();
 
 	Type *clone(Context &c);
 	std::string toStr();
-	Type *specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			 std::unordered_set<std::string> &unresolved_templates);
 	bool isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
-	bool determineTemplateActuals(Context &c, Type *actual, ErrMgr &e, ModuleLoc &loc,
-				      std::unordered_map<std::string, Type *> &templates);
 	// specializes a function type using StmtFnCallInfo
-	FuncTy *createCall(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo,
-			   std::unordered_map<std::string, Type *> &templates);
+	FuncTy *createCall(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo);
 
 	static FuncTy *create(Context &c, Stmt *_def, const std::vector<Type *> &_args, Type *_ret,
-			      IntrinsicFn _intrin, const size_t &_templs, const bool &_externed);
+			      IntrinsicFn _intrin, const bool &_externed);
 
 	Stmt *&getDef();
 	std::vector<Type *> &getArgs();
@@ -366,11 +349,7 @@ public:
 
 	Type *clone(Context &c);
 	std::string toStr();
-	Type *specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			 std::unordered_set<std::string> &unresolved_templates);
 	bool isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
-	bool determineTemplateActuals(Context &c, Type *actual, ErrMgr &e, ModuleLoc &loc,
-				      std::unordered_map<std::string, Type *> &templates);
 
 	static VariadicTy *create(Context &c, const std::vector<Type *> &_args);
 

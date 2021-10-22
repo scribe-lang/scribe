@@ -1,0 +1,5 @@
+INTRINSIC(import);
+INTRINSIC(as);
+INTRINSIC(szof);
+INTRINSIC(valen);
+INTRINSIC(array);

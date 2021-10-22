@@ -24,28 +24,28 @@ TypeAssignPass::~TypeAssignPass() {}
 bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 {
 	switch(stmt->getStmtType()) {
-	case BLOCK: visit(as<StmtBlock>(stmt), source); return true;
-	case TYPE: visit(as<StmtType>(stmt), source); return true;
-	case SIMPLE: visit(as<StmtSimple>(stmt), source); return true;
-	case EXPR: visit(as<StmtExpr>(stmt), source); return true;
-	case FNCALLINFO: visit(as<StmtFnCallInfo>(stmt), source); return true;
-	case VAR: visit(as<StmtVar>(stmt), source); return true;
-	case FNSIG: visit(as<StmtFnSig>(stmt), source); return true;
-	case FNDEF: visit(as<StmtFnDef>(stmt), source); return true;
-	case HEADER: visit(as<StmtHeader>(stmt), source); return true;
-	case LIB: visit(as<StmtLib>(stmt), source); return true;
-	case EXTERN: visit(as<StmtExtern>(stmt), source); return true;
-	case ENUMDEF: visit(as<StmtEnum>(stmt), source); return true;
-	case STRUCTDEF: visit(as<StmtStruct>(stmt), source); return true;
-	case VARDECL: visit(as<StmtVarDecl>(stmt), source); return true;
-	case COND: visit(as<StmtCond>(stmt), source); return true;
-	case FORIN: visit(as<StmtForIn>(stmt), source); return true;
-	case FOR: visit(as<StmtFor>(stmt), source); return true;
-	case WHILE: visit(as<StmtWhile>(stmt), source); return true;
-	case RET: visit(as<StmtRet>(stmt), source); return true;
-	case CONTINUE: visit(as<StmtContinue>(stmt), source); return true;
-	case BREAK: visit(as<StmtBreak>(stmt), source); return true;
-	case DEFER: visit(as<StmtDefer>(stmt), source); return true;
+	case BLOCK: return visit(as<StmtBlock>(stmt), source);
+	case TYPE: return visit(as<StmtType>(stmt), source);
+	case SIMPLE: return visit(as<StmtSimple>(stmt), source);
+	case EXPR: return visit(as<StmtExpr>(stmt), source);
+	case FNCALLINFO: return visit(as<StmtFnCallInfo>(stmt), source);
+	case VAR: return visit(as<StmtVar>(stmt), source);
+	case FNSIG: return visit(as<StmtFnSig>(stmt), source);
+	case FNDEF: return visit(as<StmtFnDef>(stmt), source);
+	case HEADER: return visit(as<StmtHeader>(stmt), source);
+	case LIB: return visit(as<StmtLib>(stmt), source);
+	case EXTERN: return visit(as<StmtExtern>(stmt), source);
+	case ENUMDEF: return visit(as<StmtEnum>(stmt), source);
+	case STRUCTDEF: return visit(as<StmtStruct>(stmt), source);
+	case VARDECL: return visit(as<StmtVarDecl>(stmt), source);
+	case COND: return visit(as<StmtCond>(stmt), source);
+	case FORIN: return visit(as<StmtForIn>(stmt), source);
+	case FOR: return visit(as<StmtFor>(stmt), source);
+	case WHILE: return visit(as<StmtWhile>(stmt), source);
+	case RET: return visit(as<StmtRet>(stmt), source);
+	case CONTINUE: return visit(as<StmtContinue>(stmt), source);
+	case BREAK: return visit(as<StmtBreak>(stmt), source);
+	case DEFER: return visit(as<StmtDefer>(stmt), source);
 	}
 	err.set(stmt, "invalid statement foudn for type assignment: %s",
 		stmt->getStmtTypeCString());
@@ -67,27 +67,18 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 {
-	std::unordered_map<std::string, Type *> resolvabletemplates;
 	size_t j = 0;
-	for(auto &t : stmt->getTemplates()) {
-		if(tmgr.exists(t.getDataStr(), false, true)) {
-			Type *ty = tmgr.getTy(t.getDataStr(), false, true);
-			resolvabletemplates[std::to_string(j++)] = ty;
-			continue;
-		}
-		std::string tname = std::to_string(j++);
-		tmgr.addVar(t.getDataStr(), TemplTy::create(ctx, tname), stmt);
+	if(!visit(stmt->getExpr(), &stmt->getExpr()) || !stmt->getExpr()->getType()) {
+		err.set(stmt, "failed to determine type of type-expr");
+		return false;
 	}
-	if(stmt->isFunc()) {
-		if(!visit(stmt->getFunc(), &stmt->getFunc())) {
-			err.set(stmt, "failed to determine type of function type");
-			return false;
-		}
-		stmt->setType(stmt->getFunc()->getType());
-		return true;
+	Type *res = stmt->getExpr()->getType();
+	if(res->isTypeTy()) {
+		res = as<TypeTy>(res)->getContainedTy()->clone(ctx);
+	} else {
+		res = res->clone(ctx);
 	}
-	Type *res = nullptr;
-	if(stmt->hasModifier(VARIADIC) && (res = tmgr.getTy(stmt->getStringName(), false, true))) {
+	if(stmt->hasModifier(VARIADIC)) {
 		res = res->clone(ctx);
 		res->setInfo(stmt->getInfoMask());
 		res->unsetVariadic();
@@ -95,32 +86,6 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 			res = PtrTy::create(ctx, res);
 		}
 		return res;
-	}
-	std::vector<lex::Lexeme> &names = stmt->getName();
-	for(size_t i = 0; i < names.size(); ++i) {
-		const std::string &name = names[i].getDataStr();
-		if(!res) {
-			std::string mangled = getMangledName(stmt, name);
-			res		    = tmgr.getTy(mangled, false, true);
-			if(res) names[i].setDataStr(mangled);
-			if(!res && !(res = tmgr.getTy(name, false, true))) {
-				err.set(stmt, "type %s does not exist", mangled.c_str());
-				return false;
-			}
-			continue;
-		}
-		if(!res->isImport()) {
-			err.set(names[i],
-				"a type can only be at the outermost level, or inside an import");
-			return false;
-		}
-		std::string mangled = getMangledName(stmt, name, as<ImportTy>(res));
-		res		    = tmgr.getTy(mangled, false, false);
-		if(!res) {
-			err.set(stmt, "type %s does not exist in import", mangled.c_str());
-			return false;
-		}
-		names[i].setDataStr(mangled);
 	}
 	res->setInfo(stmt->getInfoMask());
 
@@ -141,12 +106,7 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 	for(size_t i = 0; i < stmt->getPtrCount(); ++i) {
 		res = PtrTy::create(ctx, res);
 	}
-	if(resolvabletemplates.empty()) {
-		stmt->setType(res);
-	} else {
-		std::unordered_set<std::string> unresolved_templates; // dummy
-		stmt->setType(res->specialize(ctx, resolvabletemplates, unresolved_templates));
-	}
+	stmt->setType(res);
 	return true;
 }
 bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
@@ -154,12 +114,12 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 	switch(stmt->getLexValue().getTok().getVal()) {
 	case lex::TRUE:	 // fallthrough
 	case lex::FALSE: // fallthrough
-	case lex::NIL: stmt->setType(Int1Ty::create(ctx)); break;
-	case lex::INT: stmt->setType(Int32Ty::create(ctx)); break;
-	case lex::FLT: stmt->setType(Flt32Ty::create(ctx)); break;
-	case lex::CHAR: stmt->setType(Int8Ty::create(ctx)); break;
+	case lex::NIL: stmt->setType(IntTy::create(ctx, 1, true)); break;
+	case lex::INT: stmt->setType(IntTy::create(ctx, 32, 1)); break;
+	case lex::FLT: stmt->setType(FltTy::create(ctx, 32)); break;
+	case lex::CHAR: stmt->setType(IntTy::create(ctx, 8, 1)); break;
 	case lex::STR: {
-		Type *ty = Int8Ty::create(ctx);
+		Type *ty = IntTy::create(ctx, 8, 1);
 		ty->setConst();
 		ty = ArrayTy::create(ctx, stmt->getLexValue().getDataStr().size(), ty);
 		stmt->setType(ty);
@@ -180,6 +140,7 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 			decl = tmgr.getDecl(name, false, true);
 		}
 		stmt->setAppliedModuleID(true);
+		if(decl && decl->isComptime()) stmt->setComptime(true);
 		break;
 	}
 	default: return false;
@@ -188,17 +149,14 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		err.set(stmt, "failed to determine type of this simple statement");
 		return false;
 	}
+	if(stmt->getLexValue().getTok().getVal() != lex::IDEN) {
+		stmt->setComptime(true);
+	}
 	return true;
 }
 bool TypeAssignPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 {
 	tmgr.pushLayer();
-	for(auto &t : stmt->getTemplates()) {
-		if(!visit(t, asStmt(&t))) {
-			err.set(stmt, "failed to determine type of template");
-			return false;
-		}
-	}
 	for(auto &a : stmt->getArgs()) {
 		if(!visit(a, asStmt(&a))) {
 			err.set(stmt, "failed to determine type of argument");
@@ -280,11 +238,10 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			return false;
 		}
 		StmtFnCallInfo *callinfo = as<StmtFnCallInfo>(rhs);
-		std::unordered_map<std::string, Type *> templates;
-		bool has_va = false;
+		bool has_va		 = false;
 		if(lhs->getType()->isFunc()) {
 			FuncTy *fn = as<FuncTy>(lhs->getType());
-			if(!(fn = fn->createCall(ctx, err, callinfo, templates))) {
+			if(!(fn = fn->createCall(ctx, err, callinfo))) {
 				err.set(stmt, "function is incompatible with call arguments");
 				return false;
 			}
@@ -321,7 +278,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				err.set(stmt, "only struct definitions can be instantiated");
 				return false;
 			}
-			if(!(st = st->instantiate(ctx, err, callinfo, templates))) {
+			if(!(st = st->instantiate(ctx, err, callinfo))) {
 				err.set(stmt, "failed to instantiate struct with given arguments");
 				return false;
 			}
@@ -337,10 +294,11 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			}
 			lhs->setType(st);
 			stmt->setType(st);
+			if(lhs->isComptime()) stmt->setComptime(true);
 			break;
 		}
 		// apply template specialization
-		if(!initTemplateFunc(stmt, stmt->getType(), templates, has_va)) return false;
+		if(!initTemplateFunc(stmt, stmt->getType(), has_va)) return false;
 		break;
 	}
 	case lex::SUBS: {
@@ -457,21 +415,19 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		}
 		stmt->setType(fn->getRet());
 
-		StmtFnCallInfo *callinfo = new StmtFnCallInfo(stmt->getLoc(), {}, {lhs});
+		StmtFnCallInfo *callinfo = new StmtFnCallInfo(stmt->getLoc(), {lhs});
 		Pointer<StmtFnCallInfo> raiicallinfo(callinfo);
 		if(rhs) callinfo->getArgs().push_back(rhs);
 		if(!fn->callIntrinsic(ctx, stmt, source, callinfo)) {
 			err.set(stmt, "call to intrinsic failed");
 			return false;
 		}
-		std::unordered_map<std::string, Type *> calltemplates;
 		bool erred;
-		if(!initTemplateFunc(stmt, (Type *&)fn, calltemplates, false)) {
+		if(!initTemplateFunc(stmt, (Type *&)fn, false)) {
 			erred = true;
 			err.set(stmt, "failed to intialize template function");
 			goto end;
 		}
-		for(auto &t : calltemplates) delete t.second;
 		callinfo->getArgs().clear();
 		delete fn;
 	end:
@@ -487,7 +443,67 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtVar *stmt, Stmt **source)
 {
-	return true;
+	StmtType *&in	 = stmt->getIn();
+	Stmt *&val	 = stmt->getVVal();
+	StmtType *&vtype = stmt->getVType();
+	if(in) {
+		if(!visit(in, asStmt(&in)) || !in->getType()) {
+			err.set(stmt, "failed to determine type of 'in' expression");
+			return false;
+		}
+		tmgr.pushLayer();
+		tmgr.addVar("self", in->getType(), in);
+	}
+	if(val && val->getStmtType() == FNDEF && as<StmtFnDef>(val)->getSig()->isMember()) {
+		goto post_mangling;
+	}
+	stmt->getName().setDataStr(getMangledName(stmt, stmt->getName().getDataStr()));
+post_mangling:
+	if(stmt->isComptime() && !val && stmt->getParent() &&
+	   stmt->getParent()->getStmtType() != FNSIG) {
+		err.set(stmt, "'comptime' variables must have a value");
+		return false;
+	}
+	if((!val || val->getStmtType() != FNDEF) &&
+	   tmgr.exists(stmt->getName().getDataStr(), true, false)) {
+		err.set(stmt->getName(), "variable '%s' already exists in scope",
+			stmt->getName().getDataStr().c_str());
+		return false;
+	}
+	if(val && (!visit(val, &val) || !val->getType())) {
+		err.set(stmt, "unable to determine type of value of this variable");
+		return false;
+	}
+	if(vtype && (!visit(vtype, asStmt(&vtype)) || !vtype->getType())) {
+		err.set(stmt, "unable to determine type from the given type of this variable");
+		return false;
+	}
+	if(val && val->getType()->isVoid()) {
+		err.set(stmt, "value expression returns void, which cannot be assigned to a var");
+		return false;
+	}
+	if(vtype && val && !vtype->getType()->isCompatible(val->getType(), err, stmt->getLoc())) {
+		err.set(stmt, "incompatible given type and value of the variable decl");
+		return false;
+	}
+	if(val && !vtype) {
+		stmt->setType(val->getType());
+	} else if(vtype) {
+		stmt->setType(vtype->getType());
+	}
+
+	// assign value here
+
+	if((!val || val->getStmtType() != STRUCTDEF) && stmt->getType()->isStruct()) {
+		as<StructTy>(stmt->getType())->setDef(false);
+	}
+	if(vtype && val) applyPrimitiveTypeCoercion(vtype->getType(), val);
+	if(in) {
+		tmgr.popLayer();
+		return tmgr.addTypeFn(in->getType(), stmt->getName().getDataStr(),
+				      as<FuncTy>(stmt->getType()));
+	}
+	return tmgr.addVar(stmt->getName().getDataStr(), stmt->getType(), stmt, false);
 }
 bool TypeAssignPass::visit(StmtFnSig *stmt, Stmt **source)
 {
@@ -606,19 +622,28 @@ void TypeAssignPass::applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex:
 
 bool TypeAssignPass::chooseSuperiorPrimitiveType(Type *l, Type *r)
 {
-	static std::unordered_map<int, int> prec = {
-	{TI1, 0},  {TI8, 1},  {TU8, 2},	 {TI16, 3}, {TU16, 4},	{TI32, 5},
-	{TU32, 6}, {TI64, 7}, {TU64, 8}, {TF32, 9}, {TF64, 10},
-	};
+	assert(l->isPrimitive() && r->isPrimitive() &&
+	       "superior type can be chosen between primitives only");
 
-	return prec[l->getID()] > prec[r->getID()];
+	if(l->isFlt() && r->isInt()) return true;
+	if(r->isFlt() && l->isInt()) return false;
+
+	if(l->isFlt() && r->isFlt()) {
+		if(as<FltTy>(l)->getBits() > as<FltTy>(r)->getBits()) return true;
+		return false;
+	}
+	if(l->isInt() && r->isInt()) {
+		if(as<IntTy>(l)->getBits() > as<IntTy>(r)->getBits()) return true;
+		if(as<IntTy>(l)->getBits() < as<IntTy>(r)->getBits()) return false;
+		if(!as<IntTy>(l)->isSigned() && as<IntTy>(r)->isSigned()) return true;
+		if(as<IntTy>(l)->isSigned() && !as<IntTy>(r)->isSigned()) return false;
+	}
+	return true;
 }
 
-bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *&calledfn,
-				      std::unordered_map<std::string, Type *> &calltemplates,
-				      const bool &has_va)
+bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *&calledfn, const bool &has_va)
 {
-	if(calltemplates.empty() && !has_va) return true;
+	if(!has_va) return true; // TODO: complete this
 	assert(calledfn && "LHS has no type assigned");
 	// nothing to do if function has no definition
 	if(!calledfn->isFunc()) return true;

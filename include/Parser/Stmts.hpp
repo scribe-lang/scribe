@@ -163,15 +163,11 @@ class StmtType : public Stmt
 	size_t info; // all from TypeInfoMask
 
 	std::vector<Stmt *> array_counts; // all array counts (if any)
-	std::vector<lex::Lexeme> name;
-	std::vector<lex::Lexeme> templates;
-	Stmt *fn;
+	Stmt *expr;			  // can be func, func call, name, name.x, ... (expr1)
 
 public:
 	StmtType(const ModuleLoc &loc, const size_t &ptr, const size_t &info,
-		 const std::vector<Stmt *> &array_counts, const std::vector<lex::Lexeme> &name,
-		 const std::vector<lex::Lexeme> &templates);
-	StmtType(const ModuleLoc &loc, const std::vector<Stmt *> &array_counts, Stmt *fn);
+		 const std::vector<Stmt *> &array_counts, Stmt *expr);
 	~StmtType();
 
 	void disp(const bool &has_next) const;
@@ -195,30 +191,16 @@ public:
 	{
 		return array_counts;
 	}
-	inline std::vector<lex::Lexeme> &getName()
+	inline Stmt *&getExpr()
 	{
-		return name;
-	}
-	inline const std::vector<lex::Lexeme> &getTemplates() const
-	{
-		return templates;
+		return expr;
 	}
 
 	std::string getStringName();
 
 	inline bool isFunc() const
 	{
-		return fn != nullptr;
-	}
-
-	inline Stmt *&getFunc()
-	{
-		return fn;
-	}
-
-	inline void clearTemplates()
-	{
-		templates.clear();
+		return expr && expr->getStmtType() == FNSIG;
 	}
 };
 
@@ -275,12 +257,10 @@ public:
 
 class StmtFnCallInfo : public Stmt
 {
-	std::vector<StmtType *> templates;
 	std::vector<Stmt *> args;
 
 public:
-	StmtFnCallInfo(const ModuleLoc &loc, const std::vector<StmtType *> &templates,
-		       const std::vector<Stmt *> &args);
+	StmtFnCallInfo(const ModuleLoc &loc, const std::vector<Stmt *> &args);
 	~StmtFnCallInfo();
 
 	void disp(const bool &has_next) const;
@@ -292,14 +272,6 @@ public:
 	inline Stmt *getArg(const size_t &idx)
 	{
 		return args[idx];
-	}
-	inline std::vector<StmtType *> &getTemplates()
-	{
-		return templates;
-	}
-	inline StmtType *getTemplate(const size_t &idx)
-	{
-		return templates[idx];
 	}
 };
 
@@ -364,6 +336,7 @@ public:
 class StmtVar : public Stmt
 {
 	lex::Lexeme name;
+	StmtType *in;
 	StmtType *vtype;
 	Stmt *vval; // either of expr, funcdef, enumdef, or structdef
 	bool is_comptime;
@@ -371,8 +344,8 @@ class StmtVar : public Stmt
 
 public:
 	// at least one of type or val must be present
-	StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
-		const bool &is_comptime, const bool &is_global);
+	StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *in, StmtType *vtype,
+		Stmt *vval, const bool &is_comptime, const bool &is_global);
 	~StmtVar();
 
 	void disp(const bool &has_next) const;
@@ -380,6 +353,10 @@ public:
 	inline lex::Lexeme &getName()
 	{
 		return name;
+	}
+	inline StmtType *&getIn()
+	{
+		return in;
 	}
 	inline StmtType *&getVType()
 	{
@@ -401,7 +378,6 @@ public:
 
 class StmtFnSig : public Stmt
 {
-	std::vector<lex::Lexeme> templates;
 	// StmtVar contains only type here, no val
 	std::vector<StmtVar *> args;
 	StmtType *rettype;
@@ -409,17 +385,12 @@ class StmtFnSig : public Stmt
 	bool is_member;
 
 public:
-	StmtFnSig(const ModuleLoc &loc, const std::vector<lex::Lexeme> &templates,
-		  std::vector<StmtVar *> &args, StmtType *rettype, const bool &has_variadic,
-		  const bool &is_member);
+	StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtType *rettype,
+		  const bool &has_variadic, const bool &is_member);
 	~StmtFnSig();
 
 	void disp(const bool &has_next) const;
 
-	inline void addTemplate(const lex::Lexeme &templ)
-	{
-		templates.push_back(templ);
-	}
 	inline void insertArg(const size_t &pos, StmtVar *arg)
 	{
 		args.insert(args.begin() + pos, arg);
@@ -429,10 +400,6 @@ public:
 		is_member = member;
 	}
 
-	inline const std::vector<lex::Lexeme> &getTemplates() const
-	{
-		return templates;
-	}
 	inline const std::vector<StmtVar *> &getArgs() const
 	{
 		return args;
@@ -448,11 +415,6 @@ public:
 	inline bool isMember() const
 	{
 		return is_member;
-	}
-
-	inline bool hasTemplates() const
-	{
-		return !templates.empty();
 	}
 };
 
@@ -476,10 +438,6 @@ public:
 		return blk;
 	}
 
-	inline const std::vector<lex::Lexeme> &getSigTemplates() const
-	{
-		return sig->getTemplates();
-	}
 	inline const std::vector<StmtVar *> &getSigArgs() const
 	{
 		return sig->getArgs();
@@ -570,10 +528,6 @@ public:
 		return sig;
 	}
 
-	inline const std::vector<lex::Lexeme> &getSigTemplates() const
-	{
-		return sig->getTemplates();
-	}
 	inline const std::vector<StmtVar *> &getSigArgs() const
 	{
 		return sig->getArgs();
@@ -612,26 +566,15 @@ public:
 // both declaration and definition
 class StmtStruct : public Stmt
 {
-	bool decl;
-	std::vector<lex::Lexeme> templates;
 	std::vector<StmtVar *> fields;
 
 public:
 	// StmtVar contains only type here, no val
-	StmtStruct(const ModuleLoc &loc, const bool &decl,
-		   const std::vector<lex::Lexeme> &templates, const std::vector<StmtVar *> &fields);
+	StmtStruct(const ModuleLoc &loc, const std::vector<StmtVar *> &fields);
 	~StmtStruct();
 
 	void disp(const bool &has_next) const;
 
-	inline bool isDecl() const
-	{
-		return decl;
-	}
-	inline const std::vector<lex::Lexeme> &getTemplates() const
-	{
-		return templates;
-	}
 	inline const std::vector<StmtVar *> &getFields() const
 	{
 		return fields;

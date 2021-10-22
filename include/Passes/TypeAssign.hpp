@@ -28,9 +28,7 @@ class TypeAssignPass : public Pass
 	void applyPrimitiveTypeCoercion(Type *to, Stmt *from);
 	void applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex::Lexeme &oper);
 	bool chooseSuperiorPrimitiveType(Type *l, Type *r);
-	bool initTemplateFunc(Stmt *caller, Type *&calledfn,
-			      std::unordered_map<std::string, Type *> &calltemplates,
-			      const bool &has_va);
+	bool initTemplateFunc(Stmt *caller, Type *&calledfn, const bool &has_va);
 
 public:
 	TypeAssignPass(ErrMgr &err, Context &ctx);
