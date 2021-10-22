@@ -27,11 +27,7 @@ Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc &loc)
 	: stype(stmt_type), loc(loc), parent(nullptr), type(nullptr), cast_from(nullptr),
 	  value(nullptr), is_value_perma(false), is_comptime(false)
 {}
-Stmt::~Stmt()
-{
-	// if(type) delete type;
-	// if(cast_from) delete cast_from;
-}
+Stmt::~Stmt() {}
 Stmt *Stmt::getParentWithType(const Stmts &ty, Stmt **childofparent)
 {
 	Stmt *res = this;
@@ -73,6 +69,7 @@ const char *Stmt::getStmtTypeCString() const
 
 std::string Stmt::getTypeString() const
 {
+	if(!type) return "";
 	std::string res = type->toStr();
 	if(cast_from) res = cast_from->toStr() + " -> " + res;
 	return res;
@@ -309,8 +306,9 @@ void StmtExpr::disp(const bool &has_next) const
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
-		 const bool &is_comptime)
-	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval), is_comptime(is_comptime)
+		 const bool &is_comptime, const bool &is_global)
+	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval), is_comptime(is_comptime),
+	  is_global(is_global)
 {}
 StmtVar::~StmtVar()
 {
@@ -321,8 +319,9 @@ StmtVar::~StmtVar()
 void StmtVar::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Variable [comptime = %s]: %s%s\n", is_comptime ? "yes" : "no",
-		   name.getDataStr().c_str(), getTypeString().c_str());
+	tio::print(has_next, "Variable [comptime = %s] [global = %s]: %s%s\n",
+		   is_comptime ? "yes" : "no", is_global ? "yes" : "no", name.getDataStr().c_str(),
+		   getTypeString().c_str());
 	if(vtype) {
 		tio::taba(vval);
 		tio::print(vval, "Type:\n");

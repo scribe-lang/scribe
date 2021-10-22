@@ -49,6 +49,7 @@ const char *TokStrs[_LAST] = {
 "defer",
 "extern",
 "comptime",
+"global",
 "inline",
 "struct",
 "enum",
@@ -391,6 +392,7 @@ std::string Tokenizer::get_name(const std::string &data, size_t &i)
 
 TokType Tokenizer::classify_str(const std::string &str)
 {
+	if(str == TokStrs[GLOBAL]) return GLOBAL;
 	if(str == TokStrs[LET]) return LET;
 	if(str == TokStrs[FN]) return FN;
 	if(str == TokStrs[IF]) return IF;

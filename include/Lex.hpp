@@ -55,6 +55,7 @@ enum TokType
 	DEFER,
 	EXTERN,
 	COMPTIME,
+	GLOBAL,
 	INLINE,
 	STRUCT,
 	ENUM,
