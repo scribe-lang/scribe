@@ -37,7 +37,7 @@ bool TypeManager::addTypeFn(Type *ty, const std::string &name, FuncTy *fn)
 }
 bool TypeManager::exists(const std::string &var, bool top_only, bool include_globals)
 {
-	size_t iter = layerlock.size() > 0 ? layerlock.back() : layerlock.size() - 1;
+	size_t iter = layerlock.size() > 0 ? layerlock.back() : layers.size() - 1;
 	if(top_only) return layers[iter].getTy(var);
 	bool is_done = false;
 	while(!is_done && iter >= 0) {
@@ -58,7 +58,7 @@ bool TypeManager::existsTypeFn(Type *ty, const std::string &name)
 }
 Type *TypeManager::getTy(const std::string &var, bool top_only, bool include_globals)
 {
-	size_t iter = layerlock.size() > 0 ? layerlock.back() : layerlock.size() - 1;
+	size_t iter = layerlock.size() > 0 ? layerlock.back() : layers.size() - 1;
 	if(top_only) return layers[iter].getTy(var);
 	bool is_done = false;
 	while(!is_done && iter >= 0) {
@@ -73,7 +73,7 @@ Type *TypeManager::getTy(const std::string &var, bool top_only, bool include_glo
 }
 Stmt *TypeManager::getDecl(const std::string &var, bool top_only, bool include_globals)
 {
-	size_t iter = layerlock.size() > 0 ? layerlock.back() : layerlock.size() - 1;
+	size_t iter = layerlock.size() > 0 ? layerlock.back() : layers.size() - 1;
 	if(top_only) return layers[iter].getDecl(var);
 	bool is_done = false;
 	while(!is_done && iter >= 0) {

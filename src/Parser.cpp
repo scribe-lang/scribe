@@ -20,6 +20,7 @@
 // #include "parser/Cleanup.hpp"
 #include "Parser/Parse.hpp"
 #include "Parser/ParseHelper.hpp"
+#include "Passes/TypeAssign.hpp"
 #include "Utils.hpp"
 
 namespace sc
@@ -139,6 +140,7 @@ bool RAIIParser::executeDefaultPasses()
 {
 	PassManager pm(err, ctx);
 	// setup PM
+	pm.add<TypeAssignPass>();
 	// pm.add<CleanupParseTree>();
 	return executePasses(pm);
 }
@@ -197,7 +199,9 @@ bool RAIIParser::parse(const std::string &path, const bool &main_module)
 	if(!addModule(path)) return false;
 	fs::setCWD(wd);
 	if(!main_module) return true;
-	return executeDefaultPasses();
+	bool res = executeDefaultPasses();
+	if(!res) err.show(stderr);
+	return res;
 }
 bool RAIIParser::executePasses(PassManager &pm)
 {

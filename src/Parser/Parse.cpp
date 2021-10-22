@@ -118,12 +118,9 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 	size_t ptr  = 0;
 	size_t info = 0;
 	std::vector<Stmt *> array_counts;
-	std::vector<lex::Lexeme> name;
-	std::vector<lex::Lexeme> templates;
 	Stmt *count   = nullptr;
-	Stmt *fn      = nullptr;
+	Stmt *expr    = nullptr;
 	bool dot_turn = false; // to ensure type name is in the form <name><dot><name>...
-	std::unordered_set<std::string> templnames;
 
 	lex::Lexeme &start = p.peak();
 
@@ -144,8 +141,8 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 				goto fail;
 			}
 		}
-		if(!parse_fnsig(p, fn)) goto fail;
-		type = new StmtType(start.getLoc(), array_counts, fn);
+		if(!parse_fnsig(p, expr)) goto fail;
+		type = new StmtType(start.getLoc(), 0, 0, array_counts, expr);
 		return true;
 	}
 
@@ -176,54 +173,17 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 		}
 	}
 
-	while(p.accept(lex::IDEN, lex::DOT)) {
-		if(!dot_turn && !p.accept(lex::IDEN)) {
-			err.set(p.peak(), "expected identifier here, found dot");
-			goto fail;
-		}
-		if(dot_turn && !p.accept(lex::DOT)) {
-			err.set(p.peak(), "expected dot here, found identifier");
-			goto fail;
-		}
-		dot_turn = !dot_turn;
-		name.push_back(p.peak());
-		p.next();
-	}
-	if(name.empty()) {
-		err.set(p.peak(), "failed to parse type");
+	if(!parse_expr_01(p, expr)) {
+		err.set(p.peak(), "failed to parse type expression");
 		goto fail;
 	}
 
-	if(!p.acceptn(lex::LT)) goto after_templates;
-	// templates
-	while(true) {
-		if(!p.accept(lex::IDEN)) {
-			err.set(p.peak(), "expected template name, found: %s",
-				p.peak().getTok().cStr());
-			goto fail;
-		}
-		if(templnames.find(p.peak().getDataStr()) != templnames.end()) {
-			err.set(p.peak(), "this template name is already used "
-					  "before in this template group");
-			goto fail;
-		}
-		templnames.insert(p.peak().getDataStr());
-		templates.push_back(p.peak());
-		p.next();
-		if(!p.acceptn(lex::COMMA)) break;
-	}
-	if(!p.acceptn(lex::GT)) {
-		err.set(p.peak(), "expected '>' for end of template names, found: %s",
-			p.peak().getTok().cStr());
-		return false;
-	}
-after_templates:
-	type = new StmtType(start.getLoc(), ptr, info, array_counts, name, templates);
+	type = new StmtType(start.getLoc(), ptr, info, array_counts, expr);
 	return true;
 fail:
 	for(auto &ac : array_counts) delete ac;
 	if(count) delete count;
-	if(fn) delete fn;
+	if(expr) delete expr;
 	return false;
 }
 
@@ -856,8 +816,6 @@ bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr)
 
 	Stmt *lhs = nullptr;
 	Stmt *rhs = nullptr;
-	std::vector<StmtType *> templates;
-	StmtType *templ = nullptr;
 	std::vector<Stmt *> args;
 	Stmt *arg	  = nullptr;
 	bool is_intrinsic = false;
@@ -928,17 +886,11 @@ begin_brack:
 		if(p.acceptn(lex::RPAREN)) {
 			goto post_args;
 		}
-		// parse templates and arguments
+		// parse arguments
 		while(true) {
-			if(p.acceptn(lex::COL)) {
-				if(!parse_type(p, templ)) goto fail;
-				templates.push_back(templ);
-				templ = nullptr;
-			} else {
-				if(!parse_expr_16(p, arg)) goto fail;
-				args.push_back(arg);
-				arg = nullptr;
-			}
+			if(!parse_expr_16(p, arg)) goto fail;
+			args.push_back(arg);
+			arg = nullptr;
 			if(!p.acceptn(lex::COMMA)) break;
 		}
 		if(!p.acceptn(lex::RPAREN)) {
@@ -949,11 +901,10 @@ begin_brack:
 			goto fail;
 		}
 	post_args:
-		rhs	  = new StmtFnCallInfo(oper.getLoc(), templates, args);
-		lhs	  = new StmtExpr(oper.getLoc(), 0, lhs, oper, rhs, true);
-		rhs	  = nullptr;
-		args	  = {};
-		templates = {};
+		rhs  = new StmtFnCallInfo(oper.getLoc(), args);
+		lhs  = new StmtExpr(oper.getLoc(), 0, lhs, oper, rhs, true);
+		rhs  = nullptr;
+		args = {};
 
 		if(p.accept(lex::LBRACK, lex::LPAREN)) goto begin_brack;
 	}
@@ -978,8 +929,6 @@ done:
 fail:
 	if(lhs) delete lhs;
 	if(rhs) delete rhs;
-	for(auto &t : templates) delete t;
-	if(templ) delete templ;
 	for(auto &a : args) delete a;
 	if(arg) delete arg;
 	return false;
@@ -1083,18 +1032,10 @@ done:
 			err.set(name, "only functions can be created using let-in statements");
 			goto fail;
 		}
-		in->addTypeInfoMask(REF);
-		lex::Lexeme selfeme = lex::Lexeme(in->getLoc(), lex::IDEN, "self");
-		StmtVar *self	    = new StmtVar(in->getLoc(), selfeme, in, nullptr, false, false);
-		StmtFnSig *valsig   = as<StmtFnDef>(val)->getSig();
+		StmtFnSig *valsig = as<StmtFnDef>(val)->getSig();
 		valsig->setMember(true);
-		for(auto &t : in->getTemplates()) {
-			valsig->addTemplate(t);
-		}
-		in->clearTemplates();
-		valsig->insertArg(0, self);
 	}
-	var = new StmtVar(name.getLoc(), name, type, val, comptime, global);
+	var = new StmtVar(name.getLoc(), name, in, type, val, comptime, global);
 	return true;
 fail:
 	if(in) delete in;
@@ -1107,13 +1048,11 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 {
 	fsig = nullptr;
 
-	std::vector<lex::Lexeme> templates;
 	std::vector<StmtVar *> args;
 	StmtVar *var = nullptr;
 	std::unordered_set<std::string> argnames;
-	bool found_va	  = false;
-	StmtType *rettype = nullptr;
-	std::unordered_set<std::string> templnames;
+	bool found_va	   = false;
+	StmtType *rettype  = nullptr;
 	lex::Lexeme &start = p.peak();
 
 	if(!p.acceptn(lex::FN)) {
@@ -1121,32 +1060,6 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 		return false;
 	}
 
-	if(!p.acceptn(lex::LT)) goto after_templates;
-
-	// templates
-	while(true) {
-		if(!p.accept(lex::IDEN)) {
-			err.set(p.peak(), "expected template name, found: %s",
-				p.peak().getTok().cStr());
-			goto fail;
-		}
-		if(templnames.find(p.peak().getDataStr()) != templnames.end()) {
-			err.set(p.peak(), "this template name is already used "
-					  "before in this template group");
-			goto fail;
-		}
-		templnames.insert(p.peak().getDataStr());
-		templates.push_back(p.peak());
-		p.next();
-		if(!p.acceptn(lex::COMMA)) break;
-	}
-	if(!p.acceptn(lex::GT)) {
-		err.set(p.peak(), "expected '>' for end of template names, found: %s",
-			p.peak().getTok().cStr());
-		return false;
-	}
-
-after_templates:
 	if(!p.acceptn(lex::LPAREN)) {
 		err.set(p.peak(), "expected opening parenthesis for function args, found: %s",
 			p.peak().getTok().cStr());
@@ -1161,11 +1074,6 @@ after_templates:
 		if(argnames.find(p.peak().getDataStr()) != argnames.end()) {
 			err.set(p.peak(), "this argument name is already used "
 					  "before in this function signature");
-			goto fail;
-		}
-		if(templnames.find(p.peak().getDataStr()) != templnames.end()) {
-			err.set(p.peak(), "this argument name is already used before"
-					  " for a template in this function signature");
 			goto fail;
 		}
 		argnames.insert(p.peak().getDataStr());
@@ -1202,10 +1110,11 @@ post_args:
 	}
 	if(!rettype) {
 		lex::Lexeme voideme = lex::Lexeme(p.peak(-1).getLoc(), lex::IDEN, "void");
-		rettype		    = new StmtType(p.peak(-1).getLoc(), 0, 0, {}, {voideme}, {});
+		StmtSimple *voidsim = new StmtSimple(voideme.getLoc(), voideme);
+		rettype		    = new StmtType(voidsim->getLoc(), 0, 0, {}, voidsim);
 	}
 
-	fsig = new StmtFnSig(start.getLoc(), templates, args, rettype, found_va, false);
+	fsig = new StmtFnSig(start.getLoc(), args, rettype, found_va, false);
 	return true;
 fail:
 	if(var) delete var;
@@ -1321,8 +1230,8 @@ endinfo:
 
 sig:
 	if(!parse_fnsig(p, (Stmt *&)sig)) goto fail;
-	if(sig->hasVariadic() || sig->hasTemplates()) {
-		err.set(p.peak(), "no variadic or templates allowed in extern'd functions");
+	if(sig->hasVariadic()) {
+		err.set(p.peak(), "no variadics allowed in extern'd functions");
 		goto fail;
 	}
 	ext = new StmtExtern(name.getLoc(), name, headers, libs, sig);
@@ -1372,12 +1281,9 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd)
 {
 	sd = nullptr;
 
-	bool decl = false;
-	std::vector<lex::Lexeme> templates;
 	std::vector<StmtVar *> fields;
 	StmtVar *field = nullptr;
 	std::unordered_set<std::string> fieldnames;
-	std::unordered_set<std::string> templnames;
 	lex::Lexeme &start = p.peak();
 
 	if(!p.acceptn(lex::STRUCT)) {
@@ -1386,33 +1292,10 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd)
 		return false;
 	}
 
-	if(p.acceptn(lex::LT)) {
-		while(true) {
-			if(!p.accept(lex::IDEN)) {
-				err.set(p.peak(), "expected template name, found: %s",
-					p.peak().getTok().cStr());
-				return false;
-			}
-			if(templnames.find(p.peak().getDataStr()) != templnames.end()) {
-				err.set(p.peak(), "this template name is already used "
-						  "before in this template group");
-				goto fail;
-			}
-			templnames.insert(p.peak().getDataStr());
-			templates.push_back(p.peak());
-			p.next();
-			if(!p.acceptn(lex::COMMA)) break;
-		}
-		if(!p.acceptn(lex::GT)) {
-			err.set(p.peak(), "expected '>' for end of template names, found: %s",
-				p.peak().getTok().cStr());
-			return false;
-		}
-	}
-
 	if(!p.acceptn(lex::LBRACE)) {
-		decl = true;
-		goto done;
+		err.set(p.peak(), "expected opening braces for struct definition, found: %s",
+			p.peak().getTok().cStr());
+		return false;
 	}
 
 	while(p.accept(lex::IDEN, lex::COMPTIME)) {
@@ -1436,7 +1319,7 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd)
 	}
 
 done:
-	sd = new StmtStruct(start.getLoc(), decl, templates, fields);
+	sd = new StmtStruct(start.getLoc(), fields);
 	return true;
 
 fail:

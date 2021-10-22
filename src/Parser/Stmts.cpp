@@ -70,7 +70,7 @@ const char *Stmt::getStmtTypeCString() const
 std::string Stmt::getTypeString() const
 {
 	if(!type) return "";
-	std::string res = type->toStr();
+	std::string res = " :: " + type->toStr();
 	if(cast_from) res = cast_from->toStr() + " -> " + res;
 	return res;
 }
@@ -111,65 +111,40 @@ void StmtBlock::StmtBlock::disp(const bool &has_next) const
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtType::StmtType(const ModuleLoc &loc, const size_t &ptr, const size_t &info,
-		   const std::vector<Stmt *> &array_counts, const std::vector<lex::Lexeme> &name,
-		   const std::vector<lex::Lexeme> &templates)
-	: Stmt(TYPE, loc), ptr(ptr), info(info), array_counts(array_counts), name(name),
-	  templates(templates), fn(nullptr)
-{}
-StmtType::StmtType(const ModuleLoc &loc, const std::vector<Stmt *> &array_counts, Stmt *fn)
-	: Stmt(TYPE, loc), ptr(0), info(0), array_counts(array_counts), fn(fn)
+		   const std::vector<Stmt *> &array_counts, Stmt *expr)
+	: Stmt(TYPE, loc), ptr(ptr), info(info), array_counts(array_counts), expr(expr)
 {}
 StmtType::~StmtType()
 {
 	for(auto &ac : array_counts) delete ac;
-	if(fn) delete fn;
+	if(expr) delete expr;
 }
 
 void StmtType::disp(const bool &has_next) const
 {
-	if(fn) {
-		tio::taba(!array_counts.empty() || has_next);
-		tio::print(!array_counts.empty() || has_next, "Type: <Function>%s\n",
-			   getTypeString().c_str());
-		fn->disp(false);
-		if(array_counts.size() > 0) {
-			tio::tabr();
-			tio::taba(has_next);
-			tio::print(has_next, "Array Counts:\n");
-			for(size_t i = 0; i < array_counts.size(); ++i) {
-				array_counts[i]->disp(i != array_counts.size() - 1);
-			}
-		}
-		tio::tabr();
-		return;
-	}
 	std::string tname(ptr, '*');
 	if(info & REF) tname += "&";
 	if(info & STATIC) tname += "static ";
 	if(info & CONST) tname += "const ";
 	if(info & VOLATILE) tname += "volatile ";
 	if(info & VARIADIC) tname = "..." + tname;
-	for(auto &n : name) tname += n.getDataStr().empty() ? n.getTok().cStr() : n.getDataStr();
-	if(!templates.empty()) {
-		tname += "<";
-		for(auto &t : templates) {
-			tname += t.getDataStr() + ", ";
-		}
-		tname.pop_back();
-		tname.pop_back();
-		tname += ">";
-	}
-	tio::taba(!array_counts.empty() || has_next);
-	tio::print(!array_counts.empty() || has_next, "Type: %s%s\n", tname.c_str(),
-		   getTypeString().c_str());
-	if(array_counts.size() > 0) {
+	if(!tname.empty()) {
+		tio::taba(!array_counts.empty() || has_next);
+		tio::print(!array_counts.empty() || has_next || expr, "Type info: %s%s\n",
+			   tname.c_str(), getTypeString().c_str());
 		tio::tabr();
+	}
+	if(array_counts.size() > 0) {
 		tio::taba(has_next);
 		tio::print(has_next, "Array Counts:\n");
 		for(size_t i = 0; i < array_counts.size(); ++i) {
 			array_counts[i]->disp(i != array_counts.size() - 1);
 		}
+		tio::tabr();
 	}
+	tio::taba(has_next);
+	tio::print(has_next, "Type Expr:\n");
+	expr->disp(false);
 	tio::tabr();
 }
 
@@ -180,21 +155,13 @@ bool StmtType::hasModifier(const size_t &tim) const
 
 std::string StmtType::getStringName()
 {
-	if(fn) return fn->getStmtTypeString();
-
 	std::string tname(ptr, '*');
 	if(info & REF) tname += "&";
 	if(info & STATIC) tname += "static ";
 	if(info & CONST) tname += "const ";
 	if(info & VOLATILE) tname += "volatile ";
 	if(info & VARIADIC) tname = "..." + tname;
-	for(auto &n : name) tname += n.getDataStr().empty() ? n.getTok().cStr() : n.getDataStr();
-	if(templates.empty()) return tname;
-	tname += "<";
-	for(auto &t : templates) {
-		tname += t.getDataStr();
-	}
-	tname += ">";
+	tname += expr->getStmtTypeString();
 	return tname;
 }
 
@@ -202,7 +169,8 @@ std::string StmtType::getStringName()
 ////////////////////////////////////////// StmtSimple /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtSimple::StmtSimple(const ModuleLoc &loc, const lex::Lexeme &val) : Stmt(SIMPLE, loc), val(val)
+StmtSimple::StmtSimple(const ModuleLoc &loc, const lex::Lexeme &val)
+	: Stmt(SIMPLE, loc), val(val), applied_module_id(false)
 {}
 
 void StmtSimple::disp(const bool &has_next) const
@@ -218,29 +186,18 @@ StmtSimple::~StmtSimple() {}
 //////////////////////////////////////// StmtFnCallInfo ///////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtFnCallInfo::StmtFnCallInfo(const ModuleLoc &loc, const std::vector<StmtType *> &templates,
-			       const std::vector<Stmt *> &args)
-	: Stmt(FNCALLINFO, loc), templates(templates), args(args)
+StmtFnCallInfo::StmtFnCallInfo(const ModuleLoc &loc, const std::vector<Stmt *> &args)
+	: Stmt(FNCALLINFO, loc), args(args)
 {}
 StmtFnCallInfo::~StmtFnCallInfo()
 {
-	for(auto &templ : templates) delete templ;
 	for(auto &a : args) delete a;
 }
 
 void StmtFnCallInfo::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Function Call Info: %s\n",
-		   templates.empty() && args.empty() ? "(empty)" : "");
-	if(!templates.empty()) {
-		tio::taba(!args.empty());
-		tio::print(!args.empty(), "Template Types:\n");
-		for(size_t i = 0; i < templates.size(); ++i) {
-			templates[i]->disp(i != templates.size() - 1);
-		}
-		tio::tabr();
-	}
+	tio::print(has_next, "Function Call Info: %s\n", args.empty() ? "(empty)" : "");
 	if(!args.empty()) {
 		tio::taba(false);
 		tio::print(false, "Args:\n");
@@ -305,13 +262,14 @@ void StmtExpr::disp(const bool &has_next) const
 //////////////////////////////////////////// StmtVar //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
-		 const bool &is_comptime, const bool &is_global)
-	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval), is_comptime(is_comptime),
+StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *in, StmtType *vtype,
+		 Stmt *vval, const bool &is_comptime, const bool &is_global)
+	: Stmt(VAR, loc), name(name), in(in), vtype(vtype), vval(vval), is_comptime(is_comptime),
 	  is_global(is_global)
 {}
 StmtVar::~StmtVar()
 {
+	if(in) delete in;
 	if(vtype) delete vtype;
 	if(vval) delete vval;
 }
@@ -322,6 +280,12 @@ void StmtVar::disp(const bool &has_next) const
 	tio::print(has_next, "Variable [comptime = %s] [global = %s]: %s%s\n",
 		   is_comptime ? "yes" : "no", is_global ? "yes" : "no", name.getDataStr().c_str(),
 		   getTypeString().c_str());
+	if(in) {
+		tio::taba(vtype || vval);
+		tio::print(vtype || vval, "In:\n");
+		in->disp(false);
+		tio::tabr();
+	}
 	if(vtype) {
 		tio::taba(vval);
 		tio::print(vval, "Type:\n");
@@ -341,11 +305,10 @@ void StmtVar::disp(const bool &has_next) const
 //////////////////////////////////////////// StmtFnSig ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtFnSig::StmtFnSig(const ModuleLoc &loc, const std::vector<lex::Lexeme> &templates,
-		     std::vector<StmtVar *> &args, StmtType *rettype, const bool &has_variadic,
-		     const bool &is_member)
-	: Stmt(FNSIG, loc), templates(templates), args(args), rettype(rettype),
-	  has_variadic(has_variadic), is_member(is_member)
+StmtFnSig::StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtType *rettype,
+		     const bool &has_variadic, const bool &is_member)
+	: Stmt(FNSIG, loc), args(args), rettype(rettype), has_variadic(has_variadic),
+	  is_member(is_member)
 {}
 StmtFnSig::~StmtFnSig()
 {
@@ -356,20 +319,8 @@ StmtFnSig::~StmtFnSig()
 void StmtFnSig::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Function signature [variadic = %s, member = %s, templates = %zu]%s\n",
-		   has_variadic ? "yes" : "no", is_member ? "yes" : "no", templates.size(),
-		   getTypeString().c_str());
-	if(!templates.empty()) {
-		tio::taba(args.size() > 0 || rettype);
-		tio::print(args.size() > 0 || rettype, "Templates:\n");
-		for(size_t i = 0; i < templates.size(); ++i) {
-			tio::taba(i != templates.size() - 1);
-			tio::print(i != templates.size() - 1, "%s\n",
-				   templates[i].getDataStr().c_str());
-			tio::tabr();
-		}
-		tio::tabr();
-	}
+	tio::print(has_next, "Function signature [variadic = %s, member = %s]%s\n",
+		   has_variadic ? "yes" : "no", is_member ? "yes" : "no", getTypeString().c_str());
 	if(args.size() > 0) {
 		tio::taba(rettype);
 		tio::print(rettype, "Parameters:\n");
@@ -521,10 +472,8 @@ void StmtEnum::disp(const bool &has_next) const
 ///////////////////////////////////////// StmtStruct //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtStruct::StmtStruct(const ModuleLoc &loc, const bool &decl,
-		       const std::vector<lex::Lexeme> &templates,
-		       const std::vector<StmtVar *> &fields)
-	: Stmt(STRUCTDEF, loc), decl(decl), templates(templates), fields(fields)
+StmtStruct::StmtStruct(const ModuleLoc &loc, const std::vector<StmtVar *> &fields)
+	: Stmt(STRUCTDEF, loc), fields(fields)
 {}
 StmtStruct::~StmtStruct()
 {
@@ -534,19 +483,7 @@ StmtStruct::~StmtStruct()
 void StmtStruct::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Struct [declaration = %s]%s\n", decl ? "yes" : "no",
-		   getTypeString().c_str());
-
-	if(!templates.empty()) {
-		tio::taba(!fields.empty());
-		tio::print(!fields.empty(), "Templates:\n");
-		for(size_t i = 0; i < templates.size(); ++i) {
-			tio::taba(i != templates.size() - 1);
-			tio::print(i != templates.size() - 1, "%s\n", templates[i].str(0).c_str());
-			tio::tabr();
-		}
-		tio::tabr();
-	}
+	tio::print(has_next, "Struct %s\n", getTypeString().c_str());
 
 	if(!fields.empty()) {
 		tio::taba(false);

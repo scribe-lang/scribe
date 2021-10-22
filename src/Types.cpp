@@ -27,9 +27,8 @@ size_t getPointerCount(Type *t);
 Type *applyPointerCount(Context &c, Type *t, const size_t &count);
 
 static const char *TypeStrs[] = {
-"void",	      "<any>",	  "i1",	    "i8",	  "i16",      "i32",	    "i64",   "u8",
-"u16",	      "u32",	  "u64",    "f32",	  "f64",      "<template>", "<ptr>", "<array>",
-"<function>", "<struct>", "<enum>", "<variadic>", "<import>", "<funcmap>",
+"void",	      "<any>",	  "int",    "flt",	  "<template>", "<ptr>",     "<array>",
+"<function>", "<struct>", "<enum>", "<variadic>", "<import>",	"<funcmap>",
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -40,11 +39,6 @@ Type::Type(const Types &type, const size_t &info, const uint64_t &id)
 	: type(type), info(info), id(id)
 {}
 Type::~Type() {}
-bool Type::isPrimitive()
-{
-	return isInt1() || isInt8() || isInt16() || isInt32() || isInt64() || isUInt8() ||
-	       isUInt16() || isUInt32() || isUInt64() || isFlt32() || isFlt64();
-}
 bool Type::isBaseCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
 	if(isAny()) return true;
@@ -56,7 +50,7 @@ bool Type::isBaseCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	if(!lhs_ptr && !rhs_ptr) {
 		num_to_num = is_lhs_prim && is_rhs_prim;
 	}
-	if(!isTempl() && !num_to_num && getID() != rhs->getID()) {
+	if(!num_to_num && getID() != rhs->getID()) {
 		e.set(loc, "different type ids (LHS: %s, RHS: %s) not compatible", toStr().c_str(),
 		      rhs->toStr().c_str());
 		return false;
@@ -107,40 +101,9 @@ std::string Type::toStr()
 {
 	return baseToStr();
 }
-Type *Type::specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-		       std::unordered_set<std::string> &unresolved_templates)
-{
-	return this;
-}
 bool Type::isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
 	return isBaseCompatible(rhs, e, loc);
-}
-bool Type::determineTemplateActuals(Context &c, Type *actual, ErrMgr &e, ModuleLoc &loc,
-				    std::unordered_map<std::string, Type *> &templates)
-{
-	if(!isTempl()) return true;
-	TemplTy *templ = as<TemplTy>(this);
-	auto res       = templates.find(templ->getName());
-	if(res != templates.end()) {
-		if(!res->second->isCompatible(actual, e, loc)) {
-			e.set(loc,
-			      "In templated argument, mismatch between template %s and actual %s",
-			      res->second->toStr().c_str(), actual->toStr().c_str());
-			return false;
-		}
-		return true;
-	}
-	if(!isCompatible(actual, e, loc)) {
-		e.set(loc, "incompatible actual '%s' to template '%s'", actual->toStr().c_str(),
-		      toStr().c_str());
-		return false;
-	}
-	Type *t = actual->clone(c);
-	t->setInfo(0);
-	while(t->isPtr()) t = as<PtrTy>(t)->getTo(); // remove all pointers(?)
-	templates[templ->getName()] = t;
-	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -162,49 +125,97 @@ bool Type::determineTemplateActuals(Context &c, Type *actual, ErrMgr &e, ModuleL
 
 BasicTypeDefine(VoidTy, TVOID);
 BasicTypeDefine(AnyTy, TANY);
-BasicTypeDefine(Int1Ty, TI1);
-BasicTypeDefine(Int8Ty, TI8);
-BasicTypeDefine(Int16Ty, TI16);
-BasicTypeDefine(Int32Ty, TI32);
-BasicTypeDefine(Int64Ty, TI64);
-BasicTypeDefine(UInt8Ty, TU8);
-BasicTypeDefine(UInt16Ty, TU16);
-BasicTypeDefine(UInt32Ty, TU32);
-BasicTypeDefine(UInt64Ty, TU64);
-BasicTypeDefine(Flt32Ty, TF32);
-BasicTypeDefine(Flt64Ty, TF64);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// Template Type
+// Int Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-TemplTy::TemplTy(const std::string &name) : Type(TTEMPL, 0, TTEMPL), name(name) {}
-TemplTy::TemplTy(const size_t &info, const uint64_t &id, const std::string &name)
-	: Type(TTEMPL, info, id), name(name)
+IntTy::IntTy(const size_t &bits, const bool &sign) : Type(TINT, 0, TINT), bits(bits), sign(sign) {}
+IntTy::IntTy(const size_t &info, const uint64_t &id, const size_t &bits, const bool &sign)
+	: Type(TINT, 0, id), bits(bits), sign(sign)
 {}
-TemplTy::~TemplTy() {}
-Type *TemplTy::clone(Context &c)
+IntTy::~IntTy() {}
+
+Type *IntTy::clone(Context &c)
 {
-	return c.allocType<TemplTy>(getInfo(), getID(), name);
+	return c.allocType<IntTy>(getInfo(), getID(), bits, sign);
 }
-std::string TemplTy::toStr()
+std::string IntTy::toStr()
 {
-	return infoToStr() + "@" + name;
+	return infoToStr() + (sign ? "i" : "u") + std::to_string(bits);
 }
-Type *TemplTy::specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			  std::unordered_set<std::string> &unresolved_templates)
+
+IntTy *IntTy::create(Context &c, const size_t &_bits, const bool &_sign)
 {
-	Type *res = templates.at(name)->specialize(c, templates, unresolved_templates);
-	res->appendInfo(getInfo());
-	return res;
+	return c.allocType<IntTy>(_bits, _sign);
 }
-TemplTy *TemplTy::create(Context &c, const std::string &tname)
+
+const size_t &IntTy::getBits() const
 {
-	return c.allocType<TemplTy>(tname);
+	return bits;
 }
-std::string &TemplTy::getName()
+
+const bool &IntTy::isSigned() const
 {
-	return name;
+	return sign;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Float Type
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+FltTy::FltTy(const size_t &bits) : Type(TFLT, 0, TFLT), bits(bits) {}
+FltTy::FltTy(const size_t &info, const uint64_t &id, const size_t &bits)
+	: Type(TFLT, 0, id), bits(bits)
+{}
+FltTy::~FltTy() {}
+
+Type *FltTy::clone(Context &c)
+{
+	return c.allocType<FltTy>(getInfo(), getID(), bits);
+}
+std::string FltTy::toStr()
+{
+	return infoToStr() + "f" + std::to_string(bits);
+}
+
+FltTy *FltTy::create(Context &c, const size_t &_bits)
+{
+	return c.allocType<FltTy>(_bits);
+}
+
+const size_t &FltTy::getBits() const
+{
+	return bits;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Type Type
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+TypeTy::TypeTy(Type *containedty) : Type(TTYPE, 0, TTYPE), containedty(containedty) {}
+TypeTy::TypeTy(const size_t &info, const uint64_t &id, Type *containedty)
+	: Type(TTYPE, 0, id), containedty(containedty)
+{}
+TypeTy::~TypeTy() {}
+
+Type *TypeTy::clone(Context &c)
+{
+	return c.allocType<TypeTy>(getInfo(), getID(), containedty->clone(c));
+}
+std::string TypeTy::toStr()
+{
+	return infoToStr() + "type<" + (containedty ? containedty->toStr() : "(none)") + ">";
+}
+
+TypeTy *TypeTy::create(Context &c, Type *_containedty)
+{
+	return c.allocType<TypeTy>(_containedty);
+}
+
+Type *TypeTy::getContainedTy()
+{
+	return containedty;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -221,13 +232,6 @@ Type *PtrTy::clone(Context &c)
 std::string PtrTy::toStr()
 {
 	return "*" + infoToStr();
-}
-Type *PtrTy::specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			std::unordered_set<std::string> &unresolved_templates)
-{
-	Type *res = to->specialize(c, templates, unresolved_templates);
-	if(res == to) return this;
-	return c.allocType<PtrTy>(getInfo(), getID(), res);
 }
 PtrTy *PtrTy::create(Context &c, Type *ptr_to)
 {
@@ -255,13 +259,6 @@ std::string ArrayTy::toStr()
 {
 	return infoToStr() + "[" + std::to_string(count) + "]" + of->toStr();
 }
-Type *ArrayTy::specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			  std::unordered_set<std::string> &unresolved_templates)
-{
-	Type *resof = of->specialize(c, templates, unresolved_templates);
-	if(resof == of) return this;
-	return c.allocType<ArrayTy>(getInfo(), getID(), count, resof);
-}
 bool ArrayTy::isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
 	if(!isBaseCompatible(rhs, e, loc)) return false;
@@ -277,11 +274,6 @@ bool ArrayTy::isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 		return false;
 	}
 	return true;
-}
-bool ArrayTy::determineTemplateActuals(Context &c, Type *actual, ErrMgr &e, ModuleLoc &loc,
-				       std::unordered_map<std::string, Type *> &templates)
-{
-	return of->determineTemplateActuals(c, actual, e, loc, templates);
 }
 ArrayTy *ArrayTy::create(Context &c, const uint64_t &arr_count, Type *arr_of)
 {
@@ -300,9 +292,8 @@ Type *ArrayTy::getOf()
 // Struct Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StructTy::StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields,
-		   const size_t &templs)
-	: Type(TSTRUCT, 0, genTypeID()), fields(fields), templs(templs), is_def(true)
+StructTy::StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields)
+	: Type(TSTRUCT, 0, genTypeID()), fields(fields), is_def(true)
 {
 	for(size_t i = 0; i < fieldnames.size(); ++i) {
 		fieldpos[fieldnames[i]] = i;
@@ -310,7 +301,7 @@ StructTy::StructTy(const std::vector<std::string> &fieldnames, const std::vector
 }
 StructTy::StructTy(const size_t &info, const uint64_t &id,
 		   const std::unordered_map<std::string, size_t> &fieldpos,
-		   const std::vector<Type *> &fields, const size_t &templs, const bool &is_def)
+		   const std::vector<Type *> &fields, const bool &is_def)
 	: Type(TSTRUCT, info, id), fieldpos(fieldpos), fields(fields), is_def(is_def)
 {}
 StructTy::~StructTy() {}
@@ -318,7 +309,7 @@ Type *StructTy::clone(Context &c)
 {
 	std::vector<Type *> newfields;
 	for(auto &field : fields) newfields.push_back(field->clone(c));
-	return c.allocType<StructTy>(getInfo(), getID(), fieldpos, newfields, templs, is_def);
+	return c.allocType<StructTy>(getInfo(), getID(), fieldpos, newfields, is_def);
 }
 std::string StructTy::toStr()
 {
@@ -333,28 +324,10 @@ std::string StructTy::toStr()
 	res += "}";
 	return res;
 }
-Type *StructTy::specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			   std::unordered_set<std::string> &unresolved_templates)
-{
-	std::vector<Type *> newfields;
-	bool found = false;
-	for(auto &f : fields) {
-		newfields.push_back(f->specialize(c, templates, unresolved_templates));
-		if(newfields.back() == f) continue;
-		found = true;
-	}
-	if(!found) return this;
-	return c.allocType<StructTy>(getInfo(), getID(), fieldpos, newfields, templs, is_def);
-}
 bool StructTy::isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
 	if(!isBaseCompatible(rhs, e, loc)) return false;
 	StructTy *r = as<StructTy>(rhs);
-	if(templs != r->templs) {
-		e.set(loc, "struct type mismatch (LHS templates: %zu, RHS templates: %zu)", templs,
-		      r->templs);
-		return false;
-	}
 	if(fields.size() != r->fields.size()) {
 		e.set(loc, "struct type mismatch (LHS fields: %zu, RHS fields: %zu)", fields.size(),
 		      r->fields.size());
@@ -368,62 +341,27 @@ bool StructTy::isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	}
 	return true;
 }
-bool StructTy::determineTemplateActuals(Context &c, Type *actual, ErrMgr &e, ModuleLoc &loc,
-					std::unordered_map<std::string, Type *> &templates)
+StructTy *StructTy::instantiate(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo)
 {
-	if(!isCompatible(actual, e, loc)) return false;
-	StructTy *ast = as<StructTy>(actual);
-	for(size_t i = 0; i < fields.size(); ++i) {
-		if(!fields[i]->determineTemplateActuals(c, ast->fields[i], e, loc, templates)) {
-			return false;
-		}
-	}
-	return true;
-}
-StructTy *StructTy::instantiate(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo,
-				std::unordered_map<std::string, Type *> &templates)
-{
-	templates.clear();
-	if(templs < callinfo->getTemplates().size()) return nullptr;
 	if(fields.size() != callinfo->getArgs().size()) return nullptr;
-	std::unordered_set<std::string> unresolved_templates;
-	for(size_t i = 0; i < templs; ++i) unresolved_templates.insert(std::to_string(i));
-	for(size_t i = 0; i < callinfo->getArgs().size(); ++i) {
-		std::string istr = std::to_string(i);
-		templates[istr]	 = callinfo->getTemplate(i)->getType();
-		unresolved_templates.erase(istr);
-	}
-	ModuleLoc &loc = callinfo->getLoc();
-	for(size_t i = 0; i < fields.size(); ++i) {
-		Type *callargty = callinfo->getArg(i)->getType();
-		if(fields[i]->determineTemplateActuals(c, callargty, e, loc, templates)) continue;
-		return nullptr;
-	}
+	ModuleLoc &loc		 = callinfo->getLoc();
 	bool is_field_compatible = true;
-	std::vector<Type *> specializedfields;
-	for(auto &f : this->fields) {
-		specializedfields.push_back(f->specialize(c, templates, unresolved_templates));
-	}
-	for(size_t i = 0; i < specializedfields.size(); ++i) {
-		Type *sf    = specializedfields[i];
+	for(size_t i = 0; i < this->fields.size(); ++i) {
+		Type *sf    = this->fields[i];
 		Stmt *ciarg = callinfo->getArg(i);
 		if(sf->isCompatible(ciarg->getType(), e, loc)) continue;
 		is_field_compatible = false;
 		break;
 	}
 	if(!is_field_compatible) return nullptr;
-	StructTy *newst = as<StructTy>(specialize(c, templates, unresolved_templates));
-	if(!unresolved_templates.empty()) {
-		e.set(loc, "failed to instantiate struct - not all templates were resolved");
-		return nullptr;
-	}
+	StructTy *newst = as<StructTy>(this->clone(c));
 	newst->setDef(false);
 	return newst;
 }
 StructTy *StructTy::create(Context &c, const std::vector<std::string> &_fieldnames,
-			   const std::vector<Type *> &_fields, const size_t &templs)
+			   const std::vector<Type *> &_fields)
 {
-	return c.allocType<StructTy>(_fieldnames, _fields, templs);
+	return c.allocType<StructTy>(_fieldnames, _fields);
 }
 std::vector<Type *> &StructTy::getFields()
 {
@@ -440,10 +378,6 @@ Type *StructTy::getField(const size_t &pos)
 	if(pos >= fields.size()) return nullptr;
 	return fields[pos];
 }
-void StructTy::setTemplates(const size_t &_templs)
-{
-	templs = _templs;
-}
 void StructTy::setDef(const bool &def)
 {
 	is_def = def;
@@ -452,40 +386,34 @@ bool StructTy::isDef() const
 {
 	return is_def;
 }
-const size_t &StructTy::getTemplates() const
-{
-	return templs;
-}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Function Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 FuncTy::FuncTy(Stmt *def, const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const size_t &templs, const bool &externed)
+	       const bool &externed)
 	: Type(TFUNC, 0, genTypeID()), def(def), args(args), ret(ret), intrin(intrin),
-	  templs(templs), externed(externed)
+	  externed(externed)
 {}
 FuncTy::FuncTy(Stmt *def, const size_t &info, const uint64_t &id, const std::vector<Type *> &args,
-	       Type *ret, IntrinsicFn intrin, const size_t &templs, const bool &externed)
-	: Type(TFUNC, info, id), def(def), args(args), ret(ret), intrin(intrin), templs(templs),
-	  externed(externed)
+	       Type *ret, IntrinsicFn intrin, const bool &externed)
+	: Type(TFUNC, info, id), def(def), args(args), ret(ret), intrin(intrin), externed(externed)
 {}
 FuncTy::~FuncTy() {}
 Type *FuncTy::clone(Context &c)
 {
 	std::vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c));
-	return c.allocType<FuncTy>(def, getInfo(), getID(), newargs, ret->clone(c), intrin, templs,
+	return c.allocType<FuncTy>(def, getInfo(), getID(), newargs, ret->clone(c), intrin,
 				   externed);
 }
 std::string FuncTy::toStr()
 {
 	std::string res = infoToStr() + "function<" + std::to_string(getID());
 	if(intrin) res += "intrinsic, ";
-	if(templs) res += "templates: " + std::to_string(templs) + ", ";
 	if(externed) res += "extern, ";
-	if(intrin || templs || externed) {
+	if(intrin || externed) {
 		res.pop_back();
 		res.pop_back();
 	}
@@ -500,29 +428,10 @@ std::string FuncTy::toStr()
 	res += "): " + ret->toStr();
 	return res;
 }
-Type *FuncTy::specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			 std::unordered_set<std::string> &unresolved_templates)
-{
-	std::vector<Type *> newargs;
-	bool found = false;
-	for(auto &a : args) {
-		newargs.push_back(a->specialize(c, templates, unresolved_templates));
-		if(newargs.back() == a) continue;
-		found = true;
-	}
-	Type *newret = ret->specialize(c, templates, unresolved_templates);
-	if(!found && newret == ret) return this;
-	return c.allocType<FuncTy>(def, getInfo(), getID(), newargs, newret, intrin, 0, externed);
-}
 bool FuncTy::isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
 	if(!isBaseCompatible(rhs, e, loc)) return false;
 	FuncTy *r = as<FuncTy>(rhs);
-	if(templs != r->templs) {
-		e.set(loc, "func type mismatch (LHS templates: %zu, RHS templates: %zu)", templs,
-		      r->templs);
-		return false;
-	}
 	if(externed != r->externed) {
 		e.set(loc, "func type mismatch (LHS externed: %s, RHS externed: %s)",
 		      externed ? "yes" : "no", r->externed ? "yes" : "no");
@@ -545,48 +454,16 @@ bool FuncTy::isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	}
 	return true;
 }
-bool FuncTy::determineTemplateActuals(Context &c, Type *actual, ErrMgr &e, ModuleLoc &loc,
-				      std::unordered_map<std::string, Type *> &templates)
-{
-	if(!isCompatible(actual, e, loc)) return false;
-	FuncTy *afn = as<FuncTy>(actual);
-	for(size_t i = 0; i < args.size(); ++i) {
-		if(!args[i]->determineTemplateActuals(c, afn->args[i], e, loc, templates)) {
-			return false;
-		}
-	}
-	if(!ret->determineTemplateActuals(c, afn->ret, e, loc, templates)) return false;
-	return true;
-}
 // specializes a function type using StmtFnCallInfo
-FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo,
-			   std::unordered_map<std::string, Type *> &templates)
+FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo)
 {
-	templates.clear();
-	if(templs < callinfo->getTemplates().size()) return nullptr;
 	if(args.size() != callinfo->getArgs().size()) return nullptr;
-	std::unordered_set<std::string> unresolved_templates;
-	for(size_t i = 0; i < templs; ++i) unresolved_templates.insert(std::to_string(i));
-	for(size_t i = 0; i < callinfo->getArgs().size(); ++i) {
-		std::string istr = std::to_string(i);
-		templates[istr]	 = callinfo->getTemplate(i)->getType();
-		unresolved_templates.erase(istr);
-	}
-	ModuleLoc &loc = callinfo->getLoc();
-	for(size_t i = 0; i < args.size(); ++i) {
-		Type *callargty = callinfo->getArg(i)->getType();
-		if(args[i]->determineTemplateActuals(c, callargty, e, loc, templates)) continue;
-		return nullptr;
-	}
+	ModuleLoc &loc	       = callinfo->getLoc();
 	bool is_arg_compatible = true;
-	std::vector<Type *> specializedargs;
-	for(auto &a : this->args) {
-		specializedargs.push_back(a->specialize(c, templates, unresolved_templates));
-	}
 	std::vector<Type *> variadics;
-	for(size_t i = 0, j = 0; i < specializedargs.size() && j < callinfo->getArgs().size();
-	    ++i, ++j) {
-		Type *sa      = specializedargs[i];
+	for(size_t i = 0, j = 0; i < this->args.size() && j < callinfo->getArgs().size(); ++i, ++j)
+	{
+		Type *sa      = this->args[i];
 		Stmt *ciarg   = callinfo->getArg(i);
 		bool variadic = false;
 		if(sa->hasVariadic()) {
@@ -601,13 +478,13 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo,
 	}
 	if(!is_arg_compatible) return nullptr;
 
-	FuncTy *tmp   = this;
-	size_t va_len = tmp->args.size();
+	FuncTy *res   = this;
+	size_t va_len = res->args.size();
 	if(hasVariadic()) {
-		tmp = as<FuncTy>(clone(c));
+		res = as<FuncTy>(clone(c));
 		--va_len;
-		Type *vabase = tmp->args.back();
-		tmp->args.pop_back();
+		Type *vabase = res->args.back();
+		res->args.pop_back();
 		vabase->unsetVariadic();
 		VariadicTy *va	= VariadicTy::create(c, {});
 		size_t ptrcount = getPointerCount(vabase);
@@ -617,20 +494,15 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo,
 			v->appendInfo(vabase->getInfo());
 			va->addArg(v);
 		}
-		tmp->args.push_back(va);
+		res->args.push_back(va);
 	}
 
-	FuncTy *res = as<FuncTy>(tmp->specialize(c, templates, unresolved_templates));
-	if(!unresolved_templates.empty()) {
-		e.set(loc, "failed to create function call - not all templates were resolved");
-		return nullptr;
-	}
 	return res;
 }
 FuncTy *FuncTy::create(Context &c, Stmt *_def, const std::vector<Type *> &_args, Type *_ret,
-		       IntrinsicFn _intrin, const size_t &_templs, const bool &_externed)
+		       IntrinsicFn _intrin, const bool &_externed)
 {
-	return c.allocType<FuncTy>(_def, _args, _ret, _intrin, _templs, _externed);
+	return c.allocType<FuncTy>(_def, _args, _ret, _intrin, _externed);
 }
 Stmt *&FuncTy::getDef()
 {
@@ -691,19 +563,6 @@ std::string VariadicTy::toStr()
 	res += ">";
 	return res;
 }
-Type *VariadicTy::specialize(Context &c, const std::unordered_map<std::string, Type *> &templates,
-			     std::unordered_set<std::string> &unresolved_templates)
-{
-	std::vector<Type *> newargs;
-	bool found = false;
-	for(auto &a : args) {
-		newargs.push_back(a->specialize(c, templates, unresolved_templates));
-		if(newargs.back() == a) continue;
-		found = true;
-	}
-	if(!found) return this;
-	return c.allocType<VariadicTy>(getInfo(), getID(), newargs);
-}
 bool VariadicTy::isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
 	if(!isBaseCompatible(rhs, e, loc)) return false;
@@ -711,18 +570,6 @@ bool VariadicTy::isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	if(args.size() != r->args.size()) return false;
 	for(size_t i = 0; i < args.size(); ++i) {
 		if(!args[i]->isCompatible(r->args[i], e, loc)) return false;
-	}
-	return true;
-}
-bool VariadicTy::determineTemplateActuals(Context &c, Type *actual, ErrMgr &e, ModuleLoc &loc,
-					  std::unordered_map<std::string, Type *> &templates)
-{
-	if(!isCompatible(actual, e, loc)) return false;
-	VariadicTy *ava = as<VariadicTy>(actual);
-	for(size_t i = 0; i < args.size(); ++i) {
-		if(!args[i]->determineTemplateActuals(c, ava->args[i], e, loc, templates)) {
-			return false;
-		}
 	}
 	return true;
 }
