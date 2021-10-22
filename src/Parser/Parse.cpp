@@ -990,7 +990,12 @@ bool Parsing::parse_var(ParseHelper &p, StmtVar *&var, const Occurs &intype, con
 {
 	var = nullptr;
 
-	bool comptime = p.acceptn(lex::COMPTIME);
+	bool comptime = false;
+	bool global   = false;
+	while(p.accept(lex::COMPTIME, lex::GLOBAL)) {
+		if(p.acceptn(lex::COMPTIME)) comptime = true;
+		if(p.acceptn(lex::GLOBAL)) global = true;
+	}
 
 	if(!p.accept(lex::IDEN)) {
 		err.set(p.peak(), "expected identifier for variable name, found: %s",
@@ -1080,7 +1085,7 @@ done:
 		}
 		in->addTypeInfoMask(REF);
 		lex::Lexeme selfeme = lex::Lexeme(in->getLoc(), lex::IDEN, "self");
-		StmtVar *self	    = new StmtVar(in->getLoc(), selfeme, in, nullptr, false);
+		StmtVar *self	    = new StmtVar(in->getLoc(), selfeme, in, nullptr, false, false);
 		StmtFnSig *valsig   = as<StmtFnDef>(val)->getSig();
 		valsig->setMember(true);
 		for(auto &t : in->getTemplates()) {
@@ -1089,7 +1094,7 @@ done:
 		in->clearTemplates();
 		valsig->insertArg(0, self);
 	}
-	var = new StmtVar(name.getLoc(), name, type, val, comptime);
+	var = new StmtVar(name.getLoc(), name, type, val, comptime, global);
 	return true;
 fail:
 	if(in) delete in;
@@ -1410,14 +1415,14 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd)
 		goto done;
 	}
 
-	while(p.accept(lex::IDEN)) {
-		if(fieldnames.find(p.peak().getDataStr()) != fieldnames.end()) {
+	while(p.accept(lex::IDEN, lex::COMPTIME)) {
+		if(!parse_var(p, field, Occurs::NO, Occurs::YES, Occurs::NO)) goto fail;
+		if(fieldnames.find(field->getName().getDataStr()) != fieldnames.end()) {
 			err.set(p.peak(), "this field name is already used "
 					  "before in this same structure");
 			goto fail;
 		}
-		fieldnames.insert(p.peak().getDataStr());
-		if(!parse_var(p, field, Occurs::NO, Occurs::YES, Occurs::NO)) goto fail;
+		fieldnames.insert(field->getName().getDataStr());
 		fields.push_back(field);
 		field = nullptr;
 		if(!p.acceptn(lex::COLS)) break;

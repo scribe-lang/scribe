@@ -8,7 +8,7 @@ let Vec = struct {
 
 // a function with a comptime argument is guaranteed to be specialized
 let new = fn(comptime T: type, managed: i1): Vec {
-	return Vec{T, nil, 0, 0};
+	return Vec(T, nil, 0, 0);
 };
 
 // a function inside a struct which has at least one field of type 'type' has to be specialized (generic)
@@ -18,7 +18,7 @@ let push in Vec = fn(d: self.T) {
 
 let pop in Vec = fn() {
 	if len == 0 {
-		throw "vec.pop() in an empty vector";
+		// throw "vec.pop() in an empty vector";
 	}
 	--len;
 	if !self.managed {

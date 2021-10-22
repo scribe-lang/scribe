@@ -476,7 +476,8 @@ Type *FuncTy::clone(Context &c)
 {
 	std::vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c));
-	return c.allocType<FuncTy>(getInfo(), getID(), def, newargs, ret->clone(c), intrin);
+	return c.allocType<FuncTy>(def, getInfo(), getID(), newargs, ret->clone(c), intrin, templs,
+				   externed);
 }
 std::string FuncTy::toStr()
 {
@@ -511,7 +512,7 @@ Type *FuncTy::specialize(Context &c, const std::unordered_map<std::string, Type 
 	}
 	Type *newret = ret->specialize(c, templates, unresolved_templates);
 	if(!found && newret == ret) return this;
-	return c.allocType<FuncTy>(getInfo(), getID(), def, newargs, newret, externed);
+	return c.allocType<FuncTy>(def, getInfo(), getID(), newargs, newret, intrin, 0, externed);
 }
 bool FuncTy::isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {

@@ -367,11 +367,12 @@ class StmtVar : public Stmt
 	StmtType *vtype;
 	Stmt *vval; // either of expr, funcdef, enumdef, or structdef
 	bool is_comptime;
+	bool is_global;
 
 public:
 	// at least one of type or val must be present
 	StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
-		const bool &is_comptime);
+		const bool &is_comptime, const bool &is_global);
 	~StmtVar();
 
 	void disp(const bool &has_next) const;
@@ -391,6 +392,10 @@ public:
 	inline bool isComptime() const
 	{
 		return is_comptime;
+	}
+	inline bool isGlobal() const
+	{
+		return is_global;
 	}
 };
 
