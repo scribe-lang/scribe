@@ -51,38 +51,33 @@ class Stmt
 	Stmts stype;
 	ModuleLoc loc;
 
-	Stmt *parent;
-
 	Type *type;
 	Type *cast_from;
 	Value *value;
-
-	size_t specialized_id;
 
 	// generally used by intrinsics, causes values to never be erased or modified
 	// can be overridden by calling setPermaValue() again
 	bool is_value_perma;
 
-	bool is_comptime;
-
 public:
 	Stmt(const Stmts &stmt_type, const ModuleLoc &loc);
 	virtual ~Stmt();
-	Stmt *getParentWithType(const Stmts &ty, Stmt **childofparent = nullptr);
 
 	virtual void disp(const bool &has_next) const = 0;
+	virtual Stmt *clone()			      = 0;
+	virtual bool requiresTemplateInit()	      = 0;
+
+	const char *getStmtTypeCString() const;
+	std::string getTypeString() const;
 
 	inline const Stmts &getStmtType() const
 	{
 		return stype;
 	}
-	const char *getStmtTypeCString() const;
 	inline std::string getStmtTypeString() const
 	{
 		return getStmtTypeCString();
 	}
-
-	std::string getTypeString() const;
 
 	inline ModuleLoc &getLoc()
 	{
@@ -92,17 +87,13 @@ public:
 	{
 		return loc.getMod();
 	}
-	inline Stmt *&getParent()
-	{
-		return parent;
-	}
 
-	inline void setParent(Stmt *par)
+	inline void setType(Type *t, const bool &as_is = false)
 	{
-		parent = par;
-	}
-	inline void setType(Type *t)
-	{
+		if(t && !as_is && t->isTypeTy() && as<TypeTy>(t)->getContainedTy()) {
+			type = as<TypeTy>(t)->getContainedTy();
+			return;
+		}
 		type = t;
 	}
 	inline void castTo(Type *t)
@@ -115,35 +106,23 @@ public:
 		if(is_value_perma) return;
 		value = v;
 	}
-	inline void setSpecializedID(const size_t &id)
-	{
-		specialized_id = id;
-	}
 	inline void setPermaVal(Value *v)
 	{
 		value	       = v;
 		is_value_perma = true;
-	}
-	inline void setComptime(const bool &comptime)
-	{
-		is_comptime = comptime;
 	}
 
 	inline Type *&getType()
 	{
 		return type;
 	}
+	inline Type *&getCastFrom()
+	{
+		return cast_from;
+	}
 	inline Value *&getValue()
 	{
 		return value;
-	}
-	inline const size_t &getSpecializedID() const
-	{
-		return specialized_id;
-	}
-	inline bool isComptime() const
-	{
-		return is_comptime;
 	}
 };
 
@@ -157,24 +136,51 @@ template<typename T> Stmt **asStmt(T **data)
 	return (Stmt **)(data);
 }
 
+class StmtBlock : public Stmt
+{
+	std::vector<Stmt *> stmts;
+	bool is_top;
+
+public:
+	StmtBlock(const ModuleLoc &loc, const std::vector<Stmt *> &stmts, const bool &is_top);
+	~StmtBlock();
+
+	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
+
+	inline std::vector<Stmt *> &getStmts()
+	{
+		return stmts;
+	}
+	inline bool isTop() const
+	{
+		return is_top;
+	}
+};
+
 class StmtType : public Stmt
 {
 	size_t ptr;  // number of ptrs
 	size_t info; // all from TypeInfoMask
 
-	std::vector<Stmt *> array_counts; // all array counts (if any)
-	Stmt *expr;			  // can be func, func call, name, name.x, ... (expr1)
+	Stmt *expr; // can be func, func call, name, name.x, ... (expr1)
 
 public:
-	StmtType(const ModuleLoc &loc, const size_t &ptr, const size_t &info,
-		 const std::vector<Stmt *> &array_counts, Stmt *expr);
+	StmtType(const ModuleLoc &loc, const size_t &ptr, const size_t &info, Stmt *expr);
 	~StmtType();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline void addTypeInfoMask(const size_t &mask)
 	{
 		info |= mask;
+	}
+	inline void remTypeInfoMask(const size_t &mask)
+	{
+		info &= ~mask;
 	}
 	inline const size_t &getPtrCount() const
 	{
@@ -187,10 +193,6 @@ public:
 
 	bool hasModifier(const size_t &tim) const;
 
-	inline std::vector<Stmt *> &getArrayCounts()
-	{
-		return array_counts;
-	}
 	inline Stmt *&getExpr()
 	{
 		return expr;
@@ -204,30 +206,12 @@ public:
 	}
 };
 
-class StmtBlock : public Stmt
-{
-	std::vector<Stmt *> stmts;
-	bool is_top;
-
-public:
-	StmtBlock(const ModuleLoc &loc, const std::vector<Stmt *> &stmts, const bool &is_top);
-	~StmtBlock();
-
-	void disp(const bool &has_next) const;
-
-	inline std::vector<Stmt *> &getStmts()
-	{
-		return stmts;
-	}
-	inline bool isTop() const
-	{
-		return is_top;
-	}
-};
-
+class StmtVar;
 class StmtSimple : public Stmt
 {
+	StmtVar *decl;
 	lex::Lexeme val;
+	Stmt *self; // for executing member functions
 
 	bool applied_module_id;
 
@@ -236,18 +220,36 @@ public:
 	~StmtSimple();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
+	inline void setDecl(StmtVar *d)
+	{
+		decl = d;
+	}
 	inline void updateLexDataStr(const std::string &newdata)
 	{
 		val.setDataStr(newdata);
+	}
+	inline void setSelf(Stmt *s)
+	{
+		self = s;
 	}
 	inline void setAppliedModuleID(const bool &apply)
 	{
 		applied_module_id = apply;
 	}
+	inline StmtVar *&getDecl()
+	{
+		return decl;
+	}
 	inline lex::Lexeme &getLexValue()
 	{
 		return val;
+	}
+	inline Stmt *&getSelf()
+	{
+		return self;
 	}
 	inline bool isAppliedModuleID() const
 	{
@@ -264,6 +266,8 @@ public:
 	~StmtFnCallInfo();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline std::vector<Stmt *> &getArgs()
 	{
@@ -284,6 +288,7 @@ class StmtExpr : public Stmt
 	StmtBlock *or_blk;
 	lex::Lexeme or_blk_var;
 	bool is_intrinsic_call;
+	FuncTy *calledfn;
 
 public:
 	// or_blk and or_blk_var can be set separately - nullptr/INVALID by default
@@ -292,6 +297,8 @@ public:
 	~StmtExpr();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline void setCommas(const size_t &c)
 	{
@@ -301,6 +308,10 @@ public:
 	{
 		or_blk	   = blk;
 		or_blk_var = blk_var;
+	}
+	inline void setCalledFnTy(FuncTy *calledty)
+	{
+		calledfn = calledty;
 	}
 
 	inline const size_t &getCommas() const
@@ -331,32 +342,42 @@ public:
 	{
 		return is_intrinsic_call;
 	}
+	inline FuncTy *getCalledFn()
+	{
+		return calledfn;
+	}
 };
 
 class StmtVar : public Stmt
 {
 	lex::Lexeme name;
-	StmtType *in;
 	StmtType *vtype;
 	Stmt *vval; // either of expr, funcdef, enumdef, or structdef
+	bool is_in;
 	bool is_comptime;
 	bool is_global;
+	bool applied_module_id;
+	bool is_temp_vval; // vval is temp, therefore don't delete it in destructor
 
 public:
 	// at least one of type or val must be present
-	StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *in, StmtType *vtype,
-		Stmt *vval, const bool &is_comptime, const bool &is_global);
+	StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
+		const bool &is_in, const bool &is_comptime, const bool &is_global);
 	~StmtVar();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
+
+	inline void setTempVVal(Stmt *val)
+	{
+		vval	     = val;
+		is_temp_vval = true;
+	}
 
 	inline lex::Lexeme &getName()
 	{
 		return name;
-	}
-	inline StmtType *&getIn()
-	{
-		return in;
 	}
 	inline StmtType *&getVType()
 	{
@@ -366,6 +387,14 @@ public:
 	{
 		return vval;
 	}
+	inline void setAppliedModuleID(const bool &apply)
+	{
+		applied_module_id = apply;
+	}
+	inline bool isIn()
+	{
+		return is_in;
+	}
 	inline bool isComptime() const
 	{
 		return is_comptime;
@@ -374,6 +403,10 @@ public:
 	{
 		return is_global;
 	}
+	inline bool isAppliedModuleID() const
+	{
+		return applied_module_id;
+	}
 };
 
 class StmtFnSig : public Stmt
@@ -381,26 +414,33 @@ class StmtFnSig : public Stmt
 	// StmtVar contains only type here, no val
 	std::vector<StmtVar *> args;
 	StmtType *rettype;
+	size_t scope; // for locking scopes during type assign
+	bool has_template;
 	bool has_variadic;
-	bool is_member;
 
 public:
 	StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtType *rettype,
-		  const bool &has_variadic, const bool &is_member);
+		  const size_t &scope, const bool &has_variadic);
 	~StmtFnSig();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline void insertArg(const size_t &pos, StmtVar *arg)
 	{
 		args.insert(args.begin() + pos, arg);
 	}
-	inline void setMember(const bool &member)
+	inline void setScope(const size_t &s)
 	{
-		is_member = member;
+		scope = s;
+	}
+	inline void setVariadic(const bool &va)
+	{
+		has_variadic = va;
 	}
 
-	inline const std::vector<StmtVar *> &getArgs() const
+	inline std::vector<StmtVar *> &getArgs()
 	{
 		return args;
 	}
@@ -408,27 +448,36 @@ public:
 	{
 		return rettype;
 	}
+	inline const size_t &getScope() const
+	{
+		return scope;
+	}
 	inline bool hasVariadic() const
 	{
 		return has_variadic;
 	}
-	inline bool isMember() const
-	{
-		return is_member;
-	}
+
+	bool hasTemplate();
 };
 
 class StmtFnDef : public Stmt
 {
 	StmtFnSig *sig;
 	StmtBlock *blk;
+	StmtVar *parentvar;
 
 public:
 	StmtFnDef(const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk);
 	~StmtFnDef();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
+	inline void setParentVar(StmtVar *pvar)
+	{
+		parentvar = pvar;
+	}
 	inline StmtFnSig *&getSig()
 	{
 		return sig;
@@ -436,6 +485,10 @@ public:
 	inline StmtBlock *&getBlk()
 	{
 		return blk;
+	}
+	inline StmtVar *&getParentVar()
+	{
+		return parentvar;
 	}
 
 	inline const std::vector<StmtVar *> &getSigArgs() const
@@ -450,10 +503,6 @@ public:
 	{
 		return sig->hasVariadic();
 	}
-	inline bool isSigMember() const
-	{
-		return sig->isMember();
-	}
 };
 
 class StmtHeader : public Stmt
@@ -466,6 +515,8 @@ public:
 	StmtHeader(const ModuleLoc &loc, const lex::Lexeme &names, const lex::Lexeme &flags);
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline const lex::Lexeme &getNames() const
 	{
@@ -486,6 +537,8 @@ public:
 	StmtLib(const ModuleLoc &loc, const lex::Lexeme &flags);
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline const lex::Lexeme &getFlags() const
 	{
@@ -507,6 +560,8 @@ public:
 	~StmtExtern();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline const lex::Lexeme &getFnName() const
 	{
@@ -540,10 +595,6 @@ public:
 	{
 		return sig->hasVariadic();
 	}
-	inline bool isSigMember() const
-	{
-		return sig->isMember();
-	}
 };
 
 class StmtEnum : public Stmt
@@ -556,6 +607,8 @@ public:
 	~StmtEnum();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline const std::vector<lex::Lexeme> &getItems() const
 	{
@@ -574,8 +627,10 @@ public:
 	~StmtStruct();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
-	inline const std::vector<StmtVar *> &getFields() const
+	inline std::vector<StmtVar *> &getFields()
 	{
 		return fields;
 	}
@@ -591,6 +646,8 @@ public:
 	~StmtVarDecl();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline std::vector<StmtVar *> &getDecls()
 	{
@@ -642,6 +699,8 @@ public:
 	~StmtCond();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline std::vector<Conditional> &getConditionals()
 	{
@@ -664,6 +723,8 @@ public:
 	~StmtForIn();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline const lex::Lexeme &getIter() const
 	{
@@ -694,6 +755,8 @@ public:
 	~StmtFor();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline Stmt *&getInit()
 	{
@@ -727,6 +790,8 @@ public:
 	~StmtWhile();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline Stmt *&getCond()
 	{
@@ -741,32 +806,51 @@ public:
 class StmtRet : public Stmt
 {
 	Stmt *val;
+	StmtBlock *fnblk;
 
 public:
 	StmtRet(const ModuleLoc &loc, Stmt *val);
 	~StmtRet();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
+
+	inline void setFnBlk(StmtBlock *blk)
+	{
+		fnblk = blk;
+	}
 
 	inline Stmt *&getVal()
 	{
 		return val;
 	}
+	inline StmtBlock *&getFnBlk()
+	{
+		return fnblk;
+	}
 };
+
 class StmtContinue : public Stmt
 {
 public:
 	StmtContinue(const ModuleLoc &loc);
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 };
+
 class StmtBreak : public Stmt
 {
 public:
 	StmtBreak(const ModuleLoc &loc);
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 };
+
 class StmtDefer : public Stmt
 {
 	Stmt *val;
@@ -776,6 +860,8 @@ public:
 	~StmtDefer();
 
 	void disp(const bool &has_next) const;
+	Stmt *clone();
+	bool requiresTemplateInit();
 
 	inline Stmt *&getVal()
 	{

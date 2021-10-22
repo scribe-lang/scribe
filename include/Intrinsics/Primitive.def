@@ -33,15 +33,14 @@ INTRINSIC(le_int);
 INTRINSIC(ge_int);
 INTRINSIC(ne_int);
 
-INTRINSIC(xinc_int);
-INTRINSIC(xdec_int);
-
 INTRINSIC(uadd_int);
 INTRINSIC(usub_int);
-INTRINSIC(not_int);
+INTRINSIC(lognot_int);
 INTRINSIC(bnot_int);
 
+INTRINSIC(xinc_int);
 INTRINSIC(incx_int);
+INTRINSIC(xdec_int);
 INTRINSIC(decx_int);
 
 // Float
@@ -69,5 +68,5 @@ INTRINSIC(ne_flt);
 
 INTRINSIC(uadd_flt);
 INTRINSIC(usub_flt);
-INTRINSIC(not_flt);
+INTRINSIC(lognot_flt);
 INTRINSIC(bnot_flt);

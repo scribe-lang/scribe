@@ -45,9 +45,12 @@ enum TokType
 	RETURN,
 	CONTINUE,
 	BREAK,
+	VOID,
 	TRUE,
 	FALSE,
 	NIL,
+	ANY,  // type: any
+	TYPE, // type: type
 	OR,
 	STATIC,
 	CONST,
@@ -160,7 +163,8 @@ public:
 	inline bool isData() const
 	{
 		return val == INT || val == FLT || val == CHAR || val == STR || val == IDEN ||
-		       val == TRUE || val == FALSE || val == NIL;
+		       val == VOID || val == TRUE || val == FALSE || val == NIL || val == ANY ||
+		       val == TYPE;
 	}
 
 	inline bool isOper() const

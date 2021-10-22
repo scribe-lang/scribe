@@ -37,7 +37,6 @@ enum Types
 	TFLT,
 
 	TPTR,
-	TARRAY,
 	TFUNC,
 	TSTRUCT,
 	TENUM,
@@ -54,15 +53,31 @@ enum TypeInfoMask
 	STATIC	 = 1 << 1, // is static
 	CONST	 = 1 << 2, // is const
 	VOLATILE = 1 << 3, // is volatile
-	VARIADIC = 1 << 4, // is variadic
+	COMPTIME = 1 << 4, // is comptime
+	VARIADIC = 1 << 5, // is variadic
+};
+
+enum IntrinType
+{
+	INONE,
+
+	IPARSE,
+	IVALUE,
+
+	IALL,
 };
 
 class Stmt;
 class StmtExpr;
+class StmtVar;
+class StmtFnDef;
 class StmtFnCallInfo;
-typedef bool (*IntrinsicFn)(Context &c, StmtExpr *stmt, Stmt **source, StmtFnCallInfo *callinfo);
-#define INTRINSIC(name) \
-	bool intrinsic##name(Context &c, StmtExpr *stmt, Stmt **source, StmtFnCallInfo *callinfo)
+class Value;
+typedef bool (*IntrinsicFn)(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
+			    std::vector<Stmt *> &args, const IntrinType &currintrin);
+#define INTRINSIC(name)                                                               \
+	bool intrinsic_##name(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source, \
+			      std::vector<Stmt *> &args, const IntrinType &currintrin)
 
 class Type
 {
@@ -74,14 +89,15 @@ public:
 	Type(const Types &type, const size_t &info, const uint64_t &id);
 	virtual ~Type();
 
-	bool isBaseCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
+	bool isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 
 	std::string infoToStr();
 	std::string baseToStr();
 
+	virtual bool isTemplate();
 	virtual std::string toStr();
 	virtual Type *clone(Context &c) = 0;
-	virtual bool isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
+	virtual bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 
 	inline void setInfo(const size_t &inf)
 	{
@@ -108,6 +124,8 @@ public:
 		return isFlt();
 	}
 
+	virtual Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
+
 #define SetModifierX(Fn, Mod) \
 	inline void set##Fn() \
 	{                     \
@@ -117,6 +135,7 @@ public:
 	SetModifierX(Const, CONST);
 	SetModifierX(Volatile, VOLATILE);
 	SetModifierX(Ref, REF);
+	SetModifierX(Comptime, COMPTIME);
 	SetModifierX(Variadic, VARIADIC);
 
 #define UnsetModifierX(Fn, Mod) \
@@ -128,6 +147,7 @@ public:
 	UnsetModifierX(Const, CONST);
 	UnsetModifierX(Volatile, VOLATILE);
 	UnsetModifierX(Ref, REF);
+	UnsetModifierX(Comptime, COMPTIME);
 	UnsetModifierX(Variadic, VARIADIC);
 
 #define IsTyX(Fn, Ty)                 \
@@ -141,7 +161,6 @@ public:
 	IsTyX(Int, INT);
 	IsTyX(Flt, FLT);
 	IsTyX(Ptr, PTR);
-	IsTyX(Array, ARRAY);
 	IsTyX(Func, FUNC);
 	IsTyX(Struct, STRUCT);
 	IsTyX(Enum, ENUM);
@@ -157,6 +176,7 @@ public:
 	IsModifierX(Const, CONST);
 	IsModifierX(Volatile, VOLATILE);
 	IsModifierX(Ref, REF);
+	IsModifierX(Comptime, COMPTIME);
 	IsModifierX(Variadic, VARIADIC);
 
 	inline const uint64_t &getID() const
@@ -201,6 +221,8 @@ public:
 
 	const size_t &getBits() const;
 	const bool &isSigned() const;
+
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
 };
 
 class FltTy : public Type
@@ -218,124 +240,134 @@ public:
 	static FltTy *create(Context &c, const size_t &_bits);
 
 	const size_t &getBits() const;
+
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
 };
 
 class TypeTy : public Type
 {
-	Type *containedty;
+	uint64_t containedtyid;
 
 public:
-	TypeTy(Type *containedty);
-	TypeTy(const size_t &info, const uint64_t &id, Type *containedty);
+	TypeTy();
+	TypeTy(const size_t &info, const uint64_t &id, const uint64_t &containedtyid);
 	~TypeTy();
 
-	Type *clone(Context &c);
+	bool isTemplate();
 	std::string toStr();
+	Type *clone(Context &c);
 
-	static TypeTy *create(Context &c, Type *_containedty);
+	static TypeTy *create(Context &c);
 
+	void setContainedTy(Type *ty);
 	Type *getContainedTy();
+
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
 };
 
 class PtrTy : public Type
 {
 	Type *to;
+	size_t count; // 0 = normal pointer, > 0 = array pointer with count = size
 
 public:
-	PtrTy(Type *to);
-	PtrTy(const size_t &info, const uint64_t &id, Type *to);
+	PtrTy(Type *to, const size_t &count);
+	PtrTy(const size_t &info, const uint64_t &id, Type *to, const size_t &count);
 	~PtrTy();
 
-	Type *clone(Context &c);
+	bool isTemplate();
 	std::string toStr();
+	Type *clone(Context &c);
 
-	static PtrTy *create(Context &c, Type *ptr_to);
+	static PtrTy *create(Context &c, Type *ptr_to, const size_t &count);
 
 	Type *getTo();
-};
+	const size_t &getCount();
+	bool isArrayPtr();
 
-class ArrayTy : public Type
-{
-	uint64_t count;
-	Type *of;
-
-public:
-	ArrayTy(const uint64_t &count, Type *of);
-	ArrayTy(const size_t &info, const uint64_t &id, const uint64_t &count, Type *of);
-	~ArrayTy();
-
-	Type *clone(Context &c);
-	std::string toStr();
-	bool isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
-
-	static ArrayTy *create(Context &c, const uint64_t &arr_count, Type *arr_of);
-
-	const uint64_t &getCount();
-	Type *getOf();
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
 };
 
 class StructTy : public Type
 {
 	std::unordered_map<std::string, size_t> fieldpos;
+	std::vector<std::string> fieldnames;
 	std::vector<Type *> fields;
 	bool is_def; // true by default
 
 public:
 	StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields);
-	StructTy(const size_t &info, const uint64_t &id,
+	StructTy(const size_t &info, const uint64_t &id, const std::vector<std::string> &fieldnames,
 		 const std::unordered_map<std::string, size_t> &fieldpos,
 		 const std::vector<Type *> &fields, const bool &is_def);
 	~StructTy();
 
-	Type *clone(Context &c);
+	bool isTemplate();
 	std::string toStr();
-	bool isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
+	Type *clone(Context &c);
+	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 	// specializes a structure type using StmtFnCallInfo and returns a NON-def struct type
-	StructTy *instantiate(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo);
+	StructTy *instantiate(Context &c, ErrMgr &e, ModuleLoc &loc,
+			      const std::vector<Stmt *> &callargs);
 
 	static StructTy *create(Context &c, const std::vector<std::string> &_fieldnames,
 				const std::vector<Type *> &_fields);
 
+	const std::string &getFieldName(const size_t &idx);
 	std::vector<Type *> &getFields();
 	Type *getField(const std::string &name);
 	Type *getField(const size_t &pos);
 
 	void setDef(const bool &def);
 	bool isDef() const;
+
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
 };
 
 class FuncTy : public Type
 {
-	Stmt *def;
+	StmtVar *var;
 	std::vector<Type *> args;
 	Type *ret;
 	IntrinsicFn intrin;
+	IntrinType intrinty;
 	bool externed;
 
 public:
-	FuncTy(Stmt *def, const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const bool &externed);
-	FuncTy(Stmt *def, const size_t &info, const uint64_t &id, const std::vector<Type *> &args,
-	       Type *ret, IntrinsicFn intrin, const bool &externed);
+	FuncTy(StmtVar *var, const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
+	       const IntrinType &intrinty, const bool &externed);
+	FuncTy(StmtVar *var, const size_t &info, const uint64_t &id,
+	       const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
+	       const IntrinType &intrinty, const bool &externed);
 	~FuncTy();
 
-	Type *clone(Context &c);
+	bool isTemplate();
 	std::string toStr();
-	bool isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
+	Type *clone(Context &c);
+	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 	// specializes a function type using StmtFnCallInfo
-	FuncTy *createCall(Context &c, ErrMgr &e, StmtFnCallInfo *callinfo);
+	FuncTy *createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
+			   const std::vector<Stmt *> &callargs);
 
-	static FuncTy *create(Context &c, Stmt *_def, const std::vector<Type *> &_args, Type *_ret,
-			      IntrinsicFn _intrin, const bool &_externed);
+	static FuncTy *create(Context &c, StmtVar *_var, const std::vector<Type *> &_args,
+			      Type *_ret, IntrinsicFn _intrin, const IntrinType &_intrinty,
+			      const bool &_externed);
 
-	Stmt *&getDef();
+	void setVar(StmtVar *v);
+	void insertArg(const size_t &idx, Type *arg);
+	StmtVar *&getVar();
 	std::vector<Type *> &getArgs();
 	Type *getArg(const size_t &idx);
 	Type *getRet();
 	bool isIntrinsic();
+	bool isIntrinsicParse();
+	bool isIntrinsicValue();
 	const size_t &getTemplates() const;
 	bool isExtern();
-	bool callIntrinsic(Context &c, StmtExpr *stmt, Stmt **source, StmtFnCallInfo *callinfo);
+	IntrinsicFn getIntrinsicFn();
+	IntrinType getIntrinsicType();
+	bool callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
+			   std::vector<Stmt *> &callargs, const IntrinType &currintrin);
 };
 
 class VariadicTy : public Type
@@ -347,9 +379,10 @@ public:
 	VariadicTy(const size_t &info, const uint64_t &id, const std::vector<Type *> &args);
 	~VariadicTy();
 
-	Type *clone(Context &c);
+	bool isTemplate();
 	std::string toStr();
-	bool isCompatible(Type *rhs, ErrMgr &e, ModuleLoc &loc);
+	Type *clone(Context &c);
+	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 
 	static VariadicTy *create(Context &c, const std::vector<Type *> &_args);
 

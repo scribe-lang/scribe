@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 	RAIIParser parser(args);
 	if(!parser.parse(file, true)) return 1;
 	// parser.cleanupParseTrees();
-	// parser.dumpTokens(false);
+	parser.dumpTokens(false);
 	parser.dumpParseTree(false);
 
 	// codegen::CDriver cdriver(parser);

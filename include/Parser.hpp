@@ -17,12 +17,9 @@
 #include <cstddef>
 
 #include "Args.hpp"
-#include "Context.hpp"
 #include "Lex.hpp"
 #include "Parser/Stmts.hpp"
 #include "Passes/Base.hpp"
-// #include "parser/TypeMgr.hpp"
-// #include "parser/ValueMgr.hpp"
 
 namespace sc
 {
@@ -37,18 +34,16 @@ class Module
 	std::string code;
 	std::vector<lex::Lexeme> tokens;
 	Stmt *ptree;
+	bool is_main_module;
 
 public:
 	Module(ErrMgr &err, Context &ctx, const std::string &id, const std::string &path,
-	       const std::string &code);
+	       const std::string &code, const bool &is_main_module);
 	~Module();
 
 	bool tokenize();
 	bool parseTokens();
 	bool executePasses(PassManager &pm);
-	// bool assignType(TypeMgr &types);
-	// performs rearrangement of ptree to make all imports in order
-	void rearrangeParseTree();
 	void cleanupParseTree();
 
 	const std::string &getID() const;
@@ -56,6 +51,7 @@ public:
 	const std::string &getCode() const;
 	const std::vector<lex::Lexeme> &getTokens() const;
 	Stmt *&getParseTree();
+	bool isMainModule() const;
 
 	void dumpTokens() const;
 	void dumpParseTree() const;
@@ -68,8 +64,7 @@ class RAIIParser
 	ErrMgr err;
 	Context ctx;
 
-	// TypeMgr types;
-	// ValueMgr values;
+	PassManager defaultpm;
 
 	// as new sources are imported, they'll be pushed back
 	// the reverse iteration of this list will give the order of imports
@@ -77,7 +72,7 @@ class RAIIParser
 
 	std::unordered_map<std::string, Module *> modules;
 
-	Module *addModule(const std::string &path);
+	Module *addModule(const std::string &path, const bool &main_module);
 
 public:
 	RAIIParser(args::ArgParser &args);
@@ -88,8 +83,8 @@ public:
 	const std::vector<std::string> &getModuleStack();
 
 	bool parse(const std::string &path, const bool &main_module = false);
-	bool executeDefaultPasses();
-	bool executePasses(PassManager &pm);
+	bool executeDefaultPasses(const std::string &path);
+	void combineAllModules();
 	void cleanupParseTrees();
 
 	args::ArgParser &getCommandArgs();

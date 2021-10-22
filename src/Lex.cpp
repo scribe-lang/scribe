@@ -39,9 +39,12 @@ const char *TokStrs[_LAST] = {
 "return",
 "continue",
 "break",
+"void",
 "true",
 "false",
 "nil",
+"any",
+"type",
 "or",
 "static",
 "const",
@@ -189,20 +192,20 @@ const char *Tok::getOperCStr() const
 	case GE: return "__ge__";
 	case NE: return "__ne__";
 	// Bitwise
-	case BAND: return "__bitand__";
-	case BOR: return "__bitor__";
-	case BNOT: return "__bitnot__";
-	case BXOR: return "__bitxor__";
-	case BAND_ASSN: return "__bitand_assn__";
-	case BOR_ASSN: return "__bitor_assn__";
-	case BNOT_ASSN: return "__bitnot_assn__";
-	case BXOR_ASSN: return "__bitxor_assn__";
+	case BAND: return "__band__";
+	case BOR: return "__bor__";
+	case BNOT: return "__bnot__";
+	case BXOR: return "__bxor__";
+	case BAND_ASSN: return "__band_assn__";
+	case BOR_ASSN: return "__bor_assn__";
+	case BNOT_ASSN: return "__bnot_assn__";
+	case BXOR_ASSN: return "__bxor_assn__";
 	// Others
-	case LSHIFT: return "__leftshift__";
-	case RSHIFT: return "__rightshift__";
-	case LSHIFT_ASSN: return "__leftshift_assn__";
-	case RSHIFT_ASSN: return "__rightshift_assn__";
-	case SUBS: return "__subscript__";
+	case LSHIFT: return "__lshift__";
+	case RSHIFT: return "__rshift__";
+	case LSHIFT_ASSN: return "__lshift_assn__";
+	case RSHIFT_ASSN: return "__rshift_assn__";
+	case SUBS: return "__subscr__";
 	default: break;
 	}
 	return "";
@@ -404,9 +407,12 @@ TokType Tokenizer::classify_str(const std::string &str)
 	if(str == TokStrs[RETURN]) return RETURN;
 	if(str == TokStrs[CONTINUE]) return CONTINUE;
 	if(str == TokStrs[BREAK]) return BREAK;
+	if(str == TokStrs[VOID]) return VOID;
 	if(str == TokStrs[TRUE]) return TRUE;
 	if(str == TokStrs[FALSE]) return FALSE;
 	if(str == TokStrs[NIL]) return NIL;
+	if(str == TokStrs[ANY]) return ANY;
+	if(str == TokStrs[TYPE]) return TYPE;
 	if(str == TokStrs[OR]) return OR;
 	if(str == TokStrs[STATIC]) return STATIC;
 	if(str == TokStrs[CONST]) return CONST;

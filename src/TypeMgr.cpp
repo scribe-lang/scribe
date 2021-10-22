@@ -13,9 +13,15 @@
 
 #include "TypeMgr.hpp"
 
+#include "PrimitiveTypeFuncs.hpp"
+
 namespace sc
 {
-bool TypeManager::addVar(const std::string &var, Type *val, Stmt *decl, bool global)
+TypeManager::TypeManager(Context &c)
+{
+	AddPrimitiveFuncs(c, *this);
+}
+bool TypeManager::addVar(const std::string &var, Type *val, StmtVar *decl, bool global)
 {
 	if(global) {
 		if(globals.find(var) != globals.end()) return false;
@@ -26,7 +32,10 @@ bool TypeManager::addVar(const std::string &var, Type *val, Stmt *decl, bool glo
 }
 bool TypeManager::addTypeFn(Type *ty, const std::string &name, FuncTy *fn)
 {
-	const uint64_t &id = ty->getID();
+	return addTypeFn(ty->getID(), name, fn);
+}
+bool TypeManager::addTypeFn(const uint64_t &id, const std::string &name, FuncTy *fn)
+{
 	if(typefuncs.find(id) == typefuncs.end()) {
 		typefuncs[id] = {};
 	}
@@ -37,12 +46,18 @@ bool TypeManager::addTypeFn(Type *ty, const std::string &name, FuncTy *fn)
 }
 bool TypeManager::exists(const std::string &var, bool top_only, bool include_globals)
 {
-	size_t iter = layerlock.size() > 0 ? layerlock.back() : layers.size() - 1;
-	if(top_only) return layers[iter].getTy(var);
-	bool is_done = false;
+	size_t iter   = layers.size() - 1;
+	size_t locked = layerlock.size() > 0 ? layerlock.back() : 0;
+	bool is_done  = false;
 	while(!is_done && iter >= 0) {
 		if(iter == 0) is_done = true;
+		if(locked && iter && iter <= locked) {
+			--iter;
+			if(top_only) return false;
+			continue;
+		}
 		if(layers[iter].exists(var)) return true;
+		if(top_only) return false;
 		--iter;
 	}
 	return include_globals ? globals.find(var) != globals.end() : false;
@@ -58,28 +73,40 @@ bool TypeManager::existsTypeFn(Type *ty, const std::string &name)
 }
 Type *TypeManager::getTy(const std::string &var, bool top_only, bool include_globals)
 {
-	size_t iter = layerlock.size() > 0 ? layerlock.back() : layers.size() - 1;
-	if(top_only) return layers[iter].getTy(var);
-	bool is_done = false;
+	size_t iter   = layers.size() - 1;
+	size_t locked = layerlock.size() > 0 ? layerlock.back() : 0;
+	bool is_done  = false;
 	while(!is_done && iter >= 0) {
 		if(iter == 0) is_done = true;
+		if(locked && iter && iter <= locked) {
+			--iter;
+			if(top_only) return nullptr;
+			continue;
+		}
 		Type *res = layers[iter].getTy(var);
 		if(res) return res;
+		if(top_only) return nullptr;
 		--iter;
 	}
 	auto gres = globals.find(var);
 	if(gres != globals.end()) return gres->second.ty;
 	return nullptr;
 }
-Stmt *TypeManager::getDecl(const std::string &var, bool top_only, bool include_globals)
+StmtVar *TypeManager::getDecl(const std::string &var, bool top_only, bool include_globals)
 {
-	size_t iter = layerlock.size() > 0 ? layerlock.back() : layers.size() - 1;
-	if(top_only) return layers[iter].getDecl(var);
-	bool is_done = false;
+	size_t iter   = layers.size() - 1;
+	size_t locked = layerlock.size() > 0 ? layerlock.back() : 0;
+	bool is_done  = false;
 	while(!is_done && iter >= 0) {
 		if(iter == 0) is_done = true;
-		Stmt *res = layers[iter].getDecl(var);
+		if(locked && iter && iter <= locked) {
+			--iter;
+			if(top_only) return nullptr;
+			continue;
+		}
+		StmtVar *res = layers[iter].getDecl(var);
 		if(res) return res;
+		if(top_only) return nullptr;
 		--iter;
 	}
 	auto gres = globals.find(var);

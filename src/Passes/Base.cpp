@@ -15,8 +15,14 @@
 
 namespace sc
 {
-Pass::Pass(ErrMgr &err, Context &ctx) : err(err), ctx(ctx) {}
-Pass::~Pass() {}
+Pass::Pass(const size_t &passid, ErrMgr &err, Context &ctx) : passid(passid), err(err), ctx(ctx)
+{
+	ctx.addPass(passid, this);
+}
+Pass::~Pass()
+{
+	ctx.remPass(passid);
+}
 
 PassManager::PassManager(ErrMgr &err, Context &ctx) : err(err), ctx(ctx) {}
 PassManager::~PassManager()

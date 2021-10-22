@@ -30,8 +30,9 @@ namespace sc
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Module::Module(ErrMgr &err, Context &ctx, const std::string &id, const std::string &path,
-	       const std::string &code)
-	: err(err), ctx(ctx), id(id), path(path), code(code), tokens(), ptree(nullptr)
+	       const std::string &code, const bool &is_main_module)
+	: err(err), ctx(ctx), id(id), path(path), code(code), tokens(), ptree(nullptr),
+	  is_main_module(is_main_module)
 {}
 Module::~Module()
 {
@@ -53,42 +54,6 @@ bool Module::executePasses(PassManager &pm)
 {
 	return pm.visit(ptree);
 }
-// bool Module::assignType(TypeMgr &types)
-// {
-// 	if(!types.initTypeFuncsCalled()) types.initTypeFuncs();
-// 	if(!ptree->assignType(types)) {
-// 		err::set(ptree, "failed to assign types while parsing");
-// 		err::show(stderr);
-// 		return false;
-// 	}
-// 	return true;
-// }
-// void Module::rearrangeParseTree()
-// {
-// 	if(ptree->stmt_type != BLOCK) {
-// 		return;
-// 	}
-// 	StmtBlock *tree		   = as<StmtBlock>(ptree);
-// 	std::vector<Stmt *> &stmts = tree->stmts;
-// 	std::vector<Stmt *> newstmts;
-// 	bool first_done = false;
-// 	for(auto it = stmts.begin(); it != stmts.end();) {
-// 		if(!*it) {
-// 			if(!first_done) first_done = true;
-// 			it = stmts.erase(it);
-// 			continue;
-// 		}
-// 		if(!first_done) {
-// 			++it;
-// 			continue;
-// 		}
-// 		newstmts.push_back(*it);
-// 		it = stmts.erase(it);
-// 	}
-// 	if(newstmts.empty()) return;
-// 	newstmts.insert(newstmts.end(), stmts.begin(), stmts.end());
-// 	tree->stmts = newstmts;
-// }
 // void Module::cleanupParseTree()
 // {
 // 	cleanup(ptree, &ptree);
@@ -113,6 +78,10 @@ Stmt *&Module::getParseTree()
 {
 	return ptree;
 }
+bool Module::isMainModule() const
+{
+	return is_main_module;
+}
 void Module::dumpTokens() const
 {
 	printf("Source: %s\n", path.c_str());
@@ -130,21 +99,42 @@ void Module::dumpParseTree() const
 ////////////////////////////////////////// RAIIParser /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-RAIIParser::RAIIParser(args::ArgParser &args) : args(args) {}
+RAIIParser::RAIIParser(args::ArgParser &args) : args(args), ctx(this), defaultpm(err, ctx) {}
 RAIIParser::~RAIIParser()
 {
 	for(auto &m : modules) delete m.second;
 }
 
-bool RAIIParser::executeDefaultPasses()
+bool RAIIParser::executeDefaultPasses(const std::string &path)
 {
-	PassManager pm(err, ctx);
-	// setup PM
-	pm.add<TypeAssignPass>();
+	static bool init = false;
+	if(!init) {
+		// setup PM
+		defaultpm.add<TypeAssignPass>();
+		init = true;
+	}
 	// pm.add<CleanupParseTree>();
-	return executePasses(pm);
+	return modules[path]->executePasses(defaultpm);
 }
-Module *RAIIParser::addModule(const std::string &path)
+void RAIIParser::combineAllModules()
+{
+	if(modulestack.size() <= 1) return;
+	Module *mainmod = modules[modulestack.front()];
+	for(auto modit = modulestack.begin() + 1; modit != modulestack.end(); ++modit) {
+		Module *mod		       = modules[*modit];
+		StmtBlock *mainptree	       = as<StmtBlock>(mainmod->getParseTree());
+		StmtBlock *modptree	       = as<StmtBlock>(mod->getParseTree());
+		std::vector<Stmt *> &mainstmts = mainptree->getStmts();
+		std::vector<Stmt *> &modstmts  = modptree->getStmts();
+		mainstmts.insert(mainstmts.begin(), modstmts.begin(), modstmts.end());
+		modstmts.clear();
+	}
+	size_t count = modulestack.size() - 1;
+	while(count--) {
+		modulestack.pop_back();
+	}
+}
+Module *RAIIParser::addModule(const std::string &path, const bool &main_module)
 {
 	auto res = modules.find(path);
 	if(res != modules.end()) return res->second;
@@ -154,7 +144,8 @@ Module *RAIIParser::addModule(const std::string &path)
 		return nullptr;
 	}
 
-	Module *mod = new Module(err, ctx, std::to_string(modulestack.size()), path, code);
+	Module *mod =
+	new Module(err, ctx, std::to_string(modulestack.size()), path, code, main_module);
 	Pointer<Module> mptr(mod);
 
 	modulestack.push_back(path);
@@ -165,8 +156,6 @@ Module *RAIIParser::addModule(const std::string &path)
 		return nullptr;
 	}
 	// mod->rearrangeParseTree();
-
-	if(modulestack.size() > 1) modulestack.pop_back();
 
 	mptr.unset();
 	modules[path] = mod;
@@ -196,19 +185,15 @@ bool RAIIParser::parse(const std::string &path, const bool &main_module)
 	std::string wd = fs::getCWD();
 	fs::setCWD(fs::parentDir(path));
 	size_t src_id = 0;
-	if(!addModule(path)) return false;
+	if(!addModule(path, main_module)) return false;
 	fs::setCWD(wd);
-	if(!main_module) return true;
-	bool res = executeDefaultPasses();
+	// if(!main_module) return true;
+	bool res = executeDefaultPasses(path);
 	if(!res) err.show(stderr);
-	return res;
-}
-bool RAIIParser::executePasses(PassManager &pm)
-{
-	for(auto file = modulestack.rbegin(); file != modulestack.rend(); ++file) {
-		if(!modules[*file]->executePasses(pm)) return false;
+	if(main_module) {
+		combineAllModules();
 	}
-	return true;
+	return res;
 }
 void RAIIParser::cleanupParseTrees()
 {

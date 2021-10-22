@@ -1,0 +1,210 @@
+let io = import('std/io');
+let fmt = import('std/fmt');
+let sys = import('std/sys');
+let vec = import('std/vec');
+
+let getOperCStr = fn(op) {
+	if op == 'assn' { return "__assn__"; }
+	if op == 'add' { return "__add__"; }
+	if op == 'sub' { return "__sub__"; }
+	if op == 'mul' { return "__mul__"; }
+	if op == 'div' { return "__div__"; }
+	if op == 'mod' { return "__mod__"; }
+	if op == 'addassn' { return "__add_assn__"; }
+	if op == 'subassn' { return "__sub_assn__"; }
+	if op == 'mulassn' { return "__mul_assn__"; }
+	if op == 'divassn' { return "__div_assn__"; }
+	if op == 'modassn' { return "__mod_assn__"; }
+	if op == 'xinc' { return "__xinc__"; }
+	if op == 'xdec' { return "__xdec__"; }
+	if op == 'incx' { return "__incx__"; }
+	if op == 'decx' { return "__decx__"; }
+	if op == 'uadd' { return "__uadd__"; }
+	if op == 'usub' { return "__usub__"; }
+	if op == 'logand' { return "__logand__"; }
+	if op == 'logor' { return "__logor__"; }
+	if op == 'lognot' { return "__lognot__"; }
+	if op == 'eq' { return "__eq__"; }
+	if op == 'lt' { return "__lt__"; }
+	if op == 'gt' { return "__gt__"; }
+	if op == 'le' { return "__le__"; }
+	if op == 'ge' { return "__ge__"; }
+	if op == 'ne' { return "__ne__"; }
+	if op == 'band' { return "__band__"; }
+	if op == 'bor' { return "__bor__"; }
+	if op == 'bnot' { return "__bnot__"; }
+	if op == 'bxor' { return "__bxor__"; }
+	if op == 'bandassn' { return "__band_assn__"; }
+	if op == 'borassn' { return "__bor_assn__"; }
+	if op == 'bnotassn' { return "__bnot_assn__"; }
+	if op == 'bxorassn' { return "__bxor_assn__"; }
+	if op == 'lshift' { return "__lshift__"; }
+	if op == 'rshift' { return "__rshift__"; }
+	if op == 'lshiftassn' { return "__lshift_assn__"; }
+	if op == 'rshiftassn' { return "__rshift_assn__"; }
+	if op == 'subs' { return "__subs__"; }
+};
+
+let twoparam_templ = `
+	g = TypeTy::create(c);
+	ADD{tycap}FN("{opname}", createFn(c, \\{g, g}, g, intrinsic_{opn}_{ty}, IVALUE));`;
+let oneparam_templ = `
+	g = TypeTy::create(c);
+	ADD{tycap}FN("{opname}", createFn(c, \\{g}, g, intrinsic_{opn}_{ty}, IVALUE));`;
+let twoparambool_templ = `
+	i1 = IntTy::create(c, 1, true);
+	g = TypeTy::create(c);
+	ADD{tycap}FN("{opname}", createFn(c, \\{g, g}, i1, intrinsic_{opn}_{ty}, IVALUE));`;
+let oneparambool_templ = `
+	i1 = IntTy::create(c, 1, true);
+	g = TypeTy::create(c);
+	ADD{tycap}FN("{opname}", createFn(c, \\{g}, i1, intrinsic_{opn}_{ty}, IVALUE));`;
+
+# int
+{
+	let op = '=';
+	let opn = 'assn';
+	let opname = getOperCStr(opn);
+	let ty = 'int';
+	let tycap = 'INT';
+	io.println(fmt.template(twoparam_templ));
+	io.println();
+}
+# flt
+{
+	let op = '=';
+	let opn = 'assn';
+	let opname = getOperCStr(opn);
+	let ty = 'flt';
+	let tycap = 'FLT';
+	io.println(fmt.template(twoparam_templ));
+	io.println();
+}
+
+let arith_ops = vec.new('+', '-', '*', '/', '%', '&', '|', '^', '<<', '>>');
+let arith_opnames = vec.new(.add, .sub, .mul, .div, .mod, .band, .bor, .bxor, .lshift, .rshift);
+
+# int
+for let i = 0; i < arith_ops.len(); ++i {
+	let op = arith_ops[i];
+	let opn = arith_opnames[i];
+	let opname = getOperCStr(opn);
+	let ty = 'int';
+	let tycap = 'INT';
+	io.println(fmt.template(twoparam_templ));
+	io.println();
+}
+# flt
+for let i = 0; i < arith_ops.len(); ++i {
+	let op = arith_ops[i];
+	if op == '%' { break; } # don't go after '/'
+	let opn = arith_opnames[i];
+	let opname = getOperCStr(opn);
+	let ty = 'flt';
+	let tycap = 'FLT';
+	io.println(fmt.template(twoparam_templ));
+	io.println();
+}
+
+let arithassn_ops = vec.new('+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=');
+let arithassn_opnames = vec.new(.addassn, .subassn, .mulassn, .divassn, .modassn, .bandassn, .borassn, .bxorassn, .lshiftassn, .rshiftassn);
+
+# int
+for let i = 0; i < arithassn_ops.len(); ++i {
+	let op = arithassn_ops[i];
+	let opn = arithassn_opnames[i];
+	let opname = getOperCStr(opn);
+	let ty = 'int';
+	let tycap = 'INT';
+	io.println(fmt.template(twoparam_templ));
+	io.println();
+}
+# flt
+for let i = 0; i < arithassn_ops.len(); ++i {
+	let op = arithassn_ops[i];
+	if op == '%=' { break; } # don't go after '/='
+	let opn = arithassn_opnames[i];
+	let opname = getOperCStr(opn);
+	let ty = 'flt';
+	let tycap = 'FLT';
+	io.println(fmt.template(twoparam_templ));
+	io.println();
+}
+
+let log_ops = vec.new('&&', '||', '==', '<', '>', '<=', '>=', '!=');
+let log_opnames = vec.new(.logand, .logor, .eq, .lt, .gt, .le, .ge, .ne);
+
+# int
+for let i = 0; i < log_ops.len(); ++i {
+	let op = log_ops[i];
+	let opn = log_opnames[i];
+	let opname = getOperCStr(opn);
+	let ty = 'int';
+	let tycap = 'INT';
+	io.println(fmt.template(twoparambool_templ));
+	io.println();
+}
+# flt
+for let i = 0; i < log_ops.len(); ++i {
+	let op = log_ops[i];
+	let opn = log_opnames[i];
+	let opname = getOperCStr(opn);
+	let ty = 'flt';
+	let tycap = 'FLT';
+	io.println(fmt.template(twoparambool_templ));
+	io.println();
+}
+
+let preunary_ops = vec.new('+', '-', '!', '~', '++', '--');
+let preunary_opnames = vec.new(.uadd, .usub, .lognot, .bnot, .incx, .decx);
+
+# int
+for let i = 0; i < preunary_ops.len(); ++i {
+	let op = preunary_ops[i];
+	let opn = preunary_opnames[i];
+	let opname = getOperCStr(opn);
+	let ty = 'int';
+	let tycap = 'INT';
+	if op == '!' {
+		io.println(fmt.template(oneparambool_templ));
+	} else {
+		io.println(fmt.template(oneparam_templ));
+	}
+	io.println();
+}
+# flt
+for let i = 0; i < preunary_ops.len(); ++i {
+	let op = preunary_ops[i];
+	if op == '~' { break; } # don't go after '!'
+	let opn = preunary_opnames[i];
+	let opname = getOperCStr(opn);
+	let ty = 'flt';
+	let tycap = 'FLT';
+	if op == '!' {
+		io.println(fmt.template(oneparambool_templ));
+	} else {
+		io.println(fmt.template(oneparam_templ));
+	}
+	io.println();
+}
+
+let postunary_templ = `INTRINSIC({opname}_{ty})
+\\{
+	stmt->setVal(Create{tycap}Val(Get{tycap}Val(0){op}));
+	return true;
+}
+`;
+
+let postunary_ops = vec.new('++', '--');
+let postunary_opnames = vec.new(.xinc, .xdec);
+
+# int
+for let i = 0; i < postunary_ops.len(); ++i {
+	let op = postunary_ops[i];
+	let opn = postunary_opnames[i];
+	let opname = getOperCStr(opn);
+	let ty = 'int';
+	let tycap = 'INT';
+	io.println(fmt.template(oneparam_templ));
+	io.println();
+}

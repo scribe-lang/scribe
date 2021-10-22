@@ -23,14 +23,14 @@ namespace sc
 struct TypeDecl
 {
 	Type *ty;
-	Stmt *decl;
+	StmtVar *decl;
 };
 class Layer
 {
 	std::unordered_map<std::string, TypeDecl> items;
 
 public:
-	inline bool add(const std::string &name, Type *val, Stmt *decl)
+	inline bool add(const std::string &name, Type *val, StmtVar *decl)
 	{
 		if(exists(name)) return false;
 		items[name] = {val, decl};
@@ -44,7 +44,7 @@ public:
 	{
 		return items.find(name) == items.end() ? nullptr : items[name].ty;
 	}
-	inline Stmt *getDecl(const std::string &name)
+	inline StmtVar *getDecl(const std::string &name)
 	{
 		return items.find(name) == items.end() ? nullptr : items[name].decl;
 	}
@@ -59,8 +59,10 @@ class TypeManager
 	std::vector<Layer> layers;
 	std::unordered_map<uint64_t, std::unordered_map<std::string, FuncTy *>> typefuncs;
 	std::vector<size_t> layerlock;
+	std::vector<FuncTy *> funcstack;
 
 public:
+	TypeManager(Context &c);
 	inline void pushLayer()
 	{
 		layers.emplace_back();
@@ -69,11 +71,27 @@ public:
 	{
 		layers.pop_back();
 	}
+	inline void pushFunc(FuncTy *fn)
+	{
+		funcstack.push_back(fn);
+	}
+	inline void popFunc()
+	{
+		funcstack.pop_back();
+	}
+	inline FuncTy *getTopFunc()
+	{
+		return funcstack.back();
+	}
+	inline bool hasFunc()
+	{
+		return !funcstack.empty();
+	}
 	inline size_t getCurrentLayerIndex()
 	{
 		return layers.size() - 1;
 	}
-	inline void lockLayerAfter(const size_t &idx)
+	inline void lockScopeBelow(const size_t &idx)
 	{
 		layerlock.push_back(idx);
 	}
@@ -81,12 +99,13 @@ public:
 	{
 		layerlock.pop_back();
 	}
-	bool addVar(const std::string &var, Type *val, Stmt *decl, bool global = false);
+	bool addVar(const std::string &var, Type *val, StmtVar *decl, bool global = false);
 	bool addTypeFn(Type *ty, const std::string &name, FuncTy *fn);
+	bool addTypeFn(const uint64_t &id, const std::string &name, FuncTy *fn);
 	bool exists(const std::string &var, bool top_only, bool include_globals);
 	bool existsTypeFn(Type *ty, const std::string &name);
 	Type *getTy(const std::string &var, bool top_only, bool include_globals);
-	Stmt *getDecl(const std::string &var, bool top_only, bool include_globals);
+	StmtVar *getDecl(const std::string &var, bool top_only, bool include_globals);
 	FuncTy *getTypeFn(Type *ty, const std::string &name);
 };
 } // namespace sc
