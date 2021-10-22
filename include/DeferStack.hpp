@@ -1,6 +1,8 @@
 /*
 	MIT License
+
 	Copyright (c) 2021 Scribe Language Repositories
+
 	Permission is hereby granted, free of charge, to any person obtaining a
 	copy of this software and associated documentation files (the "Software"), to
 	deal in the Software without restriction, including without limitation the
@@ -9,15 +11,34 @@
 	furnished to do so.
 */
 
-#ifndef INTRINSICS_HPP
-#define INTRINSICS_HPP
+#ifndef DEFER_STACK_HPP
+#define DEFER_STACK_HPP
 
-#include "Types.hpp"
+#include <string> // for size_t
+#include <unordered_map>
+#include <vector>
+
+#include "Parser/Stmts.hpp"
 
 namespace sc
 {
-#include "Intrinsics/Core.def"
-#include "Intrinsics/Primitive.def"
+class DeferStack
+{
+	std::vector<std::vector<Stmt *>> stack;
+
+public:
+	~DeferStack();
+	inline void pushFrame()
+	{
+		stack.push_back({});
+	}
+	inline void addStmt(Stmt *s)
+	{
+		stack.back().push_back(s);
+	}
+	void popFrame();
+	std::vector<Stmt *> getAllStmts();
+};
 } // namespace sc
 
-#endif // INTRINSICS_HPP
+#endif // DEFER_STACK_HPP

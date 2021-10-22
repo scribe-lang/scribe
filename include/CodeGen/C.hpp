@@ -11,32 +11,18 @@
 	furnished to do so.
 */
 
-#ifndef PASSES_TYPE_ASSIGN_HPP
-#define PASSES_TYPE_ASSIGN_HPP
+#ifndef CODEGEN_C_HPP
+#define CODEGEN_C_HPP
 
 #include "Passes/Base.hpp"
-#include "Passes/ValueAssign.hpp"
-#include "TypeMgr.hpp"
 
 namespace sc
 {
-class TypeAssignPass : public Pass
+class CCodeGenPass : public Pass
 {
-	TypeManager tmgr;
-	ValueAssignPass vpass;
-	std::vector<StmtVar *> specfns; // specialized funcs
-	bool disabled_varname_mangling;
-
-	std::string getMangledName(Stmt *stmt, const std::string &name,
-				   ImportTy *import = nullptr) const;
-	void applyPrimitiveTypeCoercion(Type *to, Stmt *from);
-	void applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex::Lexeme &oper);
-	bool chooseSuperiorPrimitiveType(Type *l, Type *r);
-	bool initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<Stmt *> &args);
-
 public:
-	TypeAssignPass(ErrMgr &err, Context &ctx);
-	~TypeAssignPass();
+	CCodeGenPass(ErrMgr &err, Context &ctx);
+	~CCodeGenPass();
 
 	bool visit(Stmt *stmt, Stmt **source);
 
@@ -65,4 +51,4 @@ public:
 };
 } // namespace sc
 
-#endif // PASSES_TYPE_ASSIGN_HPP
+#endif // CODEGEN_C_HPP

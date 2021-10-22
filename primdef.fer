@@ -1,0 +1,162 @@
+let io = import('std/io');
+let fmt = import('std/fmt');
+let sys = import('std/sys');
+let vec = import('std/vec');
+
+let arith_assn_only_templ = `INTRINSIC({opname}_{ty})
+\\{
+	args[0]->setVal(Create{tycap}Val(Get{tycap}Val(1)));
+	stmt->setVal(Create{tycap}Val(Get{tycap}Val(0)));
+	return true;
+}`;
+
+# int
+{
+	let op = '=';
+	let opname = 'assn';
+	let ty = 'int';
+	let tycap = 'Int';
+	io.println(fmt.template(arith_assn_only_templ));
+	io.println();
+}
+# flt
+{
+	let op = '=';
+	let opname = 'assn';
+	let ty = 'flt';
+	let tycap = 'Flt';
+	io.println(fmt.template(arith_assn_only_templ));
+	io.println();
+}
+
+let arith_templ = `INTRINSIC({opname}_{ty})
+\\{
+	stmt->setVal(Create{tycap}Val(Get{tycap}Val(0) {op} Get{tycap}Val(1)));
+	return true;
+}`;
+
+let arith_ops = vec.new('+', '-', '*', '/', '%', '&', '|', '^', '<<', '>>');
+let arith_opnames = vec.new(.add, .sub, .mul, .div, .mod, .band, .bor, .bxor, .lshift, .rshift);
+
+# int
+for let i = 0; i < arith_ops.len(); ++i {
+	let op = arith_ops[i];
+	let opname = arith_opnames[i];
+	let ty = 'int';
+	let tycap = 'Int';
+	io.println(fmt.template(arith_templ));
+	io.println();
+}
+# flt
+for let i = 0; i < arith_ops.len(); ++i {
+	let op = arith_ops[i];
+	if op == '%' { break; } # don't go after '/'
+	let opname = arith_opnames[i];
+	let ty = 'flt';
+	let tycap = 'Flt';
+	io.println(fmt.template(arith_templ));
+	io.println();
+}
+
+let arithassn_templ = `INTRINSIC({opname}_{ty})
+\\{
+	Get{tycap}Val(0) {op} Get{tycap}Val(1);
+	stmt->setVal(Create{tycap}Val(Get{tycap}Val(0)));
+	return true;
+}
+`;
+
+let arithassn_ops = vec.new('+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=');
+let arithassn_opnames = vec.new(.addassn, .subassn, .mulassn, .divassn, .modassn, .bandassn, .borassn, .bxorassn, .lshiftassn, .rshiftassn);
+
+# int
+for let i = 0; i < arithassn_ops.len(); ++i {
+	let op = arithassn_ops[i];
+	let opname = arithassn_opnames[i];
+	let ty = 'int';
+	let tycap = 'Int';
+	io.println(fmt.template(arithassn_templ));
+	io.println();
+}
+# flt
+for let i = 0; i < arithassn_ops.len(); ++i {
+	let op = arithassn_ops[i];
+	if op == '%=' { break; } # don't go after '/='
+	let opname = arithassn_opnames[i];
+	let ty = 'flt';
+	let tycap = 'Flt';
+	io.println(fmt.template(arithassn_templ));
+	io.println();
+}
+
+let log_ops = vec.new('&&', '||', '==', '<', '>', '<=', '>=', '!=');
+let log_opnames = vec.new(.logand, .logor, .eq, .lt, .gt, .le, .ge, .ne);
+
+# int
+for let i = 0; i < log_ops.len(); ++i {
+	let op = log_ops[i];
+	let opname = log_opnames[i];
+	let ty = 'int';
+	let tycap = 'Int';
+	io.println(fmt.template(arith_templ));
+	io.println();
+}
+# flt
+for let i = 0; i < log_ops.len(); ++i {
+	let op = log_ops[i];
+	let opname = log_opnames[i];
+	let ty = 'flt';
+	let tycap = 'Flt';
+	io.println(fmt.template(arith_templ));
+	io.println();
+}
+
+let preunary_templ = `INTRINSIC({opname}_{ty})
+\\{
+	stmt->setVal(Create{tycap}Val({op}Get{tycap}Val(0)));
+	return true;
+}
+`;
+
+let preunary_ops = vec.new('+', '-', '!', '~', '++', '--');
+let preunary_opnames = vec.new(.uadd, .usub, .lognot, .bnot, .incx, .decx);
+
+# int
+for let i = 0; i < preunary_ops.len(); ++i {
+	let op = preunary_ops[i];
+	let opname = preunary_opnames[i];
+	let ty = 'int';
+	let tycap = 'Int';
+	io.println(fmt.template(preunary_templ));
+	io.println();
+}
+# flt
+for let i = 0; i < preunary_ops.len(); ++i {
+	let op = preunary_ops[i];
+	if op == '~' { break; } # don't go after '!'
+	let opname = preunary_opnames[i];
+	let ty = 'flt';
+	let tycap = 'Flt';
+	io.println(fmt.template(preunary_templ));
+	io.println();
+}
+
+let postunary_templ = `INTRINSIC({opname}_{ty})
+\\{
+	stmt->setVal(Create{tycap}Val(Get{tycap}Val(0){op}));
+	return true;
+}
+`;
+
+let postunary_ops = vec.new('++', '--');
+let postunary_opnames = vec.new(.xinc, .xdec);
+
+# int
+for let i = 0; i < postunary_ops.len(); ++i {
+	let op = postunary_ops[i];
+	let opname = postunary_opnames[i];
+	let ty = 'int';
+	let tycap = 'Int';
+	io.println(fmt.template(postunary_templ));
+	io.println();
+}

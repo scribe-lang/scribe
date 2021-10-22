@@ -13,8 +13,6 @@
 
 #include "Parser/Stmts.hpp"
 
-// #include "parser/Type.hpp"
-// #include "parser/ValueMgr.hpp"
 #include "TreeIO.hpp"
 
 namespace sc
@@ -24,19 +22,10 @@ namespace sc
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc &loc)
-	: stype(stmt_type), loc(loc), parent(nullptr), type(nullptr), cast_from(nullptr),
-	  value(nullptr), is_value_perma(false), is_comptime(false)
+	: stype(stmt_type), loc(loc), type(nullptr), cast_from(nullptr), value(nullptr),
+	  is_value_perma(false)
 {}
 Stmt::~Stmt() {}
-Stmt *Stmt::getParentWithType(const Stmts &ty, Stmt **childofparent)
-{
-	Stmt *res = this;
-	while(res && res->stype != ty) {
-		if(childofparent) *childofparent = res;
-		res = res->parent;
-	}
-	return res;
-}
 
 const char *Stmt::getStmtTypeCString() const
 {
@@ -71,7 +60,8 @@ std::string Stmt::getTypeString() const
 {
 	if(!type) return "";
 	std::string res = " :: " + type->toStr();
-	if(cast_from) res = cast_from->toStr() + " -> " + res;
+	if(cast_from) res += " <- " + cast_from->toStr();
+	if(value) res += " ==> " + value->toStr();
 	return res;
 }
 
@@ -90,7 +80,7 @@ StmtBlock::~StmtBlock()
 	}
 }
 
-void StmtBlock::StmtBlock::disp(const bool &has_next) const
+void StmtBlock::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Block [top = %s]:\n", is_top ? "yes" : "no");
@@ -106,17 +96,23 @@ void StmtBlock::StmtBlock::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtBlock::requiresTemplateInit()
+{
+	for(auto &s : stmts) {
+		if(s->requiresTemplateInit()) return true;
+	}
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtType /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtType::StmtType(const ModuleLoc &loc, const size_t &ptr, const size_t &info,
-		   const std::vector<Stmt *> &array_counts, Stmt *expr)
-	: Stmt(TYPE, loc), ptr(ptr), info(info), array_counts(array_counts), expr(expr)
+StmtType::StmtType(const ModuleLoc &loc, const size_t &ptr, const size_t &info, Stmt *expr)
+	: Stmt(TYPE, loc), ptr(ptr), info(info), expr(expr)
 {}
 StmtType::~StmtType()
 {
-	for(auto &ac : array_counts) delete ac;
 	if(expr) delete expr;
 }
 
@@ -129,23 +125,21 @@ void StmtType::disp(const bool &has_next) const
 	if(info & VOLATILE) tname += "volatile ";
 	if(info & VARIADIC) tname = "..." + tname;
 	if(!tname.empty()) {
-		tio::taba(!array_counts.empty() || has_next);
-		tio::print(!array_counts.empty() || has_next || expr, "Type info: %s%s\n",
-			   tname.c_str(), getTypeString().c_str());
-		tio::tabr();
-	}
-	if(array_counts.size() > 0) {
 		tio::taba(has_next);
-		tio::print(has_next, "Array Counts:\n");
-		for(size_t i = 0; i < array_counts.size(); ++i) {
-			array_counts[i]->disp(i != array_counts.size() - 1);
-		}
+		tio::print(has_next || expr, "Type info: %s%s\n", tname.c_str(),
+			   getTypeString().c_str());
 		tio::tabr();
 	}
 	tio::taba(has_next);
 	tio::print(has_next, "Type Expr:\n");
 	expr->disp(false);
 	tio::tabr();
+}
+
+bool StmtType::requiresTemplateInit()
+{
+	if(info & VARIADIC) return true;
+	return expr->requiresTemplateInit();
 }
 
 bool StmtType::hasModifier(const size_t &tim) const
@@ -170,17 +164,24 @@ std::string StmtType::getStringName()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtSimple::StmtSimple(const ModuleLoc &loc, const lex::Lexeme &val)
-	: Stmt(SIMPLE, loc), val(val), applied_module_id(false)
+	: Stmt(SIMPLE, loc), decl(nullptr), val(val), self(nullptr), applied_module_id(false)
 {}
+
+StmtSimple::~StmtSimple() {}
 
 void StmtSimple::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Simple: %s%s\n", val.str(0).c_str(), getTypeString().c_str());
+	tio::print(has_next, "Simple [decl = %s] [self = %s]: %s%s\n", decl ? "yes" : "no",
+		   self ? "yes" : "no", val.str(0).c_str(), getTypeString().c_str());
 	tio::tabr();
 }
 
-StmtSimple::~StmtSimple() {}
+bool StmtSimple::requiresTemplateInit()
+{
+	if(val.getTok().getVal() == lex::ANY || val.getTok().getVal() == lex::TYPE) return true;
+	return decl ? decl->requiresTemplateInit() : false;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////// StmtFnCallInfo ///////////////////////////////////////////
@@ -209,6 +210,14 @@ void StmtFnCallInfo::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtFnCallInfo::requiresTemplateInit()
+{
+	for(auto &a : args) {
+		if(a->requiresTemplateInit()) return true;
+	}
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtExpr /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -216,7 +225,7 @@ void StmtFnCallInfo::disp(const bool &has_next) const
 StmtExpr::StmtExpr(const ModuleLoc &loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
 		   Stmt *rhs, const bool &is_intrinsic_call)
 	: Stmt(EXPR, loc), commas(commas), lhs(lhs), oper(oper), rhs(rhs), or_blk(nullptr),
-	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call)
+	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call), calledfn(nullptr)
 {}
 StmtExpr::~StmtExpr()
 {
@@ -258,34 +267,36 @@ void StmtExpr::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtExpr::requiresTemplateInit()
+{
+	if(lhs && lhs->requiresTemplateInit()) return true;
+	if(rhs && rhs->requiresTemplateInit()) return true;
+	if(or_blk && or_blk->requiresTemplateInit()) return true;
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtVar //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *in, StmtType *vtype,
-		 Stmt *vval, const bool &is_comptime, const bool &is_global)
-	: Stmt(VAR, loc), name(name), in(in), vtype(vtype), vval(vval), is_comptime(is_comptime),
-	  is_global(is_global)
+StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
+		 const bool &is_in, const bool &is_comptime, const bool &is_global)
+	: Stmt(VAR, loc), name(name), is_in(is_in), vtype(vtype), vval(vval),
+	  is_comptime(is_comptime), is_global(is_global), applied_module_id(false),
+	  is_temp_vval(false)
 {}
 StmtVar::~StmtVar()
 {
-	if(in) delete in;
 	if(vtype) delete vtype;
-	if(vval) delete vval;
+	if(vval && !is_temp_vval) delete vval;
 }
 
 void StmtVar::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Variable [comptime = %s] [global = %s]: %s%s\n",
-		   is_comptime ? "yes" : "no", is_global ? "yes" : "no", name.getDataStr().c_str(),
-		   getTypeString().c_str());
-	if(in) {
-		tio::taba(vtype || vval);
-		tio::print(vtype || vval, "In:\n");
-		in->disp(false);
-		tio::tabr();
-	}
+	tio::print(has_next, "Variable [in = %s] [comptime = %s] [global = %s]: %s%s\n",
+		   is_in ? "yes" : "no", is_comptime ? "yes" : "no", is_global ? "yes" : "no",
+		   name.getDataStr().c_str(), getTypeString().c_str());
 	if(vtype) {
 		tio::taba(vval);
 		tio::print(vval, "Type:\n");
@@ -301,14 +312,21 @@ void StmtVar::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtVar::requiresTemplateInit()
+{
+	if(vtype && vtype->requiresTemplateInit()) return true;
+	if(vval && vval->requiresTemplateInit()) return true;
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtFnSig ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtFnSig::StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtType *rettype,
-		     const bool &has_variadic, const bool &is_member)
-	: Stmt(FNSIG, loc), args(args), rettype(rettype), has_variadic(has_variadic),
-	  is_member(is_member)
+		     const size_t &scope, const bool &has_variadic)
+	: Stmt(FNSIG, loc), args(args), rettype(rettype), scope(scope), has_template(false),
+	  has_variadic(has_variadic)
 {}
 StmtFnSig::~StmtFnSig()
 {
@@ -319,8 +337,8 @@ StmtFnSig::~StmtFnSig()
 void StmtFnSig::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Function signature [variadic = %s, member = %s]%s\n",
-		   has_variadic ? "yes" : "no", is_member ? "yes" : "no", getTypeString().c_str());
+	tio::print(has_next, "Function signature [variadic = %s]%s\n", has_variadic ? "yes" : "no",
+		   getTypeString().c_str());
 	if(args.size() > 0) {
 		tio::taba(rettype);
 		tio::print(rettype, "Parameters:\n");
@@ -338,12 +356,35 @@ void StmtFnSig::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtFnSig::requiresTemplateInit()
+{
+	if(hasTemplate() || has_variadic) return true;
+	for(auto &a : args) {
+		if(a->getType() && a->getType()->isTemplate()) return true;
+		if(a->isComptime()) return true;
+	}
+	if(rettype->getType() && rettype->getType()->isTemplate()) return true;
+	return false;
+}
+
+bool StmtFnSig::hasTemplate()
+{
+	if(has_template) return true;
+	for(auto &a : args) {
+		if(!a->getType()->isTemplate()) continue;
+		has_template = true;
+		break;
+	}
+	if(rettype->getType()->isTemplate()) has_template = true;
+	return has_template;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtFnDef ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtFnDef::StmtFnDef(const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk)
-	: Stmt(FNDEF, loc), sig(sig), blk(blk)
+	: Stmt(FNDEF, loc), sig(sig), blk(blk), parentvar(nullptr)
 {}
 StmtFnDef::~StmtFnDef()
 {
@@ -354,7 +395,8 @@ StmtFnDef::~StmtFnDef()
 void StmtFnDef::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Function definition%s\n", getTypeString().c_str());
+	tio::print(has_next, "Function definition [has parent: %s]%s\n", parentvar ? "yes" : "no",
+		   getTypeString().c_str());
 	tio::taba(true);
 	tio::print(true, "Function Signature:\n");
 	sig->disp(false);
@@ -364,6 +406,13 @@ void StmtFnDef::disp(const bool &has_next) const
 	tio::print(false, "Function Block:\n");
 	blk->disp(false);
 	tio::tabr(2);
+}
+
+bool StmtFnDef::requiresTemplateInit()
+{
+	if(sig->requiresTemplateInit()) return true;
+	if(blk && blk->requiresTemplateInit()) return true;
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -390,6 +439,11 @@ void StmtHeader::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtHeader::requiresTemplateInit()
+{
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtLib //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -403,6 +457,11 @@ void StmtLib::disp(const bool &has_next) const
 	tio::taba(false);
 	tio::print(false, "Flags: %s\n", flags.getDataStr().c_str());
 	tio::tabr(2);
+}
+
+bool StmtLib::requiresTemplateInit()
+{
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -447,6 +506,11 @@ void StmtExtern::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtExtern::requiresTemplateInit()
+{
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////// StmtEnum //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -466,6 +530,11 @@ void StmtEnum::disp(const bool &has_next) const
 		tio::tabr();
 	}
 	tio::tabr();
+}
+
+bool StmtEnum::requiresTemplateInit()
+{
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -497,6 +566,14 @@ void StmtStruct::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtStruct::requiresTemplateInit()
+{
+	for(auto &f : fields) {
+		if(f->requiresTemplateInit() || f->isComptime()) return true;
+	}
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////// StmtVarDecl /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -517,6 +594,14 @@ void StmtVarDecl::disp(const bool &has_next) const
 		decls[i]->disp(i != decls.size() - 1);
 	}
 	tio::tabr();
+}
+
+bool StmtVarDecl::requiresTemplateInit()
+{
+	for(auto &v : decls) {
+		if(v->requiresTemplateInit()) return true;
+	}
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -559,6 +644,16 @@ void StmtCond::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtCond::requiresTemplateInit()
+{
+	if(is_inline) return true;
+	for(auto &c : conds) {
+		if(c.getCond() && c.getCond()->requiresTemplateInit()) return true;
+		if(c.getBlk() && c.getBlk()->requiresTemplateInit()) return true;
+	}
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////// StmtForIn //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -584,6 +679,13 @@ void StmtForIn::disp(const bool &has_next) const
 	tio::print(false, "Block:\n");
 	blk->disp(false);
 	tio::tabr(2);
+}
+
+bool StmtForIn::requiresTemplateInit()
+{
+	if(in->requiresTemplateInit()) return true;
+	if(blk && blk->requiresTemplateInit()) return true;
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -633,6 +735,13 @@ void StmtFor::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtFor::requiresTemplateInit()
+{
+	if(is_inline) return true;
+	if(blk && blk->requiresTemplateInit()) return true;
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtWhile ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -660,6 +769,12 @@ void StmtWhile::disp(const bool &has_next) const
 	tio::tabr(2);
 }
 
+bool StmtWhile::requiresTemplateInit()
+{
+	if(blk && blk->requiresTemplateInit()) return true;
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtRet //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -683,6 +798,11 @@ void StmtRet::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtRet::requiresTemplateInit()
+{
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////// StmtContinue ///////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -694,6 +814,11 @@ void StmtContinue::disp(const bool &has_next) const
 	tio::taba(has_next);
 	tio::print(has_next, "Continue\n");
 	tio::tabr();
+}
+
+bool StmtContinue::requiresTemplateInit()
+{
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -709,8 +834,13 @@ void StmtBreak::disp(const bool &has_next) const
 	tio::tabr();
 }
 
+bool StmtBreak::requiresTemplateInit()
+{
+	return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////// StmtRet //////////////////////////////////////////////
+//////////////////////////////////////////// StmtDefer ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtDefer::StmtDefer(const ModuleLoc &loc, Stmt *val) : Stmt(DEFER, loc), val(val) {}
@@ -730,6 +860,12 @@ void StmtDefer::disp(const bool &has_next) const
 		tio::tabr();
 	}
 	tio::tabr();
+}
+
+bool StmtDefer::requiresTemplateInit()
+{
+	if(val->requiresTemplateInit()) return true;
+	return false;
 }
 
 } // namespace sc

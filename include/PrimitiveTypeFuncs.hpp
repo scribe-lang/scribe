@@ -15,14 +15,12 @@
 #include <string>
 #include <unordered_map>
 
+#include "Intrinsics.hpp"
 #include "TypeMgr.hpp"
 
 namespace sc
 {
-namespace parser
-{
-void add_primitive_integer_funcs(TypeManager &tmgr);
-} // namespace parser
+void AddPrimitiveFuncs(Context &c, TypeManager &tmgr);
 } // namespace sc
 
 #endif // PRIMITIVE_TYPE_FUNCS_HPP

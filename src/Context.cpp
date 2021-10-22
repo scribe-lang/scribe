@@ -13,13 +13,32 @@
 
 #include "Context.hpp"
 
+#include "Passes/Base.hpp"
 #include "Types.hpp"
+#include "Values.hpp"
 
 namespace sc
 {
-Context::Context() {}
+Context::Context(RAIIParser *parser) : parser(parser) {}
 Context::~Context()
 {
 	for(auto &t : typemem) delete t;
+	for(auto &v : valmem) delete v;
+}
+
+void Context::addPass(const size_t &id, Pass *pass)
+{
+	passes[id] = pass;
+}
+void Context::remPass(const size_t &id)
+{
+	auto loc = passes.find(id);
+	if(loc != passes.end()) passes.erase(loc);
+}
+Pass *Context::getPass(const size_t &id)
+{
+	auto loc = passes.find(id);
+	if(loc != passes.end()) return loc->second;
+	return nullptr;
 }
 } // namespace sc

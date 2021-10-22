@@ -115,9 +115,8 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 {
 	type = nullptr;
 
-	size_t ptr  = 0;
-	size_t info = 0;
-	std::vector<Stmt *> array_counts;
+	size_t ptr    = 0;
+	size_t info   = 0;
 	Stmt *count   = nullptr;
 	Stmt *expr    = nullptr;
 	bool dot_turn = false; // to ensure type name is in the form <name><dot><name>...
@@ -125,24 +124,8 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 	lex::Lexeme &start = p.peak();
 
 	if(p.accept(lex::COMPTIME, lex::FN)) {
-		while(p.acceptn(lex::LBRACK)) {
-			Stmt *ac = nullptr;
-			if(!parse_expr_11(p, ac)) {
-				err.set(p.peak(), "expected array count expression, found: %s",
-					p.peak().getTok().cStr());
-				goto fail;
-			}
-			array_counts.insert(array_counts.begin(), ac);
-			if(!p.acceptn(lex::RBRACK)) {
-				err.set(p.peak(),
-					"expected right bracket for end of array count expression, "
-					"found: %s",
-					p.peak().getTok().cStr());
-				goto fail;
-			}
-		}
 		if(!parse_fnsig(p, expr)) goto fail;
-		type = new StmtType(start.getLoc(), 0, 0, array_counts, expr);
+		type = new StmtType(start.getLoc(), 0, 0, expr);
 		return true;
 	}
 
@@ -155,33 +138,14 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 	if(p.acceptn(lex::CONST)) info |= TypeInfoMask::CONST;
 	if(p.acceptn(lex::VOLATILE)) info |= TypeInfoMask::VOLATILE;
 
-	// array count
-	while(p.acceptn(lex::LBRACK)) {
-		Stmt *ac = nullptr;
-		if(!parse_expr_11(p, ac)) {
-			err.set(p.peak(), "expected array count expression, found: %s",
-				p.peak().getTok().cStr());
-			goto fail;
-		}
-		array_counts.insert(array_counts.begin(), ac);
-		if(!p.acceptn(lex::RBRACK)) {
-			err.set(p.peak(),
-				"expected right bracket for end of array count expression, "
-				"found: %s",
-				p.peak().getTok().cStr());
-			goto fail;
-		}
-	}
-
 	if(!parse_expr_01(p, expr)) {
 		err.set(p.peak(), "failed to parse type expression");
 		goto fail;
 	}
 
-	type = new StmtType(start.getLoc(), ptr, info, array_counts, expr);
+	type = new StmtType(start.getLoc(), ptr, info, expr);
 	return true;
 fail:
-	for(auto &ac : array_counts) delete ac;
 	if(count) delete count;
 	if(expr) delete expr;
 	return false;
@@ -361,7 +325,8 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr)
 
 	while(p.accept(lex::ADD_ASSN, lex::SUB_ASSN, lex::MUL_ASSN) ||
 	      p.accept(lex::DIV_ASSN, lex::MOD_ASSN, lex::LSHIFT_ASSN) ||
-	      p.accept(lex::RSHIFT_ASSN, lex::BAND_ASSN, lex::BOR_ASSN) || p.accept(lex::BNOT_ASSN))
+	      p.accept(lex::RSHIFT_ASSN, lex::BAND_ASSN, lex::BOR_ASSN) ||
+	      p.accept(lex::BNOT_ASSN, lex::BXOR_ASSN))
 	{
 		oper = p.peak();
 		p.next();
@@ -902,7 +867,7 @@ begin_brack:
 		}
 	post_args:
 		rhs  = new StmtFnCallInfo(oper.getLoc(), args);
-		lhs  = new StmtExpr(oper.getLoc(), 0, lhs, oper, rhs, true);
+		lhs  = new StmtExpr(oper.getLoc(), 0, lhs, oper, rhs, is_intrinsic);
 		rhs  = nullptr;
 		args = {};
 
@@ -1032,10 +997,14 @@ done:
 			err.set(name, "only functions can be created using let-in statements");
 			goto fail;
 		}
+		lex::Lexeme selfeme(in->getLoc(), lex::IDEN, "self");
+		in->addTypeInfoMask(REF);
+		StmtVar *selfvar =
+		new StmtVar(in->getLoc(), selfeme, in, nullptr, false, false, false);
 		StmtFnSig *valsig = as<StmtFnDef>(val)->getSig();
-		valsig->setMember(true);
+		valsig->getArgs().insert(valsig->getArgs().begin(), selfvar);
 	}
-	var = new StmtVar(name.getLoc(), name, in, type, val, comptime, global);
+	var = new StmtVar(name.getLoc(), name, type, val, in, comptime, global);
 	return true;
 fail:
 	if(in) delete in;
@@ -1084,7 +1053,7 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 		if(var->getVType()->hasModifier(VARIADIC)) {
 			found_va = true;
 		}
-		if(var->getName().getDataStr() == "any" && !found_va) {
+		if(var->getName().getTok().getVal() == lex::ANY && !found_va) {
 			err.set(start, "type 'any' can be only used for variadic functions");
 			goto fail;
 		}
@@ -1109,12 +1078,12 @@ post_args:
 		goto fail;
 	}
 	if(!rettype) {
-		lex::Lexeme voideme = lex::Lexeme(p.peak(-1).getLoc(), lex::IDEN, "void");
+		lex::Lexeme voideme = lex::Lexeme(p.peak(-1).getLoc(), lex::VOID, "void");
 		StmtSimple *voidsim = new StmtSimple(voideme.getLoc(), voideme);
-		rettype		    = new StmtType(voidsim->getLoc(), 0, 0, {}, voidsim);
+		rettype		    = new StmtType(voidsim->getLoc(), 0, 0, voidsim);
 	}
 
-	fsig = new StmtFnSig(start.getLoc(), args, rettype, found_va, false);
+	fsig = new StmtFnSig(start.getLoc(), args, rettype, 0, found_va);
 	return true;
 fail:
 	if(var) delete var;
@@ -1342,10 +1311,17 @@ bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
 		return false;
 	}
 
-	while(p.accept(lex::IDEN, lex::COMPTIME)) {
-		bool comptime = p.accept(lex::COMPTIME);
-		Occurs in     = comptime ? Occurs::NO : Occurs::MAYBE;
-		Occurs val    = comptime ? Occurs::YES : Occurs::MAYBE;
+	while(p.accept(lex::IDEN, lex::COMPTIME, lex::GLOBAL)) {
+		bool global   = false;
+		bool comptime = false;
+		while(p.accept(lex::COMPTIME, lex::GLOBAL)) {
+			if(p.acceptn(lex::COMPTIME)) comptime = true;
+			if(p.acceptn(lex::GLOBAL)) global = true;
+		}
+		if(global) p.setPos(p.getPos() - 1);
+		if(comptime) p.setPos(p.getPos() - 1);
+		Occurs in  = comptime || global ? Occurs::NO : Occurs::MAYBE;
+		Occurs val = comptime ? Occurs::YES : Occurs::MAYBE;
 		if(!parse_var(p, decl, in, Occurs::MAYBE, val)) goto fail;
 		decls.push_back(decl);
 		decl = nullptr;

@@ -25,6 +25,7 @@ namespace sc
 {
 enum Values
 {
+	VVOID,
 	VINT,
 	VFLT,
 	VVEC,
@@ -39,6 +40,9 @@ public:
 	Value(const Values &type);
 	virtual ~Value();
 
+	virtual std::string toStr()	 = 0;
+	virtual Value *clone(Context &c) = 0;
+
 	inline Values getType() const
 	{
 		return type;
@@ -50,6 +54,17 @@ template<typename T> T *as(Value *v)
 	return static_cast<T *>(v);
 }
 
+class VoidVal : public Value
+{
+public:
+	VoidVal();
+
+	std::string toStr();
+	Value *clone(Context &c);
+
+	static VoidVal *create(Context &c);
+};
+
 class IntVal : public Value
 {
 	int64_t data;
@@ -57,9 +72,12 @@ class IntVal : public Value
 public:
 	IntVal(const int64_t &data);
 
+	std::string toStr();
+	Value *clone(Context &c);
+
 	static IntVal *create(Context &c, const int64_t &val);
 
-	inline const int64_t &getVal() const
+	inline int64_t &getVal()
 	{
 		return data;
 	}
@@ -72,9 +90,12 @@ class FltVal : public Value
 public:
 	FltVal(const long double &data);
 
+	std::string toStr();
+	Value *clone(Context &c);
+
 	static FltVal *create(Context &c, const long double &val);
 
-	inline const long double &getVal() const
+	inline long double &getVal()
 	{
 		return data;
 	}
@@ -87,13 +108,17 @@ class VecVal : public Value
 public:
 	VecVal(const std::vector<Value *> &data);
 
+	std::string toStr();
+	Value *clone(Context &c);
+
 	static VecVal *create(Context &c, const std::vector<Value *> &val);
 	static VecVal *createStr(Context &c, const std::string &val);
 
-	inline const std::vector<Value *> &getVal() const
+	inline std::vector<Value *> &getVal()
 	{
 		return data;
 	}
+	std::string getAsString();
 };
 
 class StructVal : public Value
@@ -103,14 +128,17 @@ class StructVal : public Value
 public:
 	StructVal(const std::unordered_map<std::string, Value *> &data);
 
+	std::string toStr();
+	Value *clone(Context &c);
+
 	static StructVal *create(Context &c, const std::unordered_map<std::string, Value *> &val);
 
-	inline const std::unordered_map<std::string, Value *> &getVal() const
+	inline std::unordered_map<std::string, Value *> &getVal()
 	{
 		return data;
 	}
 
-	inline const Value *getValAttr(const std::string &key)
+	inline Value *getValAttr(const std::string &key)
 	{
 		return data[key];
 	}

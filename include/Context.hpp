@@ -14,19 +14,25 @@
 #ifndef CONTEXT_HPP
 #define CONTEXT_HPP
 
+#include <string> // for size_t
+#include <unordered_map>
 #include <vector>
 
 namespace sc
 {
 class Type;
 class Value;
+class Pass;
+class RAIIParser;
 class Context
 {
 	std::vector<Type *> typemem;
 	std::vector<Value *> valmem;
+	std::unordered_map<size_t, Pass *> passes;
+	RAIIParser *parser;
 
 public:
-	Context();
+	Context(RAIIParser *parser);
 	~Context();
 
 	template<typename T, typename... Args> T *allocType(Args... args)
@@ -40,6 +46,20 @@ public:
 		T *res = new T(args...);
 		valmem.push_back(res);
 		return res;
+	}
+
+	void addPass(const size_t &id, Pass *pass);
+	void remPass(const size_t &id);
+	Pass *getPass(const size_t &id);
+	template<typename T>
+	typename std::enable_if<std::is_base_of<Pass, T>::value, T *>::type getPass()
+	{
+		return static_cast<T *>(getPass(T::template genPassID<T>()));
+	}
+
+	inline RAIIParser *getParser()
+	{
+		return parser;
 	}
 };
 } // namespace sc
