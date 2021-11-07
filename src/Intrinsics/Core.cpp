@@ -76,35 +76,6 @@ INTRINSIC(isprimitive)
 	stmt->setVal(IntVal::create(c, args[0]->getType()->isPrimitive()));
 	return true;
 }
-INTRINSIC(createity)
-{
-	const int64_t &a0 = as<IntVal>(args[0]->getValue())->getVal();
-	const int64_t &a1 = as<IntVal>(args[1]->getValue())->getVal();
-
-	if(currintrin == IPARSE) goto stage_parse;
-	if(currintrin == IVALUE) goto stage_value;
-
-stage_parse:
-	stmt->setType(IntTy::create(c, a0, a1));
-	return true;
-stage_value:
-	stmt->setVal(VecVal::createStr(c, (a1 ? "i" : "u") + std::to_string(a0)));
-	return true;
-}
-INTRINSIC(createfty)
-{
-	const int64_t &a0 = as<IntVal>(args[0]->getValue())->getVal();
-
-	if(currintrin == IPARSE) goto stage_parse;
-	if(currintrin == IVALUE) goto stage_value;
-
-stage_parse:
-	stmt->setType(FltTy::create(c, a0));
-	return true;
-stage_value:
-	stmt->setVal(VecVal::createStr(c, "f" + std::to_string(a0)));
-	return true;
-}
 INTRINSIC(as)
 {
 	stmt->setType(args[1]->getType());

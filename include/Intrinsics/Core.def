@@ -1,8 +1,6 @@
 INTRINSIC(import);
 INTRINSIC(ismainsrc);
 INTRINSIC(isprimitive);
-INTRINSIC(createity);
-INTRINSIC(createfty);
 INTRINSIC(as);
 INTRINSIC(szof);
 INTRINSIC(valen);

@@ -15,7 +15,7 @@
 #include <stdexcept>
 
 #include "Args.hpp"
-// #include "codegen/c/Driver.hpp"
+#include "CodeGen/C.hpp"
 #include "Config.hpp"
 #include "Error.hpp"
 #include "FS.hpp"
@@ -60,12 +60,16 @@ int main(int argc, char **argv)
 
 	RAIIParser parser(args);
 	if(!parser.parse(file, true)) return 1;
-	// parser.cleanupParseTrees();
 	parser.dumpTokens(false);
 	parser.dumpParseTree(false);
+	if(args.has("nofile")) return 0;
 
-	// codegen::CDriver cdriver(parser);
-	// if(!cdriver.genIR()) return 1;
-	// cdriver.dumpIR(false);
+	CDriver cdriver(parser);
+	std::string outfile = args.get(2);
+	if(outfile.empty()) {
+		fprintf(stderr, "Error: no output file provided\n");
+		return 1;
+	}
+	if(!cdriver.compile(args.get(2), args.has("ir"))) return 1;
 	return 0;
 }

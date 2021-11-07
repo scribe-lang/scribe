@@ -1,6 +1,3 @@
-let global i32 = @createIntType(32, true);
-let global i64 = @createIntType(64, true);
-
 let comptime arr = @array(i32, 5, 5);
 
 let comptime p = arr[2][1];

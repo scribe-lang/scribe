@@ -1,5 +1,3 @@
-let global i32 = @createIntType(32, true);
-
 let f = fn(p: i32): i32 {
 	let sum = 0;
 	inline for let i = 1; i <= p; ++i {

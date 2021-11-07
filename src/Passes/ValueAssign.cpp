@@ -98,6 +98,17 @@ bool ValueAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		stmt->setVal(decl->getValue());
 		break;
 	}
+	case lex::I1:  // fallthrough
+	case lex::I8:  // fallthrough
+	case lex::I16: // fallthrough
+	case lex::I32: // fallthrough
+	case lex::I64: // fallthrough
+	case lex::U8:  // fallthrough
+	case lex::U16: // fallthrough
+	case lex::U32: // fallthrough
+	case lex::U64: stmt->setVal(IntVal::create(ctx, 0)); break;
+	case lex::F32: // fallthrough
+	case lex::F64: stmt->setVal(FltVal::create(ctx, 0)); break;
 	default: {
 		err.set(stmt, "cannot assign value - unknown simple type");
 		return false;
@@ -175,6 +186,7 @@ skip_rhs_val:
 					err.set(stmt, "failed to call value intrinsic");
 					return false;
 				}
+				if(stmt->getValue()) stmt->setPermaVal(stmt->getValue());
 				return true;
 			}
 			if(!fn->getVar()) {
@@ -196,7 +208,10 @@ skip_rhs_val:
 					variadicvalues.push_back(callargs[j]->getValue());
 					continue;
 				}
-				def->getSigArgs()[i]->setVal(callargs[j]->getValue());
+				Value *aval = callargs[j]->getValue();
+				if(!def->getSigArgs()[i]->getType()->hasRef())
+					aval = aval->clone(ctx);
+				def->getSigArgs()[i]->setVal(aval);
 			}
 			if(!variadicvalues.empty()) {
 				defargs.back()->setVal(VecVal::create(ctx, variadicvalues));
@@ -205,7 +220,8 @@ skip_rhs_val:
 				err.set(stmt, "failed to determine value from function definition");
 				return false;
 			}
-			stmt->setVal(def->getValue());
+			stmt->setPermaVal(def->getValue());
+			def->clearValue();
 		} else if(lhs->getType()->isStruct()) {
 			StructTy *st = as<StructTy>(lhs->getType());
 			std::unordered_map<std::string, Value *> stvals;
@@ -218,6 +234,12 @@ skip_rhs_val:
 			}
 			stmt->setVal(StructVal::create(ctx, stvals));
 		}
+		break;
+	}
+	// address of
+	case lex::UAND: // fallthrough
+	// dereference
+	case lex::UMUL: {
 		break;
 	}
 	case lex::SUBS: {
@@ -241,12 +263,6 @@ skip_rhs_val:
 			break;
 		}
 		goto applyoperfn;
-	}
-	// address of
-	case lex::UAND: // fallthrough
-	// dereference
-	case lex::UMUL: {
-		break;
 	}
 	case lex::ASSN: {
 		goto applyoperfn;
@@ -323,7 +339,8 @@ skip_rhs_val:
 			err.set(stmt, "failed to determine value from function definition");
 			return false;
 		}
-		stmt->setVal(def->getValue());
+		stmt->setPermaVal(def->getValue());
+		def->clearValue();
 		break;
 	}
 	default: err.set(stmt->getOper(), "nonexistent operator"); return false;

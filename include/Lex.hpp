@@ -51,6 +51,17 @@ enum TokType
 	NIL,
 	ANY,  // type: any
 	TYPE, // type: type
+	I1,
+	I8,
+	I16,
+	I32,
+	I64,
+	U8,
+	U16,
+	U32,
+	U64,
+	F32,
+	F64,
 	OR,
 	STATIC,
 	CONST,
@@ -164,7 +175,9 @@ public:
 	{
 		return val == INT || val == FLT || val == CHAR || val == STR || val == IDEN ||
 		       val == VOID || val == TRUE || val == FALSE || val == NIL || val == ANY ||
-		       val == TYPE;
+		       val == TYPE || val == I1 || val == I8 || val == I16 || val == I32 ||
+		       val == I64 || val == U8 || val == U16 || val == U32 || val == U64 ||
+		       val == F32 || val == F64;
 	}
 
 	inline bool isOper() const
@@ -175,7 +188,7 @@ public:
 	inline bool isUnaryPre() const
 	{
 		return val == UADD || val == USUB || val == UAND || val == UMUL || val == INCX ||
-		       val == DECX;
+		       val == DECX || val == LNOT || val == BNOT;
 	}
 
 	inline bool isUnaryPost() const

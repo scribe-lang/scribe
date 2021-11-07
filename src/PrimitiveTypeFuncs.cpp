@@ -47,16 +47,6 @@ void AddPrimitiveFuncs(Context &c, TypeManager &tmgr)
 	g  = TypeTy::create(c);
 	ADDFN("isPrimitive", createFn(c, {g}, i1, intrinsic_isprimitive, IPARSE));
 
-	g   = TypeTy::create(c);
-	i32 = IntTy::create(c, 32, true);
-	i32->setComptime();
-	ADDFN("createIntType", createFn(c, {i32, i32}, g, intrinsic_createity, IALL));
-
-	g   = TypeTy::create(c);
-	i32 = IntTy::create(c, 32, true);
-	i32->setComptime();
-	ADDFN("createFltType", createFn(c, {i32}, g, intrinsic_createfty, IALL));
-
 	g  = TypeTy::create(c);
 	g2 = TypeTy::create(c);
 	ADDFN("as", createFn(c, {g, g2}, g, intrinsic_as, IPARSE));

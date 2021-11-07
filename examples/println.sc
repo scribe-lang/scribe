@@ -9,7 +9,7 @@ let strlen = fn(data: *const i8): i32 {
 
 // a variadic function is guaranteed to be specialized
 let println = fn(args: ...any): i32 {
-	let comptime len = @len(args);
+	let comptime len = @valen(args);
 	let res = 0;
 	inline for let comptime i = 0; i < len; ++i {
 		inline if @baseTypeName(args[i]) == "i1" {
@@ -20,7 +20,7 @@ let println = fn(args: ...any): i32 {
 			res += printFlt(args[i]);
 		} elif @baseTypeName(args[i]) == "*i8" { // does not care about const, static, ...
 			res += puts(args[i]);
-		} elif @isPtr(args[i]) && if @isPrimitive(*args[i]) {
+		} elif @isPtr(args[i]) && @isPrimitive(*args[i]) {
 			res += puts(@fullTypeName(args[i]));
 		} else {
 			let str = args[i].toStr();
