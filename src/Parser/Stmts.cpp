@@ -232,7 +232,7 @@ bool StmtFnCallInfo::requiresTemplateInit()
 StmtExpr::StmtExpr(const ModuleLoc &loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
 		   Stmt *rhs, const bool &is_intrinsic_call)
 	: Stmt(EXPR, loc), commas(commas), lhs(lhs), oper(oper), rhs(rhs), or_blk(nullptr),
-	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call), calledfn(nullptr)
+	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call), calledfn(nullptr), variadic_idx(0)
 {}
 StmtExpr::~StmtExpr() {}
 StmtExpr *StmtExpr::create(Context &c, const ModuleLoc &loc, const size_t &commas, Stmt *lhs,
@@ -289,8 +289,7 @@ bool StmtExpr::requiresTemplateInit()
 StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
 		 const bool &is_in, const bool &is_comptime, const bool &is_global)
 	: Stmt(VAR, loc), name(name), is_in(is_in), vtype(vtype), vval(vval),
-	  is_comptime(is_comptime), is_global(is_global), applied_module_id(false),
-	  is_temp_vval(false)
+	  is_comptime(is_comptime), is_global(is_global), applied_module_id(false)
 {}
 StmtVar::~StmtVar() {}
 StmtVar *StmtVar::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype,
@@ -334,8 +333,8 @@ bool StmtVar::requiresTemplateInit()
 
 StmtFnSig::StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtType *rettype,
 		     const size_t &scope, const bool &has_variadic)
-	: Stmt(FNSIG, loc), args(args), rettype(rettype), scope(scope), has_template(false),
-	  has_variadic(has_variadic)
+	: Stmt(FNSIG, loc), args(args), rettype(rettype), scope(scope), disable_template(false),
+	  has_template(false), has_variadic(has_variadic)
 {}
 StmtFnSig::~StmtFnSig() {}
 StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc &loc, std::vector<StmtVar *> &args,
@@ -374,6 +373,7 @@ bool StmtFnSig::requiresTemplateInit()
 		if(a->isComptime()) return true;
 	}
 	if(rettype->getType() && rettype->getType()->isTemplate()) return true;
+	disable_template = true;
 	return false;
 }
 

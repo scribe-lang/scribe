@@ -142,14 +142,80 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 	case lex::TRUE:	 // fallthrough
 	case lex::FALSE: // fallthrough
 	case lex::NIL: stmt->setType(IntTy::create(ctx, 1, true)); break;
-	case lex::INT: stmt->setType(IntTy::create(ctx, 32, 1)); break;
+	case lex::CHAR: stmt->setType(IntTy::create(ctx, 8, true)); break;
+	case lex::INT: stmt->setType(IntTy::create(ctx, 32, true)); break;
 	case lex::FLT: stmt->setType(FltTy::create(ctx, 32)); break;
-	case lex::CHAR: stmt->setType(IntTy::create(ctx, 8, 1)); break;
 	case lex::STR: {
 		Type *ty = IntTy::create(ctx, 8, 1);
 		ty->setConst();
 		ty = PtrTy::create(ctx, ty, stmt->getLexValue().getDataStr().size());
 		stmt->setType(ty);
+		break;
+	}
+	case lex::I1: {
+		TypeTy *t = TypeTy::create(ctx);
+		t->setContainedTy(IntTy::create(ctx, 1, true));
+		stmt->setType(t, true);
+		break;
+	}
+	case lex::I8: {
+		TypeTy *t = TypeTy::create(ctx);
+		t->setContainedTy(IntTy::create(ctx, 8, true));
+		stmt->setType(t, true);
+		break;
+	}
+	case lex::I16: {
+		TypeTy *t = TypeTy::create(ctx);
+		t->setContainedTy(IntTy::create(ctx, 16, true));
+		stmt->setType(t, true);
+		break;
+	}
+	case lex::I32: {
+		TypeTy *t = TypeTy::create(ctx);
+		t->setContainedTy(IntTy::create(ctx, 32, true));
+		stmt->setType(t, true);
+		break;
+	}
+	case lex::I64: {
+		TypeTy *t = TypeTy::create(ctx);
+		t->setContainedTy(IntTy::create(ctx, 64, true));
+		stmt->setType(t, true);
+		break;
+	}
+	case lex::U8: {
+		TypeTy *t = TypeTy::create(ctx);
+		t->setContainedTy(IntTy::create(ctx, 8, false));
+		stmt->setType(t, true);
+		break;
+	}
+	case lex::U16: {
+		TypeTy *t = TypeTy::create(ctx);
+		t->setContainedTy(IntTy::create(ctx, 16, false));
+		stmt->setType(t, true);
+		break;
+	}
+	case lex::U32: {
+		TypeTy *t = TypeTy::create(ctx);
+		t->setContainedTy(IntTy::create(ctx, 32, false));
+		stmt->setType(t, true);
+		break;
+	}
+	case lex::U64: {
+		TypeTy *t = TypeTy::create(ctx);
+		t->setContainedTy(IntTy::create(ctx, 64, false));
+		stmt->setType(t, true);
+		break;
+	}
+	case lex::F32: {
+		TypeTy *t = TypeTy::create(ctx);
+		t->setContainedTy(FltTy::create(ctx, 32));
+		stmt->setType(t, true);
+		break;
+	}
+	case lex::F64: {
+		TypeTy *t = TypeTy::create(ctx);
+		t->setContainedTy(FltTy::create(ctx, 64));
+		stmt->setType(t, true);
 		break;
 	}
 	case lex::IDEN: {
@@ -282,6 +348,9 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			}
 			lhs->setType(fn);
 			stmt->setType(fn->getRet());
+			if(stmt->getType()->isTypeTy()) {
+				stmt->setType(as<TypeTy>(stmt->getType())->getContainedTy());
+			}
 			size_t fnarglen	  = fn->getArgs().size();
 			size_t callarglen = args.size();
 			for(size_t i = 0, j = 0, k = 0; i < fnarglen && j < callarglen; ++i, ++j) {
@@ -310,6 +379,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 					return false;
 				}
 				stmt->setCalledFnTy(fn);
+				break;
 			} else if(fn->isIntrinsic()) {
 				err.set(stmt, "function is intrinsic - required '@' before call");
 				return false;
@@ -341,6 +411,21 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		}
 		break;
 	}
+	// address of
+	case lex::UAND: {
+		stmt->setType(PtrTy::create(ctx, lhs->getType(), 0));
+		break;
+	}
+	// dereference
+	case lex::UMUL: {
+		if(!lhs->getType()->isPtr()) {
+			err.set(stmt, "cannot dereference non pointer type: %s",
+				lhs->getType()->toStr().c_str());
+			return false;
+		}
+		stmt->setType(as<PtrTy>(lhs->getType())->getTo());
+		break;
+	}
 	case lex::SUBS: {
 		if(lhs->getType()->isVariadic()) {
 			if(lhs->getStmtType() != SIMPLE) {
@@ -369,6 +454,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				return false;
 			}
 			stmt->setType(va->getArg(iv->getVal()));
+			stmt->setVariadicIndex(iv->getVal());
 			break;
 		} else if(lhs->getType()->isPtr()) {
 			if(!rhs->getType()->isIntegral()) {
@@ -379,21 +465,6 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			break;
 		}
 		goto applyoperfn;
-	}
-	// address of
-	case lex::UAND: {
-		stmt->setType(PtrTy::create(ctx, lhs->getType(), 0));
-		break;
-	}
-	// dereference
-	case lex::UMUL: {
-		if(!lhs->getType()->isPtr()) {
-			err.set(stmt, "cannot dereference non pointer type: %s",
-				lhs->getType()->toStr().c_str());
-			return false;
-		}
-		stmt->setType(as<PtrTy>(lhs->getType())->getTo());
-		break;
 	}
 	case lex::ASSN: {
 		Stmt *store = lhs;
@@ -462,6 +533,9 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			return false;
 		}
 		stmt->setType(fn->getRet());
+		if(stmt->getType()->isTypeTy()) {
+			stmt->setType(as<TypeTy>(stmt->getType())->getContainedTy());
+		}
 
 		for(size_t i = 0; i < args.size(); ++i) {
 			Type *coerced_to = fn->getArg(i);
@@ -628,7 +702,7 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 		return false;
 	}
 	if(stmt->getLibs() && !visit(stmt->getLibs(), asStmt(&stmt->getLibs()))) {
-		err.set(stmt, "failed to assign header type");
+		err.set(stmt, "failed to assign lib type");
 		return false;
 	}
 	stmt->setType(stmt->getSig()->getType());
@@ -711,8 +785,8 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 			err.set(stmt, "failed to determine types in inline conditional block");
 			return false;
 		}
-		Stmt *res = b;
-		*source	  = res;
+		*source = b;
+		(*source)->clearValue();
 		return true;
 	}
 	// reached here && conditional is inline = delete the entire conditional
@@ -805,6 +879,7 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 		err.set(*source, "failed to determine type of inlined for-loop block");
 		return false;
 	}
+	(*source)->clearValue();
 	return true;
 }
 bool TypeAssignPass::visit(StmtWhile *stmt, Stmt **source)
@@ -836,7 +911,13 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 			fnretty->toStr().c_str(), valtype->toStr().c_str());
 		return false;
 	}
-	stmt->setType(valtype);
+	// TODO:
+	// mergeTemplatesOf must be a non-member function as, except TypeTy,
+	// the hierarchy of both arguments MUST be same
+	// all types have their own values - possibly ints
+	// make types values!
+	// mergeTemplatesOf(fnretty, valtype);
+	stmt->setType(fnretty);
 	stmt->setFnBlk(as<StmtFnDef>(fn->getVar()->getVVal())->getBlk());
 	return true;
 }
@@ -941,6 +1022,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 	cfdef		  = as<StmtFnDef>(cfvar->getVVal());
 	StmtFnSig *&cfsig = cfdef->getSig();
 	StmtBlock *&cfblk = cfdef->getBlk();
+	cfsig->disableTemplates();
 	cfsig->setVariadic(false);
 	if(!cfblk) {
 		err.set(caller, "function definition for specialization has no block");
@@ -954,8 +1036,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 
 	for(size_t i = 0; i < cf->getArgs().size(); ++i) {
 		StmtVar *cfa = cfsig->getArgs()[i];
-		cfa->setTempVVal(args[i]);
-		Type *cft = cf->getArg(i);
+		Type *cft    = cf->getArg(i);
 		cfa->setType(cft, true);
 		tmgr.addVar(cfa->getName().getDataStr(), cft, cfa);
 	}

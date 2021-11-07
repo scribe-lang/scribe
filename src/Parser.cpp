@@ -17,9 +17,9 @@
 
 #include "Error.hpp"
 #include "FS.hpp"
-// #include "parser/Cleanup.hpp"
 #include "Parser/Parse.hpp"
 #include "Parser/ParseHelper.hpp"
+#include "Passes/Simplify.hpp"
 #include "Passes/TypeAssign.hpp"
 #include "Utils.hpp"
 
@@ -43,7 +43,7 @@ bool Module::tokenize()
 bool Module::parseTokens()
 {
 	ParseHelper p(this, tokens);
-	Parsing parsing(ctx, err);
+	Parsing parsing(err, ctx);
 	return parsing.parse_block(p, (StmtBlock *&)ptree, false);
 }
 bool Module::executePasses(PassManager &pm)
@@ -103,6 +103,7 @@ bool RAIIParser::executeDefaultPasses(const std::string &path)
 	if(!init) {
 		// setup PM
 		defaultpm.add<TypeAssignPass>();
+		defaultpm.add<SimplifyPass>();
 		init = true;
 	}
 	// pm.add<CleanupParseTree>();
@@ -152,20 +153,6 @@ Module *RAIIParser::addModule(const std::string &path, const bool &main_module)
 	modules[path] = mod;
 	return mod;
 }
-bool RAIIParser::hasModule(const std::string &path)
-{
-	return modules.find(path) != modules.end();
-}
-Module *RAIIParser::getModule(const std::string &path)
-{
-	auto res = modules.find(path);
-	if(res != modules.end()) return res->second;
-	return nullptr;
-}
-const std::vector<std::string> &RAIIParser::getModuleStack()
-{
-	return modulestack;
-}
 bool RAIIParser::parse(const std::string &path, const bool &main_module)
 {
 	if(hasModule(path)) {
@@ -185,9 +172,31 @@ bool RAIIParser::parse(const std::string &path, const bool &main_module)
 	}
 	return res;
 }
+bool RAIIParser::hasModule(const std::string &path)
+{
+	return modules.find(path) != modules.end();
+}
+Module *RAIIParser::getModule(const std::string &path)
+{
+	auto res = modules.find(path);
+	if(res != modules.end()) return res->second;
+	return nullptr;
+}
+const std::vector<std::string> &RAIIParser::getModuleStack()
+{
+	return modulestack;
+}
 args::ArgParser &RAIIParser::getCommandArgs()
 {
 	return args;
+}
+ErrMgr &RAIIParser::getErrMgr()
+{
+	return err;
+}
+Context &RAIIParser::getContext()
+{
+	return ctx;
 }
 void RAIIParser::dumpTokens(const bool &force)
 {

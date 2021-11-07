@@ -65,6 +65,7 @@ public:
 
 	virtual void disp(const bool &has_next) const = 0;
 	virtual Stmt *clone(Context &ctx)	      = 0;
+	virtual void clearValue()		      = 0;
 	virtual bool requiresTemplateInit()	      = 0;
 
 	const char *getStmtTypeCString() const;
@@ -90,10 +91,6 @@ public:
 
 	inline void setType(Type *t, const bool &as_is = false)
 	{
-		if(t && !as_is && t->isTypeTy() && as<TypeTy>(t)->getContainedTy()) {
-			type = as<TypeTy>(t)->getContainedTy();
-			return;
-		}
 		type = t;
 	}
 	inline void castTo(Type *t)
@@ -124,6 +121,10 @@ public:
 	{
 		return value;
 	}
+	inline bool hasCast() const
+	{
+		return cast_from;
+	}
 };
 
 template<typename T> T *as(Stmt *data)
@@ -149,6 +150,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline std::vector<Stmt *> &getStmts()
@@ -176,6 +178,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline void addTypeInfoMask(const size_t &mask)
@@ -226,6 +229,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline void setDecl(StmtVar *d)
@@ -274,6 +278,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline std::vector<Stmt *> &getArgs()
@@ -296,6 +301,7 @@ class StmtExpr : public Stmt
 	lex::Lexeme or_blk_var;
 	bool is_intrinsic_call;
 	FuncTy *calledfn;
+	size_t variadic_idx;
 
 public:
 	StmtExpr(const ModuleLoc &loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
@@ -307,6 +313,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline void setCommas(const size_t &c)
@@ -321,6 +328,10 @@ public:
 	inline void setCalledFnTy(FuncTy *calledty)
 	{
 		calledfn = calledty;
+	}
+	inline void setVariadicIndex(const size_t &idx)
+	{
+		variadic_idx = idx;
 	}
 
 	inline const size_t &getCommas() const
@@ -355,6 +366,10 @@ public:
 	{
 		return calledfn;
 	}
+	inline const size_t &getVariadicIndex()
+	{
+		return variadic_idx;
+	}
 };
 
 class StmtVar : public Stmt
@@ -366,7 +381,6 @@ class StmtVar : public Stmt
 	bool is_comptime;
 	bool is_global;
 	bool applied_module_id;
-	bool is_temp_vval; // vval is temp, therefore don't delete it in destructor
 
 public:
 	StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
@@ -379,12 +393,12 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
-	inline void setTempVVal(Stmt *val)
+	inline void setVVal(Stmt *val)
 	{
-		vval	     = val;
-		is_temp_vval = true;
+		vval = val;
 	}
 
 	inline lex::Lexeme &getName()
@@ -426,7 +440,8 @@ class StmtFnSig : public Stmt
 	// StmtVar contains only type here, no val
 	std::vector<StmtVar *> args;
 	StmtType *rettype;
-	size_t scope; // for locking scopes during type assign
+	size_t scope;	       // for locking scopes during type assign
+	bool disable_template; // this function is in use, contains no template
 	bool has_template;
 	bool has_variadic;
 
@@ -439,6 +454,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline void insertArg(const size_t &pos, StmtVar *arg)
@@ -448,6 +464,10 @@ public:
 	inline void setScope(const size_t &s)
 	{
 		scope = s;
+	}
+	inline void disableTemplates()
+	{
+		disable_template = true;
 	}
 	inline void setVariadic(const bool &va)
 	{
@@ -465,6 +485,10 @@ public:
 	inline const size_t &getScope() const
 	{
 		return scope;
+	}
+	inline bool hasTemplatesDisabled()
+	{
+		return disable_template;
 	}
 	inline bool hasVariadic() const
 	{
@@ -487,6 +511,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline void setParentVar(StmtVar *pvar)
@@ -533,6 +558,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline const lex::Lexeme &getNames() const
@@ -556,6 +582,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline const lex::Lexeme &getFlags() const
@@ -581,6 +608,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline const lex::Lexeme &getFnName() const
@@ -629,6 +657,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline const std::vector<lex::Lexeme> &getItems() const
@@ -651,6 +680,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline std::vector<StmtVar *> &getFields()
@@ -672,6 +702,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline std::vector<StmtVar *> &getDecls()
@@ -727,6 +758,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline std::vector<Conditional> &getConditionals()
@@ -753,6 +785,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline const lex::Lexeme &getIter() const
@@ -787,6 +820,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline Stmt *&getInit()
@@ -823,6 +857,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline Stmt *&getCond()
@@ -847,6 +882,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline void setFnBlk(StmtBlock *blk)
@@ -872,6 +908,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 };
 
@@ -883,6 +920,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 };
 
@@ -897,6 +935,7 @@ public:
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
+	void clearValue();
 	bool requiresTemplateInit();
 
 	inline Stmt *&getVal()

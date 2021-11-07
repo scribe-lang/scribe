@@ -1,6 +1,3 @@
-let global i32 = @createIntType(32, true);
-let global i64 = @createIntType(64, true);
-
 let add = fn(data: ...i32): i32 {
 	let len = @valen(data);
 	let res = 0;

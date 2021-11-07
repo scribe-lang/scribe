@@ -1,9 +1,0 @@
-let comptime global i1 = @createIntType(1 /* number of bits */, true /* signed */);
-let comptime global i8 = @createIntType(8, true);
-let comptime global i16 = @createIntType(16, true);
-let comptime global i32 = @createIntType(32, true);
-let comptime global i64 = @createIntType(64, true);
-let comptime global u8 = @createIntType(8, false);
-let comptime global u16 = @createIntType(16, false);
-let comptime global u32 = @createIntType(32, false);
-let comptime global u64 = @createIntType(64, false);

@@ -15,7 +15,7 @@
 
 namespace sc
 {
-std::vector<std::string> StringDelim(const std::string &str, const std::string &delim)
+std::vector<std::string> stringDelim(const std::string &str, const std::string &delim)
 {
 	std::vector<std::string> res;
 
@@ -36,7 +36,7 @@ std::vector<std::string> StringDelim(const std::string &str, const std::string &
 	return res;
 }
 
-std::string GetRawString(const std::string &data)
+std::string getRawString(const std::string &data)
 {
 	std::string res;
 	for(auto &e : data) {

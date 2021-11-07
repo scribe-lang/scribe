@@ -1,6 +1,3 @@
-let global i32 = @createIntType(32, true);
-let global i64 = @createIntType(64, true);
-
 let st = struct {
 	T: type;
 	data: *T;

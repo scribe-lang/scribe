@@ -1,11 +1,7 @@
-let global i1 = @createIntType(1, true);
-let global i32 = @createIntType(32, true);
-let global u64 = @createIntType(64, false);
-
 let deinit in i32 = fn(): void {};
 
 let Vec = struct {
-	comptime T: type; // kinda like annotation - not visible in code generation (maybe?)
+	T: type; // kinda like annotation - not visible in code generation (maybe?)
 	cap: u64;
 	len: u64;
 	data: *T;
@@ -13,7 +9,7 @@ let Vec = struct {
 };
 
 // a function with a comptime argument is guaranteed to be specialized
-let new = fn(comptime T: type, managed: i1): Vec {
+let new = fn(T: type, managed: i1): Vec {
 	return Vec(T, nil, 0, 0, managed);
 };
 

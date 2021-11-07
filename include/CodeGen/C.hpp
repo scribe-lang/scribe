@@ -14,40 +14,73 @@
 #ifndef CODEGEN_C_HPP
 #define CODEGEN_C_HPP
 
-#include "Passes/Base.hpp"
+#include "Base.hpp"
+#include "Writer.hpp"
 
 namespace sc
 {
-class CCodeGenPass : public Pass
+class CDriver : public CodeGenDriver
 {
+	std::vector<std::string> headerflags;
+	std::vector<std::string> libflags;
+	std::vector<std::string> headers;
+	std::vector<std::string> macros;
+	std::vector<std::string> typedefs;
+	std::vector<std::string> structdecls;
+	std::vector<std::string> funcdecls;
+	struct ConstantInfo
+	{
+		// var: names of const declarations
+		// decl: C code equivalent
+		std::string var;
+		std::string decl;
+	};
+	// constants: key is the constant data
+	std::unordered_map<std::string, ConstantInfo> constants;
+
+	const std::string &getConstantDataVar(const lex::Lexeme &val);
+	std::string getNewConstantVar();
+	static bool acceptsSemicolon(Stmt *stmt);
+	bool trySetMainFunction(StmtVar *var, const std::string &varname, Writer &writer);
+	std::string getCTypeName(Stmt *stmt, Type *ty, bool arr_as_ptr);
+	std::string getCValue(Stmt *stmt, Value *value, Type *type);
+	void addStructDef(Stmt *stmt, StructTy *sty);
+
+	inline std::string getMangledName(const std::string &name, Stmt *stmt)
+	{
+		return name + std::to_string(stmt->getType()->getID());
+	}
+
 public:
-	CCodeGenPass(ErrMgr &err, Context &ctx);
-	~CCodeGenPass();
+	CDriver(RAIIParser &parser);
+	~CDriver();
 
-	bool visit(Stmt *stmt, Stmt **source);
+	bool compile(const std::string &outfile, const bool &ir_only);
 
-	bool visit(StmtBlock *stmt, Stmt **source);
-	bool visit(StmtType *stmt, Stmt **source);
-	bool visit(StmtSimple *stmt, Stmt **source);
-	bool visit(StmtFnCallInfo *stmt, Stmt **source);
-	bool visit(StmtExpr *stmt, Stmt **source);
-	bool visit(StmtVar *stmt, Stmt **source);
-	bool visit(StmtFnSig *stmt, Stmt **source);
-	bool visit(StmtFnDef *stmt, Stmt **source);
-	bool visit(StmtHeader *stmt, Stmt **source);
-	bool visit(StmtLib *stmt, Stmt **source);
-	bool visit(StmtExtern *stmt, Stmt **source);
-	bool visit(StmtEnum *stmt, Stmt **source);
-	bool visit(StmtStruct *stmt, Stmt **source);
-	bool visit(StmtVarDecl *stmt, Stmt **source);
-	bool visit(StmtCond *stmt, Stmt **source);
-	bool visit(StmtForIn *stmt, Stmt **source);
-	bool visit(StmtFor *stmt, Stmt **source);
-	bool visit(StmtWhile *stmt, Stmt **source);
-	bool visit(StmtRet *stmt, Stmt **source);
-	bool visit(StmtContinue *stmt, Stmt **source);
-	bool visit(StmtBreak *stmt, Stmt **source);
-	bool visit(StmtDefer *stmt, Stmt **source);
+	bool visit(Stmt *stmt, Writer &writer, const bool &semicol);
+
+	bool visit(StmtBlock *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtType *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtSimple *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtFnCallInfo *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtExpr *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtVar *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtFnSig *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtFnDef *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtHeader *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtLib *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtExtern *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtEnum *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtStruct *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtVarDecl *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtCond *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtForIn *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtFor *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtWhile *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtRet *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtContinue *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtBreak *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtDefer *stmt, Writer &writer, const bool &semicol);
 };
 } // namespace sc
 

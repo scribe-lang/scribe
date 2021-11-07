@@ -77,15 +77,16 @@ public:
 	RAIIParser(args::ArgParser &args);
 	~RAIIParser();
 
-	bool hasModule(const std::string &path);
-	Module *getModule(const std::string &path);
-	const std::vector<std::string> &getModuleStack();
-
 	bool parse(const std::string &path, const bool &main_module = false);
 	bool executeDefaultPasses(const std::string &path);
 	void combineAllModules();
 
+	bool hasModule(const std::string &path);
+	Module *getModule(const std::string &path);
+	const std::vector<std::string> &getModuleStack();
 	args::ArgParser &getCommandArgs();
+	ErrMgr &getErrMgr();
+	Context &getContext();
 
 	// force ignores arg parser
 	void dumpTokens(const bool &force);

@@ -52,7 +52,7 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	if(isTypeTy()) {
 		TypeTy *ttl = as<TypeTy>(this);
 		Type *ctl   = ttl->getContainedTy();
-		if(!ctl) return false;
+		if(!ctl) return true;
 		if(rhs->isTypeTy()) {
 			TypeTy *ttr = as<TypeTy>(rhs);
 			Type *ctr   = ttr->getContainedTy();
@@ -265,6 +265,10 @@ TypeTy *TypeTy::create(Context &c)
 void TypeTy::setContainedTy(Type *ty)
 {
 	if(containedtypes.find(containedtyid) != containedtypes.end()) return;
+	if(ty->isTypeTy() && as<TypeTy>(ty)->getContainedTy()) {
+		containedtypes[containedtyid] = as<TypeTy>(ty)->getContainedTy();
+		return;
+	}
 	containedtypes[containedtyid] = ty;
 }
 Type *TypeTy::getContainedTy()
@@ -378,7 +382,8 @@ Type *StructTy::clone(Context &c)
 {
 	std::vector<Type *> newfields;
 	for(auto &field : fields) newfields.push_back(field->clone(c));
-	return c.allocType<StructTy>(getInfo(), getID(), fieldnames, fieldpos, newfields, is_def);
+	return c.allocType<StructTy>(getInfo(), genTypeID(), fieldnames, fieldpos, newfields,
+				     is_def);
 }
 bool StructTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
@@ -517,7 +522,7 @@ Type *FuncTy::clone(Context &c)
 {
 	std::vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c));
-	return c.allocType<FuncTy>(var, getInfo(), getID(), newargs, ret->clone(c), intrin,
+	return c.allocType<FuncTy>(var, getInfo(), genTypeID(), newargs, ret->clone(c), intrin,
 				   intrinty, externed);
 }
 bool FuncTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
@@ -600,6 +605,7 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 		as<TypeTy>(args[i])->setContainedTy(nullptr);
 	}
 
+	printf("Final call: %s\n", res->toStr().c_str());
 	return res;
 }
 FuncTy *FuncTy::create(Context &c, StmtVar *_var, const std::vector<Type *> &_args, Type *_ret,
