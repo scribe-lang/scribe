@@ -22,6 +22,7 @@ namespace sc
 Context::Context(RAIIParser *parser) : parser(parser) {}
 Context::~Context()
 {
+	for(auto &s : stmtmem) delete s;
 	for(auto &t : typemem) delete t;
 	for(auto &v : valmem) delete v;
 }

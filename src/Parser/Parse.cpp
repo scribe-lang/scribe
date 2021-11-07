@@ -19,7 +19,7 @@
 
 namespace sc
 {
-Parsing::Parsing(ErrMgr &err) : err(err) {}
+Parsing::Parsing(Context &ctx, ErrMgr &err) : ctx(ctx), err(err) {}
 
 // on successful parse, returns true, and tree is allocated
 // if with_brace is true, it will attempt to find the beginning and ending brace for each block
@@ -44,45 +44,45 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_bra
 		bool skip_cols = false;
 		// logic
 		if(p.accept(lex::LET)) {
-			if(!parse_vardecl(p, stmt)) goto fail;
+			if(!parse_vardecl(p, stmt)) return false;
 		} else if(p.accept(lex::IF)) {
-			if(!parse_conds(p, stmt)) goto fail;
+			if(!parse_conds(p, stmt)) return false;
 			skip_cols = true;
 		} else if(p.accept(lex::INLINE)) { // TODO: replace with inline - for, while loops
 			if(p.peakt(1) == lex::FOR) {
-				if(!parse_for(p, stmt)) goto fail;
+				if(!parse_for(p, stmt)) return false;
 				skip_cols = true;
 			} else if(p.peakt(1) == lex::IF) {
-				if(!parse_conds(p, stmt)) goto fail;
+				if(!parse_conds(p, stmt)) return false;
 				skip_cols = true;
 			} else {
 				err.set(p.peak(1), "'comptime' is not applicable on '%s' statement",
 					p.peak(1).getTok().cStr());
-				goto fail;
+				return false;
 			}
 		} else if(p.accept(lex::FOR)) {
 			if(p.peakt(1) == lex::IDEN && p.peakt(2) == lex::IN) {
-				if(!parse_forin(p, stmt)) goto fail;
+				if(!parse_forin(p, stmt)) return false;
 			} else {
-				if(!parse_for(p, stmt)) goto fail;
+				if(!parse_for(p, stmt)) return false;
 			}
 			skip_cols = true;
 		} else if(p.accept(lex::WHILE)) {
-			if(!parse_while(p, stmt)) goto fail;
+			if(!parse_while(p, stmt)) return false;
 			skip_cols = true;
 		} else if(p.accept(lex::RETURN)) {
-			if(!parse_ret(p, stmt)) goto fail;
+			if(!parse_ret(p, stmt)) return false;
 		} else if(p.accept(lex::CONTINUE)) {
-			if(!parse_continue(p, stmt)) goto fail;
+			if(!parse_continue(p, stmt)) return false;
 		} else if(p.accept(lex::BREAK)) {
-			if(!parse_break(p, stmt)) goto fail;
+			if(!parse_break(p, stmt)) return false;
 		} else if(p.accept(lex::DEFER)) {
-			if(!parse_defer(p, stmt)) goto fail;
+			if(!parse_defer(p, stmt)) return false;
 		} else if(p.accept(lex::LBRACE)) {
-			if(!parse_block(p, (StmtBlock *&)stmt)) goto fail;
+			if(!parse_block(p, (StmtBlock *&)stmt)) return false;
 			skip_cols = true;
 		} else if(!parse_expr(p, stmt)) {
-			goto fail;
+			return false;
 		}
 
 		if(skip_cols || p.acceptn(lex::COLS)) {
@@ -92,23 +92,19 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_bra
 		}
 		err.set(p.peak(), "expected semicolon for end of statement, found: %s",
 			p.peak().getTok().cStr());
-		goto fail;
+		return false;
 	}
 
 	if(with_brace) {
 		if(!p.acceptn(lex::RBRACE)) {
 			err.set(p.peak(), "expected closing braces '}' for block, found: %s",
 				p.peak().getTok().cStr());
-			goto fail;
+			return false;
 		}
 	}
 
-	tree = new StmtBlock(start.getLoc(), stmts, !with_brace);
+	tree = StmtBlock::create(ctx, start.getLoc(), stmts, !with_brace);
 	return true;
-fail:
-	for(auto &stmt : stmts) delete stmt;
-	if(stmt) delete stmt;
-	return false;
 }
 
 bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
@@ -124,8 +120,8 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 	lex::Lexeme &start = p.peak();
 
 	if(p.accept(lex::COMPTIME, lex::FN)) {
-		if(!parse_fnsig(p, expr)) goto fail;
-		type = new StmtType(start.getLoc(), 0, 0, expr);
+		if(!parse_fnsig(p, expr)) return false;
+		type = StmtType::create(ctx, start.getLoc(), 0, 0, expr);
 		return true;
 	}
 
@@ -140,10 +136,10 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 
 	if(!parse_expr_01(p, expr)) {
 		err.set(p.peak(), "failed to parse type expression");
-		goto fail;
+		return false;
 	}
 
-	type = new StmtType(start.getLoc(), ptr, info, expr);
+	type = StmtType::create(ctx, start.getLoc(), ptr, info, expr);
 	return true;
 fail:
 	if(count) delete count;
@@ -163,7 +159,7 @@ bool Parsing::parse_simple(ParseHelper &p, Stmt *&data)
 	lex::Lexeme &val = p.peak();
 	p.next();
 
-	data = new StmtSimple(val.getLoc(), val);
+	data = StmtSimple::create(ctx, val.getLoc(), val);
 	return true;
 }
 
@@ -196,9 +192,9 @@ bool Parsing::parse_expr_17(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_16(p, lhs)) {
-			goto fail;
+			return false;
 		}
-		rhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		rhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		lhs = nullptr;
 	}
 
@@ -241,23 +237,23 @@ bool Parsing::parse_expr_16(ParseHelper &p, Stmt *&expr)
 	lex::Lexeme oper_inside;
 
 	if(!parse_expr_15(p, lhs_lhs)) {
-		goto fail;
+		return false;
 	}
 	if(!p.accept(lex::COL)) {
 		err.set(p.peak(), "expected ':' for ternary operator, found: %s",
 			p.peak().getTok().cStr());
-		goto fail;
+		return false;
 	}
 	oper_inside = p.peak();
 	p.next();
 	if(!parse_expr_15(p, lhs_rhs)) {
-		goto fail;
+		return false;
 	}
-	rhs = new StmtExpr(oper.getLoc(), 0, lhs_lhs, oper_inside, lhs_rhs, false);
+	rhs = StmtExpr::create(ctx, oper.getLoc(), 0, lhs_lhs, oper_inside, lhs_rhs, false);
 	goto after_quest;
 
 after_quest:
-	expr = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+	expr = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 	return true;
 fail:
 	if(lhs_rhs) delete lhs_rhs;
@@ -287,9 +283,9 @@ bool Parsing::parse_expr_15(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_14(p, lhs)) {
-			goto fail;
+			return false;
 		}
-		rhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		rhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		lhs = nullptr;
 	}
 
@@ -331,9 +327,9 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_13(p, rhs)) {
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -347,10 +343,10 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr)
 	}
 
 	if(!parse_block(p, or_blk)) {
-		goto fail;
+		return false;
 	}
 	if(expr->getStmtType() != EXPR) {
-		expr = new StmtExpr(expr->getLoc(), 0, expr, {}, nullptr, false);
+		expr = StmtExpr::create(ctx, expr->getLoc(), 0, expr, {}, nullptr, false);
 	}
 	as<StmtExpr>(expr)->setOr(or_blk, or_blk_var);
 	return true;
@@ -381,9 +377,9 @@ bool Parsing::parse_expr_13(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_12(p, rhs)) {
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -415,9 +411,9 @@ bool Parsing::parse_expr_12(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_11(p, rhs)) {
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -449,9 +445,9 @@ bool Parsing::parse_expr_11(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_10(p, rhs)) {
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -483,9 +479,9 @@ bool Parsing::parse_expr_10(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_09(p, rhs)) {
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -517,9 +513,9 @@ bool Parsing::parse_expr_09(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_08(p, rhs)) {
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -551,9 +547,9 @@ bool Parsing::parse_expr_08(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_07(p, rhs)) {
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -586,9 +582,9 @@ bool Parsing::parse_expr_07(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_06(p, rhs)) {
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -620,9 +616,9 @@ bool Parsing::parse_expr_06(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_05(p, rhs)) {
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -654,9 +650,9 @@ bool Parsing::parse_expr_05(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_04(p, rhs)) {
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -688,9 +684,9 @@ bool Parsing::parse_expr_04(ParseHelper &p, Stmt *&expr)
 		oper = p.peak();
 		p.next();
 		if(!parse_expr_03(p, rhs)) {
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -734,7 +730,7 @@ bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr)
 	}
 
 	for(auto &op : opers) {
-		lhs = new StmtExpr(op.getLoc(), 0, lhs, op, nullptr, false);
+		lhs = StmtExpr::create(ctx, op.getLoc(), 0, lhs, op, nullptr, false);
 	}
 
 	expr = lhs;
@@ -762,7 +758,7 @@ bool Parsing::parse_expr_02(ParseHelper &p, Stmt *&expr)
 
 	if(p.accept(lex::XINC, lex::XDEC, lex::PreVA)) {
 		if(p.peakt() == lex::PreVA) p.sett(lex::PostVA);
-		lhs = new StmtExpr(p.peak().getLoc(), 0, lhs, p.peak(), nullptr, false);
+		lhs = StmtExpr::create(ctx, p.peak().getLoc(), 0, lhs, p.peak(), nullptr, false);
 		p.next();
 	}
 
@@ -787,26 +783,26 @@ bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr)
 
 	if(p.acceptn(lex::LPAREN)) {
 		if(!parse_expr(p, expr)) {
-			goto fail;
+			return false;
 		}
 		if(!p.acceptn(lex::RPAREN)) {
 			err.set(p.peak(),
 				"expected ending parenthesis ')' for expression, found: %s",
 				p.peak().getTok().cStr());
-			goto fail;
+			return false;
 		}
 		return true;
 	}
 
 begin:
 	if(p.acceptn(lex::AT)) is_intrinsic = true;
-	if(p.acceptd() && !parse_simple(p, lhs)) goto fail;
+	if(p.acceptd() && !parse_simple(p, lhs)) return false;
 	goto begin_brack;
 
 after_dot:
-	if(!p.acceptd() || !parse_simple(p, rhs)) goto fail;
+	if(!p.acceptd() || !parse_simple(p, rhs)) return false;
 	if(lhs && rhs) {
-		lhs = new StmtExpr(dot.getLoc(), 0, lhs, dot, rhs, false);
+		lhs = StmtExpr::create(ctx, dot.getLoc(), 0, lhs, dot, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -819,20 +815,20 @@ begin_brack:
 		if(is_intrinsic) {
 			err.set(p.peak(), "only function calls can be intrinsic;"
 					  " attempted subscript here");
-			goto fail;
+			return false;
 		}
 		if(!parse_expr_16(p, rhs)) {
 			err.set(oper, "failed to parse expression for subscript");
-			goto fail;
+			return false;
 		}
 		if(!p.acceptn(lex::RBRACK)) {
 			err.set(p.peak(),
 				"expected closing bracket for"
 				" subscript expression, found: %s",
 				p.peak().getTok().cStr());
-			goto fail;
+			return false;
 		}
-		lhs = new StmtExpr(oper.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(ctx, oper.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 		if(p.accept(lex::LBRACK, lex::LPAREN) ||
 		   (p.peakt() == lex::DOT && p.peakt(1) == lex::LT))
@@ -843,7 +839,7 @@ begin_brack:
 			err.set(p.peak(),
 				"expected opening parenthesis for function call, found: %s",
 				p.peak().getTok().cStr());
-			goto fail;
+			return false;
 		}
 		p.sett(lex::FNCALL);
 		oper = p.peak();
@@ -853,7 +849,7 @@ begin_brack:
 		}
 		// parse arguments
 		while(true) {
-			if(!parse_expr_16(p, arg)) goto fail;
+			if(!parse_expr_16(p, arg)) return false;
 			args.push_back(arg);
 			arg = nullptr;
 			if(!p.acceptn(lex::COMMA)) break;
@@ -863,11 +859,11 @@ begin_brack:
 				"expected closing parenthesis after function"
 				" call arguments, found: %s",
 				p.peak().getTok().cStr());
-			goto fail;
+			return false;
 		}
 	post_args:
-		rhs  = new StmtFnCallInfo(oper.getLoc(), args);
-		lhs  = new StmtExpr(oper.getLoc(), 0, lhs, oper, rhs, is_intrinsic);
+		rhs  = StmtFnCallInfo::create(ctx, oper.getLoc(), args);
+		lhs  = StmtExpr::create(ctx, oper.getLoc(), 0, lhs, oper, rhs, is_intrinsic);
 		rhs  = nullptr;
 		args = {};
 
@@ -877,7 +873,8 @@ begin_brack:
 dot:
 	if(p.acceptn(lex::DOT, lex::ARROW)) {
 		if(lhs && rhs) {
-			lhs = new StmtExpr(p.peak(-1).getLoc(), 0, lhs, p.peak(-1), rhs, false);
+			lhs =
+			StmtExpr::create(ctx, p.peak(-1).getLoc(), 0, lhs, p.peak(-1), rhs, false);
 			rhs = nullptr;
 		}
 		dot = p.peak(-1);
@@ -886,7 +883,7 @@ dot:
 
 done:
 	if(lhs && rhs) {
-		lhs = new StmtExpr(dot.getLoc(), 0, lhs, dot, rhs, false);
+		lhs = StmtExpr::create(ctx, dot.getLoc(), 0, lhs, dot, rhs, false);
 		rhs = nullptr;
 	}
 	expr = lhs;
@@ -925,25 +922,25 @@ bool Parsing::parse_var(ParseHelper &p, StmtVar *&var, const Occurs &intype, con
 in:
 	if(intype == Occurs::NO && p.accept(lex::IN)) {
 		err.set(p.peak(), "unexpected 'in' here");
-		goto fail;
+		return false;
 	}
 	if(!p.acceptn(lex::IN)) {
 		goto type;
 	}
 	if(comptime) {
 		err.set(p.peak(), "comptime can be used only for data variables");
-		goto fail;
+		return false;
 	}
 	if(!parse_type(p, in)) {
 		err.set(p.peak(), "failed to parse in-type for variable: %s",
 			name.getDataStr().c_str());
-		goto fail;
+		return false;
 	}
 
 type:
 	if(otype == Occurs::NO && p.accept(lex::COL)) {
 		err.set(p.peak(), "unexpected beginning of type here");
-		goto fail;
+		return false;
 	}
 	if(!p.acceptn(lex::COL)) {
 		goto val;
@@ -951,60 +948,60 @@ type:
 	if(!parse_type(p, type)) {
 		err.set(p.peak(), "failed to parse type for variable: %s",
 			name.getDataStr().c_str());
-		goto fail;
+		return false;
 	}
 
 val:
 	if(oval == Occurs::NO && p.accept(lex::ASSN)) {
 		err.set(p.peak(), "unexpected beginning of value assignment here");
-		goto fail;
+		return false;
 	}
 	if(!p.acceptn(lex::ASSN)) {
 		goto done;
 	}
 	if(comptime && (p.accept(lex::ENUM, lex::STRUCT) || p.accept(lex::FN, lex::EXTERN))) {
 		err.set(p.peak(), "comptime declaration can only have an expression as value");
-		goto fail;
+		return false;
 	}
 	if(p.accept(lex::ENUM)) {
-		if(!parse_enum(p, val)) goto fail;
+		if(!parse_enum(p, val)) return false;
 	} else if(p.accept(lex::STRUCT)) {
-		if(!parse_struct(p, val)) goto fail;
+		if(!parse_struct(p, val)) return false;
 	} else if(p.accept(lex::FN)) {
-		if(!parse_fndef(p, val)) goto fail;
+		if(!parse_fndef(p, val)) return false;
 	} else if(p.accept(lex::EXTERN)) {
-		if(!parse_extern(p, val)) goto fail;
+		if(!parse_extern(p, val)) return false;
 	} else if(!parse_expr_16(p, val)) {
-		goto fail;
+		return false;
 	}
 
 done:
 	if(!type && !val) {
 		err.set(name, "invalid variable declaration - no type or value set");
-		goto fail;
+		return false;
 	}
 	if(comptime && !val && oval != Occurs::NO) {
 		err.set(name, "comptime variable cannot be declared without an expression");
-		goto fail;
+		return false;
 	}
 	if(in) {
 		if(type) {
 			err.set(name, "let-in statements can only have values (function "
 				      "definitions) - no types allowed");
-			goto fail;
+			return false;
 		}
 		if(val && val->getStmtType() != FNDEF) {
 			err.set(name, "only functions can be created using let-in statements");
-			goto fail;
+			return false;
 		}
 		lex::Lexeme selfeme(in->getLoc(), lex::IDEN, "self");
 		in->addTypeInfoMask(REF);
 		StmtVar *selfvar =
-		new StmtVar(in->getLoc(), selfeme, in, nullptr, false, false, false);
+		StmtVar::create(ctx, in->getLoc(), selfeme, in, nullptr, false, false, false);
 		StmtFnSig *valsig = as<StmtFnDef>(val)->getSig();
 		valsig->getArgs().insert(valsig->getArgs().begin(), selfvar);
 	}
-	var = new StmtVar(name.getLoc(), name, type, val, in, comptime, global);
+	var = StmtVar::create(ctx, name.getLoc(), name, type, val, in, comptime, global);
 	return true;
 fail:
 	if(in) delete in;
@@ -1043,47 +1040,47 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 		if(argnames.find(p.peak().getDataStr()) != argnames.end()) {
 			err.set(p.peak(), "this argument name is already used "
 					  "before in this function signature");
-			goto fail;
+			return false;
 		}
 		argnames.insert(p.peak().getDataStr());
 		if(is_comptime) p.setPos(p.getPos() - 1);
 		if(!parse_var(p, var, Occurs::NO, Occurs::YES, Occurs::NO)) {
-			goto fail;
+			return false;
 		}
 		if(var->getVType()->hasModifier(VARIADIC)) {
 			found_va = true;
 		}
 		if(var->getName().getTok().getVal() == lex::ANY && !found_va) {
 			err.set(start, "type 'any' can be only used for variadic functions");
-			goto fail;
+			return false;
 		}
 		args.push_back(var);
 		var = nullptr;
 		if(!p.acceptn(lex::COMMA)) break;
 		if(found_va) {
 			err.set(p.peak(), "no parameter can exist after variadic");
-			goto fail;
+			return false;
 		}
 	}
 
 	if(!p.acceptn(lex::RPAREN)) {
 		err.set(p.peak(), "expected closing parenthesis after function args, found: %s",
 			p.peak().getTok().cStr());
-		goto fail;
+		return false;
 	}
 
 post_args:
 	if(p.acceptn(lex::COL) && !parse_type(p, rettype)) {
 		err.set(p.peak(), "failed to parse return type for function");
-		goto fail;
+		return false;
 	}
 	if(!rettype) {
 		lex::Lexeme voideme = lex::Lexeme(p.peak(-1).getLoc(), lex::VOID, "void");
-		StmtSimple *voidsim = new StmtSimple(voideme.getLoc(), voideme);
-		rettype		    = new StmtType(voidsim->getLoc(), 0, 0, voidsim);
+		StmtSimple *voidsim = StmtSimple::create(ctx, voideme.getLoc(), voideme);
+		rettype		    = StmtType::create(ctx, voidsim->getLoc(), 0, 0, voidsim);
 	}
 
-	fsig = new StmtFnSig(start.getLoc(), args, rettype, 0, found_va);
+	fsig = StmtFnSig::create(ctx, start.getLoc(), args, rettype, 0, found_va);
 	return true;
 fail:
 	if(var) delete var;
@@ -1099,10 +1096,10 @@ bool Parsing::parse_fndef(ParseHelper &p, Stmt *&fndef)
 	StmtBlock *blk	   = nullptr;
 	lex::Lexeme &start = p.peak();
 
-	if(!parse_fnsig(p, sig)) goto fail;
-	if(!parse_block(p, blk)) goto fail;
+	if(!parse_fnsig(p, sig)) return false;
+	if(!parse_block(p, blk)) return false;
 
-	fndef = new StmtFnDef(start.getLoc(), (StmtFnSig *)sig, blk);
+	fndef = StmtFnDef::create(ctx, start.getLoc(), (StmtFnSig *)sig, blk);
 	return true;
 fail:
 	if(sig) delete sig;
@@ -1135,7 +1132,7 @@ bool Parsing::parse_header(ParseHelper &p, StmtHeader *&header)
 	p.next();
 
 done:
-	header = new StmtHeader(names.getLoc(), names, flags);
+	header = StmtHeader::create(ctx, names.getLoc(), names, flags);
 	return true;
 }
 bool Parsing::parse_lib(ParseHelper &p, StmtLib *&lib)
@@ -1152,7 +1149,7 @@ bool Parsing::parse_lib(ParseHelper &p, StmtLib *&lib)
 	flags = p.peak();
 	p.next();
 
-	lib = new StmtLib(flags.getLoc(), flags);
+	lib = StmtLib::create(ctx, flags.getLoc(), flags);
 	return true;
 }
 bool Parsing::parse_extern(ParseHelper &p, Stmt *&ext)
@@ -1186,9 +1183,9 @@ bool Parsing::parse_extern(ParseHelper &p, Stmt *&ext)
 
 	if(!p.acceptn(lex::COMMA)) goto sig;
 
-	if(!parse_header(p, headers)) goto fail;
+	if(!parse_header(p, headers)) return false;
 	if(!p.acceptn(lex::COMMA)) goto endinfo;
-	if(!parse_lib(p, libs)) goto fail;
+	if(!parse_lib(p, libs)) return false;
 
 endinfo:
 	if(!p.acceptn(lex::RBRACK)) {
@@ -1198,12 +1195,12 @@ endinfo:
 	}
 
 sig:
-	if(!parse_fnsig(p, (Stmt *&)sig)) goto fail;
+	if(!parse_fnsig(p, (Stmt *&)sig)) return false;
 	if(sig->hasVariadic()) {
 		err.set(p.peak(), "no variadics allowed in extern'd functions");
-		goto fail;
+		return false;
 	}
-	ext = new StmtExtern(name.getLoc(), name, headers, libs, sig);
+	ext = StmtExtern::create(ctx, name.getLoc(), name, headers, libs, sig);
 	return true;
 fail:
 	if(headers) delete headers;
@@ -1242,7 +1239,7 @@ bool Parsing::parse_enum(ParseHelper &p, Stmt *&ed)
 		err.set(start, "cannot have empty enumeration");
 		return false;
 	}
-	ed = new StmtEnum(start.getLoc(), enumvars);
+	ed = StmtEnum::create(ctx, start.getLoc(), enumvars);
 	return true;
 }
 
@@ -1268,11 +1265,11 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd)
 	}
 
 	while(p.accept(lex::IDEN, lex::COMPTIME)) {
-		if(!parse_var(p, field, Occurs::NO, Occurs::YES, Occurs::NO)) goto fail;
+		if(!parse_var(p, field, Occurs::NO, Occurs::YES, Occurs::NO)) return false;
 		if(fieldnames.find(field->getName().getDataStr()) != fieldnames.end()) {
 			err.set(p.peak(), "this field name is already used "
 					  "before in this same structure");
-			goto fail;
+			return false;
 		}
 		fieldnames.insert(field->getName().getDataStr());
 		fields.push_back(field);
@@ -1284,11 +1281,11 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd)
 			"expected closing brace for struct/trait"
 			" declaration/definition, found: %s",
 			p.peak().getTok().cStr());
-		goto fail;
+		return false;
 	}
 
 done:
-	sd = new StmtStruct(start.getLoc(), fields);
+	sd = StmtStruct::create(ctx, start.getLoc(), fields);
 	return true;
 
 fail:
@@ -1322,13 +1319,13 @@ bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
 		if(comptime) p.setPos(p.getPos() - 1);
 		Occurs in  = comptime || global ? Occurs::NO : Occurs::MAYBE;
 		Occurs val = comptime ? Occurs::YES : Occurs::MAYBE;
-		if(!parse_var(p, decl, in, Occurs::MAYBE, val)) goto fail;
+		if(!parse_var(p, decl, in, Occurs::MAYBE, val)) return false;
 		decls.push_back(decl);
 		decl = nullptr;
 		if(!p.acceptn(lex::COMMA)) break;
 	}
 
-	vd = new StmtVarDecl(start.getLoc(), decls);
+	vd = StmtVarDecl::create(ctx, start.getLoc(), decls);
 	return true;
 
 fail:
@@ -1352,18 +1349,18 @@ bool Parsing::parse_conds(ParseHelper &p, Stmt *&conds)
 cond:
 	if(!p.acceptn(lex::IF)) {
 		err.set(p.peak(), "expected 'if' here, found: %s", p.peak().getTok().cStr());
-		goto fail;
+		return false;
 	}
 
 	if(!parse_expr_15(p, c.getCond())) {
 		err.set(p.peak(), "failed to parse condition for if/else if statement");
-		goto fail;
+		return false;
 	}
 
 blk:
 	if(!parse_block(p, c.getBlk())) {
 		err.set(p.peak(), "failed to parse block for conditional");
-		goto fail;
+		return false;
 	}
 
 	cvec.emplace_back(c.getCond(), c.getBlk());
@@ -1375,7 +1372,7 @@ blk:
 		goto blk;
 	}
 
-	conds = new StmtCond(start.getLoc(), cvec, is_inline);
+	conds = StmtCond::create(ctx, start.getLoc(), cvec, is_inline);
 	return true;
 
 fail:
@@ -1416,21 +1413,21 @@ bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 
 	if(!parse_expr_01(p, in)) {
 		err.set(p.peak(), "failed to parse expression for 'in'");
-		goto fail;
+		return false;
 	}
 
 	if(!p.accept(lex::LBRACE)) {
 		err.set(p.peak(), "expected block for for-in construct, found: %s",
 			p.peak().getTok().cStr());
-		goto fail;
+		return false;
 	}
 
 	if(!parse_block(p, blk)) {
 		err.set(p.peak(), "failed to parse block for for-in construct");
-		goto fail;
+		return false;
 	}
 
-	fin = new StmtForIn(start.getLoc(), iter, in, blk);
+	fin = StmtForIn::create(ctx, start.getLoc(), iter, in, blk);
 	return true;
 fail:
 	if(in) delete in;
@@ -1459,41 +1456,41 @@ init:
 	if(p.acceptn(lex::COLS)) goto cond;
 
 	if(p.accept(lex::LET)) {
-		if(!parse_vardecl(p, init)) goto fail;
+		if(!parse_vardecl(p, init)) return false;
 	} else {
-		if(!parse_expr(p, init)) goto fail;
+		if(!parse_expr(p, init)) return false;
 	}
 	if(!p.acceptn(lex::COLS)) {
 		err.set(p.peak(), "expected semicolon here, found: %s", p.peak().getTok().cStr());
-		goto fail;
+		return false;
 	}
 
 cond:
 	if(p.acceptn(lex::COLS)) goto incr;
 
-	if(!parse_expr_16(p, cond)) goto fail;
+	if(!parse_expr_16(p, cond)) return false;
 	if(!p.acceptn(lex::COLS)) {
 		err.set(p.peak(), "expected semicolon here, found: %s", p.peak().getTok().cStr());
-		goto fail;
+		return false;
 	}
 
 incr:
 	if(p.acceptn(lex::LBRACE)) goto body;
 
-	if(!parse_expr(p, incr)) goto fail;
+	if(!parse_expr(p, incr)) return false;
 	if(!p.accept(lex::LBRACE)) {
 		err.set(p.peak(), "expected braces for body here, found: %s",
 			p.peak().getTok().cStr());
-		goto fail;
+		return false;
 	}
 
 body:
 	if(!parse_block(p, blk)) {
 		err.set(p.peak(), "failed to parse block for 'for' construct");
-		goto fail;
+		return false;
 	}
 
-	f = new StmtFor(start.getLoc(), init, cond, incr, blk, is_inline);
+	f = StmtFor::create(ctx, start.getLoc(), init, cond, incr, blk, is_inline);
 	return true;
 fail:
 	if(init) delete init;
@@ -1515,14 +1512,14 @@ bool Parsing::parse_while(ParseHelper &p, Stmt *&w)
 		return false;
 	}
 
-	if(!parse_expr_16(p, cond)) goto fail;
+	if(!parse_expr_16(p, cond)) return false;
 
 	if(!parse_block(p, blk)) {
 		err.set(p.peak(), "failed to parse block for 'for' construct");
-		goto fail;
+		return false;
 	}
 
-	w = new StmtWhile(start.getLoc(), cond, blk);
+	w = StmtWhile::create(ctx, start.getLoc(), cond, blk);
 	return true;
 fail:
 	if(cond) delete cond;
@@ -1545,11 +1542,11 @@ bool Parsing::parse_ret(ParseHelper &p, Stmt *&ret)
 
 	if(!parse_expr_16(p, val)) {
 		err.set(p.peak(), "failed to parse expression for return value");
-		goto fail;
+		return false;
 	}
 
 done:
-	ret = new StmtRet(start.getLoc(), val);
+	ret = StmtRet::create(ctx, start.getLoc(), val);
 	return true;
 fail:
 	if(val) delete val;
@@ -1566,7 +1563,7 @@ bool Parsing::parse_continue(ParseHelper &p, Stmt *&cont)
 		return false;
 	}
 
-	cont = new StmtContinue(start.getLoc());
+	cont = StmtContinue::create(ctx, start.getLoc());
 	return true;
 }
 bool Parsing::parse_break(ParseHelper &p, Stmt *&brk)
@@ -1580,7 +1577,7 @@ bool Parsing::parse_break(ParseHelper &p, Stmt *&brk)
 		return false;
 	}
 
-	brk = new StmtBreak(start.getLoc());
+	brk = StmtBreak::create(ctx, start.getLoc());
 	return true;
 }
 bool Parsing::parse_defer(ParseHelper &p, Stmt *&defer)
@@ -1597,11 +1594,11 @@ bool Parsing::parse_defer(ParseHelper &p, Stmt *&defer)
 
 	if(!parse_expr_16(p, val)) {
 		err.set(p.peak(), "failed to parse expression for return value");
-		goto fail;
+		return false;
 	}
 
 done:
-	defer = new StmtDefer(start.getLoc(), val);
+	defer = StmtDefer::create(ctx, start.getLoc(), val);
 	return true;
 fail:
 	if(val) delete val;

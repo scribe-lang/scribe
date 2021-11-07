@@ -72,12 +72,11 @@ std::string Stmt::getTypeString() const
 StmtBlock::StmtBlock(const ModuleLoc &loc, const std::vector<Stmt *> &stmts, const bool &is_top)
 	: Stmt(BLOCK, loc), stmts(stmts), is_top(is_top)
 {}
-StmtBlock::~StmtBlock()
+StmtBlock::~StmtBlock() {}
+StmtBlock *StmtBlock::create(Context &c, const ModuleLoc &loc, const std::vector<Stmt *> &stmts,
+			     const bool &is_top)
 {
-	for(auto &stmt : stmts) {
-		if(!stmt) continue;
-		delete stmt;
-	}
+	return c.allocStmt<StmtBlock>(loc, stmts, is_top);
 }
 
 void StmtBlock::disp(const bool &has_next) const
@@ -111,9 +110,11 @@ bool StmtBlock::requiresTemplateInit()
 StmtType::StmtType(const ModuleLoc &loc, const size_t &ptr, const size_t &info, Stmt *expr)
 	: Stmt(TYPE, loc), ptr(ptr), info(info), expr(expr)
 {}
-StmtType::~StmtType()
+StmtType::~StmtType() {}
+StmtType *StmtType::create(Context &c, const ModuleLoc &loc, const size_t &ptr, const size_t &info,
+			   Stmt *expr)
 {
-	if(expr) delete expr;
+	return c.allocStmt<StmtType>(loc, ptr, info, expr);
 }
 
 void StmtType::disp(const bool &has_next) const
@@ -168,6 +169,10 @@ StmtSimple::StmtSimple(const ModuleLoc &loc, const lex::Lexeme &val)
 {}
 
 StmtSimple::~StmtSimple() {}
+StmtSimple *StmtSimple::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &val)
+{
+	return c.allocStmt<StmtSimple>(loc, val);
+}
 
 void StmtSimple::disp(const bool &has_next) const
 {
@@ -190,9 +195,11 @@ bool StmtSimple::requiresTemplateInit()
 StmtFnCallInfo::StmtFnCallInfo(const ModuleLoc &loc, const std::vector<Stmt *> &args)
 	: Stmt(FNCALLINFO, loc), args(args)
 {}
-StmtFnCallInfo::~StmtFnCallInfo()
+StmtFnCallInfo::~StmtFnCallInfo() {}
+StmtFnCallInfo *StmtFnCallInfo::create(Context &c, const ModuleLoc &loc,
+				       const std::vector<Stmt *> &args)
 {
-	for(auto &a : args) delete a;
+	return c.allocStmt<StmtFnCallInfo>(loc, args);
 }
 
 void StmtFnCallInfo::disp(const bool &has_next) const
@@ -227,11 +234,11 @@ StmtExpr::StmtExpr(const ModuleLoc &loc, const size_t &commas, Stmt *lhs, const 
 	: Stmt(EXPR, loc), commas(commas), lhs(lhs), oper(oper), rhs(rhs), or_blk(nullptr),
 	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call), calledfn(nullptr)
 {}
-StmtExpr::~StmtExpr()
+StmtExpr::~StmtExpr() {}
+StmtExpr *StmtExpr::create(Context &c, const ModuleLoc &loc, const size_t &commas, Stmt *lhs,
+			   const lex::Lexeme &oper, Stmt *rhs, const bool &is_intrinsic_call)
 {
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	if(or_blk) delete or_blk;
+	return c.allocStmt<StmtExpr>(loc, commas, lhs, oper, rhs, is_intrinsic_call);
 }
 
 void StmtExpr::disp(const bool &has_next) const
@@ -285,10 +292,12 @@ StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype,
 	  is_comptime(is_comptime), is_global(is_global), applied_module_id(false),
 	  is_temp_vval(false)
 {}
-StmtVar::~StmtVar()
+StmtVar::~StmtVar() {}
+StmtVar *StmtVar::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype,
+			 Stmt *vval, const bool &is_in, const bool &is_comptime,
+			 const bool &is_global)
 {
-	if(vtype) delete vtype;
-	if(vval && !is_temp_vval) delete vval;
+	return c.allocStmt<StmtVar>(loc, name, vtype, vval, is_in, is_comptime, is_global);
 }
 
 void StmtVar::disp(const bool &has_next) const
@@ -328,10 +337,11 @@ StmtFnSig::StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtTyp
 	: Stmt(FNSIG, loc), args(args), rettype(rettype), scope(scope), has_template(false),
 	  has_variadic(has_variadic)
 {}
-StmtFnSig::~StmtFnSig()
+StmtFnSig::~StmtFnSig() {}
+StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc &loc, std::vector<StmtVar *> &args,
+			     StmtType *rettype, const size_t &scope, const bool &has_variadic)
 {
-	for(auto &p : args) delete p;
-	if(rettype) delete rettype;
+	return c.allocStmt<StmtFnSig>(loc, args, rettype, scope, has_variadic);
 }
 
 void StmtFnSig::disp(const bool &has_next) const
@@ -386,10 +396,10 @@ bool StmtFnSig::hasTemplate()
 StmtFnDef::StmtFnDef(const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk)
 	: Stmt(FNDEF, loc), sig(sig), blk(blk), parentvar(nullptr)
 {}
-StmtFnDef::~StmtFnDef()
+StmtFnDef::~StmtFnDef() {}
+StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk)
 {
-	if(sig) delete sig;
-	if(blk) delete blk;
+	return c.allocStmt<StmtFnDef>(loc, sig, blk);
 }
 
 void StmtFnDef::disp(const bool &has_next) const
@@ -422,6 +432,11 @@ bool StmtFnDef::requiresTemplateInit()
 StmtHeader::StmtHeader(const ModuleLoc &loc, const lex::Lexeme &names, const lex::Lexeme &flags)
 	: Stmt(HEADER, loc), names(names), flags(flags)
 {}
+StmtHeader *StmtHeader::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &names,
+			       const lex::Lexeme &flags)
+{
+	return c.allocStmt<StmtHeader>(loc, names, flags);
+}
 
 void StmtHeader::disp(const bool &has_next) const
 {
@@ -449,6 +464,10 @@ bool StmtHeader::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtLib::StmtLib(const ModuleLoc &loc, const lex::Lexeme &flags) : Stmt(LIB, loc), flags(flags) {}
+StmtLib *StmtLib::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &flags)
+{
+	return c.allocStmt<StmtLib>(loc, flags);
+}
 
 void StmtLib::disp(const bool &has_next) const
 {
@@ -472,11 +491,11 @@ StmtExtern::StmtExtern(const ModuleLoc &loc, const lex::Lexeme &fname, StmtHeade
 		       StmtLib *libs, StmtFnSig *sig)
 	: Stmt(EXTERN, loc), fname(fname), headers(headers), libs(libs), sig(sig)
 {}
-StmtExtern::~StmtExtern()
+StmtExtern::~StmtExtern() {}
+StmtExtern *StmtExtern::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &fname,
+			       StmtHeader *headers, StmtLib *libs, StmtFnSig *sig)
 {
-	if(headers) delete headers;
-	if(libs) delete libs;
-	if(sig) delete sig;
+	return c.allocStmt<StmtExtern>(loc, fname, headers, libs, sig);
 }
 
 void StmtExtern::disp(const bool &has_next) const
@@ -519,6 +538,10 @@ StmtEnum::StmtEnum(const ModuleLoc &loc, const std::vector<lex::Lexeme> &items)
 	: Stmt(ENUMDEF, loc), items(items)
 {}
 StmtEnum::~StmtEnum() {}
+StmtEnum *StmtEnum::create(Context &c, const ModuleLoc &loc, const std::vector<lex::Lexeme> &items)
+{
+	return c.allocStmt<StmtEnum>(loc, items);
+}
 
 void StmtEnum::disp(const bool &has_next) const
 {
@@ -544,9 +567,11 @@ bool StmtEnum::requiresTemplateInit()
 StmtStruct::StmtStruct(const ModuleLoc &loc, const std::vector<StmtVar *> &fields)
 	: Stmt(STRUCTDEF, loc), fields(fields)
 {}
-StmtStruct::~StmtStruct()
+StmtStruct::~StmtStruct() {}
+StmtStruct *StmtStruct::create(Context &c, const ModuleLoc &loc,
+			       const std::vector<StmtVar *> &fields)
 {
-	for(auto &field : fields) delete field;
+	return c.allocStmt<StmtStruct>(loc, fields);
 }
 
 void StmtStruct::disp(const bool &has_next) const
@@ -581,9 +606,11 @@ bool StmtStruct::requiresTemplateInit()
 StmtVarDecl::StmtVarDecl(const ModuleLoc &loc, const std::vector<StmtVar *> &decls)
 	: Stmt(VARDECL, loc), decls(decls)
 {}
-StmtVarDecl::~StmtVarDecl()
+StmtVarDecl::~StmtVarDecl() {}
+StmtVarDecl *StmtVarDecl::create(Context &c, const ModuleLoc &loc,
+				 const std::vector<StmtVar *> &decls)
 {
-	for(auto &decl : decls) delete decl;
+	return c.allocStmt<StmtVarDecl>(loc, decls);
 }
 
 void StmtVarDecl::disp(const bool &has_next) const
@@ -615,12 +642,11 @@ StmtCond::StmtCond(const ModuleLoc &loc, const std::vector<Conditional> &conds,
 		   const bool &is_inline)
 	: Stmt(COND, loc), conds(conds), is_inline(is_inline)
 {}
-StmtCond::~StmtCond()
+StmtCond::~StmtCond() {}
+StmtCond *StmtCond::create(Context &c, const ModuleLoc &loc, const std::vector<Conditional> &conds,
+			   const bool &is_inline)
 {
-	for(auto &c : conds) {
-		if(c.getCond()) delete c.getCond();
-		if(c.getBlk()) delete c.getBlk();
-	}
+	return c.allocStmt<StmtCond>(loc, conds, is_inline);
 }
 
 void StmtCond::disp(const bool &has_next) const
@@ -661,10 +687,11 @@ bool StmtCond::requiresTemplateInit()
 StmtForIn::StmtForIn(const ModuleLoc &loc, const lex::Lexeme &iter, Stmt *in, StmtBlock *blk)
 	: Stmt(FORIN, loc), iter(iter), in(in), blk(blk)
 {}
-StmtForIn::~StmtForIn()
+StmtForIn::~StmtForIn() {}
+StmtForIn *StmtForIn::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &iter, Stmt *in,
+			     StmtBlock *blk)
 {
-	if(in) delete in;
-	if(blk) delete blk;
+	return c.allocStmt<StmtForIn>(loc, iter, in, blk);
 }
 
 void StmtForIn::disp(const bool &has_next) const
@@ -696,12 +723,11 @@ StmtFor::StmtFor(const ModuleLoc &loc, Stmt *init, Stmt *cond, Stmt *incr, StmtB
 		 const bool &is_inline)
 	: Stmt(FOR, loc), init(init), cond(cond), incr(incr), blk(blk), is_inline(is_inline)
 {}
-StmtFor::~StmtFor()
+StmtFor::~StmtFor() {}
+StmtFor *StmtFor::create(Context &c, const ModuleLoc &loc, Stmt *init, Stmt *cond, Stmt *incr,
+			 StmtBlock *blk, const bool &is_inline)
 {
-	if(init) delete init;
-	if(cond) delete cond;
-	if(incr) delete incr;
-	if(blk) delete blk;
+	return c.allocStmt<StmtFor>(loc, init, cond, incr, blk, is_inline);
 }
 
 void StmtFor::disp(const bool &has_next) const
@@ -749,10 +775,10 @@ bool StmtFor::requiresTemplateInit()
 StmtWhile::StmtWhile(const ModuleLoc &loc, Stmt *cond, StmtBlock *blk)
 	: Stmt(WHILE, loc), cond(cond), blk(blk)
 {}
-StmtWhile::~StmtWhile()
+StmtWhile::~StmtWhile() {}
+StmtWhile *StmtWhile::create(Context &c, const ModuleLoc &loc, Stmt *cond, StmtBlock *blk)
 {
-	if(cond) delete cond;
-	if(blk) delete blk;
+	return c.allocStmt<StmtWhile>(loc, cond, blk);
 }
 
 void StmtWhile::disp(const bool &has_next) const
@@ -780,9 +806,10 @@ bool StmtWhile::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtRet::StmtRet(const ModuleLoc &loc, Stmt *val) : Stmt(RET, loc), val(val) {}
-StmtRet::~StmtRet()
+StmtRet::~StmtRet() {}
+StmtRet *StmtRet::create(Context &c, const ModuleLoc &loc, Stmt *val)
 {
-	if(val) delete val;
+	return c.allocStmt<StmtRet>(loc, val);
 }
 
 void StmtRet::disp(const bool &has_next) const
@@ -808,6 +835,10 @@ bool StmtRet::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtContinue::StmtContinue(const ModuleLoc &loc) : Stmt(CONTINUE, loc) {}
+StmtContinue *StmtContinue::create(Context &c, const ModuleLoc &loc)
+{
+	return c.allocStmt<StmtContinue>(loc);
+}
 
 void StmtContinue::disp(const bool &has_next) const
 {
@@ -826,6 +857,10 @@ bool StmtContinue::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtBreak::StmtBreak(const ModuleLoc &loc) : Stmt(BREAK, loc) {}
+StmtBreak *StmtBreak::create(Context &c, const ModuleLoc &loc)
+{
+	return c.allocStmt<StmtBreak>(loc);
+}
 
 void StmtBreak::disp(const bool &has_next) const
 {
@@ -844,9 +879,10 @@ bool StmtBreak::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtDefer::StmtDefer(const ModuleLoc &loc, Stmt *val) : Stmt(DEFER, loc), val(val) {}
-StmtDefer::~StmtDefer()
+StmtDefer::~StmtDefer() {}
+StmtDefer *StmtDefer::create(Context &c, const ModuleLoc &loc, Stmt *val)
 {
-	if(val) delete val;
+	return c.allocStmt<StmtDefer>(loc, val);
 }
 
 void StmtDefer::disp(const bool &has_next) const

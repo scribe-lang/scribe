@@ -72,7 +72,9 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 {
 	if(stmt->getMod()->isMainModule() || !stmt->isTop()) tmgr.pushLayer();
+
 	auto &stmts = stmt->getStmts();
+	deferstack.pushFrame();
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(!visit(stmts[i], &stmts[i])) {
 			err.set(stmt, "failed to assign type to stmt in block");
@@ -84,6 +86,8 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 			continue;
 		}
 	}
+	deferstack.popFrame();
+
 	if(stmt->getMod()->isMainModule() || !stmt->isTop()) tmgr.popLayer();
 	// insert all the specfns
 	if(stmt->isTop()) {
@@ -207,9 +211,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				return false;
 			}
 			// replace this stmt with RHS (effectively removing LHS - import)
-			*source	       = rhs;
-			stmt->getRHS() = nullptr;
-			delete stmt;
+			*source = rhs;
 			// once the source is changed, stmt will also be invalidated - therefore,
 			// cannot be used anymore
 			return true;
@@ -239,10 +241,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		// erase the expression, replace with the rhs alone
 		rsim->setSelf(lhs);
 		rsim->setType(res);
-		stmt->getLHS() = nullptr;
-		stmt->getRHS() = nullptr;
-		*source	       = rsim;
-		delete stmt;
+		*source = rsim;
 		// can't do anything after source modification since stmt not of same type
 		return true;
 	}
@@ -697,14 +696,11 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 			return false;
 		}
 		Stmt *res = b;
-		b	  = nullptr;
-		delete stmt;
-		*source = res;
+		*source	  = res;
 		return true;
 	}
 	// reached here && conditional is inline = delete the entire conditional
 	if(stmt->isInline()) {
-		delete stmt;
 		*source = nullptr;
 	}
 	return true;
@@ -756,7 +752,6 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 
 	if(!blk) {
 		*source = nullptr;
-		delete stmt;
 		return true;
 	}
 
@@ -768,14 +763,14 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 		err.set(stmt, "failed to determine value of inline for-loop condition");
 		return false;
 	}
-	if(init) newblkstmts.push_back(init->clone());
+	if(init) newblkstmts.push_back(init->clone(ctx));
 	while((cond->getType()->isInt() && as<IntVal>(cond->getValue())->getVal()) ||
 	      (cond->getType()->isFlt() && as<FltVal>(cond->getValue())->getVal()))
 	{
 		for(auto &s : blk->getStmts()) {
-			newblkstmts.push_back(s->clone());
+			newblkstmts.push_back(s->clone(ctx));
 		}
-		if(incr) newblkstmts.push_back(incr->clone());
+		if(incr) newblkstmts.push_back(incr->clone(ctx));
 		if(incr && !vpass.visit(incr, &incr)) {
 			err.set(stmt, "failed to determine value of inline for-loop incr");
 			return false;
@@ -785,12 +780,10 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 			return false;
 		}
 	}
-	for(auto &s : blk->getStmts()) delete s;
 	blk->getStmts() = newblkstmts;
 	finalblk	= blk;
 	stmt->getBlk()	= nullptr;
-	delete stmt;
-	*source = finalblk;
+	*source		= finalblk;
 	tmgr.popLayer();
 	if(!visit(*source, source)) {
 		err.set(*source, "failed to determine type of inlined for-loop block");
@@ -929,9 +922,8 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 	StmtFnDef *cfdef = as<StmtFnDef>(cfvar->getVVal());
 	cfdef->setParentVar(cfvar);
 	if(!cfdef->requiresTemplateInit()) return true;
-	cfvar = as<StmtVar>(cfvar->clone()); // template must be cloned
+	cfvar = as<StmtVar>(cfvar->clone(ctx)); // template must be cloned
 	cf->setVar(cfvar);
-	Pointer<StmtVar> cfvarptr(cfvar); // must be unset if everything goes right
 	cfdef		  = as<StmtFnDef>(cfvar->getVVal());
 	StmtFnSig *&cfsig = cfdef->getSig();
 	StmtBlock *&cfblk = cfdef->getBlk();
@@ -969,7 +961,6 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 		tmgr.unlockScope();
 	}
 
-	cfvarptr.unset();
 	specfns.push_back(cfvar);
 	return true;
 }

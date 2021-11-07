@@ -19,32 +19,32 @@ namespace sc
 //////////////////////////////////////////// StmtBlock ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtBlock::clone()
+Stmt *StmtBlock::clone(Context &ctx)
 {
 	std::vector<Stmt *> newstmts;
 	for(auto &stmt : stmts) {
-		newstmts.push_back(stmt->clone());
+		newstmts.push_back(stmt->clone(ctx));
 	}
-	return new StmtBlock(getLoc(), newstmts, is_top);
+	return StmtBlock::create(ctx, getLoc(), newstmts, is_top);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtType /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtType::clone()
+Stmt *StmtType::clone(Context &ctx)
 {
-	return new StmtType(getLoc(), ptr, info, expr->clone());
+	return StmtType::create(ctx, getLoc(), ptr, info, expr->clone(ctx));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////// StmtSimple /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtSimple::clone()
+Stmt *StmtSimple::clone(Context &ctx)
 {
-	StmtSimple *newsim	  = new StmtSimple(getLoc(), val);
-	newsim->self		  = self ? self->clone() : nullptr;
+	StmtSimple *newsim	  = StmtSimple::create(ctx, getLoc(), val);
+	newsim->self		  = self ? self->clone(ctx) : nullptr;
 	newsim->applied_module_id = applied_module_id;
 	return newsim;
 }
@@ -53,24 +53,25 @@ Stmt *StmtSimple::clone()
 //////////////////////////////////////// StmtFnCallInfo ///////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtFnCallInfo::clone()
+Stmt *StmtFnCallInfo::clone(Context &ctx)
 {
 	std::vector<Stmt *> newargs;
 	for(auto &a : args) {
-		newargs.push_back(a->clone());
+		newargs.push_back(a->clone(ctx));
 	}
-	return new StmtFnCallInfo(getLoc(), newargs);
+	return StmtFnCallInfo::create(ctx, getLoc(), newargs);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtExpr /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtExpr::clone()
+Stmt *StmtExpr::clone(Context &ctx)
 {
-	StmtExpr *newexpr   = new StmtExpr(getLoc(), commas, lhs ? lhs->clone() : nullptr, oper,
-					   rhs ? rhs->clone() : nullptr, is_intrinsic_call);
-	newexpr->or_blk	    = or_blk ? as<StmtBlock>(or_blk->clone()) : nullptr;
+	StmtExpr *newexpr =
+	StmtExpr::create(ctx, getLoc(), commas, lhs ? lhs->clone(ctx) : nullptr, oper,
+			 rhs ? rhs->clone(ctx) : nullptr, is_intrinsic_call);
+	newexpr->or_blk	    = or_blk ? as<StmtBlock>(or_blk->clone(ctx)) : nullptr;
 	newexpr->or_blk_var = or_blk_var;
 	newexpr->calledfn   = calledfn;
 	return newexpr;
@@ -80,12 +81,12 @@ Stmt *StmtExpr::clone()
 //////////////////////////////////////////// StmtVar //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtVar::clone()
+Stmt *StmtVar::clone(Context &ctx)
 {
-	StmtType *newvtype = vtype ? as<StmtType>(vtype->clone()) : nullptr;
-	Stmt *newvval	   = vval ? vval->clone() : nullptr;
+	StmtType *newvtype = vtype ? as<StmtType>(vtype->clone(ctx)) : nullptr;
+	Stmt *newvval	   = vval ? vval->clone(ctx) : nullptr;
 	StmtVar *res =
-	new StmtVar(getLoc(), name, newvtype, newvval, is_in, is_comptime, is_global);
+	StmtVar::create(ctx, getLoc(), name, newvtype, newvval, is_in, is_comptime, is_global);
 	res->setAppliedModuleID(applied_module_id);
 	return res;
 }
@@ -94,149 +95,149 @@ Stmt *StmtVar::clone()
 //////////////////////////////////////////// StmtFnSig ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtFnSig::clone()
+Stmt *StmtFnSig::clone(Context &ctx)
 {
 	std::vector<StmtVar *> newargs;
 	for(auto &a : args) {
-		newargs.push_back(as<StmtVar>(a->clone()));
+		newargs.push_back(as<StmtVar>(a->clone(ctx)));
 	}
-	StmtType *newrettype = rettype ? as<StmtType>(rettype->clone()) : nullptr;
-	return new StmtFnSig(getLoc(), newargs, newrettype, scope, has_variadic);
+	StmtType *newrettype = rettype ? as<StmtType>(rettype->clone(ctx)) : nullptr;
+	return StmtFnSig::create(ctx, getLoc(), newargs, newrettype, scope, has_variadic);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtFnDef ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtFnDef::clone()
+Stmt *StmtFnDef::clone(Context &ctx)
 {
-	StmtFnSig *newsig = as<StmtFnSig>(sig->clone());
-	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone()) : nullptr;
-	return new StmtFnDef(getLoc(), newsig, newblk);
+	StmtFnSig *newsig = as<StmtFnSig>(sig->clone(ctx));
+	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone(ctx)) : nullptr;
+	return StmtFnDef::create(ctx, getLoc(), newsig, newblk);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////// StmtHeader /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtHeader::clone()
+Stmt *StmtHeader::clone(Context &ctx)
 {
-	return new StmtHeader(getLoc(), names, flags);
+	return StmtHeader::create(ctx, getLoc(), names, flags);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtLib //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtLib::clone()
+Stmt *StmtLib::clone(Context &ctx)
 {
-	return new StmtLib(getLoc(), flags);
+	return StmtLib::create(ctx, getLoc(), flags);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////// StmtExtern /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtExtern::clone()
+Stmt *StmtExtern::clone(Context &ctx)
 {
-	StmtHeader *newheaders = headers ? as<StmtHeader>(headers->clone()) : nullptr;
-	StmtLib *newlibs       = libs ? as<StmtLib>(libs->clone()) : nullptr;
-	StmtFnSig *newsig      = as<StmtFnSig>(sig->clone());
-	return new StmtExtern(getLoc(), fname, newheaders, newlibs, newsig);
+	StmtHeader *newheaders = headers ? as<StmtHeader>(headers->clone(ctx)) : nullptr;
+	StmtLib *newlibs       = libs ? as<StmtLib>(libs->clone(ctx)) : nullptr;
+	StmtFnSig *newsig      = as<StmtFnSig>(sig->clone(ctx));
+	return StmtExtern::create(ctx, getLoc(), fname, newheaders, newlibs, newsig);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////// StmtEnum //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtEnum::clone()
+Stmt *StmtEnum::clone(Context &ctx)
 {
-	return new StmtEnum(getLoc(), items);
+	return StmtEnum::create(ctx, getLoc(), items);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////// StmtStruct //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtStruct::clone()
+Stmt *StmtStruct::clone(Context &ctx)
 {
 	std::vector<StmtVar *> newfields;
 	for(auto &f : fields) {
-		newfields.push_back(as<StmtVar>(f->clone()));
+		newfields.push_back(as<StmtVar>(f->clone(ctx)));
 	}
-	return new StmtStruct(getLoc(), newfields);
+	return StmtStruct::create(ctx, getLoc(), newfields);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////// StmtVarDecl /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtVarDecl::clone()
+Stmt *StmtVarDecl::clone(Context &ctx)
 {
 	std::vector<StmtVar *> newdecls;
 	for(auto &d : decls) {
-		newdecls.push_back(as<StmtVar>(d->clone()));
+		newdecls.push_back(as<StmtVar>(d->clone(ctx)));
 	}
-	return new StmtVarDecl(getLoc(), newdecls);
+	return StmtVarDecl::create(ctx, getLoc(), newdecls);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtCond /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtCond::clone()
+Stmt *StmtCond::clone(Context &ctx)
 {
 	std::vector<Conditional> newconds;
 	for(auto &c : conds) {
-		Stmt *newcond	  = c.getCond() ? c.getCond()->clone() : nullptr;
-		StmtBlock *newblk = as<StmtBlock>(c.getBlk()->clone());
+		Stmt *newcond	  = c.getCond() ? c.getCond()->clone(ctx) : nullptr;
+		StmtBlock *newblk = as<StmtBlock>(c.getBlk()->clone(ctx));
 		newconds.push_back(Conditional(newcond, newblk));
 	}
-	return new StmtCond(getLoc(), newconds, is_inline);
+	return StmtCond::create(ctx, getLoc(), newconds, is_inline);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////// StmtForIn //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtForIn::clone()
+Stmt *StmtForIn::clone(Context &ctx)
 {
-	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone()) : nullptr;
-	return new StmtForIn(getLoc(), iter, in->clone(), newblk);
+	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone(ctx)) : nullptr;
+	return StmtForIn::create(ctx, getLoc(), iter, in->clone(ctx), newblk);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtFor //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtFor::clone()
+Stmt *StmtFor::clone(Context &ctx)
 {
-	Stmt *newinit	  = init ? init->clone() : nullptr;
-	Stmt *newcond	  = cond ? cond->clone() : nullptr;
-	Stmt *newincr	  = incr ? incr->clone() : nullptr;
-	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone()) : nullptr;
-	return new StmtFor(getLoc(), newinit, newcond, newincr, newblk, is_inline);
+	Stmt *newinit	  = init ? init->clone(ctx) : nullptr;
+	Stmt *newcond	  = cond ? cond->clone(ctx) : nullptr;
+	Stmt *newincr	  = incr ? incr->clone(ctx) : nullptr;
+	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone(ctx)) : nullptr;
+	return StmtFor::create(ctx, getLoc(), newinit, newcond, newincr, newblk, is_inline);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtWhile ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtWhile::clone()
+Stmt *StmtWhile::clone(Context &ctx)
 {
-	Stmt *newcond	  = cond ? cond->clone() : nullptr;
-	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone()) : nullptr;
-	return new StmtWhile(getLoc(), newcond, newblk);
+	Stmt *newcond	  = cond ? cond->clone(ctx) : nullptr;
+	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone(ctx)) : nullptr;
+	return StmtWhile::create(ctx, getLoc(), newcond, newblk);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtRet //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtRet::clone()
+Stmt *StmtRet::clone(Context &ctx)
 {
-	Stmt *newval = val ? val->clone() : nullptr;
-	StmtRet *res = new StmtRet(getLoc(), newval);
+	Stmt *newval = val ? val->clone(ctx) : nullptr;
+	StmtRet *res = StmtRet::create(ctx, getLoc(), newval);
 	res->setFnBlk(fnblk);
 	return res;
 }
@@ -245,27 +246,27 @@ Stmt *StmtRet::clone()
 ////////////////////////////////////////// StmtContinue ///////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtContinue::clone()
+Stmt *StmtContinue::clone(Context &ctx)
 {
-	return new StmtContinue(getLoc());
+	return StmtContinue::create(ctx, getLoc());
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtBreak ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtBreak::clone()
+Stmt *StmtBreak::clone(Context &ctx)
 {
-	return new StmtBreak(getLoc());
+	return StmtBreak::create(ctx, getLoc());
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// StmtDefer ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt *StmtDefer::clone()
+Stmt *StmtDefer::clone(Context &ctx)
 {
-	return new StmtDefer(getLoc(), val->clone());
+	return StmtDefer::create(ctx, getLoc(), val->clone(ctx));
 }
 
 } // namespace sc
