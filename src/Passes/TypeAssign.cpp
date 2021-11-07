@@ -73,9 +73,19 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 {
 	if(stmt->getMod()->isMainModule() || !stmt->isTop()) tmgr.pushLayer();
 
+	if(stmt->isTop()) deferstack.pushFunc();
+
 	auto &stmts = stmt->getStmts();
 	deferstack.pushFrame();
+	bool inserted_defers = false;
 	for(size_t i = 0; i < stmts.size(); ++i) {
+		if(stmts[i]->getStmtType() == RET && !inserted_defers) {
+			std::vector<Stmt *> deferred = deferstack.getAllStmts();
+			stmts.insert(stmts.begin() + i, deferred.begin(), deferred.end());
+			inserted_defers = true;
+			--i;
+			continue;
+		}
 		if(!visit(stmts[i], &stmts[i])) {
 			err.set(stmt, "failed to assign type to stmt in block");
 			return false;
@@ -83,17 +93,23 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 		if(!stmts[i]) {
 			stmts.erase(stmts.begin() + i);
 			--i;
-			continue;
 		}
+		if(i != stmts.size() - 1 || inserted_defers) continue;
+		std::vector<Stmt *> &deferred = deferstack.getTopStmts();
+		stmts.insert(stmts.end(), deferred.begin(), deferred.end());
+		inserted_defers = true;
 	}
 	deferstack.popFrame();
 
-	if(stmt->getMod()->isMainModule() || !stmt->isTop()) tmgr.popLayer();
 	// insert all the specfns
 	if(stmt->isTop()) {
 		stmts.insert(stmts.begin(), specfns.begin(), specfns.end());
 		specfns.clear();
 	}
+
+	if(stmt->isTop()) deferstack.popFunc();
+
+	if(stmt->getMod()->isMainModule() || !stmt->isTop()) tmgr.popLayer();
 	return true;
 }
 bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
@@ -581,12 +597,12 @@ bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 
 	if(stmt->requiresTemplateInit()) goto end;
 
-	tmgr.pushFunc(sigty);
+	pushFunc(sigty);
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
 		err.set(stmt, "failed to determine type of function block");
 		return false;
 	}
-	tmgr.popFunc();
+	popFunc();
 end:
 	stmt->setType(sigty);
 	tmgr.popLayer();
@@ -834,10 +850,8 @@ bool TypeAssignPass::visit(StmtBreak *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtDefer *stmt, Stmt **source)
 {
-	if(!visit(stmt->getVal(), &stmt->getVal())) {
-		err.set(stmt, "failed to determine type of defer expression");
-		return false;
-	}
+	deferstack.addStmt(stmt->getVal());
+	*source = nullptr;
 	return true;
 }
 
@@ -949,12 +963,12 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 	cfsig->setType(cf);
 	cfdef->setType(cf);
 	cfvar->setType(cf);
-	tmgr.pushFunc(cf);
+	pushFunc(cf);
 	if(!visit(cfblk, asStmt(&cfblk))) {
 		err.set(caller, "failed to assign type for called template function's var");
 		return false;
 	}
-	tmgr.popFunc();
+	popFunc();
 	tmgr.popLayer();
 
 	if(caller->getMod()->getID() == cfdef->getMod()->getID()) {
@@ -964,4 +978,16 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 	specfns.push_back(cfvar);
 	return true;
 }
+
+void TypeAssignPass::pushFunc(FuncTy *fn)
+{
+	tmgr.pushFunc(fn);
+	deferstack.pushFunc();
+}
+void TypeAssignPass::popFunc()
+{
+	deferstack.popFunc();
+	tmgr.popFunc();
+}
+
 } // namespace sc
