@@ -177,8 +177,8 @@ bool RAIIParser::parse(const std::string &path, const bool &main_module)
 	fs::setCWD(fs::parentDir(path));
 	size_t src_id = 0;
 	if(!addModule(path, main_module)) return false;
-	fs::setCWD(wd);
 	bool res = executeDefaultPasses(path);
+	fs::setCWD(wd);
 	if(!res) err.show(stderr);
 	if(main_module) {
 		combineAllModules();
