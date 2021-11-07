@@ -2,6 +2,8 @@ let global i1 = @createIntType(1, true);
 let global i32 = @createIntType(32, true);
 let global u64 = @createIntType(64, false);
 
+let deinit in i32 = fn(): void {};
+
 let Vec = struct {
 	comptime T: type; // kinda like annotation - not visible in code generation (maybe?)
 	cap: u64;
@@ -32,7 +34,7 @@ let pop in Vec = fn() {
 };
 
 let deinit in Vec = fn() {
-	defer c.free(data);
+	// defer c.free(data);
 	if !self.managed || @isPrimitive(self.T) { return; }
 	for let i: u64 = 0; i < self.len; ++i {
 		self.data[i].deinit();

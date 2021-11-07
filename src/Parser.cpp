@@ -34,10 +34,7 @@ Module::Module(ErrMgr &err, Context &ctx, const std::string &id, const std::stri
 	: err(err), ctx(ctx), id(id), path(path), code(code), tokens(), ptree(nullptr),
 	  is_main_module(is_main_module)
 {}
-Module::~Module()
-{
-	if(ptree) delete ptree;
-}
+Module::~Module() {}
 bool Module::tokenize()
 {
 	lex::Tokenizer tokenizer(this, err);
@@ -46,18 +43,13 @@ bool Module::tokenize()
 bool Module::parseTokens()
 {
 	ParseHelper p(this, tokens);
-	Parsing parsing(err);
+	Parsing parsing(ctx, err);
 	return parsing.parse_block(p, (StmtBlock *&)ptree, false);
-	// ptree->setParent(nullptr);
 }
 bool Module::executePasses(PassManager &pm)
 {
 	return pm.visit(ptree);
 }
-// void Module::cleanupParseTree()
-// {
-// 	cleanup(ptree, &ptree);
-// }
 const std::string &Module::getID() const
 {
 	return id;
@@ -155,7 +147,6 @@ Module *RAIIParser::addModule(const std::string &path, const bool &main_module)
 		modulestack.pop_back();
 		return nullptr;
 	}
-	// mod->rearrangeParseTree();
 
 	mptr.unset();
 	modules[path] = mod;
@@ -187,19 +178,12 @@ bool RAIIParser::parse(const std::string &path, const bool &main_module)
 	size_t src_id = 0;
 	if(!addModule(path, main_module)) return false;
 	fs::setCWD(wd);
-	// if(!main_module) return true;
 	bool res = executeDefaultPasses(path);
 	if(!res) err.show(stderr);
 	if(main_module) {
 		combineAllModules();
 	}
 	return res;
-}
-void RAIIParser::cleanupParseTrees()
-{
-	for(auto file = modulestack.rbegin(); file != modulestack.rend(); ++file) {
-		// modules[*file]->cleanupParseTree();
-	}
 }
 args::ArgParser &RAIIParser::getCommandArgs()
 {

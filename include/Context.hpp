@@ -20,12 +20,14 @@
 
 namespace sc
 {
+class Stmt;
 class Type;
 class Value;
 class Pass;
 class RAIIParser;
 class Context
 {
+	std::vector<Stmt *> stmtmem;
 	std::vector<Type *> typemem;
 	std::vector<Value *> valmem;
 	std::unordered_map<size_t, Pass *> passes;
@@ -35,6 +37,12 @@ public:
 	Context(RAIIParser *parser);
 	~Context();
 
+	template<typename T, typename... Args> T *allocStmt(Args... args)
+	{
+		T *res = new T(args...);
+		stmtmem.push_back(res);
+		return res;
+	}
 	template<typename T, typename... Args> T *allocType(Args... args)
 	{
 		T *res = new T(args...);

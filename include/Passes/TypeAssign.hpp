@@ -14,6 +14,7 @@
 #ifndef PASSES_TYPE_ASSIGN_HPP
 #define PASSES_TYPE_ASSIGN_HPP
 
+#include "DeferStack.hpp"
 #include "Passes/Base.hpp"
 #include "Passes/ValueAssign.hpp"
 #include "TypeMgr.hpp"
@@ -24,6 +25,7 @@ class TypeAssignPass : public Pass
 {
 	TypeManager tmgr;
 	ValueAssignPass vpass;
+	DeferStack deferstack;
 	std::vector<StmtVar *> specfns; // specialized funcs
 	bool disabled_varname_mangling;
 

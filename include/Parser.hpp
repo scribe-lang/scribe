@@ -44,7 +44,6 @@ public:
 	bool tokenize();
 	bool parseTokens();
 	bool executePasses(PassManager &pm);
-	void cleanupParseTree();
 
 	const std::string &getID() const;
 	const std::string &getPath() const;
@@ -85,7 +84,6 @@ public:
 	bool parse(const std::string &path, const bool &main_module = false);
 	bool executeDefaultPasses(const std::string &path);
 	void combineAllModules();
-	void cleanupParseTrees();
 
 	args::ArgParser &getCommandArgs();
 

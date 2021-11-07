@@ -27,10 +27,11 @@ enum class Occurs
 };
 class Parsing
 {
+	Context &ctx;
 	ErrMgr &err;
 
 public:
-	Parsing(ErrMgr &err);
+	Parsing(Context &ctx, ErrMgr &err);
 
 	// on successful parse, returns true, and tree is allocated
 	// if with_brace is true, it will attempt to find the beginning and ending brace for each

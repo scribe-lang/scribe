@@ -15,17 +15,9 @@
 
 namespace sc
 {
-DeferStack::~DeferStack()
-{
-	for(auto &f : stack) {
-		for(auto &s : f) delete s;
-	}
-}
+DeferStack::~DeferStack() {}
 void DeferStack::popFrame()
 {
-	for(auto &stmt : stack.back()) {
-		delete stmt;
-	}
 	stack.pop_back();
 }
 std::vector<Stmt *> DeferStack::getAllStmts()
