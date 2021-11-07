@@ -24,19 +24,36 @@ namespace sc
 {
 class DeferStack
 {
-	std::vector<std::vector<Stmt *>> stack;
+	// hierarchy:
+	// global/func -> blocks -> statements
+	std::vector<std::vector<std::vector<Stmt *>>> stack;
 
 public:
-	~DeferStack();
-	inline void pushFrame()
+	DeferStack();
+	inline void pushFunc()
 	{
 		stack.push_back({});
 	}
+	inline void popFunc()
+	{
+		stack.pop_back();
+	}
+	inline void pushFrame()
+	{
+		stack.back().push_back({});
+	}
+	inline void popFrame()
+	{
+		stack.back().pop_back();
+	}
 	inline void addStmt(Stmt *s)
 	{
-		stack.back().push_back(s);
+		stack.back().back().push_back(s);
 	}
-	void popFrame();
+	inline std::vector<Stmt *> &getTopStmts()
+	{
+		return stack.back().back();
+	}
 	std::vector<Stmt *> getAllStmts();
 };
 } // namespace sc

@@ -36,6 +36,9 @@ class TypeAssignPass : public Pass
 	bool chooseSuperiorPrimitiveType(Type *l, Type *r);
 	bool initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<Stmt *> &args);
 
+	void pushFunc(FuncTy *fn);
+	void popFunc();
+
 public:
 	TypeAssignPass(ErrMgr &err, Context &ctx);
 	~TypeAssignPass();

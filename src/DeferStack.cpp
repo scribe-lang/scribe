@@ -15,15 +15,11 @@
 
 namespace sc
 {
-DeferStack::~DeferStack() {}
-void DeferStack::popFrame()
-{
-	stack.pop_back();
-}
+DeferStack::DeferStack() {}
 std::vector<Stmt *> DeferStack::getAllStmts()
 {
 	std::vector<Stmt *> res;
-	for(auto stackit = stack.rbegin(); stackit != stack.rend(); ++stackit) {
+	for(auto stackit = stack.back().rbegin(); stackit != stack.back().rend(); ++stackit) {
 		auto &frame = *stackit;
 		for(auto stmtit = frame.rbegin(); stmtit != frame.rend(); ++stmtit) {
 			auto &stmt = *stmtit;
