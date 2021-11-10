@@ -8,4 +8,4 @@ let calc = fn(a: i32, b: i32): i32 {
 	return res;
 };
 
-let comptime res = calc(5, 10);
+let comptime res = calc(5, 10); // should be 205

@@ -30,6 +30,7 @@ void AddPrimitiveFuncs(Context &c, TypeManager &tmgr)
 	IntTy *i1    = nullptr;
 	IntTy *i32   = nullptr;
 	IntTy *i32va = nullptr;
+	IntTy *u64   = nullptr;
 	Type *i8str  = nullptr;
 
 	i8str = IntTy::create(c, 8, true);
@@ -50,6 +51,22 @@ void AddPrimitiveFuncs(Context &c, TypeManager &tmgr)
 	g  = TypeTy::create(c);
 	g2 = TypeTy::create(c);
 	ADDFN("as", createFn(c, {g, g2}, g, intrinsic_as, IPARSE));
+
+	g  = TypeTy::create(c);
+	g2 = TypeTy::create(c);
+	ADDFN("typeOf", createFn(c, {g}, g, intrinsic_typeof, IPARSE));
+
+	g  = TypeTy::create(c);
+	g2 = TypeTy::create(c);
+	ADDFN("ptr", createFn(c, {g}, g2, intrinsic_ptr, IPARSE));
+
+	g  = TypeTy::create(c);
+	g2 = TypeTy::create(c);
+	ADDFN("ref", createFn(c, {g}, g2, intrinsic_ptr, IPARSE));
+
+	g   = TypeTy::create(c);
+	u64 = IntTy::create(c, 64, false);
+	ADDFN("sizeOf", createFn(c, {g}, u64, intrinsic_szof, IVALUE));
 
 	g   = TypeTy::create(c);
 	i32 = IntTy::create(c, 32, true);

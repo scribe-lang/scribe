@@ -132,7 +132,8 @@ bool ValueAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	Stmt *&rhs	  = stmt->getRHS();
 	lex::TokType oper = stmt->getOper().getTok().getVal();
 
-	if(oper != lex::FNCALL && lhs && (!visit(lhs, &lhs) || !lhs->getValue())) {
+	if(oper != lex::FNCALL && oper != lex::STCALL && lhs &&
+	   (!visit(lhs, &lhs) || !lhs->getValue())) {
 		err.set(stmt, "failed to determine value of LHS in expression");
 		return false;
 	}
@@ -172,68 +173,72 @@ skip_rhs_val:
 		break;
 	}
 	case lex::FNCALL: {
-		if(!lhs->getType()->isFunc() && !lhs->getType()->isStruct()) {
-			err.set(stmt, "a call can be performed only on functions or struct defs");
+		if(!lhs->getType()->isFunc()) {
+			err.set(stmt, "a function call can be performed only on functions");
 			return false;
 		}
-		StmtFnCallInfo *callinfo = as<StmtFnCallInfo>(rhs);
-		bool has_va		 = false;
-		if(lhs->getType()->isFunc()) {
-			std::vector<Stmt *> &callargs = callinfo->getArgs();
-			FuncTy *fn		      = as<FuncTy>(lhs->getType());
-			if(fn->isIntrinsic()) {
-				if(!fn->callIntrinsic(ctx, err, stmt, source, callargs, IVALUE)) {
-					err.set(stmt, "failed to call value intrinsic");
-					return false;
-				}
-				if(stmt->getValue()) stmt->setPermaVal(stmt->getValue());
-				return true;
-			}
-			if(!fn->getVar()) {
-				err.set(stmt, "function type contains no definition");
+		StmtFnCallInfo *callinfo      = as<StmtFnCallInfo>(rhs);
+		bool has_va		      = false;
+		std::vector<Stmt *> &callargs = callinfo->getArgs();
+		FuncTy *fn		      = as<FuncTy>(lhs->getType());
+		if(fn->isIntrinsic()) {
+			if(!fn->callIntrinsic(ctx, err, stmt, source, callargs, IVALUE)) {
+				err.set(stmt, "failed to call value intrinsic");
 				return false;
 			}
-			Stmt *&fndef			      = fn->getVar()->getVVal();
-			StmtFnDef *def			      = as<StmtFnDef>(fndef);
-			const std::vector<StmtVar *> &defargs = def->getSigArgs();
-			if(!fndef) {
-				err.set(stmt, "function has no definition to execute");
-				return false;
-			}
-			std::vector<Value *> variadicvalues;
-			for(size_t i = 0, j = 0; i < defargs.size() && j < callargs.size();
-			    ++i, ++j) {
-				if(fn->getArg(i)->isVariadic()) {
-					--i;
-					variadicvalues.push_back(callargs[j]->getValue());
-					continue;
-				}
-				Value *aval = callargs[j]->getValue();
-				if(!def->getSigArgs()[i]->getType()->hasRef())
-					aval = aval->clone(ctx);
-				def->getSigArgs()[i]->setVal(aval);
-			}
-			if(!variadicvalues.empty()) {
-				defargs.back()->setVal(VecVal::create(ctx, variadicvalues));
-			}
-			if(!visit(def, &fndef)) {
-				err.set(stmt, "failed to determine value from function definition");
-				return false;
-			}
-			stmt->setPermaVal(def->getValue());
-			def->clearValue();
-		} else if(lhs->getType()->isStruct()) {
-			StructTy *st = as<StructTy>(lhs->getType());
-			std::unordered_map<std::string, Value *> stvals;
-			for(size_t i = 0; i < st->getFields().size(); ++i) {
-				if(!callinfo->getArg(i)->getValue()) {
-					err.set(stmt, "argument %zu has no comptime value", i);
-					return false;
-				}
-				stvals[st->getFieldName(i)] = callinfo->getArg(i)->getValue();
-			}
-			stmt->setVal(StructVal::create(ctx, stvals));
+			if(stmt->getValue()) stmt->setPermaVal(stmt->getValue());
+			return true;
 		}
+		if(!fn->getVar()) {
+			err.set(stmt, "function type contains no definition");
+			return false;
+		}
+		Stmt *&fndef			      = fn->getVar()->getVVal();
+		StmtFnDef *def			      = as<StmtFnDef>(fndef);
+		const std::vector<StmtVar *> &defargs = def->getSigArgs();
+		if(!fndef) {
+			err.set(stmt, "function has no definition to execute");
+			return false;
+		}
+		std::vector<Value *> variadicvalues;
+		for(size_t i = 0, j = 0; i < defargs.size() && j < callargs.size(); ++i, ++j) {
+			if(fn->getArg(i)->isVariadic()) {
+				--i;
+				variadicvalues.push_back(callargs[j]->getValue());
+				continue;
+			}
+			Value *aval = callargs[j]->getValue();
+			if(!def->getSigArgs()[i]->getType()->hasRef()) aval = aval->clone(ctx);
+			def->getSigArgs()[i]->setVal(aval);
+		}
+		if(!variadicvalues.empty()) {
+			defargs.back()->setVal(VecVal::create(ctx, variadicvalues));
+		}
+		if(!visit(def, &fndef)) {
+			err.set(stmt, "failed to determine value from function definition");
+			return false;
+		}
+		stmt->setPermaVal(def->getValue());
+		def->clearValue();
+		break;
+	}
+	case lex::STCALL: {
+		if(!lhs->getType()->isStruct()) {
+			err.set(stmt, "a struct call can be performed only on struct defs");
+			return false;
+		}
+		StmtFnCallInfo *callinfo      = as<StmtFnCallInfo>(rhs);
+		std::vector<Stmt *> &callargs = callinfo->getArgs();
+		StructTy *st		      = as<StructTy>(lhs->getType());
+		std::unordered_map<std::string, Value *> stvals;
+		for(size_t i = 0; i < st->getFields().size(); ++i) {
+			if(!callinfo->getArg(i)->getValue()) {
+				err.set(stmt, "argument %zu has no comptime value", i);
+				return false;
+			}
+			stvals[st->getFieldName(i)] = callinfo->getArg(i)->getValue();
+		}
+		stmt->setVal(StructVal::create(ctx, stvals));
 		break;
 	}
 	// address of

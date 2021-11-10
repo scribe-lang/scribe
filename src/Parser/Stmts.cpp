@@ -160,6 +160,12 @@ std::string StmtType::getStringName()
 	return tname;
 }
 
+bool StmtType::isMetaType() const
+{
+	return expr && expr->getStmtType() == SIMPLE &&
+	       as<StmtSimple>(expr)->getLexValue().getTok() == lex::TYPE;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////// StmtSimple /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -564,20 +570,33 @@ bool StmtEnum::requiresTemplateInit()
 ///////////////////////////////////////// StmtStruct //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtStruct::StmtStruct(const ModuleLoc &loc, const std::vector<StmtVar *> &fields)
-	: Stmt(STRUCTDEF, loc), fields(fields)
+StmtStruct::StmtStruct(const ModuleLoc &loc, const std::vector<StmtVar *> &fields,
+		       const std::vector<lex::Lexeme> &templates)
+	: Stmt(STRUCTDEF, loc), fields(fields), templates(templates)
 {}
 StmtStruct::~StmtStruct() {}
 StmtStruct *StmtStruct::create(Context &c, const ModuleLoc &loc,
-			       const std::vector<StmtVar *> &fields)
+			       const std::vector<StmtVar *> &fields,
+			       const std::vector<lex::Lexeme> &templates)
 {
-	return c.allocStmt<StmtStruct>(loc, fields);
+	return c.allocStmt<StmtStruct>(loc, fields, templates);
 }
 
 void StmtStruct::disp(const bool &has_next) const
 {
+	std::string templatestr;
+	if(!templates.empty()) {
+		templatestr += "<";
+		for(auto &t : templates) {
+			templatestr += t.getDataStr() + ", ";
+		}
+		templatestr.pop_back();
+		templatestr.pop_back();
+		templatestr += ">";
+	}
+
 	tio::taba(has_next);
-	tio::print(has_next, "Struct %s\n", getTypeString().c_str());
+	tio::print(has_next, "Struct%s %s\n", templatestr.c_str(), getTypeString().c_str());
 
 	if(!fields.empty()) {
 		tio::taba(false);
@@ -593,12 +612,21 @@ void StmtStruct::disp(const bool &has_next) const
 
 bool StmtStruct::requiresTemplateInit()
 {
+	if(templates.size() > 0) return true;
 	for(auto &f : fields) {
 		if(f->requiresTemplateInit() || f->isComptime()) return true;
 	}
 	return false;
 }
 
+std::vector<std::string> StmtStruct::getTemplateNames()
+{
+	std::vector<std::string> templatenames;
+	for(auto &t : templates) {
+		templatenames.push_back(t.getDataStr());
+	}
+	return templatenames;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////// StmtVarDecl /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
