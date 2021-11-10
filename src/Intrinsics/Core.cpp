@@ -26,6 +26,7 @@
 namespace sc
 {
 static bool IsValidSource(std::string &modname);
+static size_t SizeOf(Type *ty);
 
 INTRINSIC(import)
 {
@@ -76,11 +77,40 @@ INTRINSIC(isprimitive)
 	stmt->setVal(IntVal::create(c, args[0]->getType()->isPrimitive()));
 	return true;
 }
+INTRINSIC(szof)
+{
+	int64_t sz = SizeOf(args[0]->getType());
+	if(!sz) {
+		err.set(args[0], "invalid type info, received size 0");
+		return false;
+	}
+	stmt->setVal(IntVal::create(c, sz));
+	return true;
+}
 INTRINSIC(as)
 {
-	stmt->setType(args[1]->getType());
-	stmt->castTo(args[0]->getType());
-	if(args[1]->getValue()) stmt->setVal(args[1]->getValue());
+	args[1]->castTo(args[0]->getType());
+	*source = args[1];
+	return true;
+}
+INTRINSIC(typeof)
+{
+	*source = args[0];
+	return true;
+}
+INTRINSIC(ptr)
+{
+	Type *res = args[0]->getType()->clone(c, true);
+	res	  = PtrTy::create(c, res, 0);
+	args[0]->setType(res);
+	*source = args[0];
+	return true;
+}
+INTRINSIC(ref)
+{
+	Type *res = args[0]->getType()->clone(c, true);
+	args[0]->setType(res);
+	*source = args[0];
 	return true;
 }
 INTRINSIC(valen)
@@ -142,5 +172,28 @@ static bool IsValidSource(std::string &modname)
 		}
 	}
 	return false;
+}
+
+static size_t SizeOf(Type *ty)
+{
+	if(ty->isPtr()) {
+		return sizeof(void *);
+	}
+	if(ty->isInt()) {
+		return as<IntTy>(ty)->getBits() / 8;
+	}
+	if(ty->isFlt()) {
+		return as<FltTy>(ty)->getBits() / 8;
+	}
+	if(ty->isStruct()) {
+		StructTy *st = as<StructTy>(ty);
+		size_t sz    = 0;
+		for(auto &t : st->getFields()) {
+			sz += SizeOf(t);
+		}
+		if(!sz) sz = 1;
+		return sz;
+	}
+	return 0;
 }
 } // namespace sc

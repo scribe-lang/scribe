@@ -29,6 +29,11 @@ uint64_t genTypeID()
 	static uint64_t id = _LAST;
 	return id++;
 }
+uint64_t genFuncUniqID()
+{
+	static uint64_t id = 1; // 0 is for externs = no uniq id
+	return id++;
+}
 uint64_t genContainedTypeID()
 {
 	static uint64_t id = 0;
@@ -48,22 +53,18 @@ Type::Type(const Types &type, const size_t &info, const uint64_t &id)
 Type::~Type() {}
 bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
+	if(!rhs) return false;
 	if(isAny()) return true;
+	if(isPtr() && rhs->isPtr()) {
+		return as<PtrTy>(this)->getTo()->isCompatible(c, as<PtrTy>(rhs)->getTo(), e, loc);
+	}
+	if(rhs->isTypeTy()) {
+		return this->isCompatible(c, as<TypeTy>(rhs)->getContainedTy(), e, loc);
+	}
 	if(isTypeTy()) {
-		TypeTy *ttl = as<TypeTy>(this);
-		Type *ctl   = ttl->getContainedTy();
-		if(!ctl) return true;
-		if(rhs->isTypeTy()) {
-			TypeTy *ttr = as<TypeTy>(rhs);
-			Type *ctr   = ttr->getContainedTy();
-			if(!ctr) return false;
-			ctr = ctr->clone(c);
-			ctr->appendInfo(ttr->getInfo());
-			return ctl->isCompatible(c, ctr, e, loc);
-		}
-		ctl = ctl->clone(c);
-		ctl->appendInfo(ttl->getInfo());
-		return ctl->isCompatible(c, rhs, e, loc);
+		Type *ct = as<TypeTy>(this)->getContainedTy();
+		if(!ct) return true;
+		return ct->isCompatible(c, rhs, e, loc);
 	}
 	bool is_lhs_prim = isPrimitive();
 	bool is_rhs_prim = rhs->isPrimitive();
@@ -121,6 +122,10 @@ std::string Type::baseToStr()
 {
 	return infoToStr() + TypeStrs[type];
 }
+uint64_t Type::getID()
+{
+	return getBaseID();
+}
 bool Type::isTemplate()
 {
 	return false;
@@ -148,7 +153,7 @@ Value *Type::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 	Ty::Ty() : Type(EnumName, 0, EnumName) {}                      \
 	Ty::Ty(const size_t &info) : Type(EnumName, info, EnumName) {} \
 	Ty::~Ty() {}                                                   \
-	Type *Ty::clone(Context &c)                                    \
+	Type *Ty::clone(Context &c, const bool &as_is)                 \
 	{                                                              \
 		return c.allocType<Ty>(getInfo());                     \
 	}                                                              \
@@ -170,7 +175,7 @@ IntTy::IntTy(const size_t &info, const uint64_t &id, const size_t &bits, const b
 {}
 IntTy::~IntTy() {}
 
-Type *IntTy::clone(Context &c)
+Type *IntTy::clone(Context &c, const bool &as_is)
 {
 	return c.allocType<IntTy>(getInfo(), getID(), bits, sign);
 }
@@ -209,7 +214,7 @@ FltTy::FltTy(const size_t &info, const uint64_t &id, const size_t &bits)
 {}
 FltTy::~FltTy() {}
 
-Type *FltTy::clone(Context &c)
+Type *FltTy::clone(Context &c, const bool &as_is)
 {
 	return c.allocType<FltTy>(getInfo(), getID(), bits);
 }
@@ -250,10 +255,12 @@ bool TypeTy::isTemplate()
 std::string TypeTy::toStr()
 {
 	Type *ct = getContainedTy();
-	return infoToStr() + "typety<" + (ct ? ct->toStr() : "(none)") + ">";
+	return infoToStr() + "typety<" +
+	       (ct ? ct->toStr() : "(none:" + std::to_string(containedtyid) + ")") + ">";
 }
-Type *TypeTy::clone(Context &c)
+Type *TypeTy::clone(Context &c, const bool &as_is)
 {
+	if(!as_is && getContainedTy()) return getContainedTy()->clone(c);
 	return c.allocType<TypeTy>(getInfo(), getID(), containedtyid);
 }
 
@@ -262,9 +269,13 @@ TypeTy *TypeTy::create(Context &c)
 	return c.allocType<TypeTy>();
 }
 
+void TypeTy::clearContainedTy()
+{
+	containedtypes[containedtyid] = nullptr;
+}
 void TypeTy::setContainedTy(Type *ty)
 {
-	if(containedtypes.find(containedtyid) != containedtypes.end()) return;
+	if(getContainedTy()) return;
 	if(ty->isTypeTy() && as<TypeTy>(ty)->getContainedTy()) {
 		containedtypes[containedtyid] = as<TypeTy>(ty)->getContainedTy();
 		return;
@@ -306,7 +317,7 @@ std::string PtrTy::toStr()
 	if(count) countexpr = "[" + std::to_string(count) + "] ";
 	return "*" + countexpr + infoToStr() + to->toStr();
 }
-Type *PtrTy::clone(Context &c)
+Type *PtrTy::clone(Context &c, const bool &as_is)
 {
 	return c.allocType<PtrTy>(getInfo(), getID(), to->clone(c), count);
 }
@@ -314,7 +325,7 @@ PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count)
 {
 	return c.allocType<PtrTy>(ptr_to, count);
 }
-Type *PtrTy::getTo()
+Type *&PtrTy::getTo()
 {
 	return to;
 }
@@ -343,19 +354,30 @@ Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 // Struct Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StructTy::StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields)
-	: Type(TSTRUCT, 0, genTypeID()), fieldnames(fieldnames), fields(fields), is_def(true)
+StructTy::StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields,
+		   const std::vector<std::string> &templatenames,
+		   const std::vector<TypeTy *> &templates)
+	: Type(TSTRUCT, 0, genTypeID()), fieldnames(fieldnames), fields(fields),
+	  templatenames(templatenames), templates(templates), is_def(true),
+	  has_template(templates.size())
 {
 	for(size_t i = 0; i < fieldnames.size(); ++i) {
 		fieldpos[fieldnames[i]] = i;
+	}
+	for(size_t i = 0; i < templatenames.size(); ++i) {
+		templatepos[templatenames[i]] = i;
 	}
 }
 StructTy::StructTy(const size_t &info, const uint64_t &id,
 		   const std::vector<std::string> &fieldnames,
 		   const std::unordered_map<std::string, size_t> &fieldpos,
-		   const std::vector<Type *> &fields, const bool &is_def)
+		   const std::vector<Type *> &fields, const std::vector<std::string> &templatenames,
+		   const std::unordered_map<std::string, size_t> &templatepos,
+		   const std::vector<TypeTy *> &templates, const bool &is_def,
+		   const bool &has_template)
 	: Type(TSTRUCT, info, id), fieldpos(fieldpos), fieldnames(fieldnames), fields(fields),
-	  is_def(is_def)
+	  templatepos(templatepos), templatenames(templatenames), templates(templates),
+	  is_def(is_def), has_template(has_template)
 {}
 StructTy::~StructTy() {}
 bool StructTy::isTemplate()
@@ -378,12 +400,15 @@ std::string StructTy::toStr()
 	res += "}";
 	return res;
 }
-Type *StructTy::clone(Context &c)
+Type *StructTy::clone(Context &c, const bool &as_is)
 {
 	std::vector<Type *> newfields;
+	std::vector<TypeTy *> newtemplates;
 	for(auto &field : fields) newfields.push_back(field->clone(c));
-	return c.allocType<StructTy>(getInfo(), genTypeID(), fieldnames, fieldpos, newfields,
-				     is_def);
+	for(auto &t : templates) newtemplates.push_back(as<TypeTy>(t->clone(c)));
+	return c.allocType<StructTy>(getInfo(), getID(), fieldnames, fieldpos, newfields,
+				     templatenames, templatepos, newtemplates, is_def,
+				     has_template);
 }
 bool StructTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
@@ -402,15 +427,33 @@ bool StructTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	}
 	return true;
 }
+StructTy *StructTy::applyTemplates(Context &c, ErrMgr &e, ModuleLoc &loc,
+				   const std::vector<Type *> &actuals)
+{
+	if(templates.size() != actuals.size()) {
+		e.set(loc, "expected templates for struct: %zu, found: %zu", templates.size(),
+		      actuals.size());
+		return nullptr;
+	}
+	for(size_t i = 0; i < templates.size(); ++i) {
+		templates[i]->setContainedTy(actuals[i]);
+	}
+	StructTy *res = as<StructTy>(this->clone(c));
+	for(auto &t : templates) {
+		t->clearContainedTy();
+	}
+	res->setTemplate(false);
+	return res;
+}
 StructTy *StructTy::instantiate(Context &c, ErrMgr &e, ModuleLoc &loc,
 				const std::vector<Stmt *> &callargs)
 {
 	if(fields.size() != callargs.size()) return nullptr;
-	bool is_field_compatible = true;
-	for(size_t i = 0; i < fields.size(); ++i) {
-		if(!fields[i]->isTypeTy()) continue;
-		as<TypeTy>(fields[i])->setContainedTy(callargs[i]->getType());
+	if(isTemplate()) {
+		e.set(loc, "a struct with templates cannot be instantiated");
+		return nullptr;
 	}
+	bool is_field_compatible = true;
 	for(size_t i = 0; i < this->fields.size(); ++i) {
 		Type *sf    = this->fields[i];
 		Stmt *ciarg = callargs[i];
@@ -420,17 +463,15 @@ StructTy *StructTy::instantiate(Context &c, ErrMgr &e, ModuleLoc &loc,
 	}
 	if(!is_field_compatible) return nullptr;
 	StructTy *newst = as<StructTy>(this->clone(c));
-	for(size_t i = 0; i < fields.size(); ++i) {
-		if(!fields[i]->isTypeTy()) continue;
-		as<TypeTy>(fields[i])->setContainedTy(nullptr);
-	}
 	newst->setDef(false);
 	return newst;
 }
 StructTy *StructTy::create(Context &c, const std::vector<std::string> &_fieldnames,
-			   const std::vector<Type *> &_fields)
+			   const std::vector<Type *> &_fields,
+			   const std::vector<std::string> &_templatenames,
+			   const std::vector<TypeTy *> &_templates)
 {
-	return c.allocType<StructTy>(_fieldnames, _fields);
+	return c.allocType<StructTy>(_fieldnames, _fields, _templatenames, _templates);
 }
 const std::string &StructTy::getFieldName(const size_t &idx)
 {
@@ -442,6 +483,8 @@ std::vector<Type *> &StructTy::getFields()
 }
 Type *StructTy::getField(const std::string &name)
 {
+	auto templfound = templatepos.find(name);
+	if(templfound != templatepos.end()) return templates[templfound->second];
 	auto found = fieldpos.find(name);
 	if(found == fieldpos.end()) return nullptr;
 	return fields[found->second];
@@ -451,6 +494,14 @@ Type *StructTy::getField(const size_t &pos)
 	if(pos >= fields.size()) return nullptr;
 	return fields[pos];
 }
+std::vector<TypeTy *> &StructTy::getTemplates()
+{
+	return templates;
+}
+void StructTy::clearTemplates()
+{
+	templates.clear();
+}
 void StructTy::setDef(const bool &def)
 {
 	is_def = def;
@@ -458,6 +509,18 @@ void StructTy::setDef(const bool &def)
 bool StructTy::isDef() const
 {
 	return is_def;
+}
+void StructTy::setTemplate(const bool &has_templ)
+{
+	has_template = has_templ;
+}
+bool StructTy::hasTemplate()
+{
+	if(!has_template) return false;
+	for(auto &t : templates) {
+		if(!t->getContainedTy()) return true;
+	}
+	return false;
 }
 
 Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
@@ -481,15 +544,25 @@ Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 FuncTy::FuncTy(StmtVar *var, const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
 	       const IntrinType &intrinty, const bool &externed)
 	: Type(TFUNC, 0, genTypeID()), var(var), args(args), ret(ret), intrin(intrin),
-	  intrinty(intrinty), externed(externed)
+	  intrinty(intrinty), uniqid(!externed ? genFuncUniqID() : 0), externed(externed)
 {}
 FuncTy::FuncTy(StmtVar *var, const size_t &info, const uint64_t &id,
 	       const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &intrinty, const bool &externed)
+	       const IntrinType &intrinty, const uint64_t &uniqid, const bool &externed)
 	: Type(TFUNC, info, id), var(var), args(args), ret(ret), intrin(intrin), intrinty(intrinty),
-	  externed(externed)
+	  uniqid(uniqid), externed(externed)
 {}
 FuncTy::~FuncTy() {}
+uint64_t FuncTy::getID()
+{
+	if(externed) return getBaseID();
+	uint64_t res = getBaseID() + uniqid;
+	for(auto &a : args) {
+		res += a->getID();
+	}
+	res += ret->getID();
+	return res;
+}
 bool FuncTy::isTemplate()
 {
 	for(auto &a : args) {
@@ -518,12 +591,12 @@ std::string FuncTy::toStr()
 	res += "): " + ret->toStr();
 	return res;
 }
-Type *FuncTy::clone(Context &c)
+Type *FuncTy::clone(Context &c, const bool &as_is)
 {
 	std::vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c));
-	return c.allocType<FuncTy>(var, getInfo(), genTypeID(), newargs, ret->clone(c), intrin,
-				   intrinty, externed);
+	return c.allocType<FuncTy>(var, getInfo(), getID(), newargs, ret->clone(c), intrin,
+				   intrinty, uniqid, externed);
 }
 bool FuncTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
@@ -561,9 +634,11 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 	if(args.size() != callargs.size() && !has_va) return nullptr;
 	bool is_arg_compatible = true;
 	std::vector<Type *> variadics;
+	bool has_templ = false;
 	for(size_t i = 0; i < args.size(); ++i) {
 		if(!args[i]->isTypeTy()) continue;
 		as<TypeTy>(args[i])->setContainedTy(callargs[i]->getType());
+		has_templ = true;
 	}
 	for(size_t i = 0, j = 0; i < this->args.size() && j < callargs.size(); ++i, ++j) {
 		Type *sa      = this->args[i];
@@ -601,11 +676,12 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 	}
 	res = as<FuncTy>(res->clone(c));
 	for(size_t i = 0; i < args.size(); ++i) {
-		if(!args[i]->isTypeTy()) continue;
-		as<TypeTy>(args[i])->setContainedTy(nullptr);
+		if(args[i]->isTypeTy()) {
+			as<TypeTy>(args[i])->clearContainedTy();
+			continue;
+		}
 	}
-
-	printf("Final call: %s\n", res->toStr().c_str());
+	if(has_templ) res->updateUniqID();
 	return res;
 }
 FuncTy *FuncTy::create(Context &c, StmtVar *_var, const std::vector<Type *> &_args, Type *_ret,
@@ -620,6 +696,14 @@ void FuncTy::setVar(StmtVar *v)
 void FuncTy::insertArg(const size_t &idx, Type *arg)
 {
 	args.insert(args.begin() + idx, arg);
+}
+void FuncTy::updateUniqID()
+{
+	uniqid = genFuncUniqID();
+}
+void FuncTy::setExterned(const bool &ext)
+{
+	externed = ext;
 }
 StmtVar *&FuncTy::getVar()
 {
@@ -641,6 +725,10 @@ Type *FuncTy::getRet()
 bool FuncTy::isIntrinsic()
 {
 	return intrin != nullptr;
+}
+bool FuncTy::isIntrinsicParseOnly()
+{
+	return intrinty == IPARSE;
 }
 bool FuncTy::isIntrinsicParse()
 {
@@ -698,7 +786,7 @@ std::string VariadicTy::toStr()
 	res += ">";
 	return res;
 }
-Type *VariadicTy::clone(Context &c)
+Type *VariadicTy::clone(Context &c, const bool &as_is)
 {
 	std::vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c));
@@ -741,7 +829,7 @@ ImportTy::ImportTy(const size_t &info, const uint64_t &id, const std::string &im
 	: Type(TIMPORT, info, id), impid(impid)
 {}
 ImportTy::~ImportTy() {}
-Type *ImportTy::clone(Context &c)
+Type *ImportTy::clone(Context &c, const bool &as_is)
 {
 	return c.allocType<ImportTy>(getInfo(), getID(), impid);
 }

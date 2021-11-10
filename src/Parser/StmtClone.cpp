@@ -165,7 +165,7 @@ Stmt *StmtStruct::clone(Context &ctx)
 	for(auto &f : fields) {
 		newfields.push_back(as<StmtVar>(f->clone(ctx)));
 	}
-	return StmtStruct::create(ctx, getLoc(), newfields);
+	return StmtStruct::create(ctx, getLoc(), newfields, templates);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

@@ -125,10 +125,8 @@ enum TokType
 
 	SUBS,
 
-	FNCALL,
-
-	// Empty operator - used in expr to show only LHS (no RHS)
-	EMPTY,
+	FNCALL, // function call and struct template specialization
+	STCALL, // instantiate structs
 
 	// Varargs
 	PreVA,

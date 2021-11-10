@@ -62,6 +62,7 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 	if(stmt && stmt->getType() && stmt->getType()->hasComptime() &&
 	   !stmt->getType()->isTemplate()) {
 		if(!vpass.visit(stmt, source)) {
+			stmt->disp(false);
 			err.set(stmt, "failed to get value for a comptime type");
 			return false;
 		}
@@ -148,74 +149,74 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 	case lex::STR: {
 		Type *ty = IntTy::create(ctx, 8, 1);
 		ty->setConst();
-		ty = PtrTy::create(ctx, ty, stmt->getLexValue().getDataStr().size());
+		ty = PtrTy::create(ctx, ty, 0);
 		stmt->setType(ty);
 		break;
 	}
 	case lex::I1: {
 		TypeTy *t = TypeTy::create(ctx);
 		t->setContainedTy(IntTy::create(ctx, 1, true));
-		stmt->setType(t, true);
+		stmt->setType(t);
 		break;
 	}
 	case lex::I8: {
 		TypeTy *t = TypeTy::create(ctx);
 		t->setContainedTy(IntTy::create(ctx, 8, true));
-		stmt->setType(t, true);
+		stmt->setType(t);
 		break;
 	}
 	case lex::I16: {
 		TypeTy *t = TypeTy::create(ctx);
 		t->setContainedTy(IntTy::create(ctx, 16, true));
-		stmt->setType(t, true);
+		stmt->setType(t);
 		break;
 	}
 	case lex::I32: {
 		TypeTy *t = TypeTy::create(ctx);
 		t->setContainedTy(IntTy::create(ctx, 32, true));
-		stmt->setType(t, true);
+		stmt->setType(t);
 		break;
 	}
 	case lex::I64: {
 		TypeTy *t = TypeTy::create(ctx);
 		t->setContainedTy(IntTy::create(ctx, 64, true));
-		stmt->setType(t, true);
+		stmt->setType(t);
 		break;
 	}
 	case lex::U8: {
 		TypeTy *t = TypeTy::create(ctx);
 		t->setContainedTy(IntTy::create(ctx, 8, false));
-		stmt->setType(t, true);
+		stmt->setType(t);
 		break;
 	}
 	case lex::U16: {
 		TypeTy *t = TypeTy::create(ctx);
 		t->setContainedTy(IntTy::create(ctx, 16, false));
-		stmt->setType(t, true);
+		stmt->setType(t);
 		break;
 	}
 	case lex::U32: {
 		TypeTy *t = TypeTy::create(ctx);
 		t->setContainedTy(IntTy::create(ctx, 32, false));
-		stmt->setType(t, true);
+		stmt->setType(t);
 		break;
 	}
 	case lex::U64: {
 		TypeTy *t = TypeTy::create(ctx);
 		t->setContainedTy(IntTy::create(ctx, 64, false));
-		stmt->setType(t, true);
+		stmt->setType(t);
 		break;
 	}
 	case lex::F32: {
 		TypeTy *t = TypeTy::create(ctx);
 		t->setContainedTy(FltTy::create(ctx, 32));
-		stmt->setType(t, true);
+		stmt->setType(t);
 		break;
 	}
 	case lex::F64: {
 		TypeTy *t = TypeTy::create(ctx);
 		t->setContainedTy(FltTy::create(ctx, 64));
-		stmt->setType(t, true);
+		stmt->setType(t);
 		break;
 	}
 	case lex::IDEN: {
@@ -328,6 +329,8 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		return true;
 	}
 	case lex::FNCALL: {
+		assert(lhs->getStmtType() == SIMPLE &&
+		       "LHS must be a simple expression for function call");
 		assert(rhs && rhs->getStmtType() == FNCALLINFO &&
 		       "RHS must be function call info for a function call");
 		if(!lhs->getType()->isFunc() && !lhs->getType()->isStruct()) {
@@ -373,10 +376,16 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 						      "itself is not");
 					return false;
 				}
-				if(fn->isIntrinsicParse() &&
-				   !fn->callIntrinsic(ctx, err, stmt, source, args, IPARSE)) {
-					err.set(stmt, "call to parse intrinsic failed");
-					return false;
+				if(fn->isIntrinsicParse()) {
+					if(!fn->callIntrinsic(ctx, err, stmt, source, args, IPARSE))
+					{
+						err.set(stmt, "call to parse intrinsic failed");
+						return false;
+					}
+					// IPARSE will modify the stmt to remove the intrinsic calls
+					if(fn->isIntrinsicParseOnly()) {
+						return true;
+					}
 				}
 				stmt->setCalledFnTy(fn);
 				break;
@@ -389,26 +398,48 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		} else if(lhs->getType()->isStruct()) {
 			StructTy *st = as<StructTy>(lhs->getType());
 			if(!st->isDef()) {
-				err.set(stmt, "only struct definitions can be instantiated");
+				err.set(stmt, "only struct definitions can be specialized");
 				return false;
 			}
-			if(!(st = st->instantiate(ctx, err, stmt->getLoc(), callinfo->getArgs()))) {
-				err.set(stmt, "failed to instantiate struct with given arguments");
+			std::vector<Type *> argtypes;
+			for(auto &a : args) {
+				argtypes.push_back(a->getType());
+			}
+			StructTy *resst = st->applyTemplates(ctx, err, stmt->getLoc(), argtypes);
+			if(!resst) {
+				err.set(stmt, "failed to specialize struct");
 				return false;
 			}
-			size_t fnarglen	  = st->getFields().size();
-			size_t callarglen = callinfo->getArgs().size();
-			for(size_t i = 0, j = 0, k = 0; i < fnarglen && j < callarglen; ++i, ++j) {
-				Type *coerced_to = st->getField(i);
-				if(coerced_to->isVariadic()) {
-					coerced_to = as<VariadicTy>(coerced_to)->getArg(k++);
-					--i;
-				}
-				applyPrimitiveTypeCoercion(coerced_to, callinfo->getArg(j));
-			}
-			lhs->setType(st);
-			stmt->setType(st);
+			lhs->setType(resst);
+			*source = lhs;
+			return true;
 		}
+		break;
+	}
+	case lex::STCALL: {
+		if(!lhs->getType()->isStruct() || !as<StructTy>(lhs->getType())->isDef()) {
+			err.set(stmt, "struct call is only applicable on struct defs");
+			return false;
+		}
+		StructTy *st		  = as<StructTy>(lhs->getType());
+		StmtFnCallInfo *callinfo  = as<StmtFnCallInfo>(rhs);
+		std::vector<Stmt *> &args = callinfo->getArgs();
+		if(!(st = st->instantiate(ctx, err, stmt->getLoc(), callinfo->getArgs()))) {
+			err.set(stmt, "failed to instantiate struct with given arguments");
+			return false;
+		}
+		size_t fnarglen	  = st->getFields().size();
+		size_t callarglen = callinfo->getArgs().size();
+		for(size_t i = 0, j = 0, k = 0; i < fnarglen && j < callarglen; ++i, ++j) {
+			Type *coerced_to = st->getField(i);
+			if(coerced_to->isVariadic()) {
+				coerced_to = as<VariadicTy>(coerced_to)->getArg(k++);
+				--i;
+			}
+			applyPrimitiveTypeCoercion(coerced_to, callinfo->getArg(j));
+		}
+		lhs->setType(st);
+		stmt->setType(st);
 		break;
 	}
 	// address of
@@ -535,6 +566,13 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		stmt->setType(fn->getRet());
 		if(stmt->getType()->isTypeTy()) {
 			stmt->setType(as<TypeTy>(stmt->getType())->getContainedTy());
+		}
+
+		bool both_comptime = true;
+		if(!lhs->getType()->hasComptime()) both_comptime = false;
+		if(rhs && !rhs->getType()->hasComptime()) both_comptime = false;
+		if(stmt->getType()->hasComptime() && !both_comptime) {
+			stmt->getType()->unsetComptime();
 		}
 
 		for(size_t i = 0; i < args.size(); ++i) {
@@ -697,6 +735,7 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 		err.set(stmt, "failed to determine type of func signature");
 		return false;
 	}
+	as<FuncTy>(stmt->getSig()->getType())->setExterned(true);
 	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
 		err.set(stmt, "failed to assign header type");
 		return false;
@@ -718,7 +757,14 @@ bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 	tmgr.pushLayer();
 	std::vector<std::string> fieldnames;
 	std::vector<Type *> fieldtypes;
+	std::vector<TypeTy *> templates;
+	std::vector<std::string> templatenames = stmt->getTemplateNames();
+
 	disabled_varname_mangling = true;
+	for(auto &t : templatenames) {
+		templates.push_back(TypeTy::create(ctx));
+		tmgr.addVar(t, templates.back(), nullptr);
+	}
 	for(auto &f : stmt->getFields()) {
 		if(!visit(f, asStmt(&f))) {
 			err.set(stmt, "failed to determine type of struct field");
@@ -729,7 +775,7 @@ bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 	}
 	disabled_varname_mangling = false;
 
-	StructTy *st = StructTy::create(ctx, fieldnames, fieldtypes);
+	StructTy *st = StructTy::create(ctx, fieldnames, fieldtypes, templatenames, templates);
 	st->setDef(true);
 	stmt->setType(st);
 	tmgr.popLayer();
@@ -850,7 +896,8 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 		return false;
 	}
 	if(!vpass.visit(cond, &cond)) {
-		err.set(stmt, "failed to determine value of inline for-loop condition");
+		err.set(stmt, "failed to determine value of inline for-loop condition;"
+			      " ensure relevant variables are comptime");
 		return false;
 	}
 	if(init) newblkstmts.push_back(init->clone(ctx));
@@ -953,7 +1000,7 @@ std::string TypeAssignPass::getMangledName(Stmt *stmt, const std::string &name,
 void TypeAssignPass::applyPrimitiveTypeCoercion(Type *to, Stmt *from)
 {
 	if(!to || !from) return;
-	if(!to->isPrimitive() || !from->getType()->isPrimitive()) return;
+	if(!to->isPrimitiveOrPtr() || !from->getType()->isPrimitiveOrPtr()) return;
 
 	if(to->getID() == from->getType()->getID()) return;
 	from->castTo(to);
@@ -1037,8 +1084,21 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 	for(size_t i = 0; i < cf->getArgs().size(); ++i) {
 		StmtVar *cfa = cfsig->getArgs()[i];
 		Type *cft    = cf->getArg(i);
-		cfa->setType(cft, true);
+		cfa->setType(cft);
 		tmgr.addVar(cfa->getName().getDataStr(), cft, cfa);
+		if(!cft->isVariadic()) {
+			cfa->setVal(args[i]->getValue());
+			continue;
+		}
+		size_t j = i;
+		std::vector<Value *> v;
+		bool has_vals = false;
+		while(j < args.size()) {
+			if(args[j]->getValue()) has_vals = true;
+			v.push_back(args[j]->getValue());
+		}
+		if(!has_vals) continue;
+		cfa->setVal(VecVal::create(ctx, v));
 	}
 	cfsig->getRetType()->setType(cf->getRet());
 	cfsig->setType(cf);

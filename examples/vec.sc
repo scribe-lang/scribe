@@ -1,7 +1,6 @@
 let deinit in i32 = fn(): void {};
 
-let Vec = struct {
-	T: type; // kinda like annotation - not visible in code generation (maybe?)
+let Vec = struct<T> {
 	cap: u64;
 	len: u64;
 	data: *T;
@@ -9,8 +8,8 @@ let Vec = struct {
 };
 
 // a function with a comptime argument is guaranteed to be specialized
-let new = fn(T: type, managed: i1): Vec {
-	return Vec(T, nil, 0, 0, managed);
+let new = fn(comptime T: type, managed: i1): Vec(T) {
+	return Vec(T){nil, 0, 0, managed};
 };
 
 // a function inside a struct which has at least one field of type 'type' has to be specialized (generic)

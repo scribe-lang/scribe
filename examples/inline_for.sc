@@ -1,4 +1,4 @@
-let f = fn(p: i32): i32 {
+let f = fn(comptime p: i32): i32 {
 	let sum = 0;
 	inline for let i = 1; i <= p; ++i {
 		sum += i;
@@ -7,4 +7,4 @@ let f = fn(p: i32): i32 {
 };
 
 let n = 5;
-let comptime x = f(n);
+let comptime x = f(n); // should be 15

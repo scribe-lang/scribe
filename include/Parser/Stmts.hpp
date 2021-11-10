@@ -89,7 +89,7 @@ public:
 		return loc.getMod();
 	}
 
-	inline void setType(Type *t, const bool &as_is = false)
+	inline void setType(Type *t)
 	{
 		type = t;
 	}
@@ -211,6 +211,8 @@ public:
 	{
 		return expr && expr->getStmtType() == FNSIG;
 	}
+
+	bool isMetaType() const;
 };
 
 class StmtVar;
@@ -670,13 +672,16 @@ public:
 class StmtStruct : public Stmt
 {
 	std::vector<StmtVar *> fields;
+	std::vector<lex::Lexeme> templates;
 
 public:
-	StmtStruct(const ModuleLoc &loc, const std::vector<StmtVar *> &fields);
+	StmtStruct(const ModuleLoc &loc, const std::vector<StmtVar *> &fields,
+		   const std::vector<lex::Lexeme> &templates);
 	~StmtStruct();
 	// StmtVar contains only type here, no val
 	static StmtStruct *create(Context &c, const ModuleLoc &loc,
-				  const std::vector<StmtVar *> &fields);
+				  const std::vector<StmtVar *> &fields,
+				  const std::vector<lex::Lexeme> &templates);
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
@@ -687,6 +692,12 @@ public:
 	{
 		return fields;
 	}
+	inline const std::vector<lex::Lexeme> &getTemplates()
+	{
+		return templates;
+	}
+
+	std::vector<std::string> getTemplateNames();
 };
 
 class StmtVarDecl : public Stmt

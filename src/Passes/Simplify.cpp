@@ -90,7 +90,11 @@ bool SimplifyPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 {
 	auto &args = stmt->getArgs();
 	for(size_t i = 0; i < args.size(); ++i) {
-		if(args[i]->getType()->isTypeTy()) {
+		Type *a = args[i]->getType();
+		while(a->isPtr()) {
+			a = as<PtrTy>(a)->getTo();
+		}
+		if(a->isTypeTy()) {
 			args.erase(args.begin() + i);
 			--i;
 			continue;
@@ -162,7 +166,11 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 			has_va = true;
 			break; // break is fine since variadic must be last arg anyway
 		}
-		if(args[i]->getType()->isTypeTy()) {
+		Stmt *argtyexpr = args[i]->getVType()->getExpr();
+		if(args[i]->getType()->isTypeTy() ||
+		   (argtyexpr->getStmtType() == SIMPLE &&
+		    as<StmtSimple>(argtyexpr)->getLexValue().getTok().getVal() == lex::TYPE))
+		{
 			args.erase(args.begin() + i);
 			--i;
 			continue;
@@ -190,7 +198,7 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 	ft->getArgs().pop_back();
 	for(size_t i = 0; i < vt->getArgs().size(); ++i) {
 		StmtVar *tmp = as<StmtVar>(a->clone(ctx));
-		tmp->setType(vt->getArg(i), true);
+		tmp->setType(vt->getArg(i));
 		lex::Lexeme &name = tmp->getName();
 		name.setDataStr(name.getDataStr() + "__" + std::to_string(i));
 		args.push_back(tmp);

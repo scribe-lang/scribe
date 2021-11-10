@@ -218,52 +218,53 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 		break;
 	}
 	case lex::FNCALL: {
+		std::string fname	  = as<StmtSimple>(lhs)->getLexValue().getDataStr();
 		std::vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
-		if(lhs->getType()->isFunc()) {
-			writer.write("func_%" PRIu64 "(", lhs->getType()->getID());
-			FuncTy *fn = as<FuncTy>(lhs->getType());
-			for(size_t i = 0; i < args.size(); ++i) {
-				Stmt *&a = args[i];
-				Type *at = fn->getArg(i);
-				Writer tmp(writer);
-				if(!visit(args[i], tmp, false)) {
-					err.set(stmt,
-						"failed to generate C code for func call argument");
-					return false;
-				}
-				if(at->hasRef()) {
-					writer.write("&(");
-					writer.append(tmp);
-					writer.write(")");
-				} else {
-					writer.append(tmp);
-				}
-				if(i != args.size() - 1) writer.write(", ");
+		writer.write("%s%" PRIu64 "(", fname.c_str(), lhs->getType()->getID());
+		FuncTy *fn = as<FuncTy>(lhs->getType());
+		for(size_t i = 0; i < args.size(); ++i) {
+			Stmt *&a = args[i];
+			Type *at = fn->getArg(i);
+			Writer tmp(writer);
+			if(!visit(args[i], tmp, false)) {
+				err.set(stmt, "failed to generate C code for func call argument");
+				return false;
 			}
-			writer.write(")");
-		} else {
-			writer.write("struct_%" PRIu64 "{", lhs->getType()->getID());
-			StructTy *st = as<StructTy>(lhs->getType());
-			for(size_t i = 0; i < args.size(); ++i) {
-				Stmt *&a = args[i];
-				Type *at = st->getField(i);
-				Writer tmp(writer);
-				if(!visit(args[i], tmp, false)) {
-					err.set(stmt, "failed to generate C code"
-						      " for struct declaration argument");
-					return false;
-				}
-				if(at->hasRef()) {
-					writer.write("&(");
-					writer.append(tmp);
-					writer.write(")");
-				} else {
-					writer.append(tmp);
-				}
-				if(i != args.size() - 1) writer.write(", ");
+			if(at->hasRef()) {
+				writer.write("&(");
+				writer.append(tmp);
+				writer.write(")");
+			} else {
+				writer.append(tmp);
 			}
-			writer.write("}");
+			if(i != args.size() - 1) writer.write(", ");
 		}
+		writer.write(")");
+		break;
+	}
+	case lex::STCALL: {
+		std::vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
+		writer.write("(struct_%" PRIu64 "){", lhs->getType()->getID());
+		StructTy *st = as<StructTy>(lhs->getType());
+		for(size_t i = 0; i < args.size(); ++i) {
+			Stmt *&a = args[i];
+			Type *at = st->getField(i);
+			Writer tmp(writer);
+			if(!visit(args[i], tmp, false)) {
+				err.set(stmt, "failed to generate C code"
+					      " for struct declaration argument");
+				return false;
+			}
+			if(at->hasRef()) {
+				writer.write("&(");
+				writer.append(tmp);
+				writer.write(")");
+			} else {
+				writer.append(tmp);
+			}
+			if(i != args.size() - 1) writer.write(", ");
+		}
+		writer.write("}");
 		break;
 	}
 	// address of
@@ -915,7 +916,7 @@ void CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 	static std::unordered_set<uint64_t> declaredstructs;
 	if(declaredstructs.find(sty->getID()) != declaredstructs.end()) return;
 	Writer st;
-	st.write("typedef struct_%" PRIu64 " struct {", sty->getID());
+	st.write("typedef struct {");
 	if(!sty->getFields().empty()) {
 		st.addIndent();
 		st.newLine();
@@ -929,7 +930,7 @@ void CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 		st.remIndent();
 		st.newLine();
 	}
-	st.write("};");
+	st.write("} struct_%" PRIu64 ";", sty->getID());
 	structdecls.push_back(st.getData());
 	declaredstructs.insert(sty->getID());
 }

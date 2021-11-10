@@ -119,7 +119,7 @@ const char *TokStrs[_LAST] = {
 
 "[]",
 "()",
-"<EMPTY>",
+"{}",
 
 // Varargs
 "x...",
@@ -163,6 +163,8 @@ const char *Tok::getUnaryNoCharCStr() const
 	case USUB: return "-";
 	case UAND: return "&";
 	case UMUL: return "*";
+	case LNOT: return "!";
+	case BNOT: return "~";
 	default: break;
 	}
 	return "";

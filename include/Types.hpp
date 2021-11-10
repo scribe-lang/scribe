@@ -94,9 +94,10 @@ public:
 	std::string infoToStr();
 	std::string baseToStr();
 
+	virtual uint64_t getID();
 	virtual bool isTemplate();
 	virtual std::string toStr();
-	virtual Type *clone(Context &c) = 0;
+	virtual Type *clone(Context &c, const bool &as_is = false) = 0;
 	virtual bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 
 	inline void setInfo(const size_t &inf)
@@ -114,6 +115,10 @@ public:
 	inline bool isPrimitive() const
 	{
 		return isInt() || isFlt();
+	}
+	inline bool isPrimitiveOrPtr() const
+	{
+		return isInt() || isFlt() || isPtr();
 	}
 	inline bool isIntegral() const
 	{
@@ -179,7 +184,7 @@ public:
 	IsModifierX(Comptime, COMPTIME);
 	IsModifierX(Variadic, VARIADIC);
 
-	inline const uint64_t &getID() const
+	inline const uint64_t &getBaseID() const
 	{
 		return id;
 	}
@@ -190,15 +195,15 @@ template<typename T> T *as(Type *t)
 	return static_cast<T *>(t);
 }
 
-#define BasicTypeDecl(Ty)                      \
-	class Ty : public Type                 \
-	{                                      \
-	public:                                \
-		Ty();                          \
-		Ty(const size_t &info);        \
-		~Ty();                         \
-		Type *clone(Context &c);       \
-		static Ty *create(Context &c); \
+#define BasicTypeDecl(Ty)                                           \
+	class Ty : public Type                                      \
+	{                                                           \
+	public:                                                     \
+		Ty();                                               \
+		Ty(const size_t &info);                             \
+		~Ty();                                              \
+		Type *clone(Context &c, const bool &as_is = false); \
+		static Ty *create(Context &c);                      \
 	}
 
 BasicTypeDecl(VoidTy);
@@ -214,7 +219,7 @@ public:
 	IntTy(const size_t &info, const uint64_t &id, const size_t &bits, const bool &sign);
 	~IntTy();
 
-	Type *clone(Context &c);
+	Type *clone(Context &c, const bool &as_is = false);
 	std::string toStr();
 
 	static IntTy *create(Context &c, const size_t &_bits, const bool &_sign);
@@ -234,7 +239,7 @@ public:
 	FltTy(const size_t &info, const uint64_t &id, const size_t &bits);
 	~FltTy();
 
-	Type *clone(Context &c);
+	Type *clone(Context &c, const bool &as_is = false);
 	std::string toStr();
 
 	static FltTy *create(Context &c, const size_t &_bits);
@@ -255,10 +260,11 @@ public:
 
 	bool isTemplate();
 	std::string toStr();
-	Type *clone(Context &c);
+	Type *clone(Context &c, const bool &as_is = false);
 
 	static TypeTy *create(Context &c);
 
+	void clearContainedTy();
 	void setContainedTy(Type *ty);
 	Type *getContainedTy();
 
@@ -277,11 +283,11 @@ public:
 
 	bool isTemplate();
 	std::string toStr();
-	Type *clone(Context &c);
+	Type *clone(Context &c, const bool &as_is = false);
 
 	static PtrTy *create(Context &c, Type *ptr_to, const size_t &count);
 
-	Type *getTo();
+	Type *&getTo();
 	const size_t &getCount();
 	bool isArrayPtr();
 
@@ -293,33 +299,51 @@ class StructTy : public Type
 	std::unordered_map<std::string, size_t> fieldpos;
 	std::vector<std::string> fieldnames;
 	std::vector<Type *> fields;
+	std::unordered_map<std::string, size_t> templatepos;
+	std::vector<std::string> templatenames;
+	std::vector<TypeTy *> templates;
 	bool is_def; // true by default
+	bool has_template;
 
 public:
-	StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields);
+	StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields,
+		 const std::vector<std::string> &templatenames,
+		 const std::vector<TypeTy *> &templates);
 	StructTy(const size_t &info, const uint64_t &id, const std::vector<std::string> &fieldnames,
 		 const std::unordered_map<std::string, size_t> &fieldpos,
-		 const std::vector<Type *> &fields, const bool &is_def);
+		 const std::vector<Type *> &fields, const std::vector<std::string> &templatenames,
+		 const std::unordered_map<std::string, size_t> &templatepos,
+		 const std::vector<TypeTy *> &templates, const bool &is_def,
+		 const bool &has_template);
 	~StructTy();
 
 	bool isTemplate();
 	std::string toStr();
-	Type *clone(Context &c);
+	Type *clone(Context &c, const bool &as_is = false);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
-	// specializes a structure type using StmtFnCallInfo and returns a NON-def struct type
+	// specializes a structure type
+	StructTy *applyTemplates(Context &c, ErrMgr &e, ModuleLoc &loc,
+				 const std::vector<Type *> &actuals);
+	// returns a NON-def struct type
 	StructTy *instantiate(Context &c, ErrMgr &e, ModuleLoc &loc,
 			      const std::vector<Stmt *> &callargs);
 
 	static StructTy *create(Context &c, const std::vector<std::string> &_fieldnames,
-				const std::vector<Type *> &_fields);
+				const std::vector<Type *> &_fields,
+				const std::vector<std::string> &_templatenames,
+				const std::vector<TypeTy *> &_templates);
 
 	const std::string &getFieldName(const size_t &idx);
 	std::vector<Type *> &getFields();
 	Type *getField(const std::string &name);
 	Type *getField(const size_t &pos);
+	std::vector<TypeTy *> &getTemplates();
+	void clearTemplates();
 
 	void setDef(const bool &def);
 	bool isDef() const;
+	void setTemplate(const bool &has_templ);
+	bool hasTemplate();
 
 	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
 };
@@ -331,6 +355,7 @@ class FuncTy : public Type
 	Type *ret;
 	IntrinsicFn intrin;
 	IntrinType intrinty;
+	uint64_t uniqid;
 	bool externed;
 
 public:
@@ -338,12 +363,13 @@ public:
 	       const IntrinType &intrinty, const bool &externed);
 	FuncTy(StmtVar *var, const size_t &info, const uint64_t &id,
 	       const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &intrinty, const bool &externed);
+	       const IntrinType &intrinty, const uint64_t &uniqid, const bool &externed);
 	~FuncTy();
 
+	uint64_t getID();
 	bool isTemplate();
 	std::string toStr();
-	Type *clone(Context &c);
+	Type *clone(Context &c, const bool &as_is = false);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 	// specializes a function type using StmtFnCallInfo
 	FuncTy *createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
@@ -355,11 +381,14 @@ public:
 
 	void setVar(StmtVar *v);
 	void insertArg(const size_t &idx, Type *arg);
+	void updateUniqID();
+	void setExterned(const bool &ext);
 	StmtVar *&getVar();
 	std::vector<Type *> &getArgs();
 	Type *getArg(const size_t &idx);
 	Type *getRet();
 	bool isIntrinsic();
+	bool isIntrinsicParseOnly();
 	bool isIntrinsicParse();
 	bool isIntrinsicValue();
 	const size_t &getTemplates() const;
@@ -381,7 +410,7 @@ public:
 
 	bool isTemplate();
 	std::string toStr();
-	Type *clone(Context &c);
+	Type *clone(Context &c, const bool &as_is = false);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 
 	static VariadicTy *create(Context &c, const std::vector<Type *> &_args);
@@ -400,7 +429,7 @@ public:
 	ImportTy(const size_t &info, const uint64_t &id, const std::string &impid);
 	~ImportTy();
 
-	Type *clone(Context &c);
+	Type *clone(Context &c, const bool &as_is = false);
 	std::string toStr();
 
 	static ImportTy *create(Context &c, const std::string &_impid);
