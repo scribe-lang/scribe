@@ -16,11 +16,11 @@
 #include <unordered_map>
 
 #include "Intrinsics.hpp"
-#include "TypeMgr.hpp"
+#include "ValueMgr.hpp"
 
 namespace sc
 {
-void AddPrimitiveFuncs(Context &c, TypeManager &tmgr);
+void AddPrimitiveFuncs(Context &c, ValueManager &vmgr);
 } // namespace sc
 
 #endif // PRIMITIVE_TYPE_FUNCS_HPP

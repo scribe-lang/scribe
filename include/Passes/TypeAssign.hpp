@@ -17,26 +17,26 @@
 #include "DeferStack.hpp"
 #include "Passes/Base.hpp"
 #include "Passes/ValueAssign.hpp"
-#include "TypeMgr.hpp"
+#include "ValueMgr.hpp"
 
 namespace sc
 {
 class TypeAssignPass : public Pass
 {
-	TypeManager tmgr;
+	ValueManager vmgr;
 	ValueAssignPass vpass;
 	DeferStack deferstack;
 	std::vector<StmtVar *> specfns; // specialized funcs
 	bool disabled_varname_mangling;
 
 	std::string getMangledName(Stmt *stmt, const std::string &name,
-				   ImportTy *import = nullptr) const;
+				   ImportVal *import = nullptr) const;
 	void applyPrimitiveTypeCoercion(Type *to, Stmt *from);
 	void applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex::Lexeme &oper);
 	bool chooseSuperiorPrimitiveType(Type *l, Type *r);
 	bool initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<Stmt *> &args);
 
-	void pushFunc(FuncTy *fn);
+	void pushFunc(FuncVal *fn);
 	void popFunc();
 
 public:

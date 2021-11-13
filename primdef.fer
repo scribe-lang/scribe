@@ -5,8 +5,8 @@ let vec = import('std/vec');
 
 let arith_assn_only_templ = `INTRINSIC({opname}_{ty})
 \\{
-	args[0]->setVal(Create{tycap}Val(Get{tycap}Val(1)));
-	stmt->setVal(Create{tycap}Val(Get{tycap}Val(0)));
+	args[0]->updateValue(args[1]->getValue());
+	stmt->updateValue(args[0]->getValue());
 	return true;
 }`;
 
@@ -31,7 +31,8 @@ let arith_assn_only_templ = `INTRINSIC({opname}_{ty})
 
 let arith_templ = `INTRINSIC({opname}_{ty})
 \\{
-	stmt->setVal(Create{tycap}Val(Get{tycap}Val(0) {op} Get{tycap}Val(1)));
+	auto res = Get{tycap}(args[0]) {op} Get{tycap}(args[1]);
+	stmt->updateValue({tycap}Val::create(c, stmt->getValueTy(), true, res));
 	return true;
 }`;
 
@@ -60,8 +61,8 @@ for let i = 0; i < arith_ops.len(); ++i {
 
 let arithassn_templ = `INTRINSIC({opname}_{ty})
 \\{
-	Get{tycap}Val(0) {op} Get{tycap}Val(1);
-	stmt->setVal(Create{tycap}Val(Get{tycap}Val(0)));
+	auto res = Get{tycap}(args[0]) {op} Get{tycap}(args[1]);
+	stmt->updateValue({tycap}Val::create(c, stmt->getValueTy(), true, res));
 	return true;
 }
 `;
@@ -113,7 +114,8 @@ for let i = 0; i < log_ops.len(); ++i {
 
 let preunary_templ = `INTRINSIC({opname}_{ty})
 \\{
-	stmt->setVal(Create{tycap}Val({op}Get{tycap}Val(0)));
+	auto res = {op}Get{tycap}(args[0]);
+	stmt->updateValue({tycap}Val::create(c, stmt->getValueTy(), true, res));
 	return true;
 }
 `;
@@ -143,7 +145,8 @@ for let i = 0; i < preunary_ops.len(); ++i {
 
 let postunary_templ = `INTRINSIC({opname}_{ty})
 \\{
-	stmt->setVal(Create{tycap}Val(Get{tycap}Val(0){op}));
+	auto res = Get{tycap}(args[0]){op};
+	stmt->updateValue({tycap}Val::create(c, stmt->getValueTy(), true, res));
 	return true;
 }
 `;

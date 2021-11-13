@@ -51,7 +51,7 @@ public:
 	}
 	template<typename T, typename... Args> T *allocVal(Args... args)
 	{
-		T *res = new T(args...);
+		T *res = new T(*this, args...);
 		valmem.push_back(res);
 		return res;
 	}

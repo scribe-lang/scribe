@@ -13,17 +13,18 @@
 
 namespace sc
 {
-FuncTy *createFn(Context &c, const std::vector<Type *> &args, Type *ret, IntrinsicFn fn,
-		 const IntrinType &inty)
+uint64_t createFnVal(Context &c, const std::vector<Type *> &args, Type *ret, IntrinsicFn fn,
+		     const IntrinType &inty)
 {
-	return FuncTy::create(c, nullptr, args, ret, fn, inty, false);
+	FuncTy *t = FuncTy::create(c, nullptr, args, ret, fn, inty, false);
+	return createValueIDWith(FuncVal::create(c, t));
 }
 
-#define ADDFN(name, fn) tmgr.addVar(name, fn, nullptr, true)
-#define ADDINTFN(name, fn) tmgr.addTypeFn(TINT, name, fn)
-#define ADDFLTFN(name, fn) tmgr.addTypeFn(TFLT, name, fn)
+#define ADDFN(name, fn) vmgr.addVar(name, fn, nullptr, true)
+#define ADDINTFN(name, fn) vmgr.addTypeFn(TINT, name, fn)
+#define ADDFLTFN(name, fn) vmgr.addTypeFn(TFLT, name, fn)
 
-void AddPrimitiveFuncs(Context &c, TypeManager &tmgr)
+void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 {
 	TypeTy *g    = nullptr; // g = generic
 	TypeTy *g2   = nullptr;
@@ -38,40 +39,40 @@ void AddPrimitiveFuncs(Context &c, TypeManager &tmgr)
 	i8str = PtrTy::create(c, i8str, 0);
 	i8str->setComptime();
 	g = TypeTy::create(c);
-	ADDFN("import", createFn(c, {i8str}, g, intrinsic_import, IPARSE));
+	ADDFN("import", createFnVal(c, {i8str}, g, intrinsic_import, IPARSE));
 
 	i1 = IntTy::create(c, 1, true);
 	i1->setComptime();
-	ADDFN("isMainSrc", createFn(c, {}, i1, intrinsic_ismainsrc, IVALUE));
+	ADDFN("isMainSrc", createFnVal(c, {}, i1, intrinsic_ismainsrc, IPARSE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDFN("isPrimitive", createFn(c, {g}, i1, intrinsic_isprimitive, IPARSE));
+	ADDFN("isPrimitive", createFnVal(c, {g}, i1, intrinsic_isprimitive, IPARSE));
 
 	g  = TypeTy::create(c);
 	g2 = TypeTy::create(c);
-	ADDFN("as", createFn(c, {g, g2}, g, intrinsic_as, IPARSE));
+	ADDFN("as", createFnVal(c, {g, g2}, g, intrinsic_as, IPARSE));
 
 	g  = TypeTy::create(c);
 	g2 = TypeTy::create(c);
-	ADDFN("typeOf", createFn(c, {g}, g, intrinsic_typeof, IPARSE));
+	ADDFN("typeOf", createFnVal(c, {g}, g, intrinsic_typeof, IPARSE));
 
 	g  = TypeTy::create(c);
 	g2 = TypeTy::create(c);
-	ADDFN("ptr", createFn(c, {g}, g2, intrinsic_ptr, IPARSE));
+	ADDFN("ptr", createFnVal(c, {g}, g2, intrinsic_ptr, IPARSE));
 
 	g  = TypeTy::create(c);
 	g2 = TypeTy::create(c);
-	ADDFN("ref", createFn(c, {g}, g2, intrinsic_ptr, IPARSE));
+	ADDFN("ref", createFnVal(c, {g}, g2, intrinsic_ptr, IPARSE));
 
 	g   = TypeTy::create(c);
 	u64 = IntTy::create(c, 64, false);
-	ADDFN("sizeOf", createFn(c, {g}, u64, intrinsic_szof, IVALUE));
+	ADDFN("sizeOf", createFnVal(c, {g}, u64, intrinsic_szof, IVALUE));
 
 	g   = TypeTy::create(c);
 	i32 = IntTy::create(c, 32, true);
 	i32->setComptime();
-	ADDFN("valen", createFn(c, {g}, i32, intrinsic_valen, IVALUE));
+	ADDFN("valen", createFnVal(c, {g}, i32, intrinsic_valen, IVALUE));
 
 	g   = TypeTy::create(c);
 	g2  = TypeTy::create(c);
@@ -80,195 +81,195 @@ void AddPrimitiveFuncs(Context &c, TypeManager &tmgr)
 	i32va = IntTy::create(c, 32, true);
 	i32va->setVariadic();
 	i32va->setComptime();
-	ADDFN("array", createFn(c, {g, i32, i32va}, g2, intrinsic_array, IALL));
+	ADDFN("array", createFnVal(c, {g, i32, i32va}, g2, intrinsic_array, IPARSE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__assn__", createFn(c, {g, g}, g, intrinsic_assn_int, IVALUE));
+	ADDINTFN("__assn__", createFnVal(c, {g, g}, g, intrinsic_assn_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDFLTFN("__assn__", createFn(c, {g, g}, g, intrinsic_assn_flt, IVALUE));
+	ADDFLTFN("__assn__", createFnVal(c, {g, g}, g, intrinsic_assn_flt, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__add__", createFn(c, {g, g}, g, intrinsic_add_int, IVALUE));
+	ADDINTFN("__add__", createFnVal(c, {g, g}, g, intrinsic_add_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__sub__", createFn(c, {g, g}, g, intrinsic_sub_int, IVALUE));
+	ADDINTFN("__sub__", createFnVal(c, {g, g}, g, intrinsic_sub_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__mul__", createFn(c, {g, g}, g, intrinsic_mul_int, IVALUE));
+	ADDINTFN("__mul__", createFnVal(c, {g, g}, g, intrinsic_mul_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__div__", createFn(c, {g, g}, g, intrinsic_div_int, IVALUE));
+	ADDINTFN("__div__", createFnVal(c, {g, g}, g, intrinsic_div_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__mod__", createFn(c, {g, g}, g, intrinsic_mod_int, IVALUE));
+	ADDINTFN("__mod__", createFnVal(c, {g, g}, g, intrinsic_mod_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__band__", createFn(c, {g, g}, g, intrinsic_band_int, IVALUE));
+	ADDINTFN("__band__", createFnVal(c, {g, g}, g, intrinsic_band_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__bor__", createFn(c, {g, g}, g, intrinsic_bor_int, IVALUE));
+	ADDINTFN("__bor__", createFnVal(c, {g, g}, g, intrinsic_bor_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__bxor__", createFn(c, {g, g}, g, intrinsic_bxor_int, IVALUE));
+	ADDINTFN("__bxor__", createFnVal(c, {g, g}, g, intrinsic_bxor_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__lshift__", createFn(c, {g, g}, g, intrinsic_lshift_int, IVALUE));
+	ADDINTFN("__lshift__", createFnVal(c, {g, g}, g, intrinsic_lshift_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__rshift__", createFn(c, {g, g}, g, intrinsic_rshift_int, IVALUE));
+	ADDINTFN("__rshift__", createFnVal(c, {g, g}, g, intrinsic_rshift_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDFLTFN("__add__", createFn(c, {g, g}, g, intrinsic_add_flt, IVALUE));
+	ADDFLTFN("__add__", createFnVal(c, {g, g}, g, intrinsic_add_flt, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDFLTFN("__sub__", createFn(c, {g, g}, g, intrinsic_sub_flt, IVALUE));
+	ADDFLTFN("__sub__", createFnVal(c, {g, g}, g, intrinsic_sub_flt, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDFLTFN("__mul__", createFn(c, {g, g}, g, intrinsic_mul_flt, IVALUE));
+	ADDFLTFN("__mul__", createFnVal(c, {g, g}, g, intrinsic_mul_flt, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDFLTFN("__div__", createFn(c, {g, g}, g, intrinsic_div_flt, IVALUE));
+	ADDFLTFN("__div__", createFnVal(c, {g, g}, g, intrinsic_div_flt, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__add_assn__", createFn(c, {g, g}, g, intrinsic_addassn_int, IVALUE));
+	ADDINTFN("__add_assn__", createFnVal(c, {g, g}, g, intrinsic_addassn_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__sub_assn__", createFn(c, {g, g}, g, intrinsic_subassn_int, IVALUE));
+	ADDINTFN("__sub_assn__", createFnVal(c, {g, g}, g, intrinsic_subassn_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__mul_assn__", createFn(c, {g, g}, g, intrinsic_mulassn_int, IVALUE));
+	ADDINTFN("__mul_assn__", createFnVal(c, {g, g}, g, intrinsic_mulassn_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__div_assn__", createFn(c, {g, g}, g, intrinsic_divassn_int, IVALUE));
+	ADDINTFN("__div_assn__", createFnVal(c, {g, g}, g, intrinsic_divassn_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__mod_assn__", createFn(c, {g, g}, g, intrinsic_modassn_int, IVALUE));
+	ADDINTFN("__mod_assn__", createFnVal(c, {g, g}, g, intrinsic_modassn_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__band_assn__", createFn(c, {g, g}, g, intrinsic_bandassn_int, IVALUE));
+	ADDINTFN("__band_assn__", createFnVal(c, {g, g}, g, intrinsic_bandassn_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__bor_assn__", createFn(c, {g, g}, g, intrinsic_borassn_int, IVALUE));
+	ADDINTFN("__bor_assn__", createFnVal(c, {g, g}, g, intrinsic_borassn_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__bxor_assn__", createFn(c, {g, g}, g, intrinsic_bxorassn_int, IVALUE));
+	ADDINTFN("__bxor_assn__", createFnVal(c, {g, g}, g, intrinsic_bxorassn_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__lshift_assn__", createFn(c, {g, g}, g, intrinsic_lshiftassn_int, IVALUE));
+	ADDINTFN("__lshift_assn__", createFnVal(c, {g, g}, g, intrinsic_lshiftassn_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__rshift_assn__", createFn(c, {g, g}, g, intrinsic_rshiftassn_int, IVALUE));
+	ADDINTFN("__rshift_assn__", createFnVal(c, {g, g}, g, intrinsic_rshiftassn_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDFLTFN("__add_assn__", createFn(c, {g, g}, g, intrinsic_addassn_flt, IVALUE));
+	ADDFLTFN("__add_assn__", createFnVal(c, {g, g}, g, intrinsic_addassn_flt, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDFLTFN("__sub_assn__", createFn(c, {g, g}, g, intrinsic_subassn_flt, IVALUE));
+	ADDFLTFN("__sub_assn__", createFnVal(c, {g, g}, g, intrinsic_subassn_flt, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDFLTFN("__mul_assn__", createFn(c, {g, g}, g, intrinsic_mulassn_flt, IVALUE));
+	ADDFLTFN("__mul_assn__", createFnVal(c, {g, g}, g, intrinsic_mulassn_flt, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDFLTFN("__div_assn__", createFn(c, {g, g}, g, intrinsic_divassn_flt, IVALUE));
+	ADDFLTFN("__div_assn__", createFnVal(c, {g, g}, g, intrinsic_divassn_flt, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDINTFN("__logand__", createFn(c, {g, g}, i1, intrinsic_logand_int, IVALUE));
+	ADDINTFN("__logand__", createFnVal(c, {g, g}, i1, intrinsic_logand_int, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDINTFN("__logor__", createFn(c, {g, g}, i1, intrinsic_logor_int, IVALUE));
+	ADDINTFN("__logor__", createFnVal(c, {g, g}, i1, intrinsic_logor_int, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDINTFN("__eq__", createFn(c, {g, g}, i1, intrinsic_eq_int, IVALUE));
+	ADDINTFN("__eq__", createFnVal(c, {g, g}, i1, intrinsic_eq_int, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDINTFN("__lt__", createFn(c, {g, g}, i1, intrinsic_lt_int, IVALUE));
+	ADDINTFN("__lt__", createFnVal(c, {g, g}, i1, intrinsic_lt_int, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDINTFN("__gt__", createFn(c, {g, g}, i1, intrinsic_gt_int, IVALUE));
+	ADDINTFN("__gt__", createFnVal(c, {g, g}, i1, intrinsic_gt_int, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDINTFN("__le__", createFn(c, {g, g}, i1, intrinsic_le_int, IVALUE));
+	ADDINTFN("__le__", createFnVal(c, {g, g}, i1, intrinsic_le_int, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDINTFN("__ge__", createFn(c, {g, g}, i1, intrinsic_ge_int, IVALUE));
+	ADDINTFN("__ge__", createFnVal(c, {g, g}, i1, intrinsic_ge_int, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDINTFN("__ne__", createFn(c, {g, g}, i1, intrinsic_ne_int, IVALUE));
+	ADDINTFN("__ne__", createFnVal(c, {g, g}, i1, intrinsic_ne_int, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDFLTFN("__logand__", createFn(c, {g, g}, i1, intrinsic_logand_flt, IVALUE));
+	ADDFLTFN("__logand__", createFnVal(c, {g, g}, i1, intrinsic_logand_flt, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDFLTFN("__logor__", createFn(c, {g, g}, i1, intrinsic_logor_flt, IVALUE));
+	ADDFLTFN("__logor__", createFnVal(c, {g, g}, i1, intrinsic_logor_flt, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDFLTFN("__eq__", createFn(c, {g, g}, i1, intrinsic_eq_flt, IVALUE));
+	ADDFLTFN("__eq__", createFnVal(c, {g, g}, i1, intrinsic_eq_flt, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDFLTFN("__lt__", createFn(c, {g, g}, i1, intrinsic_lt_flt, IVALUE));
+	ADDFLTFN("__lt__", createFnVal(c, {g, g}, i1, intrinsic_lt_flt, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDFLTFN("__gt__", createFn(c, {g, g}, i1, intrinsic_gt_flt, IVALUE));
+	ADDFLTFN("__gt__", createFnVal(c, {g, g}, i1, intrinsic_gt_flt, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDFLTFN("__le__", createFn(c, {g, g}, i1, intrinsic_le_flt, IVALUE));
+	ADDFLTFN("__le__", createFnVal(c, {g, g}, i1, intrinsic_le_flt, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDFLTFN("__ge__", createFn(c, {g, g}, i1, intrinsic_ge_flt, IVALUE));
+	ADDFLTFN("__ge__", createFnVal(c, {g, g}, i1, intrinsic_ge_flt, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDFLTFN("__ne__", createFn(c, {g, g}, i1, intrinsic_ne_flt, IVALUE));
+	ADDFLTFN("__ne__", createFnVal(c, {g, g}, i1, intrinsic_ne_flt, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__uadd__", createFn(c, {g}, g, intrinsic_uadd_int, IVALUE));
+	ADDINTFN("__uadd__", createFnVal(c, {g}, g, intrinsic_uadd_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__usub__", createFn(c, {g}, g, intrinsic_usub_int, IVALUE));
+	ADDINTFN("__usub__", createFnVal(c, {g}, g, intrinsic_usub_int, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDINTFN("__lognot__", createFn(c, {g}, i1, intrinsic_lognot_int, IVALUE));
+	ADDINTFN("__lognot__", createFnVal(c, {g}, i1, intrinsic_lognot_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__bnot__", createFn(c, {g}, g, intrinsic_bnot_int, IVALUE));
+	ADDINTFN("__bnot__", createFnVal(c, {g}, g, intrinsic_bnot_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__incx__", createFn(c, {g}, g, intrinsic_incx_int, IVALUE));
+	ADDINTFN("__incx__", createFnVal(c, {g}, g, intrinsic_incx_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__decx__", createFn(c, {g}, g, intrinsic_decx_int, IVALUE));
+	ADDINTFN("__decx__", createFnVal(c, {g}, g, intrinsic_decx_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDFLTFN("__uadd__", createFn(c, {g}, g, intrinsic_uadd_flt, IVALUE));
+	ADDFLTFN("__uadd__", createFnVal(c, {g}, g, intrinsic_uadd_flt, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDFLTFN("__usub__", createFn(c, {g}, g, intrinsic_usub_flt, IVALUE));
+	ADDFLTFN("__usub__", createFnVal(c, {g}, g, intrinsic_usub_flt, IVALUE));
 
 	i1 = IntTy::create(c, 1, true);
 	g  = TypeTy::create(c);
-	ADDFLTFN("__lognot__", createFn(c, {g}, i1, intrinsic_lognot_flt, IVALUE));
+	ADDFLTFN("__lognot__", createFnVal(c, {g}, i1, intrinsic_lognot_flt, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__xinc__", createFn(c, {g}, g, intrinsic_xinc_int, IVALUE));
+	ADDINTFN("__xinc__", createFnVal(c, {g}, g, intrinsic_xinc_int, IVALUE));
 
 	g = TypeTy::create(c);
-	ADDINTFN("__xdec__", createFn(c, {g}, g, intrinsic_xdec_int, IVALUE));
+	ADDINTFN("__xdec__", createFnVal(c, {g}, g, intrinsic_xdec_int, IVALUE));
 }
 } // namespace sc

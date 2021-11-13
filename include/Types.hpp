@@ -42,8 +42,6 @@ enum Types
 	TENUM,
 	TVARIADIC,
 
-	TIMPORT,
-
 	_LAST
 };
 
@@ -57,16 +55,6 @@ enum TypeInfoMask
 	VARIADIC = 1 << 5, // is variadic
 };
 
-enum IntrinType
-{
-	INONE,
-
-	IPARSE,
-	IVALUE,
-
-	IALL,
-};
-
 class Stmt;
 class StmtExpr;
 class StmtVar;
@@ -74,10 +62,10 @@ class StmtFnDef;
 class StmtFnCallInfo;
 class Value;
 typedef bool (*IntrinsicFn)(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
-			    std::vector<Stmt *> &args, const IntrinType &currintrin);
+			    std::vector<Stmt *> &args);
 #define INTRINSIC(name)                                                               \
 	bool intrinsic_##name(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source, \
-			      std::vector<Stmt *> &args, const IntrinType &currintrin)
+			      std::vector<Stmt *> &args)
 
 class Type
 {
@@ -170,7 +158,6 @@ public:
 	IsTyX(Struct, STRUCT);
 	IsTyX(Enum, ENUM);
 	IsTyX(Variadic, VARIADIC);
-	IsTyX(Import, IMPORT);
 
 #define IsModifierX(Fn, Mod)        \
 	inline bool has##Fn() const \
@@ -206,7 +193,20 @@ template<typename T> T *as(Type *t)
 		static Ty *create(Context &c);                      \
 	}
 
-BasicTypeDecl(VoidTy);
+class VoidTy : public Type
+{
+public:
+	VoidTy();
+	VoidTy(const size_t &info);
+	~VoidTy();
+
+	Type *clone(Context &c, const bool &as_is = false);
+	std::string toStr();
+
+	static VoidTy *create(Context &c);
+
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
+};
 BasicTypeDecl(AnyTy);
 
 class IntTy : public Type
@@ -302,7 +302,6 @@ class StructTy : public Type
 	std::unordered_map<std::string, size_t> templatepos;
 	std::vector<std::string> templatenames;
 	std::vector<TypeTy *> templates;
-	bool is_def; // true by default
 	bool has_template;
 
 public:
@@ -313,8 +312,7 @@ public:
 		 const std::unordered_map<std::string, size_t> &fieldpos,
 		 const std::vector<Type *> &fields, const std::vector<std::string> &templatenames,
 		 const std::unordered_map<std::string, size_t> &templatepos,
-		 const std::vector<TypeTy *> &templates, const bool &is_def,
-		 const bool &has_template);
+		 const std::vector<TypeTy *> &templates, const bool &has_template);
 	~StructTy();
 
 	bool isTemplate();
@@ -340,30 +338,34 @@ public:
 	std::vector<TypeTy *> &getTemplates();
 	void clearTemplates();
 
-	void setDef(const bool &def);
-	bool isDef() const;
 	void setTemplate(const bool &has_templ);
 	bool hasTemplate();
 
 	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
 };
 
+enum IntrinType
+{
+	INONE,
+	IPARSE,
+	IVALUE,
+};
 class FuncTy : public Type
 {
 	StmtVar *var;
 	std::vector<Type *> args;
 	Type *ret;
 	IntrinsicFn intrin;
-	IntrinType intrinty;
+	IntrinType inty;
 	uint64_t uniqid;
 	bool externed;
 
 public:
 	FuncTy(StmtVar *var, const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &intrinty, const bool &externed);
-	FuncTy(StmtVar *var, const size_t &info, const uint64_t &id,
+	       const IntrinType &inty, const bool &externed);
+	FuncTy(const size_t &info, const uint64_t &id, StmtVar *var,
 	       const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &intrinty, const uint64_t &uniqid, const bool &externed);
+	       const IntrinType &inty, const uint64_t &uniqid, const bool &externed);
 	~FuncTy();
 
 	uint64_t getID();
@@ -376,7 +378,7 @@ public:
 			   const std::vector<Stmt *> &callargs);
 
 	static FuncTy *create(Context &c, StmtVar *_var, const std::vector<Type *> &_args,
-			      Type *_ret, IntrinsicFn _intrin, const IntrinType &_intrinty,
+			      Type *_ret, IntrinsicFn _intrin, const IntrinType &_inty,
 			      const bool &_externed);
 
 	void setVar(StmtVar *v);
@@ -388,15 +390,14 @@ public:
 	Type *getArg(const size_t &idx);
 	Type *getRet();
 	bool isIntrinsic();
-	bool isIntrinsicParseOnly();
-	bool isIntrinsicParse();
-	bool isIntrinsicValue();
+	bool isParseIntrinsic();
 	const size_t &getTemplates() const;
 	bool isExtern();
 	IntrinsicFn getIntrinsicFn();
-	IntrinType getIntrinsicType();
 	bool callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
-			   std::vector<Stmt *> &callargs, const IntrinType &currintrin);
+			   std::vector<Stmt *> &callargs);
+
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
 };
 
 class VariadicTy : public Type
@@ -418,24 +419,68 @@ public:
 	void addArg(Type *ty);
 	std::vector<Type *> &getArgs();
 	Type *getArg(const size_t &idx);
+
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
 };
 
-class ImportTy : public Type
+// helpful functions
+
+inline Type *mkI1Ty(Context &c)
 {
-	std::string impid;
+	return IntTy::create(c, 1, true);
+}
+inline Type *mkI8Ty(Context &c)
+{
+	return IntTy::create(c, 8, true);
+}
+inline Type *mkI16Ty(Context &c)
+{
+	return IntTy::create(c, 16, true);
+}
+inline Type *mkI32Ty(Context &c)
+{
+	return IntTy::create(c, 32, true);
+}
+inline Type *mkI64Ty(Context &c)
+{
+	return IntTy::create(c, 64, true);
+}
+inline Type *mkU8Ty(Context &c)
+{
+	return IntTy::create(c, 8, false);
+}
+inline Type *mkU16Ty(Context &c)
+{
+	return IntTy::create(c, 16, false);
+}
+inline Type *mkU32Ty(Context &c)
+{
+	return IntTy::create(c, 32, false);
+}
+inline Type *mkU64Ty(Context &c)
+{
+	return IntTy::create(c, 64, false);
+}
+inline Type *mkF32Ty(Context &c)
+{
+	return FltTy::create(c, 32);
+}
+inline Type *mkF64Ty(Context &c)
+{
+	return FltTy::create(c, 64);
+}
+inline Type *mkPtrTy(Context &c, Type *to, const size_t &count)
+{
+	return PtrTy::create(c, to, count);
+}
+inline Type *mkStrTy(Context &c)
+{
+	Type *res = IntTy::create(c, 8, true);
+	res->setConst();
+	res = PtrTy::create(c, res, 0);
+	return res;
+}
 
-public:
-	ImportTy(const std::string &impid);
-	ImportTy(const size_t &info, const uint64_t &id, const std::string &impid);
-	~ImportTy();
-
-	Type *clone(Context &c, const bool &as_is = false);
-	std::string toStr();
-
-	static ImportTy *create(Context &c, const std::string &_impid);
-
-	const std::string &getImportID() const;
-};
 } // namespace sc
 
 #endif // TYPES_HPP
