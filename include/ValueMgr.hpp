@@ -20,49 +20,49 @@
 
 namespace sc
 {
-struct TypeDecl
+struct ValDecl
 {
-	Type *ty;
+	uint64_t valueid;
 	StmtVar *decl;
 };
 class Layer
 {
-	std::unordered_map<std::string, TypeDecl> items;
+	std::unordered_map<std::string, ValDecl> items;
 
 public:
-	inline bool add(const std::string &name, Type *val, StmtVar *decl)
+	inline bool add(const std::string &name, const uint64_t &vid, StmtVar *decl)
 	{
 		if(exists(name)) return false;
-		items[name] = {val, decl};
+		items[name] = {vid, decl};
 		return true;
 	}
 	inline bool exists(const std::string &name)
 	{
 		return items.find(name) != items.end();
 	}
-	inline Type *getTy(const std::string &name)
+	inline uint64_t getVal(const std::string &name)
 	{
-		return items.find(name) == items.end() ? nullptr : items[name].ty;
+		return items.find(name) == items.end() ? 0 : items[name].valueid;
 	}
 	inline StmtVar *getDecl(const std::string &name)
 	{
 		return items.find(name) == items.end() ? nullptr : items[name].decl;
 	}
-	inline std::unordered_map<std::string, TypeDecl> &getItems()
+	inline std::unordered_map<std::string, ValDecl> &getItems()
 	{
 		return items;
 	}
 };
-class TypeManager
+class ValueManager
 {
-	std::unordered_map<std::string, TypeDecl> globals;
+	std::unordered_map<std::string, ValDecl> globals;
 	std::vector<Layer> layers;
-	std::unordered_map<uint64_t, std::unordered_map<std::string, FuncTy *>> typefuncs;
+	std::unordered_map<uint64_t, std::unordered_map<std::string, uint64_t>> typefuncs;
 	std::vector<size_t> layerlock;
 	std::vector<FuncTy *> funcstack;
 
 public:
-	TypeManager(Context &c);
+	ValueManager(Context &c);
 	inline void pushLayer()
 	{
 		layers.emplace_back();
@@ -99,14 +99,15 @@ public:
 	{
 		layerlock.pop_back();
 	}
-	bool addVar(const std::string &var, Type *val, StmtVar *decl, bool global = false);
-	bool addTypeFn(Type *ty, const std::string &name, FuncTy *fn);
-	bool addTypeFn(const uint64_t &id, const std::string &name, FuncTy *fn);
+	bool addVar(const std::string &var, const uint64_t &vid, StmtVar *decl,
+		    bool global = false);
+	bool addTypeFn(Type *ty, const std::string &name, const uint64_t &fn);
+	bool addTypeFn(const uint64_t &id, const std::string &name, const uint64_t &fn);
 	bool exists(const std::string &var, bool top_only, bool include_globals);
 	bool existsTypeFn(Type *ty, const std::string &name);
-	Type *getTy(const std::string &var, bool top_only, bool include_globals);
+	uint64_t getVar(const std::string &var, bool top_only, bool include_globals);
 	StmtVar *getDecl(const std::string &var, bool top_only, bool include_globals);
-	FuncTy *getTypeFn(Type *ty, const std::string &name);
+	uint64_t getTypeFn(Type *ty, const std::string &name);
 };
 } // namespace sc
 

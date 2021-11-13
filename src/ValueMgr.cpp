@@ -11,30 +11,30 @@
 	furnished to do so.
 */
 
-#include "TypeMgr.hpp"
+#include "ValueMgr.hpp"
 
 #include "PrimitiveTypeFuncs.hpp"
 
 namespace sc
 {
-TypeManager::TypeManager(Context &c)
+ValueManager::ValueManager(Context &c)
 {
 	AddPrimitiveFuncs(c, *this);
 }
-bool TypeManager::addVar(const std::string &var, Type *val, StmtVar *decl, bool global)
+bool ValueManager::addVar(const std::string &var, const uint64_t &vid, StmtVar *decl, bool global)
 {
 	if(global) {
 		if(globals.find(var) != globals.end()) return false;
-		globals[var] = {val, decl};
+		globals[var] = {vid, decl};
 		return true;
 	}
-	return layers.back().add(var, val, decl);
+	return layers.back().add(var, vid, decl);
 }
-bool TypeManager::addTypeFn(Type *ty, const std::string &name, FuncTy *fn)
+bool ValueManager::addTypeFn(Type *ty, const std::string &name, const uint64_t &fn)
 {
 	return addTypeFn(ty->getID(), name, fn);
 }
-bool TypeManager::addTypeFn(const uint64_t &id, const std::string &name, FuncTy *fn)
+bool ValueManager::addTypeFn(const uint64_t &id, const std::string &name, const uint64_t &fn)
 {
 	if(typefuncs.find(id) == typefuncs.end()) {
 		typefuncs[id] = {};
@@ -44,7 +44,7 @@ bool TypeManager::addTypeFn(const uint64_t &id, const std::string &name, FuncTy 
 	funcmap[name] = fn;
 	return true;
 }
-bool TypeManager::exists(const std::string &var, bool top_only, bool include_globals)
+bool ValueManager::exists(const std::string &var, bool top_only, bool include_globals)
 {
 	size_t iter   = layers.size() - 1;
 	size_t locked = layerlock.size() > 0 ? layerlock.back() : 0;
@@ -62,7 +62,7 @@ bool TypeManager::exists(const std::string &var, bool top_only, bool include_glo
 	}
 	return include_globals ? globals.find(var) != globals.end() : false;
 }
-bool TypeManager::existsTypeFn(Type *ty, const std::string &name)
+bool ValueManager::existsTypeFn(Type *ty, const std::string &name)
 {
 	const uint64_t &id = ty->getID();
 	if(typefuncs.find(id) == typefuncs.end()) {
@@ -71,7 +71,7 @@ bool TypeManager::existsTypeFn(Type *ty, const std::string &name)
 	auto &funcmap = typefuncs[id];
 	return funcmap.find(name) != funcmap.end();
 }
-Type *TypeManager::getTy(const std::string &var, bool top_only, bool include_globals)
+uint64_t ValueManager::getVar(const std::string &var, bool top_only, bool include_globals)
 {
 	size_t iter   = layers.size() - 1;
 	size_t locked = layerlock.size() > 0 ? layerlock.back() : 0;
@@ -80,19 +80,19 @@ Type *TypeManager::getTy(const std::string &var, bool top_only, bool include_glo
 		if(iter == 0) is_done = true;
 		if(locked && iter && iter <= locked) {
 			--iter;
-			if(top_only) return nullptr;
+			if(top_only) return 0;
 			continue;
 		}
-		Type *res = layers[iter].getTy(var);
+		uint64_t res = layers[iter].getVal(var);
 		if(res) return res;
-		if(top_only) return nullptr;
+		if(top_only) return 0;
 		--iter;
 	}
 	auto gres = globals.find(var);
-	if(gres != globals.end()) return gres->second.ty;
-	return nullptr;
+	if(gres != globals.end()) return gres->second.valueid;
+	return 0;
 }
-StmtVar *TypeManager::getDecl(const std::string &var, bool top_only, bool include_globals)
+StmtVar *ValueManager::getDecl(const std::string &var, bool top_only, bool include_globals)
 {
 	size_t iter   = layers.size() - 1;
 	size_t locked = layerlock.size() > 0 ? layerlock.back() : 0;
@@ -113,7 +113,7 @@ StmtVar *TypeManager::getDecl(const std::string &var, bool top_only, bool includ
 	if(gres != globals.end()) return gres->second.decl;
 	return nullptr;
 }
-FuncTy *TypeManager::getTypeFn(Type *ty, const std::string &name)
+uint64_t ValueManager::getTypeFn(Type *ty, const std::string &name)
 {
 	const uint64_t &id = ty->getID();
 	if(typefuncs.find(id) == typefuncs.end()) {
@@ -121,7 +121,7 @@ FuncTy *TypeManager::getTypeFn(Type *ty, const std::string &name)
 	}
 	auto &funcmap = typefuncs[id];
 	auto found    = funcmap.find(name);
-	if(found == funcmap.end()) return nullptr;
+	if(found == funcmap.end()) return 0;
 	return found->second;
 }
 } // namespace sc

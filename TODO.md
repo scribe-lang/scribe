@@ -1,4 +1,3 @@
 # TODOs
 
-* make all types be values - VTYPE
-* implement the operations for handling types in expressions (umul, uand, ...)
+* make all stmts contain value ids instead of pointers so that values can be modified globally across all common ids

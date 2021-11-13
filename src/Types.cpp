@@ -162,7 +162,25 @@ Value *Type::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 		return c.allocType<Ty>();                              \
 	}
 
-BasicTypeDefine(VoidTy, TVOID);
+VoidTy::VoidTy() : Type(TVOID, 0, TVOID) {}
+VoidTy::VoidTy(const size_t &info) : Type(TVOID, info, TVOID) {}
+VoidTy::~VoidTy() {}
+Type *VoidTy::clone(Context &c, const bool &as_is)
+{
+	return c.allocType<VoidTy>(getInfo());
+}
+std::string VoidTy::toStr()
+{
+	return "void";
+}
+VoidTy *VoidTy::create(Context &c)
+{
+	return c.allocType<VoidTy>();
+}
+Value *VoidTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
+{
+	return VoidVal::create(c);
+}
 BasicTypeDefine(AnyTy, TANY);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -201,7 +219,7 @@ const bool &IntTy::isSigned() const
 
 Value *IntTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 {
-	return IntVal::create(c, 0);
+	return IntVal::create(c, this, false, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -235,7 +253,7 @@ const size_t &FltTy::getBits() const
 
 Value *FltTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 {
-	return FltVal::create(c, 0.0);
+	return FltVal::create(c, this, false, 0.0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -292,8 +310,7 @@ Type *TypeTy::getContainedTy()
 Value *TypeTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 {
 	if(!getContainedTy()) {
-		e.set(loc, "TypeTy contains no type to get default value of");
-		return nullptr;
+		return TypeVal::create(c, this);
 	}
 	return getContainedTy()->toDefaultValue(c, e, loc);
 }
@@ -336,7 +353,6 @@ const size_t &PtrTy::getCount()
 
 Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 {
-	if(!count) return IntVal::create(c, 0);
 	std::vector<Value *> vec;
 	Value *res = to->toDefaultValue(c, e, loc);
 	if(!res) {
@@ -347,7 +363,7 @@ Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 	for(size_t i = 1; i < count; ++i) {
 		vec.push_back(res->clone(c));
 	}
-	return VecVal::create(c, vec);
+	return VecVal::create(c, this, false, vec);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -358,8 +374,7 @@ StructTy::StructTy(const std::vector<std::string> &fieldnames, const std::vector
 		   const std::vector<std::string> &templatenames,
 		   const std::vector<TypeTy *> &templates)
 	: Type(TSTRUCT, 0, genTypeID()), fieldnames(fieldnames), fields(fields),
-	  templatenames(templatenames), templates(templates), is_def(true),
-	  has_template(templates.size())
+	  templatenames(templatenames), templates(templates), has_template(templates.size())
 {
 	for(size_t i = 0; i < fieldnames.size(); ++i) {
 		fieldpos[fieldnames[i]] = i;
@@ -373,11 +388,10 @@ StructTy::StructTy(const size_t &info, const uint64_t &id,
 		   const std::unordered_map<std::string, size_t> &fieldpos,
 		   const std::vector<Type *> &fields, const std::vector<std::string> &templatenames,
 		   const std::unordered_map<std::string, size_t> &templatepos,
-		   const std::vector<TypeTy *> &templates, const bool &is_def,
-		   const bool &has_template)
+		   const std::vector<TypeTy *> &templates, const bool &has_template)
 	: Type(TSTRUCT, info, id), fieldpos(fieldpos), fieldnames(fieldnames), fields(fields),
 	  templatepos(templatepos), templatenames(templatenames), templates(templates),
-	  is_def(is_def), has_template(has_template)
+	  has_template(has_template)
 {}
 StructTy::~StructTy() {}
 bool StructTy::isTemplate()
@@ -407,8 +421,7 @@ Type *StructTy::clone(Context &c, const bool &as_is)
 	for(auto &field : fields) newfields.push_back(field->clone(c));
 	for(auto &t : templates) newtemplates.push_back(as<TypeTy>(t->clone(c)));
 	return c.allocType<StructTy>(getInfo(), getID(), fieldnames, fieldpos, newfields,
-				     templatenames, templatepos, newtemplates, is_def,
-				     has_template);
+				     templatenames, templatepos, newtemplates, has_template);
 }
 bool StructTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
@@ -457,13 +470,12 @@ StructTy *StructTy::instantiate(Context &c, ErrMgr &e, ModuleLoc &loc,
 	for(size_t i = 0; i < this->fields.size(); ++i) {
 		Type *sf    = this->fields[i];
 		Stmt *ciarg = callargs[i];
-		if(sf->isCompatible(c, ciarg->getType(), e, loc)) continue;
+		if(sf->isCompatible(c, ciarg->getValueTy(), e, loc)) continue;
 		is_field_compatible = false;
 		break;
 	}
 	if(!is_field_compatible) return nullptr;
 	StructTy *newst = as<StructTy>(this->clone(c));
-	newst->setDef(false);
 	return newst;
 }
 StructTy *StructTy::create(Context &c, const std::vector<std::string> &_fieldnames,
@@ -502,14 +514,6 @@ void StructTy::clearTemplates()
 {
 	templates.clear();
 }
-void StructTy::setDef(const bool &def)
-{
-	is_def = def;
-}
-bool StructTy::isDef() const
-{
-	return is_def;
-}
 void StructTy::setTemplate(const bool &has_templ)
 {
 	has_template = has_templ;
@@ -534,7 +538,7 @@ Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 		}
 		st[f.first] = res;
 	}
-	return StructVal::create(c, st);
+	return StructVal::create(c, this, false, st);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -542,14 +546,14 @@ Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 FuncTy::FuncTy(StmtVar *var, const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &intrinty, const bool &externed)
-	: Type(TFUNC, 0, genTypeID()), var(var), args(args), ret(ret), intrin(intrin),
-	  intrinty(intrinty), uniqid(!externed ? genFuncUniqID() : 0), externed(externed)
+	       const IntrinType &inty, const bool &externed)
+	: Type(TFUNC, 0, genTypeID()), var(var), args(args), ret(ret), intrin(intrin), inty(inty),
+	  uniqid(!externed ? genFuncUniqID() : 0), externed(externed)
 {}
-FuncTy::FuncTy(StmtVar *var, const size_t &info, const uint64_t &id,
+FuncTy::FuncTy(const size_t &info, const uint64_t &id, StmtVar *var,
 	       const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &intrinty, const uint64_t &uniqid, const bool &externed)
-	: Type(TFUNC, info, id), var(var), args(args), ret(ret), intrin(intrin), intrinty(intrinty),
+	       const IntrinType &inty, const uint64_t &uniqid, const bool &externed)
+	: Type(TFUNC, info, id), var(var), args(args), ret(ret), intrin(intrin), inty(inty),
 	  uniqid(uniqid), externed(externed)
 {}
 FuncTy::~FuncTy() {}
@@ -595,8 +599,8 @@ Type *FuncTy::clone(Context &c, const bool &as_is)
 {
 	std::vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c));
-	return c.allocType<FuncTy>(var, getInfo(), getID(), newargs, ret->clone(c), intrin,
-				   intrinty, uniqid, externed);
+	return c.allocType<FuncTy>(getInfo(), getID(), var, newargs, ret->clone(c), intrin, inty,
+				   uniqid, externed);
 }
 bool FuncTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
@@ -637,7 +641,7 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 	bool has_templ = false;
 	for(size_t i = 0; i < args.size(); ++i) {
 		if(!args[i]->isTypeTy()) continue;
-		as<TypeTy>(args[i])->setContainedTy(callargs[i]->getType());
+		as<TypeTy>(args[i])->setContainedTy(callargs[i]->getValueTy());
 		has_templ = true;
 	}
 	for(size_t i = 0, j = 0; i < this->args.size() && j < callargs.size(); ++i, ++j) {
@@ -648,11 +652,11 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 			variadic = true;
 			--i;
 		}
-		if(!sa->isCompatible(c, ciarg->getType(), e, loc)) {
+		if(!sa->isCompatible(c, ciarg->getValueTy(), e, loc)) {
 			is_arg_compatible = false;
 			break;
 		}
-		if(variadic) variadics.push_back(ciarg->getType());
+		if(variadic) variadics.push_back(ciarg->getValueTy());
 	}
 	if(!is_arg_compatible) return nullptr;
 
@@ -685,9 +689,9 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 	return res;
 }
 FuncTy *FuncTy::create(Context &c, StmtVar *_var, const std::vector<Type *> &_args, Type *_ret,
-		       IntrinsicFn _intrin, const IntrinType &_intrinty, const bool &_externed)
+		       IntrinsicFn _intrin, const IntrinType &_inty, const bool &_externed)
 {
-	return c.allocType<FuncTy>(_var, _args, _ret, _intrin, _intrinty, _externed);
+	return c.allocType<FuncTy>(_var, _args, _ret, _intrin, _inty, _externed);
 }
 void FuncTy::setVar(StmtVar *v)
 {
@@ -726,17 +730,9 @@ bool FuncTy::isIntrinsic()
 {
 	return intrin != nullptr;
 }
-bool FuncTy::isIntrinsicParseOnly()
+bool FuncTy::isParseIntrinsic()
 {
-	return intrinty == IPARSE;
-}
-bool FuncTy::isIntrinsicParse()
-{
-	return intrinty == IPARSE || intrinty == IALL;
-}
-bool FuncTy::isIntrinsicValue()
-{
-	return intrinty == IVALUE || intrinty == IALL;
+	return inty == IPARSE;
 }
 bool FuncTy::isExtern()
 {
@@ -746,14 +742,14 @@ IntrinsicFn FuncTy::getIntrinsicFn()
 {
 	return intrin;
 }
-IntrinType FuncTy::getIntrinsicType()
-{
-	return intrinty;
-}
 bool FuncTy::callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
-			   std::vector<Stmt *> &callargs, const IntrinType &currintrin)
+			   std::vector<Stmt *> &callargs)
 {
-	return intrin(c, err, stmt, source, callargs, currintrin);
+	return intrin(c, err, stmt, source, callargs);
+}
+Value *FuncTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
+{
+	return FuncVal::create(c, this);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -819,32 +815,19 @@ Type *VariadicTy::getArg(const size_t &idx)
 	if(args.size() > idx) return args[idx];
 	return nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// Import Type
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-ImportTy::ImportTy(const std::string &impid) : Type(TIMPORT, 0, TIMPORT), impid(impid) {}
-ImportTy::ImportTy(const size_t &info, const uint64_t &id, const std::string &impid)
-	: Type(TIMPORT, info, id), impid(impid)
-{}
-ImportTy::~ImportTy() {}
-Type *ImportTy::clone(Context &c, const bool &as_is)
+Value *VariadicTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 {
-	return c.allocType<ImportTy>(getInfo(), getID(), impid);
-}
-std::string ImportTy::toStr()
-{
-	return infoToStr() + "import<" + impid + ">";
-}
-ImportTy *ImportTy::create(Context &c, const std::string &_impid)
-{
-	return c.allocType<ImportTy>(_impid);
-}
-
-const std::string &ImportTy::getImportID() const
-{
-	return impid;
+	std::vector<Value *> vec;
+	for(auto &a : args) {
+		Value *v = a->toDefaultValue(c, e, loc);
+		if(!v) {
+			e.set(loc, "failed to generate default value for type: %s",
+			      a->toStr().c_str());
+			return nullptr;
+		}
+		vec.push_back(v);
+	}
+	return VecVal::create(c, this, false, vec);
 }
 
 size_t getPointerCount(Type *t)

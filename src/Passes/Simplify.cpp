@@ -90,11 +90,7 @@ bool SimplifyPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 {
 	auto &args = stmt->getArgs();
 	for(size_t i = 0; i < args.size(); ++i) {
-		Type *a = args[i]->getType();
-		while(a->isPtr()) {
-			a = as<PtrTy>(a)->getTo();
-		}
-		if(a->isTypeTy()) {
+		if(args[i]->getValue()->isType()) {
 			args.erase(args.begin() + i);
 			--i;
 			continue;
@@ -119,15 +115,6 @@ bool SimplifyPass::visit(StmtExpr *stmt, Stmt **source)
 		err.set(stmt, "failed to apply simplify pass on LHS in expression");
 		return false;
 	}
-	if(!stmt->getValue() && oper == lex::SUBS && lhs->getType()->isVariadic()) {
-		StmtSimple *ls	= as<StmtSimple>(lhs);
-		std::string idx = std::to_string(stmt->getVariadicIndex());
-		ls->getLexValue().setDataStr(ls->getLexValue().getDataStr() + "__" + idx);
-		VariadicTy *vt = as<VariadicTy>(ls->getType());
-		ls->setType(vt->getArg(stmt->getVariadicIndex()));
-		*source = lhs;
-		return true;
-	}
 	return true;
 }
 bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
@@ -139,7 +126,7 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 			return true;
 		}
 	}
-	if(stmt->getType()->isImport()) {
+	if(stmt->getValue()->isImport()) {
 		*source = nullptr;
 		return true;
 	}
@@ -162,15 +149,12 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 	auto &args  = stmt->getArgs();
 	bool has_va = false;
 	for(size_t i = 0; i < args.size(); ++i) {
-		if(args[i]->getType()->isVariadic()) {
+		if(args[i]->getValueTy()->isVariadic()) {
 			has_va = true;
 			break; // break is fine since variadic must be last arg anyway
 		}
 		Stmt *argtyexpr = args[i]->getVType()->getExpr();
-		if(args[i]->getType()->isTypeTy() ||
-		   (argtyexpr->getStmtType() == SIMPLE &&
-		    as<StmtSimple>(argtyexpr)->getLexValue().getTok().getVal() == lex::TYPE))
-		{
+		if(args[i]->getValue()->isType()) {
 			args.erase(args.begin() + i);
 			--i;
 			continue;
@@ -193,12 +177,12 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 	// remove variadic
 	StmtVar *a = args.back();
 	args.pop_back();
-	VariadicTy *vt = as<VariadicTy>(a->getType());
-	FuncTy *ft     = as<FuncTy>(stmt->getType());
+	VariadicTy *vt = as<VariadicTy>(a->getValueTy());
+	FuncTy *ft     = as<FuncTy>(stmt->getValueTy());
 	ft->getArgs().pop_back();
 	for(size_t i = 0; i < vt->getArgs().size(); ++i) {
 		StmtVar *tmp = as<StmtVar>(a->clone(ctx));
-		tmp->setType(vt->getArg(i));
+		tmp->createAndSetValue(TypeVal::create(ctx, vt->getArg(i)));
 		lex::Lexeme &name = tmp->getName();
 		name.setDataStr(name.getDataStr() + "__" + std::to_string(i));
 		args.push_back(tmp);
