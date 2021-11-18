@@ -18,9 +18,7 @@
 #include <cstddef>
 #include <string>
 #include <unordered_map>
-
-#include "Context.hpp"
-#include "Types.hpp"
+#include <vector>
 
 namespace sc
 {
@@ -42,6 +40,10 @@ enum ContainsData
 	CDTRUE,	 // value is contained
 	CDPERMA, // value is contained and is permanent
 };
+
+class Context;
+class FuncTy;
+class Type;
 
 class Value
 {

@@ -139,7 +139,7 @@ bool Type::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	return isBaseCompatible(c, rhs, e, loc);
 }
 
-Value *Type::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
+Value *Type::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
 	e.set(loc, "invalid type for toDefaultValue(): %s", toStr().c_str());
 	return nullptr;
@@ -177,7 +177,7 @@ VoidTy *VoidTy::create(Context &c)
 {
 	return c.allocType<VoidTy>();
 }
-Value *VoidTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
+Value *VoidTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
 	return VoidVal::create(c);
 }
@@ -217,9 +217,9 @@ const bool &IntTy::isSigned() const
 	return sign;
 }
 
-Value *IntTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
+Value *IntTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
-	return IntVal::create(c, this, CDFALSE, 0);
+	return IntVal::create(c, this, cd, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -251,9 +251,9 @@ const size_t &FltTy::getBits() const
 	return bits;
 }
 
-Value *FltTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
+Value *FltTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
-	return FltVal::create(c, this, CDFALSE, 0.0);
+	return FltVal::create(c, this, cd, 0.0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -307,12 +307,12 @@ Type *TypeTy::getContainedTy()
 	return loc->second;
 }
 
-Value *TypeTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
+Value *TypeTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
 	if(!getContainedTy()) {
 		return TypeVal::create(c, this);
 	}
-	return getContainedTy()->toDefaultValue(c, e, loc);
+	return getContainedTy()->toDefaultValue(c, e, loc, cd);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -351,10 +351,10 @@ const size_t &PtrTy::getCount()
 	return count;
 }
 
-Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
+Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
 	std::vector<Value *> vec;
-	Value *res = to->toDefaultValue(c, e, loc);
+	Value *res = to->toDefaultValue(c, e, loc, cd);
 	if(!res) {
 		e.set(loc, "failed to get default value from array's type");
 		return nullptr;
@@ -363,7 +363,7 @@ Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 	for(size_t i = 1; i < count; ++i) {
 		vec.push_back(res->clone(c));
 	}
-	return VecVal::create(c, this, CDFALSE, vec);
+	return VecVal::create(c, this, cd, vec);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -527,18 +527,18 @@ bool StructTy::hasTemplate()
 	return false;
 }
 
-Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
+Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
 	std::unordered_map<std::string, Value *> st;
 	for(auto &f : fieldpos) {
-		Value *res = fields[f.second]->toDefaultValue(c, e, loc);
+		Value *res = fields[f.second]->toDefaultValue(c, e, loc, cd);
 		if(!res) {
 			e.set(loc, "failed to get default value from array's type");
 			return nullptr;
 		}
 		st[f.first] = res;
 	}
-	return StructVal::create(c, this, CDFALSE, st);
+	return StructVal::create(c, this, cd, st);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -747,7 +747,7 @@ bool FuncTy::callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **sourc
 {
 	return intrin(c, err, stmt, source, callargs);
 }
-Value *FuncTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
+Value *FuncTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
 	return FuncVal::create(c, this);
 }
@@ -815,11 +815,11 @@ Type *VariadicTy::getArg(const size_t &idx)
 	if(args.size() > idx) return args[idx];
 	return nullptr;
 }
-Value *VariadicTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
+Value *VariadicTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
 	std::vector<Value *> vec;
 	for(auto &a : args) {
-		Value *v = a->toDefaultValue(c, e, loc);
+		Value *v = a->toDefaultValue(c, e, loc, cd);
 		if(!v) {
 			e.set(loc, "failed to generate default value for type: %s",
 			      a->toStr().c_str());
@@ -827,7 +827,7 @@ Value *VariadicTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 		}
 		vec.push_back(v);
 	}
-	return VecVal::create(c, this, CDFALSE, vec);
+	return VecVal::create(c, this, cd, vec);
 }
 
 size_t getPointerCount(Type *t)

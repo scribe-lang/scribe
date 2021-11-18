@@ -322,7 +322,8 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				return false;
 			}
 			// clone() is called to resolve any TypeTy's
-			Value *retval = fn->getRet()->toDefaultValue(ctx, err, stmt->getLoc());
+			Value *retval =
+			fn->getRet()->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
 			if(!retval) {
 				err.set(stmt,
 					"failed to generate a default"
@@ -463,8 +464,9 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				err.set(rhs, "index for a pointer must be integral");
 				return false;
 			}
-			Type *t = as<PtrTy>(lhs->getValueTy())->getTo();
-			stmt->createAndSetValue(t->toDefaultValue(ctx, err, stmt->getLoc()));
+			Type *t	 = as<PtrTy>(lhs->getValueTy())->getTo();
+			Value *v = t->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
+			stmt->createAndSetValue(v);
 			break;
 		}
 		goto applyoperfn;
@@ -537,7 +539,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			err.set(stmt, "function is incompatible with call arguments");
 			return false;
 		}
-		Value *retval = fn->getRet()->toDefaultValue(ctx, err, stmt->getLoc());
+		Value *retval = fn->getRet()->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
 		if(!retval) {
 			err.set(stmt,
 				"failed to generate a default"
@@ -642,7 +644,7 @@ post_mangling:
 	}
 	if(vtype && stmt->getValue()->isType()) {
 		Type *t	   = as<TypeVal>(stmt->getValue())->getVal();
-		Value *res = t->toDefaultValue(ctx, err, stmt->getLoc());
+		Value *res = t->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
 		if(!res) {
 			err.set(stmt, "failed to retrieve default value for type: %s",
 				t->toStr().c_str());
