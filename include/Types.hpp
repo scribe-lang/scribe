@@ -182,17 +182,6 @@ template<typename T> T *as(Type *t)
 	return static_cast<T *>(t);
 }
 
-#define BasicTypeDecl(Ty)                                           \
-	class Ty : public Type                                      \
-	{                                                           \
-	public:                                                     \
-		Ty();                                               \
-		Ty(const size_t &info);                             \
-		~Ty();                                              \
-		Type *clone(Context &c, const bool &as_is = false); \
-		static Ty *create(Context &c);                      \
-	}
-
 class VoidTy : public Type
 {
 public:
@@ -207,7 +196,20 @@ public:
 
 	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
-BasicTypeDecl(AnyTy);
+class AnyTy : public Type
+{
+public:
+	AnyTy();
+	AnyTy(const size_t &info);
+	~AnyTy();
+
+	Type *clone(Context &c, const bool &as_is = false);
+	std::string toStr();
+
+	static AnyTy *create(Context &c);
+
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
+};
 
 class IntTy : public Type
 {
