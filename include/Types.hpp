@@ -22,6 +22,7 @@
 
 #include "Context.hpp"
 #include "Error.hpp"
+#include "Values.hpp"
 
 namespace sc
 {
@@ -60,7 +61,6 @@ class StmtExpr;
 class StmtVar;
 class StmtFnDef;
 class StmtFnCallInfo;
-class Value;
 typedef bool (*IntrinsicFn)(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
 			    std::vector<Stmt *> &args);
 #define INTRINSIC(name)                                                               \
@@ -117,7 +117,7 @@ public:
 		return isFlt();
 	}
 
-	virtual Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
+	virtual Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 
 #define SetModifierX(Fn, Mod) \
 	inline void set##Fn() \
@@ -205,7 +205,7 @@ public:
 
 	static VoidTy *create(Context &c);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
 BasicTypeDecl(AnyTy);
 
@@ -227,7 +227,7 @@ public:
 	const size_t &getBits() const;
 	const bool &isSigned() const;
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
 
 class FltTy : public Type
@@ -246,7 +246,7 @@ public:
 
 	const size_t &getBits() const;
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
 
 class TypeTy : public Type
@@ -268,7 +268,7 @@ public:
 	void setContainedTy(Type *ty);
 	Type *getContainedTy();
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
 
 class PtrTy : public Type
@@ -291,7 +291,7 @@ public:
 	const size_t &getCount();
 	bool isArrayPtr();
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
 
 class StructTy : public Type
@@ -341,7 +341,7 @@ public:
 	void setTemplate(const bool &has_templ);
 	bool hasTemplate();
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
 
 enum IntrinType
@@ -397,7 +397,7 @@ public:
 	bool callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
 			   std::vector<Stmt *> &callargs);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
 
 class VariadicTy : public Type
@@ -420,7 +420,7 @@ public:
 	std::vector<Type *> &getArgs();
 	Type *getArg(const size_t &idx);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
 
 // helpful functions

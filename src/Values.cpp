@@ -13,6 +13,8 @@
 
 #include "Values.hpp"
 
+#include "Types.hpp"
+
 namespace sc
 {
 Value::Value(const Values &vty, Type *ty, ContainsData has_data)
@@ -117,7 +119,7 @@ bool FltVal::updateValue(Value *v)
 {
 	if(!v->isFlt()) return false;
 	data	 = as<FltVal>(v)->getVal();
-	has_data = getHasData();
+	has_data = v->getHasData();
 	return true;
 }
 
@@ -156,7 +158,7 @@ bool VecVal::updateValue(Value *v)
 	for(size_t i = 0; i < data.size(); ++i) {
 		if(!data[i]->updateValue(vv->getValAt(i))) return false;
 	}
-	has_data = getHasData();
+	has_data = v->getHasData();
 	return true;
 }
 
@@ -221,7 +223,7 @@ bool StructVal::updateValue(Value *v)
 	for(auto &f : data) {
 		if(!f.second->updateValue(sv->getField(f.first))) return false;
 	}
-	has_data = getHasData();
+	has_data = v->getHasData();
 	return true;
 }
 
@@ -287,7 +289,7 @@ bool ImportVal::updateValue(Value *v)
 {
 	if(!v->isImport()) return false;
 	val	 = as<ImportVal>(v)->getVal();
-	has_data = getHasData();
+	has_data = v->getHasData();
 	return true;
 }
 
