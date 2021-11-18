@@ -15,7 +15,9 @@
 
 namespace sc
 {
-Value::Value(const Values &vty, Type *ty, bool has_val) : vty(vty), ty(ty), has_val(has_val) {}
+Value::Value(const Values &vty, Type *ty, ContainsData has_data)
+	: vty(vty), ty(ty), has_data(has_data)
+{}
 Value::~Value() {}
 bool Value::IsValStrLiteral()
 {
@@ -26,16 +28,35 @@ bool Value::IsValStrLiteral()
 	if(i->getBits() != 8 || !i->isSigned()) return false;
 	return true;
 }
-void Value::setHasData(const bool &val)
+ContainsData Value::getHasData()
 {
-	has_val = val;
+	return has_data;
+}
+void Value::setHasData(ContainsData cd)
+{
+	if(has_data == CDPERMA) return;
+	has_data = cd;
+}
+void Value::setContainsData()
+{
+	if(has_data == CDPERMA) return;
+	has_data = CDTRUE;
+}
+void Value::setContainsPermaData()
+{
+	has_data = CDPERMA;
 }
 bool Value::hasData()
 {
-	return has_val;
+	return has_data == CDTRUE || has_data == CDPERMA;
+}
+void Value::clearHasData()
+{
+	if(has_data == CDPERMA) return;
+	has_data = CDFALSE;
 }
 
-VoidVal::VoidVal(Context &c) : Value(VVOID, VoidTy::create(c), true) {}
+VoidVal::VoidVal(Context &c) : Value(VVOID, VoidTy::create(c), CDTRUE) {}
 
 std::string VoidVal::toStr()
 {
@@ -55,8 +76,8 @@ VoidVal *VoidVal::create(Context &c)
 	return c.allocVal<VoidVal>();
 }
 
-IntVal::IntVal(Context &c, Type *ty, bool has_val, const int64_t &data)
-	: Value(VINT, ty, has_val), data(data)
+IntVal::IntVal(Context &c, Type *ty, ContainsData has_data, const int64_t &data)
+	: Value(VINT, ty, has_data), data(data)
 {}
 
 std::string IntVal::toStr()
@@ -65,23 +86,23 @@ std::string IntVal::toStr()
 }
 Value *IntVal::clone(Context &c)
 {
-	return create(c, ty, has_val, data);
+	return create(c, ty, has_data, data);
 }
 bool IntVal::updateValue(Value *v)
 {
 	if(!v->isInt()) return false;
-	data	= as<IntVal>(v)->getVal();
-	has_val = v->hasData();
+	data	 = as<IntVal>(v)->getVal();
+	has_data = v->getHasData();
 	return true;
 }
 
-IntVal *IntVal::create(Context &c, Type *ty, bool has_val, const int64_t &val)
+IntVal *IntVal::create(Context &c, Type *ty, ContainsData has_data, const int64_t &val)
 {
-	return c.allocVal<IntVal>(ty, has_val, val);
+	return c.allocVal<IntVal>(ty, has_data, val);
 }
 
-FltVal::FltVal(Context &c, Type *ty, bool has_val, const long double &data)
-	: Value(VFLT, ty, has_val), data(data)
+FltVal::FltVal(Context &c, Type *ty, ContainsData has_data, const long double &data)
+	: Value(VFLT, ty, has_data), data(data)
 {}
 
 std::string FltVal::toStr()
@@ -90,23 +111,23 @@ std::string FltVal::toStr()
 }
 Value *FltVal::clone(Context &c)
 {
-	return create(c, ty, has_val, data);
+	return create(c, ty, has_data, data);
 }
 bool FltVal::updateValue(Value *v)
 {
 	if(!v->isFlt()) return false;
-	data	= as<FltVal>(v)->getVal();
-	has_val = v->hasData();
+	data	 = as<FltVal>(v)->getVal();
+	has_data = getHasData();
 	return true;
 }
 
-FltVal *FltVal::create(Context &c, Type *ty, bool has_val, const long double &val)
+FltVal *FltVal::create(Context &c, Type *ty, ContainsData has_data, const long double &val)
 {
-	return c.allocVal<FltVal>(ty, has_val, val);
+	return c.allocVal<FltVal>(ty, has_data, val);
 }
 
-VecVal::VecVal(Context &c, Type *ty, bool has_val, const std::vector<Value *> &data)
-	: Value(VVEC, ty, has_val), data(data)
+VecVal::VecVal(Context &c, Type *ty, ContainsData has_data, const std::vector<Value *> &data)
+	: Value(VVEC, ty, has_data), data(data)
 {}
 
 std::string VecVal::toStr()
@@ -125,7 +146,7 @@ Value *VecVal::clone(Context &c)
 	for(auto &d : data) {
 		newdata.push_back(d->clone(c));
 	}
-	return create(c, ty, has_val, newdata);
+	return create(c, ty, has_data, newdata);
 }
 bool VecVal::updateValue(Value *v)
 {
@@ -135,23 +156,23 @@ bool VecVal::updateValue(Value *v)
 	for(size_t i = 0; i < data.size(); ++i) {
 		if(!data[i]->updateValue(vv->getValAt(i))) return false;
 	}
-	has_val = v->hasData();
+	has_data = getHasData();
 	return true;
 }
 
-VecVal *VecVal::create(Context &c, Type *ty, bool has_val, const std::vector<Value *> &val)
+VecVal *VecVal::create(Context &c, Type *ty, ContainsData has_data, const std::vector<Value *> &val)
 {
-	return c.allocVal<VecVal>(ty, has_val, val);
+	return c.allocVal<VecVal>(ty, has_data, val);
 }
 VecVal *VecVal::createStr(Context &c, const std::string &val)
 {
 	std::vector<Value *> chars;
 	Type *ty = mkI8Ty(c);
 	for(auto &ch : val) {
-		chars.push_back(IntVal::create(c, ty, true, ch));
+		chars.push_back(IntVal::create(c, ty, CDTRUE, ch));
 	}
 	ty = mkPtrTy(c, ty, 0);
-	return c.allocVal<VecVal>(ty, true, chars);
+	return c.allocVal<VecVal>(ty, CDTRUE, chars);
 }
 
 std::string VecVal::getAsString()
@@ -166,9 +187,9 @@ std::string VecVal::getAsString()
 	return res;
 }
 
-StructVal::StructVal(Context &c, Type *ty, bool has_val,
+StructVal::StructVal(Context &c, Type *ty, ContainsData has_data,
 		     const std::unordered_map<std::string, Value *> &data)
-	: Value(VSTRUCT, ty, has_val), data(data)
+	: Value(VSTRUCT, ty, has_data), data(data)
 {}
 
 std::string StructVal::toStr()
@@ -190,7 +211,7 @@ Value *StructVal::clone(Context &c)
 	for(auto &d : data) {
 		newdata[d.first] = d.second->clone(c);
 	}
-	return create(c, ty, has_val, newdata);
+	return create(c, ty, has_data, newdata);
 }
 bool StructVal::updateValue(Value *v)
 {
@@ -200,17 +221,17 @@ bool StructVal::updateValue(Value *v)
 	for(auto &f : data) {
 		if(!f.second->updateValue(sv->getField(f.first))) return false;
 	}
-	has_val = v->hasData();
+	has_data = getHasData();
 	return true;
 }
 
-StructVal *StructVal::create(Context &c, Type *ty, bool has_val,
+StructVal *StructVal::create(Context &c, Type *ty, ContainsData has_data,
 			     const std::unordered_map<std::string, Value *> &val)
 {
-	return c.allocVal<StructVal>(ty, has_val, val);
+	return c.allocVal<StructVal>(ty, has_data, val);
 }
 
-FuncVal::FuncVal(Context &c, FuncTy *val) : Value(VFUNC, val, true) {}
+FuncVal::FuncVal(Context &c, FuncTy *val) : Value(VFUNC, val, CDTRUE) {}
 
 std::string FuncVal::toStr()
 {
@@ -230,7 +251,7 @@ FuncVal *FuncVal::create(Context &c, FuncTy *val)
 	return c.allocVal<FuncVal>(val);
 }
 
-TypeVal::TypeVal(Context &c, Type *val) : Value(VTYPE, val, true) {}
+TypeVal::TypeVal(Context &c, Type *val) : Value(VTYPE, val, CDTRUE) {}
 
 std::string TypeVal::toStr()
 {
@@ -251,7 +272,7 @@ TypeVal *TypeVal::create(Context &c, Type *val)
 }
 
 ImportVal::ImportVal(Context &c, const std::string &val)
-	: Value(VIMPORT, mkStrTy(c), true), val(val)
+	: Value(VIMPORT, mkStrTy(c), CDTRUE), val(val)
 {}
 
 std::string ImportVal::toStr()
@@ -265,8 +286,8 @@ Value *ImportVal::clone(Context &c)
 bool ImportVal::updateValue(Value *v)
 {
 	if(!v->isImport()) return false;
-	val	= as<ImportVal>(v)->getVal();
-	has_val = v->hasData();
+	val	 = as<ImportVal>(v)->getVal();
+	has_data = getHasData();
 	return true;
 }
 
@@ -275,7 +296,7 @@ ImportVal *ImportVal::create(Context &c, const std::string &val)
 	return c.allocVal<ImportVal>(val);
 }
 
-RefVal::RefVal(Context &c, Type *ty, Value *to) : Value(VREF, ty, true), to(to) {}
+RefVal::RefVal(Context &c, Type *ty, Value *to) : Value(VREF, ty, CDTRUE), to(to) {}
 
 std::string RefVal::toStr()
 {
@@ -288,7 +309,7 @@ Value *RefVal::clone(Context &c)
 bool RefVal::updateValue(Value *v)
 {
 	if(!v->isRef()) return false;
-	to->setHasData(v->hasData());
+	to->setHasData(v->getHasData());
 	return to->updateValue(as<RefVal>(v)->getVal());
 }
 
@@ -296,12 +317,29 @@ RefVal *RefVal::create(Context &c, Type *ty, Value *to)
 {
 	return c.allocVal<RefVal>(ty, to);
 }
-void RefVal::setHasData(const bool &val)
+
+ContainsData RefVal::getHasData()
 {
-	to->setHasData(val);
+	return to->getHasData();
+}
+void RefVal::setHasData(ContainsData cd)
+{
+	to->setHasData(cd);
+}
+void RefVal::setContainsData()
+{
+	to->setContainsData();
+}
+void RefVal::setContainsPermaData()
+{
+	to->setContainsPermaData();
 }
 bool RefVal::hasData()
 {
 	return to->hasData();
+}
+void RefVal::clearHasData()
+{
+	to->clearHasData();
 }
 } // namespace sc

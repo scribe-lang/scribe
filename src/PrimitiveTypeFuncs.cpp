@@ -69,10 +69,9 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	u64 = IntTy::create(c, 64, false);
 	ADDFN("sizeOf", createFnVal(c, {g}, u64, intrinsic_szof, IVALUE));
 
-	g   = TypeTy::create(c);
 	i32 = IntTy::create(c, 32, true);
 	i32->setComptime();
-	ADDFN("valen", createFnVal(c, {g}, i32, intrinsic_valen, IVALUE));
+	ADDFN("valen", createFnVal(c, {}, i32, intrinsic_valen, IVALUE));
 
 	g   = TypeTy::create(c);
 	g2  = TypeTy::create(c);

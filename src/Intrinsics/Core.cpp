@@ -13,6 +13,7 @@
 #include "FS.hpp"
 #include "Intrinsics.hpp"
 #include "Parser.hpp"
+#include "Passes/TypeAssign.hpp"
 #include "ValueMgr.hpp"
 
 #define GetType(i) args[i]->getType()
@@ -68,13 +69,14 @@ gen_import:
 }
 INTRINSIC(ismainsrc)
 {
-	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), true, stmt->getMod()->isMainModule()));
+	bool ismm = stmt->getMod()->isMainModule();
+	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDTRUE, ismm));
 	return true;
 }
 INTRINSIC(isprimitive)
 {
 	bool is_prim = args[0]->getValueTy()->isPrimitive();
-	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), true, is_prim));
+	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDTRUE, is_prim));
 	return true;
 }
 INTRINSIC(szof)
@@ -84,7 +86,7 @@ INTRINSIC(szof)
 		err.set(args[0], "invalid type info, received size 0");
 		return false;
 	}
-	stmt->createAndSetValue(IntVal::create(c, mkU64Ty(c), true, sz));
+	stmt->createAndSetValue(IntVal::create(c, mkU64Ty(c), CDTRUE, sz));
 	return true;
 }
 INTRINSIC(as)
@@ -117,13 +119,14 @@ INTRINSIC(ref)
 }
 INTRINSIC(valen)
 {
-	if(!args[0]->getValueTy()->isVariadic()) {
-		err.set(stmt, "expected variadic type for valen(), found: %s",
-			args[0]->getValueTy()->toStr().c_str());
+	if(stmt->getValue()->hasData()) return true;
+	TypeAssignPass *ta = c.getPass<TypeAssignPass>();
+	if(!ta->isFnVALen()) {
+		err.set(stmt, "this is not a variadic function");
 		return false;
 	}
-	size_t vasz = as<VariadicTy>(args[0]->getValueTy())->getArgs().size();
-	stmt->createAndSetValue(IntVal::create(c, mkU64Ty(c), true, vasz));
+	size_t vasz = ta->getFnVALen();
+	stmt->createAndSetValue(IntVal::create(c, mkU64Ty(c), CDPERMA, vasz));
 	return true;
 }
 INTRINSIC(array)

@@ -19,7 +19,7 @@
 namespace sc
 {
 TypeAssignPass::TypeAssignPass(ErrMgr &err, Context &ctx)
-	: Pass(Pass::genPassID<TypeAssignPass>(), err, ctx), vmgr(ctx), vpass(err, ctx),
+	: Pass(Pass::genPassID<TypeAssignPass>(), err, ctx), vmgr(ctx), vpass(err, ctx), valen(0),
 	  disabled_varname_mangling(false)
 {}
 TypeAssignPass::~TypeAssignPass() {}
@@ -135,18 +135,28 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 	case lex::VOID: stmt->createAndSetValue(VoidVal::create(ctx)); break;
 	case lex::ANY: stmt->createAndSetValue(TypeVal::create(ctx, AnyTy::create(ctx))); break;
 	case lex::TYPE: stmt->createAndSetValue(TypeVal::create(ctx, TypeTy::create(ctx))); break;
-	case lex::TRUE: stmt->createAndSetValue(IntVal::create(ctx, mkI1Ty(ctx), true, 1)); break;
+	case lex::TRUE: {
+		IntVal *iv = IntVal::create(ctx, mkI1Ty(ctx), CDPERMA, 1);
+		stmt->createAndSetValue(iv);
+		break;
+	}
 	case lex::FALSE: // fallthrough
-	case lex::NIL: stmt->createAndSetValue(IntVal::create(ctx, mkI1Ty(ctx), true, 0)); break;
-	case lex::CHAR:
-		stmt->createAndSetValue(IntVal::create(ctx, mkI8Ty(ctx), true, lval.getDataInt()));
+	case lex::NIL: stmt->createAndSetValue(IntVal::create(ctx, mkI1Ty(ctx), CDPERMA, 0)); break;
+	case lex::CHAR: {
+		IntVal *iv = IntVal::create(ctx, mkI8Ty(ctx), CDPERMA, lval.getDataInt());
+		stmt->createAndSetValue(iv);
 		break;
-	case lex::INT:
-		stmt->createAndSetValue(IntVal::create(ctx, mkI32Ty(ctx), true, lval.getDataInt()));
+	}
+	case lex::INT: {
+		IntVal *iv = IntVal::create(ctx, mkI32Ty(ctx), CDPERMA, lval.getDataInt());
+		stmt->createAndSetValue(iv);
 		break;
-	case lex::FLT:
-		stmt->createAndSetValue(FltVal::create(ctx, mkF32Ty(ctx), true, lval.getDataFlt()));
+	}
+	case lex::FLT: {
+		FltVal *fv = FltVal::create(ctx, mkF32Ty(ctx), CDPERMA, lval.getDataFlt());
+		stmt->createAndSetValue(fv);
 		break;
+	}
 	case lex::STR: stmt->createAndSetValue(VecVal::createStr(ctx, lval.getDataStr())); break;
 	case lex::I1: stmt->createAndSetValue(TypeVal::create(ctx, mkI1Ty(ctx))); break;
 	case lex::I8: stmt->createAndSetValue(TypeVal::create(ctx, mkI8Ty(ctx))); break;
@@ -381,7 +391,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			applyPrimitiveTypeCoercion(coerced_to, callinfo->getArg(i));
 			stvals[st->getFieldName(i)] = callinfo->getArg(i)->getValue();
 		}
-		StructVal *sv = StructVal::create(ctx, st, false, stvals);
+		StructVal *sv = StructVal::create(ctx, st, CDFALSE, stvals);
 		stmt->createAndSetValue(sv);
 		break;
 	}
@@ -418,10 +428,6 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	}
 	case lex::SUBS: {
 		if(lhs->getValueTy()->isVariadic()) {
-			if(!lhs->getValue()->isVec()) {
-				err.set(stmt, "a variadic must have a vector value");
-				return false;
-			}
 			if(!lhs->isSimple()) {
 				err.set(stmt, "LHS in variadic subscript must be a simple stmt");
 				return false;
@@ -435,16 +441,22 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				return false;
 			}
 			IntVal *iv = as<IntVal>(rhs->getValue());
-			VecVal *va = as<VecVal>(lhs->getValue());
-			if(va->getVal().size() <= iv->getVal()) {
+			if(getFnVALen() <= iv->getVal()) {
 				err.set(stmt,
 					"variadic index out of bounds "
 					"(va: %zu, index: %" PRId64 ")",
-					va->getVal().size(), iv->getVal());
+					getFnVALen(), iv->getVal());
 				return false;
 			}
-			lhs->createAndSetValue(va->getValAt(iv->getVal()));
-			*source = lhs;
+			StmtSimple *l	 = as<StmtSimple>(lhs->clone(ctx));
+			std::string newn = l->getLexValue().getDataStr();
+			newn += "." + std::to_string(iv->getVal());
+			l->getLexValue().setDataStr(newn);
+			*source = l;
+			if(!visit(*source, source)) {
+				err.set(stmt, "failed to determine type of LHS in expression");
+				return false;
+			}
 			return true;
 		} else if(lhs->getValueTy()->isPtr()) {
 			if(!rhs->getValue()->isInt()) {
@@ -695,7 +707,7 @@ bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 
 	if(stmt->requiresTemplateInit()) goto end;
 
-	pushFunc(fn);
+	pushFunc(fn, false, 0);
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
 		err.set(stmt, "failed to determine type of function block");
 		return false;
@@ -1071,7 +1083,8 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 
 	vmgr.pushLayer();
 
-	for(size_t i = 0; i < cf->getArgs().size(); ++i) {
+	size_t va_count = 0;
+	for(size_t i = 0; i < args.size(); ++i) {
 		StmtVar *cfa = cfsig->getArg(i);
 		Type *cft    = cf->getArg(i);
 		if(!cft->isVariadic()) {
@@ -1083,23 +1096,39 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 			vmgr.addVar(cfa->getName().getDataStr(), cfa->getValueID(), cfa);
 			continue;
 		}
-		size_t j = i;
-		std::vector<Value *> v;
-		bool has_val = true;
-		while(j < args.size()) {
-			has_val &= args[j]->getValue()->hasData();
-			v.push_back(args[j]->getValue());
-			++j;
+		ModuleLoc &mloc	     = cfa->getLoc();
+		lex::Lexeme &va_name = cfa->getName();
+		Type *vaty	     = cft;
+		cfsig->getArgs().pop_back();
+		cf->getArgs().pop_back();
+		std::vector<Value *> vtmp(args.size() - i, nullptr);
+		uint64_t vavid = createValueIDWith(VecVal::create(ctx, vaty, CDFALSE, vtmp));
+		vmgr.addVar(va_name.getDataStr(), vavid, cfa);
+		while(i < args.size()) {
+			std::string argn = va_name.getDataStr() + "." + std::to_string(va_count);
+			StmtVar *newv	 = as<StmtVar>(cfa->clone(ctx));
+			newv->getName().setDataStr(argn);
+			Type *t = args[i]->getValueTy()->clone(ctx);
+			t->appendInfo(cft->getInfo());
+			if(t->hasRef()) {
+				newv->setValueID(args[i]);
+			} else {
+				newv->createAndSetValue(args[i]->getValue()->clone(ctx));
+			}
+			vmgr.addVar(argn, newv->getValueID(), newv);
+			cfsig->getArgs().push_back(newv);
+			cf->getArgs().push_back(t);
+			++va_count;
+			++i;
 		}
-		cfa->createAndSetValue(VecVal::create(ctx, cft, has_val, v));
-		vmgr.addVar(cfa->getName().getDataStr(), cfa->getValueID(), cfa);
+		break;
 	}
 	FuncVal *cfn = FuncVal::create(ctx, cf);
 	cfsig->getRetType()->createAndSetValue(TypeVal::create(ctx, cf->getRet()));
 	cfsig->createAndSetValue(cfn);
 	cfdef->setValueID(cfsig);
 	cfvar->setValueID(cfsig);
-	pushFunc(cfn);
+	pushFunc(cfn, va_count > 0, va_count);
 	if(!visit(cfblk, asStmt(&cfblk))) {
 		err.set(caller, "failed to assign type for called template function's var");
 		return false;
@@ -1115,15 +1144,19 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 	return true;
 }
 
-void TypeAssignPass::pushFunc(FuncVal *fn)
+void TypeAssignPass::pushFunc(FuncVal *fn, const bool &is_va, const size_t &va_len)
 {
 	vmgr.pushFunc(fn->getVal());
 	deferstack.pushFunc();
+	is_fn_va.push_back(is_va);
+	valen.push_back(va_len);
 }
 void TypeAssignPass::popFunc()
 {
 	deferstack.popFunc();
 	vmgr.popFunc();
+	is_fn_va.pop_back();
+	valen.pop_back();
 }
 
 } // namespace sc

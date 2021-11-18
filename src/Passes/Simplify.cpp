@@ -146,12 +146,11 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 }
 bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 {
-	auto &args  = stmt->getArgs();
-	bool has_va = false;
+	auto &args = stmt->getArgs();
 	for(size_t i = 0; i < args.size(); ++i) {
 		if(args[i]->getValueTy()->isVariadic()) {
-			has_va = true;
-			break; // break is fine since variadic must be last arg anyway
+			err.set(stmt, "variadic argument in function cannot reach simplify stage");
+			return false;
 		}
 		Stmt *argtyexpr = args[i]->getVType()->getExpr();
 		if(args[i]->getValue()->isType()) {
@@ -172,21 +171,6 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 	if(!visit(stmt->getRetType(), asStmt(&stmt->getRetType()))) {
 		err.set(stmt, "failed to apply simplify pass on func signature ret type");
 		return false;
-	}
-	if(!has_va) return true;
-	// remove variadic
-	StmtVar *a = args.back();
-	args.pop_back();
-	VariadicTy *vt = as<VariadicTy>(a->getValueTy());
-	FuncTy *ft     = as<FuncTy>(stmt->getValueTy());
-	ft->getArgs().pop_back();
-	for(size_t i = 0; i < vt->getArgs().size(); ++i) {
-		StmtVar *tmp = as<StmtVar>(a->clone(ctx));
-		tmp->createAndSetValue(TypeVal::create(ctx, vt->getArg(i)));
-		lex::Lexeme &name = tmp->getName();
-		name.setDataStr(name.getDataStr() + "__" + std::to_string(i));
-		args.push_back(tmp);
-		ft->getArgs().push_back(vt->getArg(i));
 	}
 	return true;
 }
