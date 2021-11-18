@@ -192,7 +192,7 @@ skip_rhs_val:
 		}
 		if(!variadicvalues.empty()) {
 			Type *back = fn->getArgs().back();
-			VecVal *v  = VecVal::create(ctx, back, true, variadicvalues);
+			VecVal *v  = VecVal::create(ctx, back, CDTRUE, variadicvalues);
 			defargs.back()->updateValue(v);
 		}
 		if(!visit(def, &fndef)) {
@@ -232,7 +232,7 @@ skip_rhs_val:
 				return false;
 			}
 		}
-		stmt->getValue()->setHasData(true);
+		stmt->getValue()->setContainsData();
 		break;
 	}
 	// address of

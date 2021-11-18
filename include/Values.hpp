@@ -36,16 +36,22 @@ enum Values
 	VIMPORT,
 	VREF,
 };
+enum ContainsData
+{
+	CDFALSE, // no value is contained
+	CDTRUE,	 // value is contained
+	CDPERMA, // value is contained and is permanent
+};
 
 class Value
 {
 protected:
 	Values vty;
 	Type *ty;
-	bool has_val;
+	ContainsData has_data;
 
 public:
-	Value(const Values &vty, Type *ty, bool has_val);
+	Value(const Values &vty, Type *ty, ContainsData has_data);
 	virtual ~Value();
 
 	virtual std::string toStr()	   = 0;
@@ -77,8 +83,12 @@ public:
 	{
 		return ty;
 	}
-	virtual void setHasData(const bool &val);
+	virtual ContainsData getHasData();
+	virtual void setHasData(ContainsData cd);
+	virtual void setContainsData();
+	virtual void setContainsPermaData();
 	virtual bool hasData();
+	virtual void clearHasData();
 };
 
 template<typename T> T *as(Value *v)
@@ -103,13 +113,13 @@ class IntVal : public Value
 	int64_t data;
 
 public:
-	IntVal(Context &c, Type *ty, bool has_val, const int64_t &data);
+	IntVal(Context &c, Type *ty, ContainsData has_data, const int64_t &data);
 
 	std::string toStr();
 	Value *clone(Context &c);
 	bool updateValue(Value *v);
 
-	static IntVal *create(Context &c, Type *ty, bool has_val, const int64_t &val);
+	static IntVal *create(Context &c, Type *ty, ContainsData has_data, const int64_t &val);
 
 	inline int64_t &getVal()
 	{
@@ -122,13 +132,13 @@ class FltVal : public Value
 	long double data;
 
 public:
-	FltVal(Context &c, Type *ty, bool has_val, const long double &data);
+	FltVal(Context &c, Type *ty, ContainsData has_data, const long double &data);
 
 	std::string toStr();
 	Value *clone(Context &c);
 	bool updateValue(Value *v);
 
-	static FltVal *create(Context &c, Type *ty, bool has_val, const long double &val);
+	static FltVal *create(Context &c, Type *ty, ContainsData has_data, const long double &val);
 
 	inline long double &getVal()
 	{
@@ -141,13 +151,14 @@ class VecVal : public Value
 	std::vector<Value *> data;
 
 public:
-	VecVal(Context &c, Type *ty, bool has_val, const std::vector<Value *> &data);
+	VecVal(Context &c, Type *ty, ContainsData has_data, const std::vector<Value *> &data);
 
 	std::string toStr();
 	Value *clone(Context &c);
 	bool updateValue(Value *v);
 
-	static VecVal *create(Context &c, Type *ty, bool has_val, const std::vector<Value *> &val);
+	static VecVal *create(Context &c, Type *ty, ContainsData has_data,
+			      const std::vector<Value *> &val);
 	static VecVal *createStr(Context &c, const std::string &val);
 
 	inline std::vector<Value *> &getVal()
@@ -166,14 +177,14 @@ class StructVal : public Value
 	std::unordered_map<std::string, Value *> data;
 
 public:
-	StructVal(Context &c, Type *ty, bool has_val,
+	StructVal(Context &c, Type *ty, ContainsData has_data,
 		  const std::unordered_map<std::string, Value *> &data);
 
 	std::string toStr();
 	Value *clone(Context &c);
 	bool updateValue(Value *v);
 
-	static StructVal *create(Context &c, Type *ty, bool has_val,
+	static StructVal *create(Context &c, Type *ty, ContainsData has_data,
 				 const std::unordered_map<std::string, Value *> &val);
 
 	inline std::unordered_map<std::string, Value *> &getVal()
@@ -260,8 +271,12 @@ public:
 		return to;
 	}
 
-	void setHasData(const bool &val);
+	ContainsData getHasData();
+	void setHasData(ContainsData cd);
+	void setContainsData();
+	void setContainsPermaData();
 	bool hasData();
+	void clearHasData();
 };
 } // namespace sc
 

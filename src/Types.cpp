@@ -219,7 +219,7 @@ const bool &IntTy::isSigned() const
 
 Value *IntTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 {
-	return IntVal::create(c, this, false, 0);
+	return IntVal::create(c, this, CDFALSE, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -253,7 +253,7 @@ const size_t &FltTy::getBits() const
 
 Value *FltTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 {
-	return FltVal::create(c, this, false, 0.0);
+	return FltVal::create(c, this, CDFALSE, 0.0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -363,7 +363,7 @@ Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 	for(size_t i = 1; i < count; ++i) {
 		vec.push_back(res->clone(c));
 	}
-	return VecVal::create(c, this, false, vec);
+	return VecVal::create(c, this, CDFALSE, vec);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -538,7 +538,7 @@ Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 		}
 		st[f.first] = res;
 	}
-	return StructVal::create(c, this, false, st);
+	return StructVal::create(c, this, CDFALSE, st);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -827,7 +827,7 @@ Value *VariadicTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc)
 		}
 		vec.push_back(v);
 	}
-	return VecVal::create(c, this, false, vec);
+	return VecVal::create(c, this, CDFALSE, vec);
 }
 
 size_t getPointerCount(Type *t)
