@@ -146,21 +146,8 @@ Value *Type::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData 
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// Core Types
+// Void Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-#define BasicTypeDefine(Ty, EnumName)                                  \
-	Ty::Ty() : Type(EnumName, 0, EnumName) {}                      \
-	Ty::Ty(const size_t &info) : Type(EnumName, info, EnumName) {} \
-	Ty::~Ty() {}                                                   \
-	Type *Ty::clone(Context &c, const bool &as_is)                 \
-	{                                                              \
-		return c.allocType<Ty>(getInfo());                     \
-	}                                                              \
-	Ty *Ty::create(Context &c)                                     \
-	{                                                              \
-		return c.allocType<Ty>();                              \
-	}
 
 VoidTy::VoidTy() : Type(TVOID, 0, TVOID) {}
 VoidTy::VoidTy(const size_t &info) : Type(TVOID, info, TVOID) {}
@@ -181,7 +168,31 @@ Value *VoidTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsDat
 {
 	return VoidVal::create(c);
 }
-BasicTypeDefine(AnyTy, TANY);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Any Type
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+AnyTy::AnyTy() : Type(TANY, 0, TANY) {}
+AnyTy::AnyTy(const size_t &info) : Type(TANY, info, TANY) {}
+AnyTy::~AnyTy() {}
+Type *AnyTy::clone(Context &c, const bool &as_is)
+{
+	return c.allocType<AnyTy>(getInfo());
+}
+std::string AnyTy::toStr()
+{
+	return "any";
+}
+AnyTy *AnyTy::create(Context &c)
+{
+	return c.allocType<AnyTy>();
+}
+
+Value *AnyTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
+{
+	return TypeVal::create(c, this);
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Int Type

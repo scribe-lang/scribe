@@ -61,7 +61,7 @@ public:
 	virtual bool updateValue(Value *v) = 0;
 
 #define IsVal(ty, vt)                \
-	bool is##ty()                \
+	inline bool is##ty()         \
 	{                            \
 		return vty == V##vt; \
 	}
@@ -80,6 +80,10 @@ public:
 	inline void setType(Type *t)
 	{
 		ty = t;
+	}
+	inline Values getValType()
+	{
+		return vty;
 	}
 	inline Type *&getType()
 	{

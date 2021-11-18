@@ -179,43 +179,26 @@ skip_rhs_val:
 			err.set(stmt, "function has no definition to execute");
 			return false;
 		}
-		// TODO: remove the variadic logic
-		std::vector<Value *> variadicvalues;
-		for(size_t i = 0, j = 0; i < defargs.size() && j < callargs.size(); ++i, ++j) {
-			if(fn->getArg(i)->isVariadic()) {
-				--i;
-				variadicvalues.push_back(callargs[j]->getValue());
-				continue;
-			}
-			Value *aval = callargs[j]->getValue();
-			def->getSigArg(i)->updateValue(aval);
+		if(defargs.size() != callargs.size()) {
+			err.set(stmt,
+				"function definition and call must "
+				"have same argument len (def: %zu, call: %zu)\n",
+				defargs.size(), callargs.size());
+			return false;
 		}
-		if(!variadicvalues.empty()) {
-			Type *back = fn->getArgs().back();
-			VecVal *v  = VecVal::create(ctx, back, CDTRUE, variadicvalues);
-			defargs.back()->updateValue(v);
+		for(size_t i = 0; i < defargs.size(); ++i) {
+			Value *aval = callargs[i]->getValue();
+			def->getSigArg(i)->updateValue(aval);
 		}
 		if(!visit(def, &fndef)) {
 			err.set(stmt, "failed to determine value from function definition");
 			return false;
 		}
 		// update the callee's arguments if they are references
-		for(size_t i = 0; i < defargs.size() - !variadicvalues.empty(); ++i) {
+		for(size_t i = 0; i < defargs.size(); ++i) {
 			Value *aval = callargs[i]->getValue();
 			if(def->getSigArg(i)->getValueTy()->hasRef()) {
 				aval->updateValue(defargs[i]->getValue());
-			}
-		}
-		if(!variadicvalues.empty() && defargs.back()->getValueTy()->hasRef()) {
-			if(!defargs.back()->getValue()->isVec()) {
-				err.set(stmt, "definition with variadic must have"
-					      " a vector as last argument");
-				return false;
-			}
-			VecVal *v = as<VecVal>(defargs.back()->getValue());
-			size_t j  = 0;
-			for(size_t i = defargs.size() - 1; i < callargs.size(); ++i) {
-				callargs[i]->updateValue(v->getValAt(j++));
 			}
 		}
 
@@ -242,25 +225,16 @@ skip_rhs_val:
 		break;
 	}
 	case lex::SUBS: {
-		if(lhs->getValueTy()->isVariadic()) {
-			assert(lhs->getValue()->isVec() && "value of variadic must be a vector");
-			VecVal *vaval = as<VecVal>(lhs->getValue());
-			IntVal *iv    = as<IntVal>(rhs->getValue());
-			stmt->updateValue(vaval->getValAt(iv->getVal()));
-			break;
-		} else if(lhs->getValueTy()->isPtr()) {
-			assert(lhs->getValue()->isVec() &&
-			       "value of pointer/array must be a vector");
-			VecVal *vaval = as<VecVal>(lhs->getValue());
-			IntVal *iv    = as<IntVal>(rhs->getValue());
-			if(vaval->getVal().size() <= iv->getVal()) {
-				err.set(stmt, "index out of bounds of pointer/array");
-				return false;
-			}
-			stmt->updateValue(vaval->getValAt(iv->getVal()));
-			break;
+		if(!lhs->getValueTy()->isPtr()) goto applyoperfn;
+		assert(lhs->getValue()->isVec() && "value of pointer/array must be a vector");
+		VecVal *vaval = as<VecVal>(lhs->getValue());
+		IntVal *iv    = as<IntVal>(rhs->getValue());
+		if(vaval->getVal().size() <= iv->getVal()) {
+			err.set(stmt, "index out of bounds of pointer/array");
+			return false;
 		}
-		goto applyoperfn;
+		stmt->updateValue(vaval->getValAt(iv->getVal()));
+		break;
 	}
 	case lex::ASSN: {
 		goto applyoperfn;

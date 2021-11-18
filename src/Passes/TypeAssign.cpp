@@ -143,7 +143,7 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 	case lex::FALSE: // fallthrough
 	case lex::NIL: stmt->createAndSetValue(IntVal::create(ctx, mkI1Ty(ctx), CDPERMA, 0)); break;
 	case lex::CHAR: {
-		IntVal *iv = IntVal::create(ctx, mkI8Ty(ctx), CDPERMA, lval.getDataInt());
+		IntVal *iv = IntVal::create(ctx, mkI8Ty(ctx), CDPERMA, lval.getDataStr().front());
 		stmt->createAndSetValue(iv);
 		break;
 	}
@@ -451,7 +451,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			}
 			StmtSimple *l	 = as<StmtSimple>(lhs->clone(ctx));
 			std::string newn = l->getLexValue().getDataStr();
-			newn += "." + std::to_string(iv->getVal());
+			newn += "__" + std::to_string(iv->getVal());
 			l->getLexValue().setDataStr(newn);
 			*source = l;
 			if(!visit(*source, source)) {
@@ -1107,8 +1107,9 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 		uint64_t vavid = createValueIDWith(VecVal::create(ctx, vaty, CDFALSE, vtmp));
 		vmgr.addVar(va_name.getDataStr(), vavid, cfa);
 		while(i < args.size()) {
-			std::string argn = va_name.getDataStr() + "." + std::to_string(va_count);
+			std::string argn = va_name.getDataStr() + "__" + std::to_string(va_count);
 			StmtVar *newv	 = as<StmtVar>(cfa->clone(ctx));
+			newv->getVType()->remTypeInfoMask(VARIADIC);
 			newv->getName().setDataStr(argn);
 			Type *t = args[i]->getValueTy()->clone(ctx);
 			t->appendInfo(cft->getInfo());
