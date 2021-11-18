@@ -94,7 +94,7 @@ bool IntVal::updateValue(Value *v)
 {
 	if(!v->isInt()) return false;
 	data	 = as<IntVal>(v)->getVal();
-	has_data = v->getHasData();
+	has_data = v->getHasData() == CDTRUE || v->getHasData() == CDPERMA ? CDTRUE : CDFALSE;
 	return true;
 }
 
@@ -119,7 +119,7 @@ bool FltVal::updateValue(Value *v)
 {
 	if(!v->isFlt()) return false;
 	data	 = as<FltVal>(v)->getVal();
-	has_data = v->getHasData();
+	has_data = v->getHasData() == CDTRUE || v->getHasData() == CDPERMA ? CDTRUE : CDFALSE;
 	return true;
 }
 
@@ -158,7 +158,7 @@ bool VecVal::updateValue(Value *v)
 	for(size_t i = 0; i < data.size(); ++i) {
 		if(!data[i]->updateValue(vv->getValAt(i))) return false;
 	}
-	has_data = v->getHasData();
+	has_data = v->getHasData() == CDTRUE || v->getHasData() == CDPERMA ? CDTRUE : CDFALSE;
 	return true;
 }
 
@@ -223,7 +223,7 @@ bool StructVal::updateValue(Value *v)
 	for(auto &f : data) {
 		if(!f.second->updateValue(sv->getField(f.first))) return false;
 	}
-	has_data = v->getHasData();
+	has_data = v->getHasData() == CDTRUE || v->getHasData() == CDPERMA ? CDTRUE : CDFALSE;
 	return true;
 }
 
@@ -289,7 +289,7 @@ bool ImportVal::updateValue(Value *v)
 {
 	if(!v->isImport()) return false;
 	val	 = as<ImportVal>(v)->getVal();
-	has_data = v->getHasData();
+	has_data = v->getHasData() == CDTRUE || v->getHasData() == CDPERMA ? CDTRUE : CDFALSE;
 	return true;
 }
 

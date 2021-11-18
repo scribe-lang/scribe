@@ -30,7 +30,7 @@ static size_t SizeOf(Type *ty);
 
 INTRINSIC(import)
 {
-	if(!args[0]->getValue() || !args[0]->getValue()->isVec()) {
+	if(!args[0]->getValue() || !args[0]->getValue()->IsValStrLiteral()) {
 		err.set(stmt, "import must be a compile time computable string");
 		return false;
 	}
