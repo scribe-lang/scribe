@@ -119,13 +119,7 @@ bool SimplifyPass::visit(StmtExpr *stmt, Stmt **source)
 }
 bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 {
-	if(stmt->getVVal() && stmt->getVVal()->getStmtType() == FNDEF) {
-		StmtFnSig *sig = as<StmtFnDef>(stmt->getVVal())->getSig();
-		if(!sig->hasTemplatesDisabled()) {
-			*source = nullptr;
-			return true;
-		}
-	}
+	if(!stmt->getValueID()) return true;
 	if(stmt->getValue()->isImport()) {
 		*source = nullptr;
 		return true;
@@ -134,9 +128,14 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 	// 	*source = nullptr;
 	// 	return true;
 	// }
+	bool had_val = stmt->getVVal();
 	if(stmt->getVVal() && !visit(stmt->getVVal(), &stmt->getVVal())) {
 		err.set(stmt, "failed to apply simplify pass on variable value expression");
 		return false;
+	}
+	if(had_val && !stmt->getVVal()) {
+		*source = nullptr;
+		return true;
 	}
 	if(stmt->getVType() && !visit(stmt->getVType(), asStmt(&stmt->getVType()))) {
 		err.set(stmt, "failed to apply simplify pass on variable type expression");
@@ -146,6 +145,10 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 }
 bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 {
+	if(!stmt->hasTemplatesDisabled()) {
+		*source = nullptr;
+		return true;
+	}
 	auto &args = stmt->getArgs();
 	for(size_t i = 0; i < args.size(); ++i) {
 		if(args[i]->getValueTy()->isVariadic()) {
@@ -179,6 +182,10 @@ bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
 	if(!visit(stmt->getSig(), asStmt(&stmt->getSig()))) {
 		err.set(stmt, "failed to apply simplify pass on func signature in definition");
 		return false;
+	}
+	if(!stmt->getSig() || (stmt->getBlk() && stmt->getBlk()->requiresTemplateInit())) {
+		*source = nullptr;
+		return true;
 	}
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
 		err.set(stmt, "failed to apply simplify pass on func def block");

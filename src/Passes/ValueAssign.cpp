@@ -166,7 +166,6 @@ skip_rhs_val:
 				err.set(stmt, "failed to call value intrinsic");
 				return false;
 			}
-			// if(stmt->getValue()->hasData()) stmt->setPermaValue(stmt->getValue());
 			return true;
 		}
 		if(!fn->getVar()) {
@@ -180,6 +179,7 @@ skip_rhs_val:
 			err.set(stmt, "function has no definition to execute");
 			return false;
 		}
+		// TODO: remove the variadic logic
 		std::vector<Value *> variadicvalues;
 		for(size_t i = 0, j = 0; i < defargs.size() && j < callargs.size(); ++i, ++j) {
 			if(fn->getArg(i)->isVariadic()) {
