@@ -81,6 +81,7 @@ public:
 
 	std::string infoToStr();
 	std::string baseToStr();
+	bool requiresCast(Type *other);
 
 	virtual uint64_t getID();
 	virtual bool isTemplate();

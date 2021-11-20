@@ -693,6 +693,8 @@ bool TypeAssignPass::visit(StmtFnSig *stmt, Stmt **source)
 	Type *retty = stmt->getRetType()->getValueTy();
 	FuncTy *ft  = FuncTy::create(ctx, nullptr, argst, retty, nullptr, INONE, false);
 	stmt->createAndSetValue(FuncVal::create(ctx, ft));
+	// needs to be executed to set the correct value for disable_template variable
+	stmt->requiresTemplateInit();
 	return true;
 }
 bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
@@ -1006,7 +1008,7 @@ void TypeAssignPass::applyPrimitiveTypeCoercion(Type *to, Stmt *from)
 	if(!to || !from) return;
 	if(!to->isPrimitiveOrPtr() || !from->getValueTy()->isPrimitiveOrPtr()) return;
 
-	if(to->getID() == from->getValueTy()->getID()) return;
+	if(!to->requiresCast(from->getValueTy())) return;
 	from->castTo(to);
 }
 
@@ -1056,12 +1058,9 @@ bool TypeAssignPass::chooseSuperiorPrimitiveType(Type *l, Type *r)
 	return true;
 }
 
-bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<Stmt *> &args)
+bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt *> &args)
 {
-	assert(calledfn && "LHS has no type assigned");
 	// nothing to do if function has no definition
-	if(!calledfn->isFunc()) return true;
-	FuncTy *cf = as<FuncTy>(calledfn);
 	if(!cf->getVar() || !cf->getVar()->getVVal()) return true;
 	StmtVar *&cfvar = cf->getVar();
 	if(!cfvar) return true;
@@ -1095,6 +1094,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 			} else {
 				cfa->createAndSetValue(args[i]->getValue()->clone(ctx));
 			}
+			if(args[i]->getCast()) cfa->castTo(args[i]->getCast());
 			vmgr.addVar(cfa->getName().getDataStr(), cfa->getValueID(), cfa);
 			continue;
 		}
@@ -1118,6 +1118,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<
 			} else {
 				newv->createAndSetValue(args[i]->getValue()->clone(ctx));
 			}
+			if(args[i]->getCast()) newv->castTo(args[i]->getCast());
 			vmgr.addVar(argn, newv->getValueID(), newv);
 			cfsig->getArgs().push_back(newv);
 			cf->getArgs().push_back(t);

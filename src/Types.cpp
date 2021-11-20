@@ -122,6 +122,25 @@ std::string Type::baseToStr()
 {
 	return infoToStr() + TypeStrs[type];
 }
+bool Type::requiresCast(Type *other)
+{
+	if(!isPrimitiveOrPtr() || !other->isPrimitiveOrPtr()) return false;
+	if(isPtr() && other->isPtr()) {
+		return as<PtrTy>(this)->getTo()->requiresCast(as<PtrTy>(other)->getTo());
+	}
+
+	if(!isPrimitive() || !other->isPrimitive()) return getID() != other->getID();
+	if(getID() != other->getID()) return true;
+	// since id matching is done, both must be of same type only
+	if(isInt() && other->isInt()) {
+		return as<IntTy>(this)->getBits() != as<IntTy>(other)->getBits() ||
+		       as<IntTy>(this)->isSigned() != as<IntTy>(other)->isSigned();
+	}
+	if(isFlt() && other->isFlt()) {
+		return as<FltTy>(this)->getBits() != as<FltTy>(other)->getBits();
+	}
+	return false;
+}
 uint64_t Type::getID()
 {
 	return getBaseID();
@@ -289,7 +308,7 @@ std::string TypeTy::toStr()
 }
 Type *TypeTy::clone(Context &c, const bool &as_is)
 {
-	if(!as_is && getContainedTy()) return getContainedTy()->clone(c);
+	if(!as_is && getContainedTy()) return getContainedTy()->clone(c, as_is);
 	return c.allocType<TypeTy>(getInfo(), getID(), containedtyid);
 }
 
@@ -347,7 +366,7 @@ std::string PtrTy::toStr()
 }
 Type *PtrTy::clone(Context &c, const bool &as_is)
 {
-	return c.allocType<PtrTy>(getInfo(), getID(), to->clone(c), count);
+	return c.allocType<PtrTy>(getInfo(), getID(), to->clone(c, as_is), count);
 }
 PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count)
 {
@@ -429,8 +448,8 @@ Type *StructTy::clone(Context &c, const bool &as_is)
 {
 	std::vector<Type *> newfields;
 	std::vector<TypeTy *> newtemplates;
-	for(auto &field : fields) newfields.push_back(field->clone(c));
-	for(auto &t : templates) newtemplates.push_back(as<TypeTy>(t->clone(c)));
+	for(auto &field : fields) newfields.push_back(field->clone(c, as_is));
+	for(auto &t : templates) newtemplates.push_back(as<TypeTy>(t->clone(c, as_is)));
 	return c.allocType<StructTy>(getInfo(), getID(), fieldnames, fieldpos, newfields,
 				     templatenames, templatepos, newtemplates, has_template);
 }
@@ -609,9 +628,9 @@ std::string FuncTy::toStr()
 Type *FuncTy::clone(Context &c, const bool &as_is)
 {
 	std::vector<Type *> newargs;
-	for(auto &arg : args) newargs.push_back(arg->clone(c));
-	return c.allocType<FuncTy>(getInfo(), getID(), var, newargs, ret->clone(c), intrin, inty,
-				   uniqid, externed);
+	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is));
+	return c.allocType<FuncTy>(getInfo(), getID(), var, newargs, ret->clone(c, as_is), intrin,
+				   inty, uniqid, externed);
 }
 bool FuncTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
@@ -796,7 +815,7 @@ std::string VariadicTy::toStr()
 Type *VariadicTy::clone(Context &c, const bool &as_is)
 {
 	std::vector<Type *> newargs;
-	for(auto &arg : args) newargs.push_back(arg->clone(c));
+	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is));
 	return c.allocType<VariadicTy>(getInfo(), getID(), newargs);
 }
 bool VariadicTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)

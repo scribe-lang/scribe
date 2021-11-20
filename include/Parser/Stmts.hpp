@@ -168,7 +168,7 @@ public:
 		if(cast_to) return cast_to;
 		return values[valueid]->getType();
 	}
-	inline bool hasCast() const
+	inline Type *getCast()
 	{
 		return cast_to;
 	}
@@ -482,7 +482,6 @@ class StmtFnSig : public Stmt
 	StmtType *rettype;
 	size_t scope;	       // for locking scopes during type assign
 	bool disable_template; // this function is in use, contains no template
-	bool has_template;
 	bool has_variadic;
 
 public:
