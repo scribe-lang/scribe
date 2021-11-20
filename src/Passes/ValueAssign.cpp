@@ -18,6 +18,9 @@
 
 namespace sc
 {
+static bool break_stmt	  = false;
+static bool continue_stmt = false;
+
 ValueAssignPass::ValueAssignPass(ErrMgr &err, Context &ctx)
 	: Pass(Pass::genPassID<ValueAssignPass>(), err, ctx)
 {}
@@ -62,6 +65,7 @@ bool ValueAssignPass::visit(StmtBlock *stmt, Stmt **source)
 			err.set(stmt, "failed to assign type to stmt in block");
 			return false;
 		}
+		if(break_stmt || continue_stmt) break;
 	}
 	return true;
 }
@@ -399,6 +403,40 @@ bool ValueAssignPass::visit(StmtVarDecl *stmt, Stmt **source)
 }
 bool ValueAssignPass::visit(StmtCond *stmt, Stmt **source)
 {
+	if(stmt->isInline()) {
+		if(stmt->getConditionals().empty()) return true;
+		StmtBlock *&blk = stmt->getConditionals()[0].getBlk();
+		if(!visit(blk, asStmt(&blk))) {
+			err.set(stmt, "failed to determine value for inline conditional block");
+			return false;
+		}
+		return true;
+	}
+	for(auto &c : stmt->getConditionals()) {
+		Stmt *&cond	= c.getCond();
+		StmtBlock *&blk = c.getBlk();
+		if(!cond) {
+			if(!visit(blk, asStmt(&blk))) {
+				err.set(stmt, "failed to determine else-block value");
+				return false;
+			}
+			break;
+		}
+		if(!visit(cond, &cond)) {
+			err.set(stmt, "failed to determine conditional value");
+			return false;
+		}
+		if(!(cond->getValue()->isInt() && as<IntVal>(cond->getValue())->getVal()) &&
+		   !(cond->getValue()->isFlt() && as<FltVal>(cond->getValue())->getVal()))
+		{
+			continue;
+		}
+		if(!visit(blk, asStmt(&blk))) {
+			err.set(stmt, "failed to determine conditional-block value");
+			return false;
+		}
+		break;
+	}
 	return true;
 }
 bool ValueAssignPass::visit(StmtForIn *stmt, Stmt **source)
@@ -407,6 +445,43 @@ bool ValueAssignPass::visit(StmtForIn *stmt, Stmt **source)
 }
 bool ValueAssignPass::visit(StmtFor *stmt, Stmt **source)
 {
+	Stmt *&init	= stmt->getInit();
+	Stmt *&cond	= stmt->getCond();
+	Stmt *&incr	= stmt->getIncr();
+	StmtBlock *&blk = stmt->getBlk();
+	if(stmt->isInline()) {
+		if(init && !visit(init, &init)) {
+			err.set(stmt, "failed to determine init value for inline for loop");
+			return false;
+		}
+		if(!visit(blk, asStmt(&blk))) {
+			err.set(stmt, "failed to determine block value for inline for loop");
+			return false;
+		}
+		stmt->clearValue();
+		return true;
+	}
+	if(init && !visit(init, &init)) {
+		err.set(stmt, "failed to determine value for for-init statement");
+		return false;
+	}
+	while((cond->getValue()->isInt() && as<IntVal>(cond->getValue())->getVal()) ||
+	      (cond->getValue()->isFlt() && as<FltVal>(cond->getValue())->getVal()))
+	{
+		if(!visit(blk, asStmt(&blk))) {
+			err.set(stmt, "failed to determine value for for-loop block");
+			return false;
+		}
+		continue_stmt = false;
+		if(break_stmt) break;
+		if(incr) incr->clearValue();
+		if(incr && !visit(incr, &incr)) {
+			err.set(stmt, "failed to determine incr value for for-loop");
+			return false;
+		}
+		cond->clearValue();
+	}
+	break_stmt = false;
 	return true;
 }
 bool ValueAssignPass::visit(StmtWhile *stmt, Stmt **source)
@@ -428,10 +503,12 @@ bool ValueAssignPass::visit(StmtRet *stmt, Stmt **source)
 }
 bool ValueAssignPass::visit(StmtContinue *stmt, Stmt **source)
 {
+	continue_stmt = true;
 	return true;
 }
 bool ValueAssignPass::visit(StmtBreak *stmt, Stmt **source)
 {
+	break_stmt = true;
 	return true;
 }
 bool ValueAssignPass::visit(StmtDefer *stmt, Stmt **source)

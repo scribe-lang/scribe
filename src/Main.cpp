@@ -15,7 +15,7 @@
 #include <stdexcept>
 
 #include "Args.hpp"
-// #include "CodeGen/C.hpp"
+#include "CodeGen/C.hpp"
 #include "Config.hpp"
 #include "Error.hpp"
 #include "FS.hpp"
@@ -64,12 +64,12 @@ int main(int argc, char **argv)
 	parser.dumpParseTree(false);
 	if(args.has("nofile")) return 0;
 
-	// CDriver cdriver(parser);
-	// std::string outfile = args.get(2);
-	// if(outfile.empty()) {
-	// 	fprintf(stderr, "Error: no output file provided\n");
-	// 	return 1;
-	// }
-	// if(!cdriver.compile(args.get(2), args.has("ir"))) return 1;
+	CDriver cdriver(parser);
+	std::string outfile = args.get(2);
+	if(outfile.empty()) {
+		fprintf(stderr, "Error: no output file provided\n");
+		return 1;
+	}
+	if(!cdriver.compile(args.get(2), args.has("ir"))) return 1;
 	return 0;
 }

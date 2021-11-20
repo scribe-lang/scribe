@@ -1,3 +1,4 @@
+let puts = extern[puts, "<stdio.h>"] fn(data: *const i8): i32;
 let strlen = extern[strlen, "<string.h>"] fn(data: *const i8): i32;
 let _malloc = extern[malloc, "<stdlib.h>"] fn(size: u64): *void;
 let _realloc = extern[realloc, "<stdlib.h>"] fn(data: *void, newsz: u64): *void;

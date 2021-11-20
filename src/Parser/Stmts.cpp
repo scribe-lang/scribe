@@ -360,7 +360,7 @@ bool StmtVar::requiresTemplateInit()
 StmtFnSig::StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtType *rettype,
 		     const size_t &scope, const bool &has_variadic)
 	: Stmt(FNSIG, loc), args(args), rettype(rettype), scope(scope), disable_template(false),
-	  has_template(false), has_variadic(has_variadic)
+	  has_variadic(has_variadic)
 {}
 StmtFnSig::~StmtFnSig() {}
 StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc &loc, std::vector<StmtVar *> &args,
@@ -393,6 +393,7 @@ void StmtFnSig::disp(const bool &has_next) const
 
 bool StmtFnSig::requiresTemplateInit()
 {
+	if(disable_template) return false;
 	if(has_variadic) return true;
 	for(auto &a : args) {
 		if(a->getValue()->getType()->isTemplate()) return true;

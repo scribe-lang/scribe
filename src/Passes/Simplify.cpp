@@ -183,13 +183,17 @@ bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
 		err.set(stmt, "failed to apply simplify pass on func signature in definition");
 		return false;
 	}
-	if(!stmt->getSig() || (stmt->getBlk() && stmt->getBlk()->requiresTemplateInit())) {
+	if(!stmt->getSig()) {
 		*source = nullptr;
 		return true;
 	}
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
 		err.set(stmt, "failed to apply simplify pass on func def block");
 		return false;
+	}
+	if(stmt->getBlk() && stmt->getBlk()->requiresTemplateInit()) {
+		*source = nullptr;
+		return true;
 	}
 	return true;
 }
@@ -206,6 +210,10 @@ bool SimplifyPass::visit(StmtExtern *stmt, Stmt **source)
 	if(!visit(stmt->getSig(), asStmt(&stmt->getSig()))) {
 		err.set(stmt, "failed to apply simplify pass on func signature in definition");
 		return false;
+	}
+	if(!stmt->getSig()) {
+		*source = nullptr;
+		return true;
 	}
 	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
 		err.set(stmt, "failed to apply simplify pass on header in extern");
