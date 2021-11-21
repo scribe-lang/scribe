@@ -148,6 +148,12 @@ INTRINSIC(array)
 	stmt->createAndSetValue(res);
 	return true;
 }
+INTRINSIC(assn_ptr)
+{
+	args[0]->updateValue(args[1]->getValue());
+	stmt->updateValue(args[0]->getValue());
+	return true;
+}
 
 static bool IsValidSource(std::string &modname)
 {

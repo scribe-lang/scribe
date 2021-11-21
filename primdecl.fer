@@ -188,13 +188,6 @@ for let i = 0; i < preunary_ops.len(); ++i {
 	io.println();
 }
 
-let postunary_templ = `INTRINSIC({opname}_{ty})
-\\{
-	stmt->setVal(Create{tycap}Val(Get{tycap}Val(0){op}));
-	return true;
-}
-`;
-
 let postunary_ops = vec.new('++', '--');
 let postunary_opnames = vec.new(.xinc, .xdec);
 

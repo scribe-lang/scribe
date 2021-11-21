@@ -734,6 +734,23 @@ bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 		return false;
 	}
 
+	if(lhs->isSimple() && !opers.empty()) {
+		lex::Lexeme &val = as<StmtSimple>(lhs)->getLexValue();
+		lex::TokType tk	 = val.getTok().getVal();
+		if(tk == lex::INT) {
+			while(!opers.empty() && opers.front().getTok().getVal() == lex::USUB) {
+				val.setDataInt(-val.getDataInt());
+				opers.erase(opers.begin());
+			}
+		}
+		if(tk == lex::FLT) {
+			while(!opers.empty() && opers.front().getTok().getVal() == lex::USUB) {
+				val.setDataFlt(-val.getDataFlt());
+				opers.erase(opers.begin());
+			}
+		}
+	}
+
 	for(auto &op : opers) {
 		lhs = StmtExpr::create(ctx, op.getLoc(), 0, lhs, op, nullptr, false);
 	}
@@ -1211,10 +1228,6 @@ endinfo:
 
 sig:
 	if(!parse_fnsig(p, (Stmt *&)sig)) return false;
-	if(sig->hasVariadic()) {
-		err.set(p.peak(), "no variadics allowed in extern'd functions");
-		return false;
-	}
 	ext = StmtExtern::create(ctx, name.getLoc(), name, headers, libs, sig);
 	return true;
 fail:
@@ -1504,7 +1517,7 @@ cond:
 	}
 
 incr:
-	if(p.acceptn(lex::LBRACE)) goto body;
+	if(p.accept(lex::LBRACE)) goto body;
 
 	if(!parse_expr(p, incr, true)) return false;
 	if(!p.accept(lex::LBRACE)) {

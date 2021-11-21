@@ -38,7 +38,7 @@ class CDriver : public CodeGenDriver
 	// constants: key is the constant data
 	std::unordered_map<std::string, ConstantInfo> constants;
 
-	const std::string &getConstantDataVar(const lex::Lexeme &val);
+	const std::string &getConstantDataVar(const lex::Lexeme &val, Type *ty);
 	std::string getNewConstantVar();
 	static bool acceptsSemicolon(Stmt *stmt);
 	bool trySetMainFunction(StmtVar *var, const std::string &varname, Writer &writer);
@@ -48,7 +48,7 @@ class CDriver : public CodeGenDriver
 
 	inline std::string getMangledName(const std::string &name, Stmt *stmt)
 	{
-		return name + std::to_string(stmt->getValueTy()->getID());
+		return name + std::to_string(stmt->getValueTy(true)->getID());
 	}
 
 public:
