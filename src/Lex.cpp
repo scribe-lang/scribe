@@ -789,7 +789,9 @@ void Tokenizer::remove_back_slash(std::string &s)
 		if(*it == '\\') {
 			if(it + 1 >= s.end()) continue;
 			it = s.erase(it);
-			if(*it == 'a') *it = '\a';
+			if(*it == '0') *it = '\0';
+			else if(*it == 'a')
+				*it = '\a';
 			else if(*it == 'b')
 				*it = '\b';
 			else if(*it == 'f')
@@ -810,6 +812,11 @@ std::string view_backslash(const std::string &data)
 {
 	std::string res = data;
 	for(auto it = res.begin(); it != res.end(); ++it) {
+		if(*it == '\0') {
+			it = res.erase(it);
+			res.insert(it - res.begin(), "\\0");
+			continue;
+		}
 		if(*it == '\a') {
 			it = res.erase(it);
 			res.insert(it - res.begin(), "\\a");

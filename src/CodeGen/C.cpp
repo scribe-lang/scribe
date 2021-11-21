@@ -116,11 +116,14 @@ bool CDriver::visit(Stmt *stmt, Writer &writer, const bool &semicol)
 	if(stmt->getCast()) {
 		writer.write("(");
 		std::string cty;
+		// bool has_ref = stmt->getCast()->hasRef();
+		// stmt->getCast()->unsetRef();
 		if(!getCTypeName(cty, stmt, stmt->getCast(), true)) {
 			err.set(stmt, "received invalid c type name for scribe cast type: %s",
 				stmt->getCast()->toStr().c_str());
 			return false;
 		}
+		// if(has_ref) stmt->getCast()->setRef();
 		writer.write(cty);
 		writer.write(")(");
 		writer.append(tmp);
@@ -181,14 +184,16 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 	case lex::INT:	 // fallthrough
 	case lex::FLT:	 // fallthrough
 	case lex::CHAR:	 // fallthrough
-	case lex::STR: writer.write(getConstantDataVar(stmt->getLexValue())); return true;
+	case lex::STR:
+		writer.write(getConstantDataVar(stmt->getLexValue(), stmt->getValueTy()));
+		return true;
 	default: break;
 	}
 	// the following part is only valid for existing variables.
 	// the part for variable declaration exists in Var visit
-	if(stmt->getValueTy()->hasRef()) writer.write("(*"); // for references
+	if(stmt->getValueTy(true)->hasRef()) writer.write("(*"); // for references
 	writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
-	if(stmt->getValueTy()->hasRef()) writer.write(")"); // for references
+	if(stmt->getValueTy(true)->hasRef()) writer.write(")"); // for references
 	if(semicol) writer.write(";");
 	return true;
 }
@@ -199,19 +204,19 @@ bool CDriver::visit(StmtFnCallInfo *stmt, Writer &writer, const bool &semicol)
 bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 {
 	writer.clear();
-	if(stmt->getValue()->hasData()) {
-		std::string cval;
-		if(!getCValue(cval, stmt, stmt->getValue(), stmt->getValueTy())) {
-			err.set(stmt, "failed to get C value for scribe value: %s",
-				stmt->getValue()->toStr().c_str());
-			return false;
-		}
-		if(!cval.empty()) {
-			writer.write(cval);
-			if(semicol) writer.write(";");
-			return true;
-		}
-	}
+	// if(stmt->getValue()->hasData()) {
+	// 	std::string cval;
+	// 	if(!getCValue(cval, stmt, stmt->getValue(), stmt->getValueTy())) {
+	// 		err.set(stmt, "failed to get C value for scribe value: %s",
+	// 			stmt->getValue()->toStr().c_str());
+	// 		return false;
+	// 	}
+	// 	if(!cval.empty()) {
+	// 		writer.write(cval);
+	// 		if(semicol) writer.write(";");
+	// 		return true;
+	// 	}
+	// }
 
 	lex::TokType oper = stmt->getOper().getTok().getVal();
 	Writer l;
@@ -354,7 +359,8 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 			writer.write("]");
 			break;
 		}
-		if(lhs->getValueTy()->isPrimitive() && (!rhs || rhs->getValueTy()->isPrimitive())) {
+		if(lhs->getValueTy()->isPrimitiveOrPtr() &&
+		   (!rhs || rhs->getValueTy()->isPrimitiveOrPtr())) {
 			if(optok.isUnaryPre()) {
 				writer.write(optok.getUnaryNoCharCStr());
 				writer.append(l);
@@ -724,11 +730,13 @@ bool CDriver::visit(StmtDefer *stmt, Writer &writer, const bool &semicol)
 	return false;
 }
 
-const std::string &CDriver::getConstantDataVar(const lex::Lexeme &val)
+const std::string &CDriver::getConstantDataVar(const lex::Lexeme &val, Type *ty)
 {
 	std::string key;
 	std::string value;
 	std::string type;
+	std::string bits;
+	std::string is_sign;
 	switch(val.getTok().getVal()) {
 	case lex::TRUE:
 		value = "1";
@@ -746,14 +754,17 @@ const std::string &CDriver::getConstantDataVar(const lex::Lexeme &val)
 		type  = "const i1";
 		break;
 	case lex::INT:
-		value = std::to_string(val.getDataInt());
-		key   = value + "i32";
-		type  = "const i32";
+		value	= std::to_string(val.getDataInt());
+		bits	= std::to_string(as<IntTy>(ty)->getBits());
+		is_sign = as<IntTy>(ty)->isSigned() ? "i" : "u";
+		key	= value + is_sign + bits;
+		type	= "const " + is_sign + bits;
 		break;
 	case lex::FLT:
 		value = std::to_string(val.getDataFlt());
-		key   = value + "f32";
-		type  = "const f32";
+		bits  = std::to_string(as<FltTy>(ty)->getBits());
+		key   = value + "f" + bits;
+		type  = "const f" + bits;
 		break;
 	case lex::CHAR:
 		value = '\'' + std::to_string(val.getDataStr()[0]) + '\'';

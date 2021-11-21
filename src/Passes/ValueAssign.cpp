@@ -240,9 +240,7 @@ skip_rhs_val:
 		stmt->updateValue(vaval->getValAt(iv->getVal()));
 		break;
 	}
-	case lex::ASSN: {
-		goto applyoperfn;
-	}
+	case lex::ASSN:
 	// Arithmetic
 	case lex::ADD:
 	case lex::SUB:
@@ -465,6 +463,14 @@ bool ValueAssignPass::visit(StmtFor *stmt, Stmt **source)
 		err.set(stmt, "failed to determine value for for-init statement");
 		return false;
 	}
+	if(!cond) {
+		err.set(stmt, "condition must be present in for loop for value assignment pass");
+		return false;
+	}
+	if(!visit(cond, &cond)) {
+		err.set(stmt, "failed to determine value for for-condition expression");
+		return false;
+	}
 	while((cond->getValue()->isInt() && as<IntVal>(cond->getValue())->getVal()) ||
 	      (cond->getValue()->isFlt() && as<FltVal>(cond->getValue())->getVal()))
 	{
@@ -480,12 +486,38 @@ bool ValueAssignPass::visit(StmtFor *stmt, Stmt **source)
 			return false;
 		}
 		cond->clearValue();
+		if(!visit(cond, &cond)) {
+			err.set(stmt, "failed to determine value for for-condition expression");
+			return false;
+		}
 	}
 	break_stmt = false;
 	return true;
 }
 bool ValueAssignPass::visit(StmtWhile *stmt, Stmt **source)
 {
+	Stmt *&cond	= stmt->getCond();
+	StmtBlock *&blk = stmt->getBlk();
+	if(!visit(cond, &cond)) {
+		err.set(stmt, "failed to determine value for for-condition expression");
+		return false;
+	}
+	while((cond->getValue()->isInt() && as<IntVal>(cond->getValue())->getVal()) ||
+	      (cond->getValue()->isFlt() && as<FltVal>(cond->getValue())->getVal()))
+	{
+		if(!visit(blk, asStmt(&blk))) {
+			err.set(stmt, "failed to determine value for for-loop block");
+			return false;
+		}
+		continue_stmt = false;
+		if(break_stmt) break;
+		cond->clearValue();
+		if(!visit(cond, &cond)) {
+			err.set(stmt, "failed to determine value for for-condition expression");
+			return false;
+		}
+	}
+	break_stmt = false;
 	return true;
 }
 bool ValueAssignPass::visit(StmtRet *stmt, Stmt **source)

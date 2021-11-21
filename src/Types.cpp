@@ -95,7 +95,7 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 		      rhs->toStr().c_str());
 		return false;
 	}
-	if(rhs->hasConst() && !hasConst()) {
+	if(rhs->hasConst() && !hasConst() && (isPtr() || hasRef())) {
 		e.set(loc, "losing constness here, cannot continue (LHS: %s, RHS: %s)",
 		      toStr().c_str(), rhs->toStr().c_str());
 		return false;
@@ -589,7 +589,6 @@ FuncTy::FuncTy(const size_t &info, const uint64_t &id, StmtVar *var,
 FuncTy::~FuncTy() {}
 uint64_t FuncTy::getID()
 {
-	if(externed) return getBaseID();
 	uint64_t res = getBaseID() + uniqid;
 	for(auto &a : args) {
 		res += a->getID();
@@ -629,8 +628,8 @@ Type *FuncTy::clone(Context &c, const bool &as_is)
 {
 	std::vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is));
-	return c.allocType<FuncTy>(getInfo(), getID(), var, newargs, ret->clone(c, as_is), intrin,
-				   inty, uniqid, externed);
+	return c.allocType<FuncTy>(getInfo(), getBaseID(), var, newargs, ret->clone(c, as_is),
+				   intrin, inty, uniqid, externed);
 }
 bool FuncTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
@@ -707,6 +706,7 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 			va->addArg(v);
 		}
 		res->args.push_back(va);
+		has_templ = true;
 	}
 	res = as<FuncTy>(res->clone(c));
 	for(size_t i = 0; i < args.size(); ++i) {

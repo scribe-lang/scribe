@@ -13,6 +13,8 @@
 
 #include "Passes/TypeAssign.hpp"
 
+#include <climits>
+
 #include "Parser.hpp"
 #include "Utils.hpp"
 
@@ -148,7 +150,13 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		break;
 	}
 	case lex::INT: {
-		IntVal *iv = IntVal::create(ctx, mkI32Ty(ctx), CDPERMA, lval.getDataInt());
+		Type *ity = nullptr;
+		if(lval.getDataInt() > INT_MAX || lval.getDataInt() < INT_MIN) {
+			ity = mkI64Ty(ctx);
+		} else {
+			ity = mkI32Ty(ctx);
+		}
+		IntVal *iv = IntVal::create(ctx, ity, CDPERMA, lval.getDataInt());
 		stmt->createAndSetValue(iv);
 		break;
 	}
@@ -251,21 +259,20 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		const std::string &fieldname = rsim->getLexValue().getDataStr();
 		// if value is struct, that's definitely not struct def
 		// struct def will be in TypeVal(Struct)
+		StructVal *sv = nullptr;
+		Value *res    = nullptr;
 		if(!lhs->getValue()->isStruct()) {
-			err.set(stmt,
-				"dot operation can be performed "
-				"only on imports and structs, found: %s",
-				lhs->getValue()->toStr().c_str());
-			return false;
+			goto typefn;
 		}
-		StructVal *sv = as<StructVal>(lhs->getValue());
+		sv = as<StructVal>(lhs->getValue());
 		// struct field names are not mangled with the module ids
-		Value *res = sv->getField(fieldname);
+		res = sv->getField(fieldname);
 		if(res) {
 			rhs->createAndSetValue(res);
 			stmt->setValueID(rhs);
 			break;
 		}
+	typefn:
 		uint64_t vid = 0;
 		if(!(vid = vmgr.getTypeFn(lhs->getValueTy(), fieldname))) {
 			err.set(stmt, "no field or function '%s' in struct '%s'", fieldname.c_str(),
@@ -390,7 +397,9 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		for(size_t i = 0; i < fnarglen; ++i) {
 			Type *coerced_to = st->getField(i);
 			applyPrimitiveTypeCoercion(coerced_to, callinfo->getArg(i));
-			stvals[st->getFieldName(i)] = callinfo->getArg(i)->getValue();
+			Value *v = callinfo->getArg(i)->getValue()->clone(ctx);
+			v->setType(coerced_to);
+			stvals[st->getFieldName(i)] = v;
 		}
 		StructVal *sv = StructVal::create(ctx, st, CDFALSE, stvals);
 		stmt->createAndSetValue(sv);
@@ -558,7 +567,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		for(size_t i = 0; i < args.size(); ++i) {
 			Type *coerced_to = fn->getArg(i);
 			Stmt *&arg	 = args[i];
-			if(!coerced_to->hasComptime() || vpass.visit(args[i], &args[i])) {
+			if(!both_comptime || vpass.visit(args[i], &args[i])) {
 				continue;
 			}
 			err.set(stmt, "failed to determine value for comptime arg");
@@ -592,6 +601,9 @@ bool TypeAssignPass::visit(StmtVar *stmt, Stmt **source)
 	if(val && val->isFnDef()) {
 		as<StmtFnDef>(val)->setParentVar(stmt);
 		if(stmt->isIn()) goto post_mangling;
+	}
+	if(val && val->isExtern()) {
+		as<StmtExtern>(val)->setParentVar(stmt);
 	}
 	if(stmt->isGlobal()) goto post_mangling;
 	if(disabled_varname_mangling || stmt->isAppliedModuleID()) goto post_mangling;
@@ -739,6 +751,7 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 	}
 	FuncVal *fn = as<FuncVal>(stmt->getSig()->getValue());
 	fn->getVal()->setExterned(true);
+	fn->getVal()->setVar(stmt->getParentVar());
 	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
 		err.set(stmt, "failed to assign header type");
 		return false;
@@ -938,6 +951,14 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtWhile *stmt, Stmt **source)
 {
+	if(!visit(stmt->getCond(), &stmt->getCond())) {
+		err.set(stmt, "failed to determine type of while loop condition");
+		return false;
+	}
+	if(stmt->getBlk() && !visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
+		err.set(stmt, "failed to determine type of while loop block");
+		return false;
+	}
 	return true;
 }
 bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
@@ -1064,21 +1085,23 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 	if(!cf->getVar() || !cf->getVar()->getVVal()) return true;
 	StmtVar *&cfvar = cf->getVar();
 	if(!cfvar) return true;
-	StmtFnDef *cfdef = as<StmtFnDef>(cfvar->getVVal());
-	cfdef->setParentVar(cfvar);
-	if(!cfdef->requiresTemplateInit()) return true;
-	cfvar = as<StmtVar>(cfvar->clone(ctx)); // template must be cloned
-	cf->setVar(cfvar);
-	cfdef		  = as<StmtFnDef>(cfvar->getVVal());
-	StmtFnSig *&cfsig = cfdef->getSig();
-	StmtBlock *&cfblk = cfdef->getBlk();
+	if(!cfvar->getVVal()->requiresTemplateInit()) return true;
+	cfvar		 = as<StmtVar>(cfvar->clone(ctx)); // template must be cloned
+	StmtFnSig *cfsig = nullptr;
+	StmtBlock *cfblk = nullptr;
+	if(cfvar->getVVal()->isFnDef()) {
+		StmtFnDef *cfdef = as<StmtFnDef>(cfvar->getVVal());
+		cfdef->setParentVar(cfvar);
+		cfsig = cfdef->getSig();
+		cfblk = cfdef->getBlk();
+	} else if(cfvar->getVVal()->isExtern()) {
+		StmtExtern *cfext = as<StmtExtern>(cfvar->getVVal());
+		cfext->setParentVar(cfvar);
+		cfsig = cfext->getSig();
+	}
 	cfsig->disableTemplates();
 	cfsig->setVariadic(false);
-	if(!cfblk) {
-		err.set(caller, "function definition for specialization has no block");
-		return false;
-	}
-	if(caller->getMod()->getID() == cfdef->getMod()->getID()) {
+	if(caller->getMod()->getID() == cfvar->getVVal()->getMod()->getID()) {
 		vmgr.lockScopeBelow(cfsig->getScope());
 	}
 
@@ -1112,6 +1135,11 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 			newv->getVType()->remTypeInfoMask(VARIADIC);
 			newv->getName().setDataStr(argn);
 			Type *t = args[i]->getValueTy()->clone(ctx);
+			// the following attributes must not be set for function parameter type
+			// by the argument
+			t->unsetRef();
+			t->unsetStatic();
+			t->unsetVolatile();
 			t->appendInfo(cft->getInfo());
 			if(t->hasRef()) {
 				newv->setValueID(args[i]);
@@ -1130,17 +1158,26 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 	FuncVal *cfn = FuncVal::create(ctx, cf);
 	cfsig->getRetType()->createAndSetValue(TypeVal::create(ctx, cf->getRet()));
 	cfsig->createAndSetValue(cfn);
-	cfdef->setValueID(cfsig);
+	cfvar->getVVal()->setValueID(cfsig);
 	cfvar->setValueID(cfsig);
+
+	if(cf->isExtern()) {
+		goto end;
+	}
+	if(!cfblk) {
+		err.set(caller, "function definition for specialization has no block");
+		return false;
+	}
 	pushFunc(cfn, va_count > 0, va_count);
 	if(!visit(cfblk, asStmt(&cfblk))) {
 		err.set(caller, "failed to assign type for called template function's var");
 		return false;
 	}
 	popFunc();
+end:
 	vmgr.popLayer();
 
-	if(caller->getMod()->getID() == cfdef->getMod()->getID()) {
+	if(caller->getMod()->getID() == cfvar->getVVal()->getMod()->getID()) {
 		vmgr.unlockScope();
 	}
 

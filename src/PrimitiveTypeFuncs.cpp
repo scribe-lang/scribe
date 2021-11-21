@@ -23,6 +23,7 @@ uint64_t createFnVal(Context &c, const std::vector<Type *> &args, Type *ret, Int
 #define ADDFN(name, fn) vmgr.addVar(name, fn, nullptr, true)
 #define ADDINTFN(name, fn) vmgr.addTypeFn(TINT, name, fn)
 #define ADDFLTFN(name, fn) vmgr.addTypeFn(TFLT, name, fn)
+#define ADDPTRFN(name, fn) vmgr.addTypeFn(TPTR, name, fn)
 
 void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 {
@@ -81,6 +82,9 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	i32va->setVariadic();
 	i32va->setComptime();
 	ADDFN("array", createFnVal(c, {g, i32, i32va}, g2, intrinsic_array, IPARSE));
+
+	g = TypeTy::create(c);
+	ADDPTRFN("__assn__", createFnVal(c, {g, g}, g, intrinsic_assn_ptr, IVALUE));
 
 	g = TypeTy::create(c);
 	ADDINTFN("__assn__", createFnVal(c, {g, g}, g, intrinsic_assn_int, IVALUE));

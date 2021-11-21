@@ -211,7 +211,7 @@ void StmtSimple::disp(const bool &has_next) const
 bool StmtSimple::requiresTemplateInit()
 {
 	if(val.getTok().getVal() == lex::ANY || val.getTok().getVal() == lex::TYPE) return true;
-	return decl ? decl->requiresTemplateInit() : false;
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -504,7 +504,8 @@ bool StmtLib::requiresTemplateInit()
 
 StmtExtern::StmtExtern(const ModuleLoc &loc, const lex::Lexeme &fname, StmtHeader *headers,
 		       StmtLib *libs, StmtFnSig *sig)
-	: Stmt(EXTERN, loc), fname(fname), headers(headers), libs(libs), sig(sig)
+	: Stmt(EXTERN, loc), fname(fname), headers(headers), libs(libs), sig(sig),
+	  parentvar(nullptr)
 {}
 StmtExtern::~StmtExtern() {}
 StmtExtern *StmtExtern::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &fname,
@@ -516,8 +517,8 @@ StmtExtern *StmtExtern::create(Context &c, const ModuleLoc &loc, const lex::Lexe
 void StmtExtern::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Extern for %s%s\n", fname.getDataStr().c_str(),
-		   getTypeString().c_str());
+	tio::print(has_next, "Extern for %s [has parent: %s]%s\n", fname.getDataStr().c_str(),
+		   parentvar ? "yes" : "no", getTypeString().c_str());
 	if(headers) {
 		tio::taba(libs || sig);
 		tio::print(libs || sig, "Headers:\n");
@@ -542,7 +543,7 @@ void StmtExtern::disp(const bool &has_next) const
 
 bool StmtExtern::requiresTemplateInit()
 {
-	return false;
+	return sig->requiresTemplateInit();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

@@ -162,10 +162,11 @@ public:
 		assert(valueid && "valueid cannot be zero for getValue()");
 		return values[valueid];
 	}
-	inline Type *&getValueTy()
+	// if exact = true, cast will be skipped
+	inline Type *&getValueTy(const bool &exact = false)
 	{
 		assert(valueid && "valueid cannot be zero for getValueTy()");
-		if(cast_to) return cast_to;
+		if(cast_to && !exact) return cast_to;
 		return values[valueid]->getType();
 	}
 	inline Type *getCast()
@@ -642,6 +643,7 @@ class StmtExtern : public Stmt
 	StmtHeader *headers;
 	StmtLib *libs;
 	StmtFnSig *sig;
+	StmtVar *parentvar;
 
 public:
 	StmtExtern(const ModuleLoc &loc, const lex::Lexeme &fname, StmtHeader *headers,
@@ -655,6 +657,11 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+
+	inline void setParentVar(StmtVar *var)
+	{
+		parentvar = var;
+	}
 
 	inline const lex::Lexeme &getFnName() const
 	{
@@ -674,6 +681,10 @@ public:
 	inline StmtFnSig *&getSig()
 	{
 		return sig;
+	}
+	inline StmtVar *&getParentVar()
+	{
+		return parentvar;
 	}
 
 	inline const std::vector<StmtVar *> &getSigArgs() const
