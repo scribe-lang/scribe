@@ -91,24 +91,17 @@ void Module::dumpParseTree() const
 ////////////////////////////////////////// RAIIParser /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-RAIIParser::RAIIParser(args::ArgParser &args) : args(args), ctx(this), defaultpm(err, ctx) {}
+RAIIParser::RAIIParser(args::ArgParser &args)
+	: args(args), ctx(this), defaultpmpermodule(err, ctx), defaultpmcombined(err, ctx)
+{
+	defaultpmpermodule.add<TypeAssignPass>();
+	defaultpmcombined.add<SimplifyPass>();
+}
 RAIIParser::~RAIIParser()
 {
 	for(auto &m : modules) delete m.second;
 }
 
-bool RAIIParser::executeDefaultPasses(const std::string &path)
-{
-	static bool init = false;
-	if(!init) {
-		// setup PM
-		defaultpm.add<TypeAssignPass>();
-		defaultpm.add<SimplifyPass>();
-		init = true;
-	}
-	// pm.add<CleanupParseTree>();
-	return modules[path]->executePasses(defaultpm);
-}
 void RAIIParser::combineAllModules()
 {
 	if(modulestack.size() <= 1) return;
@@ -164,12 +157,15 @@ bool RAIIParser::parse(const std::string &path, const bool &main_module)
 	fs::setCWD(fs::parentDir(path));
 	size_t src_id = 0;
 	if(!addModule(path, main_module)) return false;
-	bool res = executeDefaultPasses(path);
+	bool res = modules[path]->executePasses(defaultpmpermodule);
 	fs::setCWD(wd);
-	if(!res) err.show(stderr);
+	if(!res) goto end;
 	if(main_module) {
 		combineAllModules();
+		res = modules[path]->executePasses(defaultpmcombined);
 	}
+end:
+	if(!res) err.show(stderr);
 	return res;
 }
 bool RAIIParser::hasModule(const std::string &path)

@@ -47,18 +47,18 @@ let getOperCStr = fn(op) {
 
 let twoparam_templ = `
 	g = TypeTy::create(c);
-	ADD{tycap}FN("{opname}", createFn(c, \\{g, g}, g, intrinsic_{opn}_{ty}, IVALUE));`;
+	ADD{tycap}FN("{opname}", createFn(c, \\{g, g}, g, intrinsic_{opn}_{ty}));`;
 let oneparam_templ = `
 	g = TypeTy::create(c);
-	ADD{tycap}FN("{opname}", createFn(c, \\{g}, g, intrinsic_{opn}_{ty}, IVALUE));`;
+	ADD{tycap}FN("{opname}", createFn(c, \\{g}, g, intrinsic_{opn}_{ty}));`;
 let twoparambool_templ = `
 	i1 = IntTy::create(c, 1, true);
 	g = TypeTy::create(c);
-	ADD{tycap}FN("{opname}", createFn(c, \\{g, g}, i1, intrinsic_{opn}_{ty}, IVALUE));`;
+	ADD{tycap}FN("{opname}", createFn(c, \\{g, g}, i1, intrinsic_{opn}_{ty}));`;
 let oneparambool_templ = `
 	i1 = IntTy::create(c, 1, true);
 	g = TypeTy::create(c);
-	ADD{tycap}FN("{opname}", createFn(c, \\{g}, i1, intrinsic_{opn}_{ty}, IVALUE));`;
+	ADD{tycap}FN("{opname}", createFn(c, \\{g}, i1, intrinsic_{opn}_{ty}));`;
 
 # int
 {
@@ -187,13 +187,6 @@ for let i = 0; i < preunary_ops.len(); ++i {
 	}
 	io.println();
 }
-
-let postunary_templ = `INTRINSIC({opname}_{ty})
-\\{
-	stmt->setVal(Create{tycap}Val(Get{tycap}Val(0){op}));
-	return true;
-}
-`;
 
 let postunary_ops = vec.new('++', '--');
 let postunary_opnames = vec.new(.xinc, .xdec);

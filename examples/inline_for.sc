@@ -1,4 +1,4 @@
-let f = fn(comptime p: i32): i32 {
+let f = fn(p: i32): i32 { // no need for 'comptime' before p, but the value actually has to be comptime
 	let sum = 0;
 	inline for let i = 1; i <= p; ++i {
 		sum += i;

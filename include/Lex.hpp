@@ -277,6 +277,14 @@ public:
 	{
 		data.s = str;
 	}
+	inline void setDataInt(const int64_t &i)
+	{
+		data.i = i;
+	}
+	inline void setDataFlt(const long double &f)
+	{
+		data.f = f;
+	}
 
 	inline const std::string &getDataStr() const
 	{

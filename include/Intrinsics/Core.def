@@ -8,3 +8,4 @@ INTRINSIC(ref);
 INTRINSIC(szof);
 INTRINSIC(valen);
 INTRINSIC(array);
+INTRINSIC(assn_ptr);

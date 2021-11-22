@@ -13,8 +13,8 @@
 #include "FS.hpp"
 #include "Intrinsics.hpp"
 #include "Parser.hpp"
-#include "Passes/ValueAssign.hpp"
-#include "TypeMgr.hpp"
+#include "Passes/TypeAssign.hpp"
+#include "ValueMgr.hpp"
 
 #define GetType(i) args[i]->getType()
 
@@ -30,7 +30,7 @@ static size_t SizeOf(Type *ty);
 
 INTRINSIC(import)
 {
-	if(!args[0]->getValue() || args[0]->getValue()->getType() != VVEC) {
+	if(!args[0]->getValue() || !args[0]->getValue()->IsValStrLiteral()) {
 		err.set(stmt, "import must be a compile time computable string");
 		return false;
 	}
@@ -41,7 +41,7 @@ INTRINSIC(import)
 	}
 
 	if(!IsValidSource(modname)) {
-		err.set(stmt, "Error: import file %s does not exist", modname.c_str());
+		err.set(stmt, "Error: import file '%s' does not exist", modname.c_str());
 		return false;
 	}
 
@@ -64,91 +64,94 @@ INTRINSIC(import)
 	topblk = as<StmtBlock>(topmod->getParseTree());
 
 gen_import:
-	stmt->setType(ImportTy::create(c, mod->getID()));
+	stmt->createAndSetValue(ImportVal::create(c, mod->getID()));
 	return true;
 }
 INTRINSIC(ismainsrc)
 {
-	stmt->setVal(IntVal::create(c, stmt->getMod()->isMainModule()));
+	bool ismm = stmt->getMod()->isMainModule();
+	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDTRUE, ismm));
 	return true;
 }
 INTRINSIC(isprimitive)
 {
-	stmt->setVal(IntVal::create(c, args[0]->getType()->isPrimitive()));
+	bool is_prim = args[0]->getValueTy()->isPrimitive();
+	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDTRUE, is_prim));
 	return true;
 }
 INTRINSIC(szof)
 {
-	int64_t sz = SizeOf(args[0]->getType());
+	int64_t sz = SizeOf(args[0]->getValueTy());
 	if(!sz) {
 		err.set(args[0], "invalid type info, received size 0");
 		return false;
 	}
-	stmt->setVal(IntVal::create(c, sz));
+	stmt->createAndSetValue(IntVal::create(c, mkU64Ty(c), CDTRUE, sz));
 	return true;
 }
 INTRINSIC(as)
 {
-	args[1]->castTo(args[0]->getType());
+	// args[0] must have a value of type TypeVal
+	args[1]->castTo(as<TypeVal>(args[0]->getValue())->getVal());
 	*source = args[1];
 	return true;
 }
 INTRINSIC(typeof)
 {
-	*source = args[0];
+	stmt->createAndSetValue(TypeVal::create(c, args[0]->getValueTy()));
 	return true;
 }
 INTRINSIC(ptr)
 {
-	Type *res = args[0]->getType()->clone(c, true);
+	// args[0] should be a TypeVal
+	Type *res = as<TypeVal>(args[0]->getValue())->getVal()->clone(c);
 	res	  = PtrTy::create(c, res, 0);
-	args[0]->setType(res);
-	*source = args[0];
+	stmt->createAndSetValue(TypeVal::create(c, res));
 	return true;
 }
 INTRINSIC(ref)
 {
-	Type *res = args[0]->getType()->clone(c, true);
-	args[0]->setType(res);
-	*source = args[0];
+	// args[0] should be a TypeVal
+	Type *res = as<TypeVal>(args[0]->getValue())->getVal()->clone(c);
+	res->setRef();
+	stmt->createAndSetValue(TypeVal::create(c, res));
 	return true;
 }
 INTRINSIC(valen)
 {
-	if(!args[0]->getType()->isVariadic()) {
-		err.set(stmt, "expected variadic type for valen(), found: %s",
-			args[0]->getType()->toStr().c_str());
+	if(stmt->getValue()->hasData()) return true;
+	TypeAssignPass *ta = c.getPass<TypeAssignPass>();
+	if(!ta->isFnVALen()) {
+		err.set(stmt, "this is not a variadic function");
 		return false;
 	}
-	stmt->setVal(IntVal::create(c, as<VariadicTy>(args[0]->getType())->getArgs().size()));
+	size_t vasz = ta->getFnVALen();
+	stmt->createAndSetValue(IntVal::create(c, mkU64Ty(c), CDPERMA, vasz));
 	return true;
 }
 INTRINSIC(array)
 {
 	std::vector<int64_t> counts;
-	Type *argty  = args[0]->getType();
-	Type *stmtty = stmt->getType();
+	Type *resty = as<TypeVal>(args[0]->getValue())->getVal();
 
-	if(currintrin == IPARSE) goto stage_parse;
-	if(currintrin == IVALUE) goto stage_value;
-
-stage_parse:
 	for(size_t i = 1; i < args.size(); ++i) {
 		counts.insert(counts.begin(), as<IntVal>(args[i]->getValue())->getVal());
 	}
 	for(auto &count : counts) {
-		argty = PtrTy::create(c, argty, count);
+		resty = PtrTy::create(c, resty, count);
 	}
-	stmt->setType(argty);
-	return true;
-
-stage_value:
-	Value *res = stmtty->toDefaultValue(c, err, stmt->getLoc());
+	Value *res = resty->toDefaultValue(c, err, stmt->getLoc(), CDTRUE);
 	if(!res) {
 		err.set(stmt, "failed to get default value from array's type");
 		return false;
 	}
-	stmt->setVal(res);
+	stmt->createAndSetValue(res);
+	return true;
+}
+INTRINSIC(assn_ptr)
+{
+	args[0]->updateValue(args[1]->getValue());
+	stmt->updateValue(args[0]->getValue());
 	return true;
 }
 

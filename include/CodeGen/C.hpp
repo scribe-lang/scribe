@@ -38,24 +38,28 @@ class CDriver : public CodeGenDriver
 	// constants: key is the constant data
 	std::unordered_map<std::string, ConstantInfo> constants;
 
-	const std::string &getConstantDataVar(const lex::Lexeme &val);
+	const std::string &getConstantDataVar(const lex::Lexeme &val, Type *ty);
 	std::string getNewConstantVar();
 	static bool acceptsSemicolon(Stmt *stmt);
 	bool trySetMainFunction(StmtVar *var, const std::string &varname, Writer &writer);
-	std::string getCTypeName(Stmt *stmt, Type *ty, bool arr_as_ptr);
-	std::string getCValue(Stmt *stmt, Value *value, Type *type);
-	void addStructDef(Stmt *stmt, StructTy *sty);
+	bool getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool arr_as_ptr);
+	bool getCValue(std::string &res, Stmt *stmt, Value *value, Type *type);
+	bool addStructDef(Stmt *stmt, StructTy *sty);
+	bool writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &args, Type *ty,
+			   Writer &writer);
+	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
+	std::string getSystemCompiler();
 
 	inline std::string getMangledName(const std::string &name, Stmt *stmt)
 	{
-		return name + std::to_string(stmt->getType()->getID());
+		return name + std::to_string(stmt->getValueTy(true)->getID());
 	}
 
 public:
 	CDriver(RAIIParser &parser);
 	~CDriver();
 
-	bool compile(const std::string &outfile, const bool &ir_only);
+	bool compile(const std::string &outfile);
 
 	bool visit(Stmt *stmt, Writer &writer, const bool &semicol);
 

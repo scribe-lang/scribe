@@ -15,7 +15,6 @@
 #define PASSES_VALUE_ASSIGN_HPP
 
 #include "Passes/Base.hpp"
-#include "TypeMgr.hpp"
 
 namespace sc
 {

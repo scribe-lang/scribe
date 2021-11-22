@@ -29,7 +29,7 @@ public:
 	CodeGenDriver(RAIIParser &parser);
 	virtual ~CodeGenDriver();
 
-	virtual bool compile(const std::string &outfile, const bool &ir_only) = 0;
+	virtual bool compile(const std::string &outfile) = 0;
 };
 } // namespace sc
 
