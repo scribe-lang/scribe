@@ -63,7 +63,10 @@ class RAIIParser
 	ErrMgr err;
 	Context ctx;
 
-	PassManager defaultpm;
+	// default pms that run:
+	// 1. on each module
+	// 2. once all modules are combined
+	PassManager defaultpmpermodule, defaultpmcombined;
 
 	// as new sources are imported, they'll be pushed back
 	// the reverse iteration of this list will give the order of imports
@@ -78,7 +81,6 @@ public:
 	~RAIIParser();
 
 	bool parse(const std::string &path, const bool &main_module = false);
-	bool executeDefaultPasses(const std::string &path);
 	void combineAllModules();
 
 	bool hasModule(const std::string &path);

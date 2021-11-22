@@ -16,6 +16,8 @@
 #include <cassert>
 
 #include "CodeGen/C/Prelude.hpp"
+#include "Env.hpp"
+#include "FS.hpp"
 #include "Parser.hpp"
 #include "Utils.hpp"
 
@@ -26,7 +28,7 @@ CDriver::CDriver(RAIIParser &parser)
 {}
 CDriver::~CDriver() {}
 
-bool CDriver::compile(const std::string &outfile, const bool &ir_only)
+bool CDriver::compile(const std::string &outfile)
 {
 	Module *mainmod = parser.getModule(parser.getModuleStack().front());
 	Writer mainwriter;
@@ -68,13 +70,82 @@ bool CDriver::compile(const std::string &outfile, const bool &ir_only)
 	}
 	if(constants.size() > 0) finalmod.newLine();
 	finalmod.append(mainwriter);
-	if(ir_only) {
-		FILE *f = fopen(outfile.c_str(), "w+");
-		fprintf(f, "%s\n", finalmod.getData().c_str());
-		fclose(f);
-		return true;
+
+	args::ArgParser &cliargs = parser.getCommandArgs();
+	std::string opt		 = "2";
+	std::string std		 = "11";
+	bool ir_only		 = cliargs.has("ir");
+	bool llir		 = cliargs.has("llir");
+	if(cliargs.has("opt")) {
+		std::string res = cliargs.val("opt");
+		if(res.empty()) {
+			err.set(mainmod->getParseTree(),
+				"optimization option must have a value, found nothing");
+			err.show(stderr);
+			return false;
+		}
+		if(res != "0" && res != "1" && res != "2" && res != "3") {
+			err.set(mainmod->getParseTree(), "optimization option value must be"
+							 " one of 0, 1, 2, or 3; found nothing");
+			err.show(stderr);
+			return false;
+		}
+		opt = res;
 	}
-	// TODO: full compilation
+	if(cliargs.has("std")) {
+		std::string res = cliargs.val("std");
+		if(res.empty()) {
+			err.set(mainmod->getParseTree(),
+				"standard option must have a value, found nothing");
+			err.show(stderr);
+			return false;
+		}
+		if(res != "11" && res != "14" && res != "17") {
+			err.set(mainmod->getParseTree(), "standard option value must be"
+							 " one of 11, 14, or 17; found nothing");
+			err.show(stderr);
+			return false;
+		}
+		std = res;
+	}
+
+	std::string tmpfile;
+	if(ir_only) {
+		tmpfile = outfile + ".c";
+	} else {
+		auto loc = outfile.find_last_of('/');
+		tmpfile	 = (loc == std::string::npos ? outfile : outfile.substr(loc));
+		tmpfile	 = "/tmp/" + tmpfile + ".c";
+	}
+	FILE *f = fopen(tmpfile.c_str(), "w+");
+	if(!f) {
+		err.set(mainmod->getParseTree(), "failed to create file for writing C code: %s",
+			tmpfile.c_str());
+		err.show(stderr);
+		return false;
+	}
+	fprintf(f, "%s\n", finalmod.getData().c_str());
+	fclose(f);
+	if(ir_only) return true;
+
+	std::string cmd = getSystemCompiler();
+	cmd += " -std=c" + std + " -O" + opt + " ";
+	for(auto &h : headerflags) {
+		cmd += h + " ";
+	}
+	for(auto &l : libflags) {
+		cmd += l + " ";
+	}
+	cmd += tmpfile + " -o " + outfile;
+	if(llir) cmd += ".ll -S -emit-llvm";
+	int res = std::system(cmd.c_str());
+	res	= WEXITSTATUS(res);
+	if(res) {
+		err.set(mainmod->getParseTree(),
+			"failed to compiler code, got compiler exit status: %d", res);
+		err.show(stderr);
+		return false;
+	}
 	return true;
 }
 
@@ -111,18 +182,7 @@ bool CDriver::visit(Stmt *stmt, Writer &writer, const bool &semicol)
 		break;
 	}
 	}
-	if(!res) return false;
-
-	if(stmt->hasCast()) {
-		writer.write("(");
-		writer.write(getCTypeName(stmt, stmt->getType(), true));
-		writer.write(")(");
-		writer.append(tmp);
-		writer.write(")");
-	} else {
-		writer.append(tmp);
-	}
-	return res;
+	return res && applyCast(stmt, writer, tmp);
 }
 
 bool CDriver::visit(StmtBlock *stmt, Writer &writer, const bool &semicol)
@@ -158,10 +218,6 @@ bool CDriver::visit(StmtType *stmt, Writer &writer, const bool &semicol)
 bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 {
 	writer.clear();
-	if(stmt->getValue()) {
-		writer.write(getCValue(stmt, stmt->getValue(), stmt->getType()));
-		return true;
-	}
 	switch(stmt->getLexValue().getTok().getVal()) {
 	case lex::TRUE:	 // fallthrough
 	case lex::FALSE: // fallthrough
@@ -169,14 +225,18 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 	case lex::INT:	 // fallthrough
 	case lex::FLT:	 // fallthrough
 	case lex::CHAR:	 // fallthrough
-	case lex::STR: writer.write(getConstantDataVar(stmt->getLexValue())); return true;
+	case lex::STR:
+		writer.write(getConstantDataVar(stmt->getLexValue(), stmt->getValueTy()));
+		return true;
 	default: break;
 	}
-	// the following part is only valid for existing variables.
+	// No perma data here as all variables lose permadata attribute
+	// in type assign pass for StmtVar
+	// The following part is only valid for existing variables.
 	// the part for variable declaration exists in Var visit
-	if(stmt->getType()->hasRef()) writer.write("(*"); // for references
+	if(stmt->getValueTy(true)->hasRef()) writer.write("(*"); // for references
 	writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
-	if(stmt->getType()->hasRef()) writer.write(")"); // for references
+	if(stmt->getValueTy(true)->hasRef()) writer.write(")"); // for references
 	if(semicol) writer.write(";");
 	return true;
 }
@@ -187,26 +247,32 @@ bool CDriver::visit(StmtFnCallInfo *stmt, Writer &writer, const bool &semicol)
 bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 {
 	writer.clear();
-	if(stmt->getValue()) {
-		writer.write(getCValue(stmt, stmt->getValue(), stmt->getType()));
-		if(semicol) writer.write(";");
-		return true;
+	if(stmt->getValue()->hasPermaData()) {
+		std::string cval;
+		if(!getCValue(cval, stmt, stmt->getValue(), stmt->getValueTy())) {
+			err.set(stmt, "failed to get C value for scribe value: %s",
+				stmt->getValue()->toStr().c_str());
+			return false;
+		}
+		if(!cval.empty()) {
+			writer.write(cval);
+			if(semicol) writer.write(";");
+			return true;
+		}
 	}
 
 	lex::TokType oper = stmt->getOper().getTok().getVal();
+	Stmt *&lhs	  = stmt->getLHS();
+	Stmt *&rhs	  = stmt->getRHS();
 	Writer l;
-	Stmt *&lhs = stmt->getLHS();
-	Stmt *&rhs = stmt->getRHS();
-	if(!visit(lhs, l, false)) {
-		err.set(stmt, "failed to generate C code for LHS in expression");
-		return false;
-	}
 	Writer r;
-	if(oper != lex::DOT && oper != lex::ARROW && oper != lex::FNCALL && rhs &&
-	   !visit(rhs, r, false)) {
-		rhs->disp(false);
-		err.set(stmt, "failed to generate C code for RHS in expression");
-		return false;
+	if(oper == lex::ARROW || oper == lex::DOT || oper == lex::FNCALL || oper == lex::STCALL ||
+	   oper == lex::UAND || oper == lex::UMUL)
+	{
+		if(!visit(lhs, l, false)) {
+			err.set(stmt, "failed to generate C code for LHS in expression");
+			return false;
+		}
 	}
 	switch(oper) {
 	case lex::ARROW:
@@ -220,50 +286,15 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 	case lex::FNCALL: {
 		std::string fname	  = as<StmtSimple>(lhs)->getLexValue().getDataStr();
 		std::vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
-		writer.write("%s%" PRIu64 "(", fname.c_str(), lhs->getType()->getID());
-		FuncTy *fn = as<FuncTy>(lhs->getType());
-		for(size_t i = 0; i < args.size(); ++i) {
-			Stmt *&a = args[i];
-			Type *at = fn->getArg(i);
-			Writer tmp(writer);
-			if(!visit(args[i], tmp, false)) {
-				err.set(stmt, "failed to generate C code for func call argument");
-				return false;
-			}
-			if(at->hasRef()) {
-				writer.write("&(");
-				writer.append(tmp);
-				writer.write(")");
-			} else {
-				writer.append(tmp);
-			}
-			if(i != args.size() - 1) writer.write(", ");
-		}
+		writer.write("%s%" PRIu64 "(", fname.c_str(), lhs->getValueTy()->getID());
+		if(!writeCallArgs(stmt->getLoc(), args, lhs->getValueTy(), writer)) return false;
 		writer.write(")");
 		break;
 	}
 	case lex::STCALL: {
 		std::vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
-		writer.write("(struct_%" PRIu64 "){", lhs->getType()->getID());
-		StructTy *st = as<StructTy>(lhs->getType());
-		for(size_t i = 0; i < args.size(); ++i) {
-			Stmt *&a = args[i];
-			Type *at = st->getField(i);
-			Writer tmp(writer);
-			if(!visit(args[i], tmp, false)) {
-				err.set(stmt, "failed to generate C code"
-					      " for struct declaration argument");
-				return false;
-			}
-			if(at->hasRef()) {
-				writer.write("&(");
-				writer.append(tmp);
-				writer.write(")");
-			} else {
-				writer.append(tmp);
-			}
-			if(i != args.size() - 1) writer.write(", ");
-		}
+		writer.write("(struct_%" PRIu64 "){", lhs->getValueTy()->getID());
+		if(!writeCallArgs(stmt->getLoc(), args, lhs->getValueTy(), writer)) return false;
 		writer.write("}");
 		break;
 	}
@@ -327,14 +358,27 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 	case lex::RSHIFT_ASSN: {
 	applyoperfn:
 		lex::Tok &optok = stmt->getOper().getTok();
-		if(oper == lex::SUBS && lhs->getType()->isPtr()) {
+		if(oper == lex::SUBS && lhs->getValueTy()->isPtr()) {
+			if(!visit(lhs, l, false)) {
+				err.set(stmt, "failed to generate C code for LHS in expression");
+				return false;
+			}
+			if(!visit(rhs, r, false)) {
+				err.set(stmt, "failed to generate C code for LHS in expression");
+				return false;
+			}
 			writer.append(l);
 			writer.write("[");
 			writer.append(r);
 			writer.write("]");
 			break;
 		}
-		if(lhs->getType()->isPrimitive() && (!rhs || rhs->getType()->isPrimitive())) {
+		if(lhs->getValueTy()->isPrimitiveOrPtr() &&
+		   (!rhs || rhs->getValueTy()->isPrimitiveOrPtr())) {
+			if(!visit(lhs, l, false)) {
+				err.set(stmt, "failed to generate C code for LHS in expression");
+				return false;
+			}
 			if(optok.isUnaryPre()) {
 				writer.write(optok.getUnaryNoCharCStr());
 				writer.append(l);
@@ -345,17 +389,21 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 				writer.write(optok.getUnaryNoCharCStr());
 				break;
 			}
+			if(!visit(rhs, r, false)) {
+				err.set(stmt, "failed to generate C code for LHS in expression");
+				return false;
+			}
 			writer.append(l);
 			writer.write(" %s ", lex::TokStrs[oper]);
 			writer.append(r);
 			break;
 		}
+		std::vector<Stmt *> args = {lhs};
+		if(rhs) args.push_back(rhs);
 		writer.write(optok.getOperCStr());
 		writer.write("(");
-		writer.append(l);
-		if(rhs) {
-			writer.write(", ");
-			writer.append(r);
+		if(!writeCallArgs(stmt->getLoc(), args, stmt->getCalledFn(), writer)) {
+			return false;
 		}
 		writer.write(")");
 		break;
@@ -370,13 +418,6 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 	writer.clear();
 	std::string varname = getMangledName(stmt->getName().getDataStr(), stmt);
 
-	if(stmt->getValue()) {
-		std::string type = getCTypeName(stmt, stmt->getType(), false);
-		writer.write("%s %s = %s", type.c_str(), varname.c_str(),
-			     getCValue(stmt, stmt->getValue(), stmt->getType()).c_str());
-		if(semicol) writer.write(";");
-		return true;
-	}
 	if(stmt->getVVal() && stmt->getVVal()->getStmtType() == EXTERN) {
 		StmtExtern *ext	  = as<StmtExtern>(stmt->getVVal());
 		size_t args	  = ext->getSigArgs().size();
@@ -412,11 +453,16 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 			varname	 = "main";
 		}
 
-		StmtFnDef *fn = as<StmtFnDef>(stmt->getVVal());
-		std::string ret =
-		getCTypeName(fn->getSigRetType(), fn->getSigRetType()->getType(), true);
+		StmtFnDef *fn	 = as<StmtFnDef>(stmt->getVVal());
+		StmtType *sigret = fn->getSigRetType();
+		std::string retcty;
+		if(!getCTypeName(retcty, sigret, sigret->getValueTy(), true)) {
+			err.set(stmt, "failed to determine C type for scribe type: %s",
+				sigret->getValueTy()->toStr().c_str());
+			return false;
+		}
 
-		tmp.insertAfter(ret.size(), " " + varname);
+		tmp.insertAfter(retcty.size(), " " + varname);
 		writer.append(tmp);
 		// no semicolon after fndef
 
@@ -426,7 +472,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 			err.set(stmt, "failed to generate C code for function def");
 			return false;
 		}
-		decl.insertAfter(ret.size(), " " + varname);
+		decl.insertAfter(retcty.size(), " " + varname);
 		funcdecls.push_back(decl.getData());
 		return true;
 	}
@@ -435,22 +481,39 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 		// they are defined when a struct type is encountered
 		return true;
 	}
+	if(stmt->getVVal() && stmt->getValue()->hasData()) {
+		std::string cty, cval;
+		if(!getCTypeName(cty, stmt, stmt->getValueTy(), false)) {
+			err.set(stmt, "failed to determine C type for scribe type: %s",
+				stmt->getValueTy()->toStr().c_str());
+			return false;
+		}
+		if(!getCValue(cval, stmt, stmt->getValue(), stmt->getValueTy())) {
+			err.set(stmt, "failed to get C value for scribe value: %s",
+				stmt->getValue()->toStr().c_str());
+			return false;
+		}
+		writer.write("%s %s = %s", cty.c_str(), varname.c_str(), cval.c_str());
+		if(semicol) writer.write(";");
+		return true;
+	}
 
 	Writer tmp(writer);
 	if(stmt->getVVal() && !visit(stmt->getVVal(), tmp, false)) {
 		err.set(stmt, "failed to generate C code from scribe declaration value");
 		return false;
 	}
-	std::string type = getCTypeName(stmt, stmt->getType(), false);
-	if(type.empty()) {
-		err.set(stmt, "no C type found for the variable type: %s",
-			stmt->getType()->toStr().c_str());
+	std::string cty;
+	Type *valty = stmt->getCast() ? stmt->getCast() : stmt->getValueTy();
+	if(!getCTypeName(cty, stmt, valty, false)) {
+		err.set(stmt, "unable to determine C type for scribe type: %s",
+			valty->toStr().c_str());
 		return false;
 	}
-	writer.write("%s %s", type.c_str(), varname.c_str());
+	writer.write("%s %s", cty.c_str(), varname.c_str());
 	if(!tmp.empty()) {
 		writer.write(" = ");
-		if(stmt->getType()->hasRef()) {
+		if(stmt->getValueTy()->hasRef()) {
 			writer.write("&(");
 			writer.append(tmp);
 			writer.write(")");
@@ -463,7 +526,13 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 }
 bool CDriver::visit(StmtFnSig *stmt, Writer &writer, const bool &semicol)
 {
-	writer.write(getCTypeName(stmt->getRetType(), stmt->getRetType()->getType(), true));
+	std::string cty;
+	if(!getCTypeName(cty, stmt->getRetType(), stmt->getRetType()->getValueTy(), true)) {
+		err.set(stmt, "unable to determine C type for scribe type: %s",
+			stmt->getValueTy()->toStr().c_str());
+		return false;
+	}
+	writer.write(cty);
 	writer.write("(");
 	for(size_t i = 0; i < stmt->getArgs().size(); ++i) {
 		auto &a = stmt->getArgs()[i];
@@ -536,7 +605,7 @@ bool CDriver::visit(StmtVarDecl *stmt, Writer &writer, const bool &semicol)
 {
 	for(auto &d : stmt->getDecls()) {
 		Writer tmp(writer);
-		if(!visit(d, tmp, true)) {
+		if(!visit(d, tmp, semicol)) {
 			err.set(stmt, "failed to generate C code for var decl");
 			return false;
 		}
@@ -683,11 +752,13 @@ bool CDriver::visit(StmtDefer *stmt, Writer &writer, const bool &semicol)
 	return false;
 }
 
-const std::string &CDriver::getConstantDataVar(const lex::Lexeme &val)
+const std::string &CDriver::getConstantDataVar(const lex::Lexeme &val, Type *ty)
 {
 	std::string key;
 	std::string value;
 	std::string type;
+	std::string bits;
+	std::string is_sign;
 	switch(val.getTok().getVal()) {
 	case lex::TRUE:
 		value = "1";
@@ -705,14 +776,17 @@ const std::string &CDriver::getConstantDataVar(const lex::Lexeme &val)
 		type  = "const i1";
 		break;
 	case lex::INT:
-		value = std::to_string(val.getDataInt());
-		key   = value + "i32";
-		type  = "const i32";
+		value	= std::to_string(val.getDataInt());
+		bits	= std::to_string(as<IntTy>(ty)->getBits());
+		is_sign = as<IntTy>(ty)->isSigned() ? "i" : "u";
+		key	= value + is_sign + bits;
+		type	= "const " + is_sign + bits;
 		break;
 	case lex::FLT:
 		value = std::to_string(val.getDataFlt());
-		key   = value + "f32";
-		type  = "const f32";
+		bits  = std::to_string(as<FltTy>(ty)->getBits());
+		key   = value + "f" + bits;
+		type  = "const f" + bits;
 		break;
 	case lex::CHAR:
 		value = '\'' + std::to_string(val.getDataStr()[0]) + '\'';
@@ -761,7 +835,7 @@ bool CDriver::acceptsSemicolon(Stmt *stmt)
 	case EXTERN: return false;
 	case ENUMDEF: return false;
 	case STRUCTDEF: return false;
-	case VARDECL: return false;
+	case VARDECL: return true;
 	case COND: return false;
 	case FORIN: return false;
 	case FOR: return false;
@@ -778,7 +852,7 @@ bool CDriver::trySetMainFunction(StmtVar *var, const std::string &varname, Write
 {
 	StmtFnDef *fn = as<StmtFnDef>(var->getVVal());
 	if(!startsWith(var->getName().getDataStr(), "main_0")) return false;
-	Type *retbase = fn->getSig()->getRetType()->getType();
+	Type *retbase = fn->getSig()->getRetType()->getValueTy();
 	if(!retbase || !retbase->isInt()) return false;
 	// false => 0 args
 	// true => 2 args
@@ -786,8 +860,8 @@ bool CDriver::trySetMainFunction(StmtVar *var, const std::string &varname, Write
 	if(fn->getSigArgs().empty()) { // int main()
 		return true;
 	} else if(fn->getSigArgs().size() == 2) { // int main(int argc, char **argv)
-		Type *a1 = fn->getSigArgs()[0]->getType();
-		Type *a2 = fn->getSigArgs()[0]->getType();
+		Type *a1 = fn->getSigArgs()[0]->getValueTy();
+		Type *a2 = fn->getSigArgs()[0]->getValueTy();
 		if(!a1->isInt()) return false;
 		if(!a2->isPtr()) return false;
 		if(!as<PtrTy>(a2)->getTo()->isPtr()) return false;
@@ -797,7 +871,7 @@ bool CDriver::trySetMainFunction(StmtVar *var, const std::string &varname, Write
 	return false;
 }
 
-std::string CDriver::getCTypeName(Stmt *stmt, Type *ty, bool arr_as_ptr)
+bool CDriver::getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool arr_as_ptr)
 {
 	std::string pre;
 	std::string post;
@@ -807,38 +881,66 @@ std::string CDriver::getCTypeName(Stmt *stmt, Type *ty, bool arr_as_ptr)
 	if(ty->hasRef()) post += " *";
 
 	if(ty->isVoid()) {
-		return pre + "void" + post;
+		res = pre + "void" + post;
+		return true;
 	}
 	if(ty->isTypeTy()) {
-		Type *cty = as<TypeTy>(ty)->getContainedTy();
-		return pre + getCTypeName(stmt, cty, arr_as_ptr) + post;
+		Type *ctyp = as<TypeTy>(ty)->getContainedTy();
+		std::string cty;
+		if(!getCTypeName(cty, stmt, ctyp, arr_as_ptr)) {
+			err.set(stmt, "failed to determine C type for scribe type: %s",
+				ctyp->toStr().c_str());
+			return false;
+		}
+		res = pre + cty + post;
+		return true;
 	}
 	if(ty->isInt()) {
 		bool is_signed	 = as<IntTy>(ty)->isSigned();
 		std::string bits = std::to_string(as<IntTy>(ty)->getBits());
-		return pre + (is_signed ? "i" : "u") + bits + post;
+		res		 = pre + (is_signed ? "i" : "u") + bits + post;
+		return true;
 	}
 	if(ty->isFlt()) {
 		std::string bits = std::to_string(as<FltTy>(ty)->getBits());
-		return pre + "f" + bits + post;
+		res		 = pre + "f" + bits + post;
+		return true;
 	}
 	if(ty->isPtr()) {
-		Type *to	= as<PtrTy>(ty)->getTo();
-		std::string res = getCTypeName(stmt, to, arr_as_ptr);
+		Type *to = as<PtrTy>(ty)->getTo();
+		std::string cty;
+		if(!getCTypeName(cty, stmt, to, arr_as_ptr)) {
+			err.set(stmt, "failed to determine C type for scribe type: %s",
+				to->toStr().c_str());
+			return false;
+		}
 		if(arr_as_ptr || as<PtrTy>(ty)->getCount() == 0) {
-			return res + "*";
+			res = cty + "*";
+			return true;
 		}
 		std::string arrcount = "[" + std::to_string(as<PtrTy>(ty)->getCount()) + "]";
-		return pre + res + arrcount + post;
+		res		     = pre + cty + arrcount + post;
+		return true;
 	}
 	if(ty->isFunc()) {
 		FuncTy *f = as<FuncTy>(ty);
-		std::string res;
-		res += getCTypeName(stmt, f->getRet(), true);
+		std::string cty;
+		if(!getCTypeName(cty, stmt, f->getRet(), arr_as_ptr)) {
+			err.set(stmt, "failed to determine C type for scribe type: %s",
+				f->getRet()->toStr().c_str());
+			return false;
+		}
+		res += cty;
 		res += "(*func_" + std::to_string(f->getID()) + ")";
 		res += "(";
 		for(auto &t : f->getArgs()) {
-			res += getCTypeName(stmt, t, true);
+			cty = "";
+			if(!getCTypeName(cty, stmt, t, arr_as_ptr)) {
+				err.set(stmt, "failed to determine C type for scribe type: %s",
+					t->toStr().c_str());
+				return false;
+			}
+			res += cty;
 			res += ", ";
 		}
 		if(f->getArgs().size() > 0) {
@@ -846,51 +948,63 @@ std::string CDriver::getCTypeName(Stmt *stmt, Type *ty, bool arr_as_ptr)
 			res.pop_back();
 		}
 		res += ")";
-		return res;
+		return true;
 	}
 	if(ty->isStruct()) {
 		StructTy *s = as<StructTy>(ty);
-		addStructDef(stmt, s);
-		std::string res = "struct_" + std::to_string(s->getID());
-		return pre + res + post;
+		if(!addStructDef(stmt, s)) {
+			err.set(stmt, "failed to add struct def '%s' in C code",
+				s->toStr().c_str());
+			return false;
+		}
+		res = pre + "struct_" + std::to_string(s->getID()) + post;
+		return true;
 	}
 	return "";
 }
-std::string CDriver::getCValue(Stmt *stmt, Value *value, Type *type)
+bool CDriver::getCValue(std::string &res, Stmt *stmt, Value *value, Type *type)
 {
-	switch(value->getType()) {
-	case VVOID: return "";
+	switch(value->getValType()) {
+	// in case of VVOID, since res will be empty, it will cause actual expression to emit
+	case VVOID: return true;
 	case VINT: {
 		IntTy *t = as<IntTy>(type);
 		if(t->getBits() == 8 && t->isSigned()) {
-			return "'" + std::string(1, as<IntVal>(value)->getVal()) + "'";
+			res = "'" + std::string(1, as<IntVal>(value)->getVal()) + "'";
+			return true;
 		}
-		return std::to_string(as<IntVal>(value)->getVal());
+		res = std::to_string(as<IntVal>(value)->getVal());
+		return true;
 	}
-	case VFLT: return std::to_string(as<FltVal>(value)->getVal());
+	case VFLT: res = std::to_string(as<FltVal>(value)->getVal()); return true;
 	case VVEC: {
 		bool is_str = false;
-		printf("hi there %s\n", type->toStr().c_str());
 		assert(type->isPtr());
 		if(as<PtrTy>(type)->getTo()->isInt()) {
 			IntTy *t = as<IntTy>(as<PtrTy>(type)->getTo());
 			if(t->getBits() == 8 && t->isSigned()) is_str = true;
 		}
 		if(is_str) {
-			return "\"" + as<VecVal>(value)->getAsString() + "\"";
+			res = "\"" + as<VecVal>(value)->getAsString() + "\"";
+			return true;
 		}
-		std::string res;
 		res	 = "{";
 		Type *to = as<PtrTy>(type)->getTo();
 		for(auto &e : as<VecVal>(value)->getVal()) {
-			res += getCValue(stmt, e, to) + ", ";
+			std::string cval;
+			if(!getCValue(cval, stmt, e, to)) {
+				err.set(stmt, "failed to determine C value of scribe value: %s",
+					e->toStr().c_str());
+				return false;
+			}
+			res += cval + ", ";
 		}
 		if(as<VecVal>(value)->getVal().size() > 0) {
 			res.pop_back();
 			res.pop_back();
 		}
 		res += "}";
-		return res;
+		return true;
 	}
 	case VSTRUCT: {
 		std::string res;
@@ -898,23 +1012,33 @@ std::string CDriver::getCValue(Stmt *stmt, Value *value, Type *type)
 
 		res = "{";
 		for(size_t i = 0; i < st->getFields().size(); ++i) {
-			Value *fv = as<StructVal>(value)->getValAttr(st->getFieldName(i));
-			res += getCValue(stmt, fv, st->getField(i));
+			Value *fv = as<StructVal>(value)->getField(st->getFieldName(i));
+			std::string cval;
+			if(!getCValue(cval, stmt, fv, st->getField(i))) {
+				err.set(stmt, "failed to determine C value of scribe value: %s",
+					fv->toStr().c_str());
+				return false;
+			}
+			res += cval;
 		}
 		if(st->getFields().size() > 0) {
 			res.pop_back();
 			res.pop_back();
 		}
 		res += "}";
-		return res;
+		return true;
+	}
+	default: {
+		err.set(stmt, "failed to generate C value for value: %s", value->toStr().c_str());
+		break;
 	}
 	}
-	return "";
+	return false;
 }
-void CDriver::addStructDef(Stmt *stmt, StructTy *sty)
+bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 {
 	static std::unordered_set<uint64_t> declaredstructs;
-	if(declaredstructs.find(sty->getID()) != declaredstructs.end()) return;
+	if(declaredstructs.find(sty->getID()) != declaredstructs.end()) return true;
 	Writer st;
 	st.write("typedef struct {");
 	if(!sty->getFields().empty()) {
@@ -922,7 +1046,13 @@ void CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 		st.newLine();
 	}
 	for(size_t i = 0; i < sty->getFields().size(); ++i) {
-		st.write(getCTypeName(stmt, sty->getField(i), false));
+		std::string cty;
+		if(!getCTypeName(cty, stmt, sty->getField(i), false)) {
+			err.set(stmt, "failed to determine C type for scribe type: %s",
+				sty->getField(i)->toStr().c_str());
+			return false;
+		}
+		st.write(cty);
 		st.write(" %s;", sty->getFieldName(i).c_str());
 		if(i != sty->getFields().size() - 1) st.newLine();
 	}
@@ -933,5 +1063,73 @@ void CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 	st.write("} struct_%" PRIu64 ";", sty->getID());
 	structdecls.push_back(st.getData());
 	declaredstructs.insert(sty->getID());
+	return true;
+}
+bool CDriver::applyCast(Stmt *stmt, Writer &writer, Writer &tmp)
+{
+	if(stmt->getCast()) {
+		writer.write("(");
+		std::string cty;
+		// bool has_ref = stmt->getCast()->hasRef();
+		// stmt->getCast()->unsetRef();
+		if(!getCTypeName(cty, stmt, stmt->getCast(), true)) {
+			err.set(stmt, "received invalid c type name for scribe cast type: %s",
+				stmt->getCast()->toStr().c_str());
+			return false;
+		}
+		// if(has_ref) stmt->getCast()->setRef();
+		writer.write(cty);
+		writer.write(")(");
+		writer.append(tmp);
+		writer.write(")");
+	} else {
+		writer.append(tmp);
+	}
+	return true;
+}
+bool CDriver::writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &args, Type *ty,
+			    Writer &writer)
+{
+	FuncTy *fn   = nullptr;
+	StructTy *st = nullptr;
+	if(ty->isFunc()) fn = as<FuncTy>(ty);
+	if(ty->isStruct()) st = as<StructTy>(ty);
+	for(size_t i = 0; i < args.size(); ++i) {
+		Stmt *a	 = args[i];
+		Type *at = fn ? fn->getArg(i) : st->getField(i);
+		Writer tmp(writer);
+		Type *cast = a->getCast();
+		a->castTo(nullptr);
+		if(!visit(a, tmp, false)) {
+			err.set(loc, "failed to generate C code for func call argument");
+			return false;
+		}
+		a->castTo(cast);
+		if(at->hasRef()) {
+			tmp.writeBefore("&(");
+			tmp.write(")");
+		}
+		if(!applyCast(a, writer, tmp)) return false;
+		if(i != args.size() - 1) writer.write(", ");
+	}
+	return true;
+}
+std::string CDriver::getSystemCompiler()
+{
+	std::string compiler = env::get("C_COMPILER");
+	if(!compiler.empty()) {
+		if(compiler.front() == '/' || compiler.front() == '~' || compiler.front() == '.') {
+			compiler = fs::absPath(compiler);
+			return compiler;
+		}
+	} else {
+		compiler = "clang";
+	}
+	compiler = env::getExeFromPath(compiler);
+	if(compiler.empty()) {
+		compiler = "gcc";
+		compiler = env::getExeFromPath(compiler);
+	}
+	return compiler;
 }
 } // namespace sc

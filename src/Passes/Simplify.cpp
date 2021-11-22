@@ -90,11 +90,7 @@ bool SimplifyPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 {
 	auto &args = stmt->getArgs();
 	for(size_t i = 0; i < args.size(); ++i) {
-		Type *a = args[i]->getType();
-		while(a->isPtr()) {
-			a = as<PtrTy>(a)->getTo();
-		}
-		if(a->isTypeTy()) {
+		if(args[i]->getValue()->isType()) {
 			args.erase(args.begin() + i);
 			--i;
 			continue;
@@ -119,27 +115,12 @@ bool SimplifyPass::visit(StmtExpr *stmt, Stmt **source)
 		err.set(stmt, "failed to apply simplify pass on LHS in expression");
 		return false;
 	}
-	if(!stmt->getValue() && oper == lex::SUBS && lhs->getType()->isVariadic()) {
-		StmtSimple *ls	= as<StmtSimple>(lhs);
-		std::string idx = std::to_string(stmt->getVariadicIndex());
-		ls->getLexValue().setDataStr(ls->getLexValue().getDataStr() + "__" + idx);
-		VariadicTy *vt = as<VariadicTy>(ls->getType());
-		ls->setType(vt->getArg(stmt->getVariadicIndex()));
-		*source = lhs;
-		return true;
-	}
 	return true;
 }
 bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 {
-	if(stmt->getVVal() && stmt->getVVal()->getStmtType() == FNDEF) {
-		StmtFnSig *sig = as<StmtFnDef>(stmt->getVVal())->getSig();
-		if(!sig->hasTemplatesDisabled()) {
-			*source = nullptr;
-			return true;
-		}
-	}
-	if(stmt->getType()->isImport()) {
+	if(!stmt->getValueID()) return true;
+	if(stmt->getValue()->isImport()) {
 		*source = nullptr;
 		return true;
 	}
@@ -147,9 +128,14 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 	// 	*source = nullptr;
 	// 	return true;
 	// }
+	bool had_val = stmt->getVVal();
 	if(stmt->getVVal() && !visit(stmt->getVVal(), &stmt->getVVal())) {
 		err.set(stmt, "failed to apply simplify pass on variable value expression");
 		return false;
+	}
+	if(had_val && !stmt->getVVal()) {
+		*source = nullptr;
+		return true;
 	}
 	if(stmt->getVType() && !visit(stmt->getVType(), asStmt(&stmt->getVType()))) {
 		err.set(stmt, "failed to apply simplify pass on variable type expression");
@@ -159,19 +145,20 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 }
 bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 {
-	auto &args  = stmt->getArgs();
-	bool has_va = false;
+	if(!stmt->hasTemplatesDisabled()) {
+		*source = nullptr;
+		return true;
+	}
+	auto &args = stmt->getArgs();
 	for(size_t i = 0; i < args.size(); ++i) {
-		if(args[i]->getType()->isVariadic()) {
-			has_va = true;
-			break; // break is fine since variadic must be last arg anyway
+		if(args[i]->getValueTy()->isVariadic()) {
+			err.set(stmt, "variadic argument in function cannot reach simplify stage");
+			return false;
 		}
 		Stmt *argtyexpr = args[i]->getVType()->getExpr();
-		if(args[i]->getType()->isTypeTy() ||
-		   (argtyexpr->getStmtType() == SIMPLE &&
-		    as<StmtSimple>(argtyexpr)->getLexValue().getTok().getVal() == lex::TYPE))
-		{
+		if(args[i]->getValue()->isType()) {
 			args.erase(args.begin() + i);
+			as<FuncTy>(stmt->getValueTy())->eraseArg(i);
 			--i;
 			continue;
 		}
@@ -189,21 +176,6 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 		err.set(stmt, "failed to apply simplify pass on func signature ret type");
 		return false;
 	}
-	if(!has_va) return true;
-	// remove variadic
-	StmtVar *a = args.back();
-	args.pop_back();
-	VariadicTy *vt = as<VariadicTy>(a->getType());
-	FuncTy *ft     = as<FuncTy>(stmt->getType());
-	ft->getArgs().pop_back();
-	for(size_t i = 0; i < vt->getArgs().size(); ++i) {
-		StmtVar *tmp = as<StmtVar>(a->clone(ctx));
-		tmp->setType(vt->getArg(i));
-		lex::Lexeme &name = tmp->getName();
-		name.setDataStr(name.getDataStr() + "__" + std::to_string(i));
-		args.push_back(tmp);
-		ft->getArgs().push_back(vt->getArg(i));
-	}
 	return true;
 }
 bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
@@ -212,9 +184,17 @@ bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
 		err.set(stmt, "failed to apply simplify pass on func signature in definition");
 		return false;
 	}
+	if(!stmt->getSig()) {
+		*source = nullptr;
+		return true;
+	}
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
 		err.set(stmt, "failed to apply simplify pass on func def block");
 		return false;
+	}
+	if(stmt->getBlk() && stmt->getBlk()->requiresTemplateInit()) {
+		*source = nullptr;
+		return true;
 	}
 	return true;
 }
@@ -231,6 +211,10 @@ bool SimplifyPass::visit(StmtExtern *stmt, Stmt **source)
 	if(!visit(stmt->getSig(), asStmt(&stmt->getSig()))) {
 		err.set(stmt, "failed to apply simplify pass on func signature in definition");
 		return false;
+	}
+	if(!stmt->getSig()) {
+		*source = nullptr;
+		return true;
 	}
 	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
 		err.set(stmt, "failed to apply simplify pass on header in extern");

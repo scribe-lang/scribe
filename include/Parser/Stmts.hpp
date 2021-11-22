@@ -20,6 +20,11 @@
 
 namespace sc
 {
+extern std::unordered_map<uint64_t, Value *> values;
+uint64_t genValueID();
+uint64_t createValueIDWith(Value *v);
+Value *getValueWithID(const uint64_t &id);
+
 enum Stmts
 {
 	BLOCK,
@@ -48,16 +53,12 @@ enum Stmts
 
 class Stmt
 {
+protected:
 	Stmts stype;
 	ModuleLoc loc;
 
-	Type *type;
-	Type *cast_from;
-	Value *value;
-
-	// generally used by intrinsics, causes values to never be erased or modified
-	// can be overridden by calling setPermaValue() again
-	bool is_value_perma;
+	uint64_t valueid;
+	Type *cast_to;
 
 public:
 	Stmt(const Stmts &stmt_type, const ModuleLoc &loc);
@@ -70,6 +71,34 @@ public:
 
 	const char *getStmtTypeCString() const;
 	std::string getTypeString() const;
+
+#define isStmtX(X, ENUMVAL)              \
+	inline bool is##X()              \
+	{                                \
+		return stype == ENUMVAL; \
+	}
+	isStmtX(Block, BLOCK);
+	isStmtX(Type, TYPE);
+	isStmtX(Simple, SIMPLE);
+	isStmtX(Expr, EXPR);
+	isStmtX(FnCallInfo, FNCALLINFO);
+	isStmtX(Var, VAR);
+	isStmtX(FnSig, FNSIG);
+	isStmtX(FnDef, FNDEF);
+	isStmtX(Header, HEADER);
+	isStmtX(Lib, LIB);
+	isStmtX(Extern, EXTERN);
+	isStmtX(EnumDef, ENUMDEF);
+	isStmtX(StructDef, STRUCTDEF);
+	isStmtX(VarDecl, VARDECL);
+	isStmtX(Cond, COND);
+	isStmtX(ForIn, FORIN);
+	isStmtX(For, FOR);
+	isStmtX(While, WHILE);
+	isStmtX(Return, RET);
+	isStmtX(Continue, CONTINUE);
+	isStmtX(Break, BREAK);
+	isStmtX(Defer, DEFER);
 
 	inline const Stmts &getStmtType() const
 	{
@@ -89,41 +118,60 @@ public:
 		return loc.getMod();
 	}
 
-	inline void setType(Type *t)
-	{
-		type = t;
-	}
 	inline void castTo(Type *t)
 	{
-		cast_from = type;
-		type	  = t;
+		cast_to = t;
 	}
-	inline void setVal(Value *v)
+	inline void setValueID(const uint64_t &vid)
 	{
-		if(is_value_perma) return;
-		value = v;
+		valueid = vid;
 	}
-	inline void setPermaVal(Value *v)
+	inline void setValueID(Stmt *stmt)
 	{
-		value	       = v;
-		is_value_perma = true;
+		valueid = stmt->getValueID();
+	}
+	// creates a new valueid and sets the value for it
+	inline void createAndSetValue(Value *v)
+	{
+		valueid		= genValueID();
+		values[valueid] = v;
+	}
+	// changes the value at the valueid (valueid is unchanged)
+	// changeValue() cannot exist because the inner (dot) members will be invalidated
+	inline bool updateValue(Value *v)
+	{
+		assert(valueid && "valueid cannot be zero for updateValue()");
+		if(!values[valueid]) {
+			values[valueid] = v;
+			return true;
+		}
+		return values[valueid]->updateValue(v);
+	}
+	inline void setValueTy(Type *t)
+	{
+		assert(valueid && "valueid cannot be zero for setValueTy()");
+		values[valueid]->setType(t);
 	}
 
-	inline Type *&getType()
+	inline const uint64_t &getValueID()
 	{
-		return type;
-	}
-	inline Type *&getCastFrom()
-	{
-		return cast_from;
+		return valueid;
 	}
 	inline Value *&getValue()
 	{
-		return value;
+		assert(valueid && "valueid cannot be zero for getValue()");
+		return values[valueid];
 	}
-	inline bool hasCast() const
+	// if exact = true, cast will be skipped
+	inline Type *&getValueTy(const bool &exact = false)
 	{
-		return cast_from;
+		assert(valueid && "valueid cannot be zero for getValueTy()");
+		if(cast_to && !exact) return cast_to;
+		return values[valueid]->getType();
+	}
+	inline Type *getCast()
+	{
+		return cast_to;
 	}
 };
 
@@ -303,7 +351,6 @@ class StmtExpr : public Stmt
 	lex::Lexeme or_blk_var;
 	bool is_intrinsic_call;
 	FuncTy *calledfn;
-	size_t variadic_idx;
 
 public:
 	StmtExpr(const ModuleLoc &loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
@@ -330,10 +377,6 @@ public:
 	inline void setCalledFnTy(FuncTy *calledty)
 	{
 		calledfn = calledty;
-	}
-	inline void setVariadicIndex(const size_t &idx)
-	{
-		variadic_idx = idx;
 	}
 
 	inline const size_t &getCommas() const
@@ -367,10 +410,6 @@ public:
 	inline FuncTy *getCalledFn()
 	{
 		return calledfn;
-	}
-	inline const size_t &getVariadicIndex()
-	{
-		return variadic_idx;
 	}
 };
 
@@ -444,7 +483,6 @@ class StmtFnSig : public Stmt
 	StmtType *rettype;
 	size_t scope;	       // for locking scopes during type assign
 	bool disable_template; // this function is in use, contains no template
-	bool has_template;
 	bool has_variadic;
 
 public:
@@ -476,6 +514,10 @@ public:
 		has_variadic = va;
 	}
 
+	inline StmtVar *&getArg(const size_t &idx)
+	{
+		return args[idx];
+	}
 	inline std::vector<StmtVar *> &getArgs()
 	{
 		return args;
@@ -496,8 +538,6 @@ public:
 	{
 		return has_variadic;
 	}
-
-	bool hasTemplate();
 };
 
 class StmtFnDef : public Stmt
@@ -533,6 +573,10 @@ public:
 		return parentvar;
 	}
 
+	inline StmtVar *&getSigArg(const size_t &idx)
+	{
+		return sig->getArg(idx);
+	}
 	inline const std::vector<StmtVar *> &getSigArgs() const
 	{
 		return sig->getArgs();
@@ -599,6 +643,7 @@ class StmtExtern : public Stmt
 	StmtHeader *headers;
 	StmtLib *libs;
 	StmtFnSig *sig;
+	StmtVar *parentvar;
 
 public:
 	StmtExtern(const ModuleLoc &loc, const lex::Lexeme &fname, StmtHeader *headers,
@@ -612,6 +657,11 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+
+	inline void setParentVar(StmtVar *var)
+	{
+		parentvar = var;
+	}
 
 	inline const lex::Lexeme &getFnName() const
 	{
@@ -631,6 +681,10 @@ public:
 	inline StmtFnSig *&getSig()
 	{
 		return sig;
+	}
+	inline StmtVar *&getParentVar()
+	{
+		return parentvar;
 	}
 
 	inline const std::vector<StmtVar *> &getSigArgs() const

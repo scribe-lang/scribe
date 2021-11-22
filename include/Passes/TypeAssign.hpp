@@ -17,26 +17,28 @@
 #include "DeferStack.hpp"
 #include "Passes/Base.hpp"
 #include "Passes/ValueAssign.hpp"
-#include "TypeMgr.hpp"
+#include "ValueMgr.hpp"
 
 namespace sc
 {
 class TypeAssignPass : public Pass
 {
-	TypeManager tmgr;
+	ValueManager vmgr;
 	ValueAssignPass vpass;
 	DeferStack deferstack;
 	std::vector<StmtVar *> specfns; // specialized funcs
+	std::vector<size_t> valen;	// variadic length of current function
+	std::vector<bool> is_fn_va;
 	bool disabled_varname_mangling;
 
 	std::string getMangledName(Stmt *stmt, const std::string &name,
-				   ImportTy *import = nullptr) const;
+				   ImportVal *import = nullptr) const;
 	void applyPrimitiveTypeCoercion(Type *to, Stmt *from);
 	void applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex::Lexeme &oper);
 	bool chooseSuperiorPrimitiveType(Type *l, Type *r);
-	bool initTemplateFunc(Stmt *caller, Type *calledfn, std::vector<Stmt *> &args);
+	bool initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt *> &args);
 
-	void pushFunc(FuncTy *fn);
+	void pushFunc(FuncVal *fn, const bool &is_va, const size_t &va_len);
 	void popFunc();
 
 public:
@@ -67,6 +69,15 @@ public:
 	bool visit(StmtContinue *stmt, Stmt **source);
 	bool visit(StmtBreak *stmt, Stmt **source);
 	bool visit(StmtDefer *stmt, Stmt **source);
+
+	inline size_t getFnVALen() const
+	{
+		return valen.size() > 0 ? valen.back() : 0;
+	}
+	inline bool isFnVALen() const
+	{
+		return is_fn_va.size() > 0 ? is_fn_va.back() : false;
+	}
 };
 } // namespace sc
 

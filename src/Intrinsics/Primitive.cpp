@@ -10,372 +10,409 @@
 */
 
 #include "Intrinsics.hpp"
-#include "TypeMgr.hpp"
+#include "ValueMgr.hpp"
 
-#define GetType(i) args[i]->getType()
-
-#define GetIntVal(i) as<IntVal>(args[i]->getValue())->getVal()
-#define CreateIntVal(v) IntVal::create(c, v)
-#define GetFltVal(i) as<FltVal>(args[i]->getValue())->getVal()
-#define CreateFltVal(v) FltVal::create(c, v)
+#define GetInt(from) as<IntVal>(from->getValue())->getVal()
+#define GetFlt(from) as<FltVal>(from->getValue())->getVal()
 
 namespace sc
 {
 INTRINSIC(assn_int)
 {
-	args[0]->setVal(CreateIntVal(GetIntVal(1)));
-	stmt->setVal(CreateIntVal(GetIntVal(0)));
+	args[0]->updateValue(args[1]->getValue());
+	stmt->updateValue(args[0]->getValue());
 	return true;
 }
 
 INTRINSIC(assn_flt)
 {
-	args[0]->setVal(CreateFltVal(GetFltVal(1)));
-	stmt->setVal(CreateFltVal(GetFltVal(0)));
+	args[0]->updateValue(args[1]->getValue());
+	stmt->updateValue(args[0]->getValue());
 	return true;
 }
 
 INTRINSIC(add_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) + GetIntVal(1)));
+	auto res = GetInt(args[0]) + GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(sub_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) - GetIntVal(1)));
+	auto res = GetInt(args[0]) - GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(mul_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) * GetIntVal(1)));
+	auto res = GetInt(args[0]) * GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(div_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) / GetIntVal(1)));
+	auto res = GetInt(args[0]) / GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(mod_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) % GetIntVal(1)));
+	auto res = GetInt(args[0]) % GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(band_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) & GetIntVal(1)));
+	auto res = GetInt(args[0]) & GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(bor_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) | GetIntVal(1)));
+	auto res = GetInt(args[0]) | GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(bxor_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) ^ GetIntVal(1)));
+	auto res = GetInt(args[0]) ^ GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(lshift_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) << GetIntVal(1)));
+	auto res = GetInt(args[0]) << GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(rshift_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) >> GetIntVal(1)));
+	auto res = GetInt(args[0]) >> GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(add_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) + GetFltVal(1)));
+	auto res = GetFlt(args[0]) + GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(sub_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) - GetFltVal(1)));
+	auto res = GetFlt(args[0]) - GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(mul_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) * GetFltVal(1)));
+	auto res = GetFlt(args[0]) * GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(div_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) / GetFltVal(1)));
+	auto res = GetFlt(args[0]) / GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(addassn_int)
 {
-	GetIntVal(0) += GetIntVal(1);
-	stmt->setVal(CreateIntVal(GetIntVal(0)));
+	auto res = GetInt(args[0]) += GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(subassn_int)
 {
-	GetIntVal(0) -= GetIntVal(1);
-	stmt->setVal(CreateIntVal(GetIntVal(0)));
+	auto res = GetInt(args[0]) -= GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(mulassn_int)
 {
-	GetIntVal(0) *= GetIntVal(1);
-	stmt->setVal(CreateIntVal(GetIntVal(0)));
+	auto res = GetInt(args[0]) *= GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(divassn_int)
 {
-	GetIntVal(0) /= GetIntVal(1);
-	stmt->setVal(CreateIntVal(GetIntVal(0)));
+	auto res = GetInt(args[0]) /= GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(modassn_int)
 {
-	GetIntVal(0) %= GetIntVal(1);
-	stmt->setVal(CreateIntVal(GetIntVal(0)));
+	auto res = GetInt(args[0]) %= GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(bandassn_int)
 {
-	GetIntVal(0) &= GetIntVal(1);
-	stmt->setVal(CreateIntVal(GetIntVal(0)));
+	auto res = GetInt(args[0]) &= GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(borassn_int)
 {
-	GetIntVal(0) |= GetIntVal(1);
-	stmt->setVal(CreateIntVal(GetIntVal(0)));
+	auto res = GetInt(args[0]) |= GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(bxorassn_int)
 {
-	GetIntVal(0) ^= GetIntVal(1);
-	stmt->setVal(CreateIntVal(GetIntVal(0)));
+	auto res = GetInt(args[0]) ^= GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(lshiftassn_int)
 {
-	GetIntVal(0) <<= GetIntVal(1);
-	stmt->setVal(CreateIntVal(GetIntVal(0)));
+	auto res = GetInt(args[0]) <<= GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(rshiftassn_int)
 {
-	GetIntVal(0) >>= GetIntVal(1);
-	stmt->setVal(CreateIntVal(GetIntVal(0)));
+	auto res = GetInt(args[0]) >>= GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(addassn_flt)
 {
-	GetFltVal(0) += GetFltVal(1);
-	stmt->setVal(CreateFltVal(GetFltVal(0)));
+	auto res = GetFlt(args[0]) += GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(subassn_flt)
 {
-	GetFltVal(0) -= GetFltVal(1);
-	stmt->setVal(CreateFltVal(GetFltVal(0)));
+	auto res = GetFlt(args[0]) -= GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(mulassn_flt)
 {
-	GetFltVal(0) *= GetFltVal(1);
-	stmt->setVal(CreateFltVal(GetFltVal(0)));
+	auto res = GetFlt(args[0]) *= GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(divassn_flt)
 {
-	GetFltVal(0) /= GetFltVal(1);
-	stmt->setVal(CreateFltVal(GetFltVal(0)));
+	auto res = GetFlt(args[0]) /= GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(logand_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) && GetIntVal(1)));
+	auto res = GetInt(args[0]) && GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(logor_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) || GetIntVal(1)));
+	auto res = GetInt(args[0]) || GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(eq_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) == GetIntVal(1)));
+	auto res = GetInt(args[0]) == GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(lt_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) < GetIntVal(1)));
+	auto res = GetInt(args[0]) < GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(gt_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) > GetIntVal(1)));
+	auto res = GetInt(args[0]) > GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(le_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) <= GetIntVal(1)));
+	auto res = GetInt(args[0]) <= GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(ge_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) >= GetIntVal(1)));
+	auto res = GetInt(args[0]) >= GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(ne_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0) != GetIntVal(1)));
+	auto res = GetInt(args[0]) != GetInt(args[1]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(logand_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) && GetFltVal(1)));
+	auto res = GetFlt(args[0]) && GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(logor_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) || GetFltVal(1)));
+	auto res = GetFlt(args[0]) || GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(eq_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) == GetFltVal(1)));
+	auto res = GetFlt(args[0]) == GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(lt_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) < GetFltVal(1)));
+	auto res = GetFlt(args[0]) < GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(gt_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) > GetFltVal(1)));
+	auto res = GetFlt(args[0]) > GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(le_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) <= GetFltVal(1)));
+	auto res = GetFlt(args[0]) <= GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(ge_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) >= GetFltVal(1)));
+	auto res = GetFlt(args[0]) >= GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(ne_flt)
 {
-	stmt->setVal(CreateFltVal(GetFltVal(0) != GetFltVal(1)));
+	auto res = GetFlt(args[0]) != GetFlt(args[1]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(uadd_int)
 {
-	stmt->setVal(CreateIntVal(+GetIntVal(0)));
+	auto res = +GetInt(args[0]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(usub_int)
 {
-	stmt->setVal(CreateIntVal(-GetIntVal(0)));
+	auto res = -GetInt(args[0]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(lognot_int)
 {
-	stmt->setVal(CreateIntVal(!GetIntVal(0)));
+	auto res = !GetInt(args[0]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(bnot_int)
 {
-	stmt->setVal(CreateIntVal(~GetIntVal(0)));
+	auto res = ~GetInt(args[0]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(incx_int)
 {
-	stmt->setVal(CreateIntVal(++GetIntVal(0)));
+	auto res = ++GetInt(args[0]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(decx_int)
 {
-	stmt->setVal(CreateIntVal(--GetIntVal(0)));
+	auto res = --GetInt(args[0]);
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(uadd_flt)
 {
-	stmt->setVal(CreateFltVal(+GetFltVal(0)));
+	auto res = +GetFlt(args[0]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(usub_flt)
 {
-	stmt->setVal(CreateFltVal(-GetFltVal(0)));
+	auto res = -GetFlt(args[0]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(lognot_flt)
 {
-	stmt->setVal(CreateFltVal(!GetFltVal(0)));
+	auto res = !GetFlt(args[0]);
+	stmt->updateValue(FltVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(xinc_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0)++));
+	auto res = GetInt(args[0])++;
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 
 INTRINSIC(xdec_int)
 {
-	stmt->setVal(CreateIntVal(GetIntVal(0)--));
+	auto res = GetInt(args[0])--;
+	stmt->updateValue(IntVal::create(c, stmt->getValueTy(), CDTRUE, res));
 	return true;
 }
 } // namespace sc

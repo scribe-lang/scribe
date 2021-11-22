@@ -21,7 +21,7 @@ namespace sc
 
 void StmtBlock::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	for(auto &stmt : stmts) {
 		stmt->clearValue();
 	}
@@ -33,7 +33,7 @@ void StmtBlock::clearValue()
 
 void StmtType::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	expr->clearValue();
 }
 
@@ -43,7 +43,7 @@ void StmtType::clearValue()
 
 void StmtSimple::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -52,7 +52,7 @@ void StmtSimple::clearValue()
 
 void StmtFnCallInfo::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	for(auto &a : args) {
 		a->clearValue();
 	}
@@ -64,7 +64,7 @@ void StmtFnCallInfo::clearValue()
 
 void StmtExpr::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	lhs->clearValue();
 	if(rhs) rhs->clearValue();
 }
@@ -75,7 +75,7 @@ void StmtExpr::clearValue()
 
 void StmtVar::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	if(vtype) vtype->clearValue();
 	if(vval) vval->clearValue();
 }
@@ -86,7 +86,7 @@ void StmtVar::clearValue()
 
 void StmtFnSig::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	for(auto &a : args) a->clearValue();
 	if(rettype) rettype->clearValue();
 }
@@ -97,7 +97,7 @@ void StmtFnSig::clearValue()
 
 void StmtFnDef::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	sig->clearValue();
 	if(blk) blk->clearValue();
 }
@@ -108,7 +108,7 @@ void StmtFnDef::clearValue()
 
 void StmtHeader::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -117,7 +117,7 @@ void StmtHeader::clearValue()
 
 void StmtLib::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -126,7 +126,7 @@ void StmtLib::clearValue()
 
 void StmtExtern::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	if(headers) headers->clearValue();
 	if(libs) libs->clearValue();
 	sig->clearValue();
@@ -138,7 +138,7 @@ void StmtExtern::clearValue()
 
 void StmtEnum::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -147,7 +147,7 @@ void StmtEnum::clearValue()
 
 void StmtStruct::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	for(auto &f : fields) f->clearValue();
 }
 
@@ -157,7 +157,7 @@ void StmtStruct::clearValue()
 
 void StmtVarDecl::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	for(auto &d : decls) d->clearValue();
 }
 
@@ -167,7 +167,7 @@ void StmtVarDecl::clearValue()
 
 void StmtCond::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	for(auto &c : conds) {
 		if(c.getCond()) c.getCond()->clearValue();
 		if(c.getBlk()) c.getBlk()->clearValue();
@@ -180,7 +180,7 @@ void StmtCond::clearValue()
 
 void StmtForIn::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	in->clearValue();
 	if(blk) blk->clearValue();
 }
@@ -191,7 +191,7 @@ void StmtForIn::clearValue()
 
 void StmtFor::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	if(init) init->clearValue();
 	if(cond) cond->clearValue();
 	if(incr) incr->clearValue();
@@ -204,7 +204,7 @@ void StmtFor::clearValue()
 
 void StmtWhile::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	if(cond) cond->clearValue();
 	if(blk) blk->clearValue();
 }
@@ -215,7 +215,7 @@ void StmtWhile::clearValue()
 
 void StmtRet::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	if(val) val->clearValue();
 }
 
@@ -225,7 +225,7 @@ void StmtRet::clearValue()
 
 void StmtContinue::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -234,7 +234,7 @@ void StmtContinue::clearValue()
 
 void StmtBreak::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -243,7 +243,7 @@ void StmtBreak::clearValue()
 
 void StmtDefer::clearValue()
 {
-	setVal(nullptr);
+	if(values[valueid]) values[valueid]->clearHasData();
 	if(val) val->clearValue();
 }
 

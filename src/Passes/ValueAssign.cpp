@@ -18,6 +18,9 @@
 
 namespace sc
 {
+static bool break_stmt	  = false;
+static bool continue_stmt = false;
+
 ValueAssignPass::ValueAssignPass(ErrMgr &err, Context &ctx)
 	: Pass(Pass::genPassID<ValueAssignPass>(), err, ctx)
 {}
@@ -62,6 +65,7 @@ bool ValueAssignPass::visit(StmtBlock *stmt, Stmt **source)
 			err.set(stmt, "failed to assign type to stmt in block");
 			return false;
 		}
+		if(break_stmt || continue_stmt) break;
 	}
 	return true;
 }
@@ -73,46 +77,40 @@ bool ValueAssignPass::visit(StmtSimple *stmt, Stmt **source)
 {
 	lex::Lexeme &tok = stmt->getLexValue();
 	switch(stmt->getLexValue().getTok().getVal()) {
-	case lex::TRUE: stmt->setVal(IntVal::create(ctx, 1)); return true;
-	case lex::FALSE: stmt->setVal(IntVal::create(ctx, 0)); return true;
-	case lex::NIL: stmt->setVal(IntVal::create(ctx, 0)); return true;
-	case lex::INT: stmt->setVal(IntVal::create(ctx, tok.getDataInt())); return true;
-	case lex::FLT: stmt->setVal(FltVal::create(ctx, tok.getDataFlt())); return true;
-	case lex::CHAR: stmt->setVal(IntVal::create(ctx, tok.getDataInt())); return true;
-	case lex::STR: stmt->setVal(VecVal::createStr(ctx, tok.getDataStr())); return true;
-	case lex::IDEN: {
-		Type *ty = stmt->getType();
-		if(!ty) {
-			err.set(stmt, "cannot assign value to identifier without a type");
+	case lex::TRUE:	 // fallthrough
+	case lex::FALSE: // fallthrough
+	case lex::NIL:	 // fallthrough
+	case lex::INT:	 // fallthrough
+	case lex::FLT:	 // fallthrough
+	case lex::CHAR:	 // fallthrough
+	case lex::STR:	 // fallthrough
+	case lex::I1:	 // fallthrough
+	case lex::I8:	 // fallthrough
+	case lex::I16:	 // fallthrough
+	case lex::I32:	 // fallthrough
+	case lex::I64:	 // fallthrough
+	case lex::U8:	 // fallthrough
+	case lex::U16:	 // fallthrough
+	case lex::U32:	 // fallthrough
+	case lex::U64:	 // fallthrough
+	case lex::F32:	 // fallthrough
+	case lex::F64:	 // fallthrough
+	case lex::IDEN:
+		if(!stmt->getValue()->hasData() && stmt->getDecl() &&
+		   !visit(stmt->getDecl(), asStmt(&stmt->getDecl())))
+		{
+			err.set(stmt, "failed to determine value from declaration");
 			return false;
 		}
-		StmtVar *&decl = stmt->getDecl();
-		if(!decl) {
-			err.set(stmt, "failed to determine value - variable has no declaration");
-			return false;
-		}
-		if(!decl->getValue() && !visit(decl, asStmt(&decl))) {
-			err.set(stmt, "failed to determine value from variable declaration");
-			return false;
-		}
-		stmt->setVal(decl->getValue());
 		break;
-	}
-	case lex::I1:  // fallthrough
-	case lex::I8:  // fallthrough
-	case lex::I16: // fallthrough
-	case lex::I32: // fallthrough
-	case lex::I64: // fallthrough
-	case lex::U8:  // fallthrough
-	case lex::U16: // fallthrough
-	case lex::U32: // fallthrough
-	case lex::U64: stmt->setVal(IntVal::create(ctx, 0)); break;
-	case lex::F32: // fallthrough
-	case lex::F64: stmt->setVal(FltVal::create(ctx, 0)); break;
 	default: {
 		err.set(stmt, "cannot assign value - unknown simple type");
 		return false;
 	}
+	}
+	if(!stmt->getValue()->hasData()) {
+		err.set(stmt, "failed to assign value to entity: %s", tok.getDataStr().c_str());
+		return false;
 	}
 	return true;
 }
@@ -133,14 +131,17 @@ bool ValueAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	lex::TokType oper = stmt->getOper().getTok().getVal();
 
 	if(oper != lex::FNCALL && oper != lex::STCALL && lhs &&
-	   (!visit(lhs, &lhs) || !lhs->getValue())) {
-		err.set(stmt, "failed to determine value of LHS in expression");
+	   (!visit(lhs, &lhs) || !lhs->getValue()->hasData()))
+	{
+		err.set(stmt, "failed to determine value of LHS in expression with operation: %s",
+			stmt->getOper().getTok().getOperCStr());
 		return false;
 	}
 
 	if((oper == lex::DOT || oper == lex::ARROW)) goto skip_rhs_val;
-	if(rhs && (!visit(rhs, &rhs) || (!rhs->getValue() && rhs->getStmtType() != FNCALLINFO))) {
-		err.set(stmt, "failed to determine value of RHS in expression");
+	if(rhs && (!visit(rhs, &rhs) || (!rhs->isFnCallInfo() && !rhs->getValue()->hasData()))) {
+		err.set(stmt, "failed to determine value of RHS in expression with operation: %s",
+			stmt->getOper().getTok().getOperCStr());
 		return false;
 	}
 
@@ -148,45 +149,27 @@ skip_rhs_val:
 	switch(oper) {
 	case lex::ARROW: // fallthrough
 	case lex::DOT: {
-		StmtSimple *rsim = as<StmtSimple>(rhs);
-		// import no longer exists at this point
-		Value *res		     = nullptr;
-		const std::string &fieldname = rsim->getLexValue().getDataStr();
-		if(!lhs->getType()->isStruct()) {
-			err.set(stmt, "expected LHS to be struct for dot operation, found: %s",
-				lhs->getType()->toStr().c_str());
-			return false;
-		}
-		// struct.func() call
-		if(rhs->getType()->isFunc()) {
-			// this will be taken care of in lex::FNCALL:
-			return true;
-		}
-		res = as<StructVal>(lhs->getValue())->getValAttr(fieldname);
-		if(!res) {
-			err.set(stmt, "no value found for field '%s' in struct '%s'",
-				fieldname.c_str(), lhs->getType()->toStr().c_str());
-			return false;
-		}
-		rhs->setVal(res);
-		stmt->setVal(res);
+		// nothing to be done for dot operation since all that is required
+		// is already done in type assign pass
 		break;
 	}
 	case lex::FNCALL: {
-		if(!lhs->getType()->isFunc()) {
-			err.set(stmt, "a function call can be performed only on functions");
-			return false;
-		}
 		StmtFnCallInfo *callinfo      = as<StmtFnCallInfo>(rhs);
 		bool has_va		      = false;
 		std::vector<Stmt *> &callargs = callinfo->getArgs();
-		FuncTy *fn		      = as<FuncTy>(lhs->getType());
+		for(auto &a : callargs) {
+			if(!visit(a, &a)) {
+				err.set(stmt, "failed to determine value of arg in struct call");
+				return false;
+			}
+		}
+		FuncTy *fn = as<FuncTy>(lhs->getValueTy());
 		if(fn->isIntrinsic()) {
-			if(!fn->callIntrinsic(ctx, err, stmt, source, callargs, IVALUE)) {
+			if(!fn->isParseIntrinsic() &&
+			   !fn->callIntrinsic(ctx, err, stmt, source, callargs)) {
 				err.set(stmt, "failed to call value intrinsic");
 				return false;
 			}
-			if(stmt->getValue()) stmt->setPermaVal(stmt->getValue());
 			return true;
 		}
 		if(!fn->getVar()) {
@@ -200,45 +183,43 @@ skip_rhs_val:
 			err.set(stmt, "function has no definition to execute");
 			return false;
 		}
-		std::vector<Value *> variadicvalues;
-		for(size_t i = 0, j = 0; i < defargs.size() && j < callargs.size(); ++i, ++j) {
-			if(fn->getArg(i)->isVariadic()) {
-				--i;
-				variadicvalues.push_back(callargs[j]->getValue());
-				continue;
-			}
-			Value *aval = callargs[j]->getValue();
-			if(!def->getSigArgs()[i]->getType()->hasRef()) aval = aval->clone(ctx);
-			def->getSigArgs()[i]->setVal(aval);
+		if(defargs.size() != callargs.size()) {
+			err.set(stmt,
+				"function definition and call must "
+				"have same argument len (def: %zu, call: %zu)\n",
+				defargs.size(), callargs.size());
+			return false;
 		}
-		if(!variadicvalues.empty()) {
-			defargs.back()->setVal(VecVal::create(ctx, variadicvalues));
+		for(size_t i = 0; i < defargs.size(); ++i) {
+			Value *aval = callargs[i]->getValue();
+			def->getSigArg(i)->updateValue(aval);
 		}
 		if(!visit(def, &fndef)) {
 			err.set(stmt, "failed to determine value from function definition");
 			return false;
 		}
-		stmt->setPermaVal(def->getValue());
+		// update the callee's arguments if they are references
+		for(size_t i = 0; i < defargs.size(); ++i) {
+			Value *aval = callargs[i]->getValue();
+			if(def->getSigArg(i)->getValueTy()->hasRef()) {
+				aval->updateValue(defargs[i]->getValue());
+			}
+		}
+
+		stmt->updateValue(def->getBlk()->getValue());
 		def->clearValue();
 		break;
 	}
 	case lex::STCALL: {
-		if(!lhs->getType()->isStruct()) {
-			err.set(stmt, "a struct call can be performed only on struct defs");
-			return false;
-		}
 		StmtFnCallInfo *callinfo      = as<StmtFnCallInfo>(rhs);
 		std::vector<Stmt *> &callargs = callinfo->getArgs();
-		StructTy *st		      = as<StructTy>(lhs->getType());
-		std::unordered_map<std::string, Value *> stvals;
-		for(size_t i = 0; i < st->getFields().size(); ++i) {
-			if(!callinfo->getArg(i)->getValue()) {
-				err.set(stmt, "argument %zu has no comptime value", i);
+		for(auto &a : callargs) {
+			if(!visit(a, &a)) {
+				err.set(stmt, "failed to determine value of arg in struct call");
 				return false;
 			}
-			stvals[st->getFieldName(i)] = callinfo->getArg(i)->getValue();
 		}
-		stmt->setVal(StructVal::create(ctx, stvals));
+		stmt->getValue()->setContainsData();
 		break;
 	}
 	// address of
@@ -248,30 +229,18 @@ skip_rhs_val:
 		break;
 	}
 	case lex::SUBS: {
-		if(lhs->getType()->isVariadic()) {
-			assert(lhs->getValue()->getType() == VVEC &&
-			       "value of variadic must be a vector");
-			VecVal *vaval = as<VecVal>(lhs->getValue());
-			IntVal *iv    = as<IntVal>(rhs->getValue());
-			stmt->setVal(vaval->getVal()[iv->getVal()]);
-			break;
-		} else if(lhs->getType()->isPtr()) {
-			assert(lhs->getValue()->getType() == VVEC &&
-			       "value of pointer/array must be a vector");
-			VecVal *vaval = as<VecVal>(lhs->getValue());
-			IntVal *iv    = as<IntVal>(rhs->getValue());
-			if(vaval->getVal().size() <= iv->getVal()) {
-				err.set(stmt, "index out of bounds of pointer/array");
-				return false;
-			}
-			stmt->setVal(vaval->getVal()[iv->getVal()]);
-			break;
+		if(!lhs->getValueTy()->isPtr()) goto applyoperfn;
+		assert(lhs->getValue()->isVec() && "value of pointer/array must be a vector");
+		VecVal *vaval = as<VecVal>(lhs->getValue());
+		IntVal *iv    = as<IntVal>(rhs->getValue());
+		if(vaval->getVal().size() <= iv->getVal()) {
+			err.set(stmt, "index out of bounds of pointer/array");
+			return false;
 		}
-		goto applyoperfn;
+		stmt->updateValue(vaval->getValAt(iv->getVal()));
+		break;
 	}
-	case lex::ASSN: {
-		goto applyoperfn;
-	}
+	case lex::ASSN:
 	// Arithmetic
 	case lex::ADD:
 	case lex::SUB:
@@ -319,16 +288,24 @@ skip_rhs_val:
 	applyoperfn:
 		std::vector<Stmt *> args = {lhs};
 		if(rhs) args.push_back(rhs);
+		for(auto &a : args) {
+			if(!visit(a, &a)) {
+				err.set(stmt, "failed to determine value of arg in struct call");
+				return false;
+			}
+		}
 		FuncTy *fn = stmt->getCalledFn();
 		if(fn->isIntrinsic()) {
-			if(!fn->callIntrinsic(ctx, err, stmt, source, args, IVALUE)) {
+			if(!fn->isParseIntrinsic() &&
+			   !fn->callIntrinsic(ctx, err, stmt, source, args)) {
 				err.set(stmt, "failed to call value intrinsic");
 				return false;
 			}
 			return true;
 		}
-		Stmt *&fndef   = fn->getVar()->getVVal();
-		StmtFnDef *def = as<StmtFnDef>(fndef);
+		Stmt *&fndef			      = fn->getVar()->getVVal();
+		StmtFnDef *def			      = as<StmtFnDef>(fndef);
+		const std::vector<StmtVar *> &defargs = def->getSigArgs();
 		if(!fndef) {
 			err.set(stmt, "function has no definition to execute");
 			return false;
@@ -337,14 +314,22 @@ skip_rhs_val:
 			err.set(stmt, "function def and call must have same argument count");
 			return false;
 		}
-		for(size_t i = 0; i < def->getSigArgs().size(); ++i) {
-			def->getSigArgs()[i]->setVal(args[i]->getValue());
+		for(size_t i = 0; i < defargs.size(); ++i) {
+			Value *aval = args[i]->getValue();
+			def->getSigArg(i)->updateValue(aval);
 		}
 		if(!visit(def, &fndef)) {
 			err.set(stmt, "failed to determine value from function definition");
 			return false;
 		}
-		stmt->setPermaVal(def->getValue());
+		// update the callee's arguments if they are references
+		for(size_t i = 0; i < defargs.size(); ++i) {
+			Value *aval = args[i]->getValue();
+			if(def->getSigArg(i)->getValueTy()->hasRef()) {
+				aval->updateValue(def->getSigArg(i)->getValue());
+			}
+		}
+		stmt->updateValue(def->getBlk()->getValue());
 		def->clearValue();
 		break;
 	}
@@ -362,7 +347,7 @@ bool ValueAssignPass::visit(StmtVar *stmt, Stmt **source)
 		err.set(stmt, "failed to determine value for variable");
 		return false;
 	}
-	stmt->setVal(val->getValue());
+	stmt->updateValue(val->getValue());
 	return true;
 }
 bool ValueAssignPass::visit(StmtFnSig *stmt, Stmt **source)
@@ -381,7 +366,7 @@ bool ValueAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 		err.set(stmt, "failed to determine value from function definition block");
 		return false;
 	}
-	stmt->setVal(blk->getValue());
+	stmt->updateValue(blk->getValue());
 	return true;
 }
 bool ValueAssignPass::visit(StmtHeader *stmt, Stmt **source)
@@ -416,6 +401,40 @@ bool ValueAssignPass::visit(StmtVarDecl *stmt, Stmt **source)
 }
 bool ValueAssignPass::visit(StmtCond *stmt, Stmt **source)
 {
+	if(stmt->isInline()) {
+		if(stmt->getConditionals().empty()) return true;
+		StmtBlock *&blk = stmt->getConditionals()[0].getBlk();
+		if(!visit(blk, asStmt(&blk))) {
+			err.set(stmt, "failed to determine value for inline conditional block");
+			return false;
+		}
+		return true;
+	}
+	for(auto &c : stmt->getConditionals()) {
+		Stmt *&cond	= c.getCond();
+		StmtBlock *&blk = c.getBlk();
+		if(!cond) {
+			if(!visit(blk, asStmt(&blk))) {
+				err.set(stmt, "failed to determine else-block value");
+				return false;
+			}
+			break;
+		}
+		if(!visit(cond, &cond)) {
+			err.set(stmt, "failed to determine conditional value");
+			return false;
+		}
+		if(!(cond->getValue()->isInt() && as<IntVal>(cond->getValue())->getVal()) &&
+		   !(cond->getValue()->isFlt() && as<FltVal>(cond->getValue())->getVal()))
+		{
+			continue;
+		}
+		if(!visit(blk, asStmt(&blk))) {
+			err.set(stmt, "failed to determine conditional-block value");
+			return false;
+		}
+		break;
+	}
 	return true;
 }
 bool ValueAssignPass::visit(StmtForIn *stmt, Stmt **source)
@@ -424,10 +443,81 @@ bool ValueAssignPass::visit(StmtForIn *stmt, Stmt **source)
 }
 bool ValueAssignPass::visit(StmtFor *stmt, Stmt **source)
 {
+	Stmt *&init	= stmt->getInit();
+	Stmt *&cond	= stmt->getCond();
+	Stmt *&incr	= stmt->getIncr();
+	StmtBlock *&blk = stmt->getBlk();
+	if(stmt->isInline()) {
+		if(init && !visit(init, &init)) {
+			err.set(stmt, "failed to determine init value for inline for loop");
+			return false;
+		}
+		if(!visit(blk, asStmt(&blk))) {
+			err.set(stmt, "failed to determine block value for inline for loop");
+			return false;
+		}
+		stmt->clearValue();
+		return true;
+	}
+	if(init && !visit(init, &init)) {
+		err.set(stmt, "failed to determine value for for-init statement");
+		return false;
+	}
+	if(!cond) {
+		err.set(stmt, "condition must be present in for loop for value assignment pass");
+		return false;
+	}
+	if(!visit(cond, &cond)) {
+		err.set(stmt, "failed to determine value for for-condition expression");
+		return false;
+	}
+	while((cond->getValue()->isInt() && as<IntVal>(cond->getValue())->getVal()) ||
+	      (cond->getValue()->isFlt() && as<FltVal>(cond->getValue())->getVal()))
+	{
+		if(!visit(blk, asStmt(&blk))) {
+			err.set(stmt, "failed to determine value for for-loop block");
+			return false;
+		}
+		continue_stmt = false;
+		if(break_stmt) break;
+		if(incr) incr->clearValue();
+		if(incr && !visit(incr, &incr)) {
+			err.set(stmt, "failed to determine incr value for for-loop");
+			return false;
+		}
+		cond->clearValue();
+		if(!visit(cond, &cond)) {
+			err.set(stmt, "failed to determine value for for-condition expression");
+			return false;
+		}
+	}
+	break_stmt = false;
 	return true;
 }
 bool ValueAssignPass::visit(StmtWhile *stmt, Stmt **source)
 {
+	Stmt *&cond	= stmt->getCond();
+	StmtBlock *&blk = stmt->getBlk();
+	if(!visit(cond, &cond)) {
+		err.set(stmt, "failed to determine value for for-condition expression");
+		return false;
+	}
+	while((cond->getValue()->isInt() && as<IntVal>(cond->getValue())->getVal()) ||
+	      (cond->getValue()->isFlt() && as<FltVal>(cond->getValue())->getVal()))
+	{
+		if(!visit(blk, asStmt(&blk))) {
+			err.set(stmt, "failed to determine value for for-loop block");
+			return false;
+		}
+		continue_stmt = false;
+		if(break_stmt) break;
+		cond->clearValue();
+		if(!visit(cond, &cond)) {
+			err.set(stmt, "failed to determine value for for-condition expression");
+			return false;
+		}
+	}
+	break_stmt = false;
 	return true;
 }
 bool ValueAssignPass::visit(StmtRet *stmt, Stmt **source)
@@ -437,16 +527,20 @@ bool ValueAssignPass::visit(StmtRet *stmt, Stmt **source)
 		err.set(stmt, "failed to determine value of return argument");
 		return false;
 	}
-	stmt->setVal(val ? val->getValue() : VoidVal::create(ctx));
-	stmt->getFnBlk()->setVal(stmt->getValue());
+	// nothing to do for VoidVal
+	if(!val) return true;
+	stmt->updateValue(val->getValue());
+	stmt->getFnBlk()->updateValue(stmt->getValue());
 	return true;
 }
 bool ValueAssignPass::visit(StmtContinue *stmt, Stmt **source)
 {
+	continue_stmt = true;
 	return true;
 }
 bool ValueAssignPass::visit(StmtBreak *stmt, Stmt **source)
 {
+	break_stmt = true;
 	return true;
 }
 bool ValueAssignPass::visit(StmtDefer *stmt, Stmt **source)

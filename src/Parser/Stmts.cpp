@@ -17,13 +17,31 @@
 
 namespace sc
 {
+std::unordered_map<uint64_t, Value *> values = {{0, nullptr}};
+uint64_t genValueID()
+{
+	static uint64_t vid = 1;
+	return vid++;
+}
+uint64_t createValueIDWith(Value *v)
+{
+	uint64_t id = genValueID();
+	values[id]  = v;
+	return id;
+}
+Value *getValueWithID(const uint64_t &id)
+{
+	auto loc = values.find(id);
+	if(loc == values.end()) return nullptr;
+	return loc->second;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////// Stmt //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc &loc)
-	: stype(stmt_type), loc(loc), type(nullptr), cast_from(nullptr), value(nullptr),
-	  is_value_perma(false)
+	: stype(stmt_type), loc(loc), valueid(0), cast_to(nullptr)
 {}
 Stmt::~Stmt() {}
 
@@ -58,10 +76,11 @@ const char *Stmt::getStmtTypeCString() const
 
 std::string Stmt::getTypeString() const
 {
-	if(!type) return "";
-	std::string res = " :: " + type->toStr();
-	if(cast_from) res += " <- " + cast_from->toStr();
-	if(value) res += " ==> " + value->toStr();
+	if(!values[valueid]) return "";
+	std::string res = " :<" + std::to_string(valueid) + ">: ";
+	res += values[valueid]->getType()->toStr();
+	if(cast_to) res += " -> " + cast_to->toStr();
+	if(values[valueid]->hasData()) res += " ==> " + values[valueid]->toStr();
 	return res;
 }
 
@@ -82,7 +101,8 @@ StmtBlock *StmtBlock::create(Context &c, const ModuleLoc &loc, const std::vector
 void StmtBlock::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Block [top = %s]:\n", is_top ? "yes" : "no");
+	tio::print(has_next, "Block [top = %s]:%s\n", is_top ? "yes" : "no",
+		   getTypeString().c_str());
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(!stmts[i]) {
 			tio::taba(has_next);
@@ -191,7 +211,7 @@ void StmtSimple::disp(const bool &has_next) const
 bool StmtSimple::requiresTemplateInit()
 {
 	if(val.getTok().getVal() == lex::ANY || val.getTok().getVal() == lex::TYPE) return true;
-	return decl ? decl->requiresTemplateInit() : false;
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -238,7 +258,7 @@ bool StmtFnCallInfo::requiresTemplateInit()
 StmtExpr::StmtExpr(const ModuleLoc &loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
 		   Stmt *rhs, const bool &is_intrinsic_call)
 	: Stmt(EXPR, loc), commas(commas), lhs(lhs), oper(oper), rhs(rhs), or_blk(nullptr),
-	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call), calledfn(nullptr), variadic_idx(0)
+	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call), calledfn(nullptr)
 {}
 StmtExpr::~StmtExpr() {}
 StmtExpr *StmtExpr::create(Context &c, const ModuleLoc &loc, const size_t &commas, Stmt *lhs,
@@ -340,7 +360,7 @@ bool StmtVar::requiresTemplateInit()
 StmtFnSig::StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtType *rettype,
 		     const size_t &scope, const bool &has_variadic)
 	: Stmt(FNSIG, loc), args(args), rettype(rettype), scope(scope), disable_template(false),
-	  has_template(false), has_variadic(has_variadic)
+	  has_variadic(has_variadic)
 {}
 StmtFnSig::~StmtFnSig() {}
 StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc &loc, std::vector<StmtVar *> &args,
@@ -373,26 +393,15 @@ void StmtFnSig::disp(const bool &has_next) const
 
 bool StmtFnSig::requiresTemplateInit()
 {
-	if(hasTemplate() || has_variadic) return true;
+	if(disable_template) return false;
+	if(has_variadic) return true;
 	for(auto &a : args) {
-		if(a->getType() && a->getType()->isTemplate()) return true;
+		if(a->getValue()->getType()->isTemplate()) return true;
 		if(a->isComptime()) return true;
 	}
-	if(rettype->getType() && rettype->getType()->isTemplate()) return true;
+	if(rettype->getValue()->getType()->isTemplate()) return true;
 	disable_template = true;
 	return false;
-}
-
-bool StmtFnSig::hasTemplate()
-{
-	if(has_template) return true;
-	for(auto &a : args) {
-		if(!a->getType()->isTemplate()) continue;
-		has_template = true;
-		break;
-	}
-	if(rettype->getType()->isTemplate()) has_template = true;
-	return has_template;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -495,7 +504,8 @@ bool StmtLib::requiresTemplateInit()
 
 StmtExtern::StmtExtern(const ModuleLoc &loc, const lex::Lexeme &fname, StmtHeader *headers,
 		       StmtLib *libs, StmtFnSig *sig)
-	: Stmt(EXTERN, loc), fname(fname), headers(headers), libs(libs), sig(sig)
+	: Stmt(EXTERN, loc), fname(fname), headers(headers), libs(libs), sig(sig),
+	  parentvar(nullptr)
 {}
 StmtExtern::~StmtExtern() {}
 StmtExtern *StmtExtern::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &fname,
@@ -507,8 +517,8 @@ StmtExtern *StmtExtern::create(Context &c, const ModuleLoc &loc, const lex::Lexe
 void StmtExtern::disp(const bool &has_next) const
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Extern for %s%s\n", fname.getDataStr().c_str(),
-		   getTypeString().c_str());
+	tio::print(has_next, "Extern for %s [has parent: %s]%s\n", fname.getDataStr().c_str(),
+		   parentvar ? "yes" : "no", getTypeString().c_str());
 	if(headers) {
 		tio::taba(libs || sig);
 		tio::print(libs || sig, "Headers:\n");
@@ -533,7 +543,7 @@ void StmtExtern::disp(const bool &has_next) const
 
 bool StmtExtern::requiresTemplateInit()
 {
-	return false;
+	return sig->requiresTemplateInit();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

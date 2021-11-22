@@ -11,12 +11,13 @@
 	furnished to do so.
 */
 
-#include "../include/Env.hpp"
+#include "Env.hpp"
 
 #include <cstdlib>
 #include <cstring>
 
-#include "../include/FS.hpp"
+#include "FS.hpp"
+#include "Utils.hpp"
 
 #if __APPLE__
 	#include <mach-o/dyld.h> // for _NSGetExecutablePath()
@@ -60,6 +61,19 @@ std::string getProcPath()
 	_NSGetExecutablePath(path, &sz);
 #endif
 	return path;
+}
+
+std::string getExeFromPath(const std::string &exe)
+{
+	std::string path = get("PATH");
+	if(path.empty()) return "";
+
+	std::vector<std::string> paths = stringDelim(path, ":");
+
+	for(auto &p : paths) {
+		if(fs::exists(p + "/" + exe)) return p + "/" + exe;
+	}
+	return "";
 }
 } // namespace env
 } // namespace sc
