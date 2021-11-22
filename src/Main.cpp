@@ -12,6 +12,7 @@
 */
 
 #include <cstdio>
+#include <cstring>
 #include <stdexcept>
 
 #include "Args.hpp"
@@ -26,12 +27,15 @@ int main(int argc, char **argv)
 {
 	using namespace sc;
 	args::ArgParser args(argc, (const char **)argv);
-	args.add("version").set_short("v").set_long("version").set_help("prints program version");
-	args.add("tokens").set_short("t").set_long("tokens").set_help("shows lexical tokens");
-	args.add("parse").set_short("p").set_long("parse").set_help("shows AST");
-	args.add("semantic").set_short("s").set_long("semantic").set_help("shows Semantic Tree");
-	args.add("ir").set_short("i").set_long("ir").set_help("shows codegen IR");
-	args.add("nofile").set_short("n").set_long("nofile").set_help("disables output to a file");
+	args.add("version").set_short("v").set_help("prints program version");
+	args.add("tokens").set_short("t").set_help("shows lexical tokens");
+	args.add("parse").set_short("p").set_help("shows AST");
+	args.add("semantic").set_short("s").set_help("shows Semantic Tree");
+	args.add("ir").set_short("i").set_help("shows codegen IR");
+	args.add("nofile").set_short("n").set_help("disables output to a file");
+	args.add("opt").set_short("O").set_val_reqd(true).set_help("set optimization level");
+	args.add("std").set_short("std").set_val_reqd(true).set_help("set C standard");
+	args.add("llir").set_short("llir").set_help("emit LLVM IR (C backend)");
 
 	args.parse();
 
@@ -67,9 +71,12 @@ int main(int argc, char **argv)
 	CDriver cdriver(parser);
 	std::string outfile = args.get(2);
 	if(outfile.empty()) {
-		fprintf(stderr, "Error: no output file provided\n");
-		return 1;
+		char f[2048] = {0};
+		strcpy(f, file.c_str());
+		outfile = basename(f);
 	}
-	if(!cdriver.compile(args.get(2), args.has("ir"))) return 1;
+	auto ext = outfile.find_last_of('.');
+	if(ext != std::string::npos) outfile = outfile.substr(0, ext);
+	if(!cdriver.compile(outfile)) return 1;
 	return 0;
 }
