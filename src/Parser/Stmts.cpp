@@ -315,7 +315,8 @@ bool StmtExpr::requiresTemplateInit()
 StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
 		 const bool &is_in, const bool &is_comptime, const bool &is_global)
 	: Stmt(VAR, loc), name(name), is_in(is_in), vtype(vtype), vval(vval),
-	  is_comptime(is_comptime), is_global(is_global), applied_module_id(false)
+	  is_comptime(is_comptime), is_global(is_global), applied_module_id(false),
+	  applied_codegen_mangle(false)
 {}
 StmtVar::~StmtVar() {}
 StmtVar *StmtVar::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype,
@@ -409,7 +410,7 @@ bool StmtFnSig::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtFnDef::StmtFnDef(const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk)
-	: Stmt(FNDEF, loc), sig(sig), blk(blk), parentvar(nullptr), used(false)
+	: Stmt(FNDEF, loc), sig(sig), blk(blk), parentvar(nullptr), used(0)
 {}
 StmtFnDef::~StmtFnDef() {}
 StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk)

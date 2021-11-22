@@ -58,7 +58,7 @@ bool SimplifyPass::visit(StmtBlock *stmt, Stmt **source)
 	auto &stmts = stmt->getStmts();
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(!visit(stmts[i], &stmts[i])) {
-			err.set(stmt, "failed to assign type to stmt in block");
+			err.set(stmt, "failed to perform simplify pass on stmt in block");
 			return false;
 		}
 		if(!stmts[i]) {
@@ -84,11 +84,6 @@ bool SimplifyPass::visit(StmtType *stmt, Stmt **source)
 }
 bool SimplifyPass::visit(StmtSimple *stmt, Stmt **source)
 {
-	switch(stmt->getLexValue().getTok().getVal()) {
-	case lex::IDEN: break;
-	default: return true;
-	}
-	stmt->getLexValue().setDataStr(getMangledName(stmt->getLexValue().getDataStr(), stmt));
 	return true;
 }
 bool SimplifyPass::visit(StmtFnCallInfo *stmt, Stmt **source)
@@ -129,7 +124,6 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 			stmt->getName().getDataStr().c_str());
 		return false;
 	}
-	stmt->getName().setDataStr(getMangledName(stmt->getName().getDataStr(), stmt));
 	if(stmt->getValue()->isImport()) {
 		*source = nullptr;
 		return true;
@@ -142,9 +136,10 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 				err.set(stmt, "multiple main functions found");
 				return false;
 			}
-			as<StmtFnDef>(stmt->getVVal())->setUsed();
+			as<StmtFnDef>(stmt->getVVal())->incUsed();
 			maindone = true;
 			stmt->getName().setDataStr("main");
+			stmt->setCodeGenMangle(true);
 		}
 	}
 	bool had_val = stmt->getVVal();
@@ -208,8 +203,8 @@ bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
 		return true;
 	}
 	if(!stmt->isUsed()) {
-		printf("unused: %s\n", stmt->getValue()->toStr().c_str());
-		*source = nullptr;
+		stmt->decUsed();
+		// No point in continuing as this will be erased in CleanupPass
 		return true;
 	}
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
@@ -364,5 +359,4 @@ bool SimplifyPass::trySetMainFunction(StmtVar *var, const std::string &varname)
 	}
 	return false;
 }
-
 } // namespace sc

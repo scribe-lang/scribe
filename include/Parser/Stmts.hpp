@@ -68,6 +68,7 @@ public:
 	virtual Stmt *clone(Context &ctx)	      = 0;
 	virtual void clearValue()		      = 0;
 	virtual bool requiresTemplateInit()	      = 0;
+	virtual void _setFuncUsed(const bool &inc)    = 0;
 
 	const char *getStmtTypeCString() const;
 	std::string getTypeString() const;
@@ -200,6 +201,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline std::vector<Stmt *> &getStmts()
 	{
@@ -228,6 +230,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline void addTypeInfoMask(const size_t &mask)
 	{
@@ -281,6 +284,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline void setDecl(StmtVar *d)
 	{
@@ -330,6 +334,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline std::vector<Stmt *> &getArgs()
 	{
@@ -364,6 +369,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline void setCommas(const size_t &c)
 	{
@@ -422,6 +428,7 @@ class StmtVar : public Stmt
 	bool is_comptime;
 	bool is_global;
 	bool applied_module_id;
+	bool applied_codegen_mangle;
 
 public:
 	StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
@@ -436,10 +443,15 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline void setVVal(Stmt *val)
 	{
 		vval = val;
+	}
+	inline void setCodeGenMangle(const bool &cgmangle)
+	{
+		applied_codegen_mangle = cgmangle;
 	}
 
 	inline lex::Lexeme &getName()
@@ -474,6 +486,10 @@ public:
 	{
 		return applied_module_id;
 	}
+	inline bool isCodeGenMangled()
+	{
+		return applied_codegen_mangle;
+	}
 };
 
 class StmtFnSig : public Stmt
@@ -496,6 +512,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline void insertArg(const size_t &pos, StmtVar *arg)
 	{
@@ -545,7 +562,7 @@ class StmtFnDef : public Stmt
 	StmtFnSig *sig;
 	StmtBlock *blk;
 	StmtVar *parentvar;
-	bool used; // if unused (false), will be deleted in SimplifyPass
+	int64_t used; // if unused (false), will be deleted in SimplifyPass
 
 public:
 	StmtFnDef(const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk);
@@ -556,18 +573,19 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline void setParentVar(StmtVar *pvar)
 	{
 		parentvar = pvar;
 	}
-	inline void setUsed()
+	inline void incUsed()
 	{
-		used = true;
+		_setFuncUsed(true);
 	}
-	inline void unsetUsed()
+	inline void decUsed()
 	{
-		used = false;
+		_setFuncUsed(false);
 	}
 	inline StmtFnSig *&getSig()
 	{
@@ -600,6 +618,10 @@ public:
 	}
 	inline bool isUsed()
 	{
+		return used > 0;
+	}
+	inline int64_t getUsed()
+	{
 		return used;
 	}
 };
@@ -619,6 +641,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline const lex::Lexeme &getNames() const
 	{
@@ -643,6 +666,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline const lex::Lexeme &getFlags() const
 	{
@@ -670,6 +694,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline void setParentVar(StmtVar *var)
 	{
@@ -728,6 +753,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline const std::vector<lex::Lexeme> &getItems() const
 	{
@@ -754,6 +780,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline std::vector<StmtVar *> &getFields()
 	{
@@ -782,6 +809,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline std::vector<StmtVar *> &getDecls()
 	{
@@ -838,6 +866,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline std::vector<Conditional> &getConditionals()
 	{
@@ -865,6 +894,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline const lex::Lexeme &getIter() const
 	{
@@ -900,6 +930,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline Stmt *&getInit()
 	{
@@ -937,6 +968,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline Stmt *&getCond()
 	{
@@ -962,6 +994,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline void setFnBlk(StmtBlock *blk)
 	{
@@ -988,6 +1021,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 };
 
 class StmtBreak : public Stmt
@@ -1000,6 +1034,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 };
 
 class StmtDefer : public Stmt
@@ -1015,6 +1050,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
+	void _setFuncUsed(const bool &inc);
 
 	inline Stmt *&getVal()
 	{

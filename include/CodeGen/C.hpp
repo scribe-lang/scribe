@@ -49,6 +49,11 @@ class CDriver : public CodeGenDriver
 	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
 	std::string getSystemCompiler();
 
+	inline std::string getMangledName(const std::string &name, Stmt *stmt)
+	{
+		return name + std::to_string(stmt->getValueTy(true)->getID());
+	}
+
 public:
 	CDriver(RAIIParser &parser);
 	~CDriver();
