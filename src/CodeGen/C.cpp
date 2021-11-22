@@ -234,7 +234,7 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 	// The following part is only valid for existing variables.
 	// the part for variable declaration exists in Var visit
 	if(stmt->getValueTy(true)->hasRef()) writer.write("(*"); // for references
-	writer.write(stmt->getLexValue().getDataStr());
+	writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
 	if(stmt->getValueTy(true)->hasRef()) writer.write(")"); // for references
 	if(semicol) writer.write(";");
 	return true;
@@ -416,6 +416,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 {
 	writer.clear();
 	std::string varname = stmt->getName().getDataStr();
+	if(!stmt->isCodeGenMangled()) varname = getMangledName(varname, stmt);
 
 	if(stmt->getVVal() && stmt->getVVal()->getStmtType() == EXTERN) {
 		StmtExtern *ext	  = as<StmtExtern>(stmt->getVVal());

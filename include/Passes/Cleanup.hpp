@@ -11,20 +11,19 @@
 	furnished to do so.
 */
 
-#ifndef PASSES_SIMPLIFY_HPP
-#define PASSES_SIMPLIFY_HPP
+#ifndef PASSES_CLEANUP_HPP
+#define PASSES_CLEANUP_HPP
 
 #include "Passes/Base.hpp"
 
 namespace sc
 {
-class SimplifyPass : public Pass
+// Cleans up unused functions
+class CleanupPass : public Pass
 {
-	bool trySetMainFunction(StmtVar *var, const std::string &varname);
-
 public:
-	SimplifyPass(ErrMgr &err, Context &ctx);
-	~SimplifyPass();
+	CleanupPass(ErrMgr &err, Context &ctx);
+	~CleanupPass();
 
 	bool visit(Stmt *stmt, Stmt **source);
 
@@ -53,4 +52,4 @@ public:
 };
 } // namespace sc
 
-#endif // PASSES_SIMPLIFY_HPP
+#endif // PASSES_CLEANUP_HPP

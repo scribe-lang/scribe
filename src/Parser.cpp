@@ -19,6 +19,7 @@
 #include "FS.hpp"
 #include "Parser/Parse.hpp"
 #include "Parser/ParseHelper.hpp"
+#include "Passes/Cleanup.hpp"
 #include "Passes/Simplify.hpp"
 #include "Passes/TypeAssign.hpp"
 #include "Utils.hpp"
@@ -96,6 +97,7 @@ RAIIParser::RAIIParser(args::ArgParser &args)
 {
 	defaultpmpermodule.add<TypeAssignPass>();
 	defaultpmcombined.add<SimplifyPass>();
+	defaultpmcombined.add<CleanupPass>();
 }
 RAIIParser::~RAIIParser()
 {

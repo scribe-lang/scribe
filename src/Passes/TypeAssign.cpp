@@ -357,9 +357,6 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				return false;
 			}
 			stmt->setCalledFnTy(fn);
-			if(fn->getVar() && fn->getVar()->getVVal()->isFnDef()) {
-				as<StmtFnDef>(fn->getVar()->getVVal())->setUsed();
-			}
 			// apply template specialization
 			if(!initTemplateFunc(stmt, fn, args)) return false;
 		} else if(lhs->getValueTy()->isStruct()) {
@@ -583,9 +580,6 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			return false;
 		}
 		stmt->setCalledFnTy(fn);
-		if(fn->getVar() && fn->getVar()->getVVal()->isFnDef()) {
-			as<StmtFnDef>(fn->getVar()->getVVal())->setUsed();
-		}
 		if(!initTemplateFunc(stmt, fn, args)) {
 			err.set(stmt, "failed to intialize template function");
 			return false;
@@ -1097,7 +1091,10 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 	if(!cf->getVar() || !cf->getVar()->getVVal()) return true;
 	StmtVar *&cfvar = cf->getVar();
 	if(!cfvar) return true;
-	if(!cfvar->getVVal()->requiresTemplateInit()) return true;
+	if(!cfvar->getVVal()->requiresTemplateInit()) {
+		if(cfvar->getVVal()->isFnDef()) as<StmtFnDef>(cfvar->getVVal())->incUsed();
+		return true;
+	}
 	cfvar		 = as<StmtVar>(cfvar->clone(ctx)); // template must be cloned
 	StmtFnSig *cfsig = nullptr;
 	StmtBlock *cfblk = nullptr;
@@ -1106,7 +1103,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 		cfdef->setParentVar(cfvar);
 		cfsig = cfdef->getSig();
 		cfblk = cfdef->getBlk();
-		cfdef->setUsed();
+		cfdef->incUsed();
 	} else if(cfvar->getVVal()->isExtern()) {
 		StmtExtern *cfext = as<StmtExtern>(cfvar->getVVal());
 		cfext->setParentVar(cfvar);
