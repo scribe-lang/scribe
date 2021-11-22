@@ -53,7 +53,7 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_bra
 		} else if(p.accept(lex::IF)) {
 			if(!parse_conds(p, stmt)) return false;
 			skip_cols = true;
-		} else if(p.accept(lex::INLINE)) { // TODO: replace with inline - for, while loops
+		} else if(p.accept(lex::INLINE)) {
 			if(p.peakt(1) == lex::FOR) {
 				if(!parse_for(p, stmt)) return false;
 				skip_cols = true;
@@ -61,7 +61,7 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_bra
 				if(!parse_conds(p, stmt)) return false;
 				skip_cols = true;
 			} else {
-				err.set(p.peak(1), "'comptime' is not applicable on '%s' statement",
+				err.set(p.peak(1), "'inline' is not applicable on '%s' statement",
 					p.peak(1).getTok().cStr());
 				return false;
 			}
@@ -1213,7 +1213,7 @@ bool Parsing::parse_extern(ParseHelper &p, Stmt *&ext)
 	name = p.peak();
 	p.next();
 
-	if(!p.acceptn(lex::COMMA)) goto sig;
+	if(!p.acceptn(lex::COMMA)) goto endinfo;
 
 	if(!parse_header(p, headers)) return false;
 	if(!p.acceptn(lex::COMMA)) goto endinfo;
@@ -1226,7 +1226,6 @@ endinfo:
 		return false;
 	}
 
-sig:
 	if(!parse_fnsig(p, (Stmt *&)sig)) return false;
 	ext = StmtExtern::create(ctx, name.getLoc(), name, headers, libs, sig);
 	return true;

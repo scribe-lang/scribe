@@ -588,6 +588,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	}
 	default: err.set(stmt->getOper(), "nonexistent operator"); return false;
 	}
+	if(!*source) return true;
 	if(stmt->getCommas() > 0) {
 		stmt->setValueID((uint64_t)0);
 	}
@@ -813,26 +814,23 @@ bool TypeAssignPass::visit(StmtVarDecl *stmt, Stmt **source)
 bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 {
 	for(auto &cond : stmt->getConditionals()) {
-		Stmt *&c	= cond.getCond();
-		StmtBlock *&b	= cond.getBlk();
-		bool this_is_it = false;
-		if(!c) goto after_cond_check;
-		if(!visit(c, &c)) {
+		Stmt *&c      = cond.getCond();
+		StmtBlock *&b = cond.getBlk();
+		if(c && !visit(c, &c)) {
 			err.set(stmt, "failed to determine type of conditional");
 			return false;
 		}
-		if(!c->getValueTy()->isPrimitive()) {
+		if(c && !c->getValueTy()->isPrimitive()) {
 			err.set(stmt, "conditional expression type must be primitive");
 			return false;
 		}
-		if(!stmt->isInline()) {
-			if(!visit(b, asStmt(&b))) {
-				err.set(stmt, "failed to determine types"
-					      " in inline conditional block");
-				return false;
-			}
-			continue;
+		if(!visit(b, asStmt(&b))) {
+			err.set(stmt, "failed to determine types"
+				      " in inline conditional block");
+			return false;
 		}
+		if(!stmt->isInline()) continue;
+		bool this_is_it = false;
 		if(!vpass.visit(c, &c)) {
 			err.set(stmt, "failed to get condition value for inline conditional");
 			return false;
@@ -848,8 +846,6 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 			this_is_it = as<FltVal>(c->getValue())->getVal() != 0.0;
 		}
 		if(!this_is_it) continue;
-	after_cond_check:
-		if(!b) continue;
 		if(!visit(b, asStmt(&b))) {
 			err.set(stmt, "failed to determine types in inline conditional block");
 			return false;
