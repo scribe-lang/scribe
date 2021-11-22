@@ -20,9 +20,42 @@ uint64_t createFnVal(Context &c, const std::vector<Type *> &args, Type *ret, Int
 	return createValueIDWith(FuncVal::create(c, t));
 }
 
+void addIntFn(Context &c, ValueManager &vmgr, const std::string &name, const uint64_t &fid)
+{
+	static std::vector<int> bits  = {1, 8, 16, 32, 64};
+	static std::vector<bool> sign = {true, false};
+	static std::unordered_map<int, IntTy *> tys;
+
+	for(auto s : sign) {
+		for(auto &b : bits) {
+			IntTy *ty = nullptr;
+			if(tys.find(b + s) == tys.end()) {
+				tys[b + s] = IntTy::create(c, b, s);
+			}
+			ty = tys[b + s];
+			vmgr.addTypeFn(ty->getID(), name, fid);
+		}
+	}
+}
+
+void addFltFn(Context &c, ValueManager &vmgr, const std::string &name, const uint64_t &fid)
+{
+	static std::vector<int> bits = {32, 64};
+	static std::unordered_map<int, FltTy *> tys;
+
+	for(auto &b : bits) {
+		FltTy *ty = nullptr;
+		if(tys.find(b) == tys.end()) {
+			tys[b] = FltTy::create(c, b);
+		}
+		ty = tys[b];
+		vmgr.addTypeFn(ty->getID(), name, fid);
+	}
+}
+
 #define ADDFN(name, fn) vmgr.addVar(name, fn, nullptr, true)
-#define ADDINTFN(name, fn) vmgr.addTypeFn(TINT, name, fn)
-#define ADDFLTFN(name, fn) vmgr.addTypeFn(TFLT, name, fn)
+#define ADDINTFN(name, fn) addIntFn(c, vmgr, name, fn)
+#define ADDFLTFN(name, fn) addFltFn(c, vmgr, name, fn)
 #define ADDPTRFN(name, fn) vmgr.addTypeFn(TPTR, name, fn)
 
 void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)

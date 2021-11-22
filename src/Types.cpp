@@ -223,9 +223,13 @@ IntTy::IntTy(const size_t &info, const uint64_t &id, const size_t &bits, const b
 {}
 IntTy::~IntTy() {}
 
+uint64_t IntTy::getID()
+{
+	return getBaseID() + bits + (sign * 2);
+}
 Type *IntTy::clone(Context &c, const bool &as_is)
 {
-	return c.allocType<IntTy>(getInfo(), getID(), bits, sign);
+	return c.allocType<IntTy>(getInfo(), getBaseID(), bits, sign);
 }
 std::string IntTy::toStr()
 {
@@ -262,9 +266,13 @@ FltTy::FltTy(const size_t &info, const uint64_t &id, const size_t &bits)
 {}
 FltTy::~FltTy() {}
 
+uint64_t FltTy::getID()
+{
+	return getBaseID() + (bits * 3); // * 3 to prevent clash between int and flt
+}
 Type *FltTy::clone(Context &c, const bool &as_is)
 {
-	return c.allocType<FltTy>(getInfo(), getID(), bits);
+	return c.allocType<FltTy>(getInfo(), getBaseID(), bits);
 }
 std::string FltTy::toStr()
 {
@@ -309,7 +317,7 @@ std::string TypeTy::toStr()
 Type *TypeTy::clone(Context &c, const bool &as_is)
 {
 	if(!as_is && getContainedTy()) return getContainedTy()->clone(c, as_is);
-	return c.allocType<TypeTy>(getInfo(), getID(), containedtyid);
+	return c.allocType<TypeTy>(getInfo(), getBaseID(), containedtyid);
 }
 
 TypeTy *TypeTy::create(Context &c)
@@ -366,7 +374,7 @@ std::string PtrTy::toStr()
 }
 Type *PtrTy::clone(Context &c, const bool &as_is)
 {
-	return c.allocType<PtrTy>(getInfo(), getID(), to->clone(c, as_is), count);
+	return c.allocType<PtrTy>(getInfo(), getBaseID(), to->clone(c, as_is), count);
 }
 PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count)
 {
@@ -450,7 +458,7 @@ Type *StructTy::clone(Context &c, const bool &as_is)
 	std::vector<TypeTy *> newtemplates;
 	for(auto &field : fields) newfields.push_back(field->clone(c, as_is));
 	for(auto &t : templates) newtemplates.push_back(as<TypeTy>(t->clone(c, as_is)));
-	return c.allocType<StructTy>(getInfo(), getID(), fieldnames, fieldpos, newfields,
+	return c.allocType<StructTy>(getInfo(), getBaseID(), fieldnames, fieldpos, newfields,
 				     templatenames, templatepos, newtemplates, has_template);
 }
 bool StructTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
@@ -594,7 +602,7 @@ uint64_t FuncTy::getID()
 		res += a->getID();
 	}
 	res += ret->getID();
-	return res;
+	return res * 7;
 }
 bool FuncTy::isTemplate()
 {
@@ -727,9 +735,17 @@ void FuncTy::setVar(StmtVar *v)
 {
 	var = v;
 }
+void FuncTy::setArg(const size_t &idx, Type *arg)
+{
+	args[idx] = arg;
+}
 void FuncTy::insertArg(const size_t &idx, Type *arg)
 {
 	args.insert(args.begin() + idx, arg);
+}
+void FuncTy::eraseArg(const size_t &idx)
+{
+	args.erase(args.begin() + idx);
 }
 void FuncTy::updateUniqID()
 {
@@ -816,7 +832,7 @@ Type *VariadicTy::clone(Context &c, const bool &as_is)
 {
 	std::vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is));
-	return c.allocType<VariadicTy>(getInfo(), getID(), newargs);
+	return c.allocType<VariadicTy>(getInfo(), getBaseID(), newargs);
 }
 bool VariadicTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {

@@ -222,6 +222,7 @@ public:
 	IntTy(const size_t &info, const uint64_t &id, const size_t &bits, const bool &sign);
 	~IntTy();
 
+	uint64_t getID();
 	Type *clone(Context &c, const bool &as_is = false);
 	std::string toStr();
 
@@ -242,6 +243,7 @@ public:
 	FltTy(const size_t &info, const uint64_t &id, const size_t &bits);
 	~FltTy();
 
+	uint64_t getID();
 	Type *clone(Context &c, const bool &as_is = false);
 	std::string toStr();
 
@@ -385,7 +387,9 @@ public:
 			      const bool &_externed);
 
 	void setVar(StmtVar *v);
+	void setArg(const size_t &idx, Type *arg);
 	void insertArg(const size_t &idx, Type *arg);
+	void eraseArg(const size_t &idx);
 	void updateUniqID();
 	void setExterned(const bool &ext);
 	StmtVar *&getVar();

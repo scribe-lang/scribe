@@ -158,6 +158,7 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 		Stmt *argtyexpr = args[i]->getVType()->getExpr();
 		if(args[i]->getValue()->isType()) {
 			args.erase(args.begin() + i);
+			as<FuncTy>(stmt->getValueTy())->eraseArg(i);
 			--i;
 			continue;
 		}
