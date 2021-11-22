@@ -409,7 +409,7 @@ bool StmtFnSig::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtFnDef::StmtFnDef(const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk)
-	: Stmt(FNDEF, loc), sig(sig), blk(blk), parentvar(nullptr)
+	: Stmt(FNDEF, loc), sig(sig), blk(blk), parentvar(nullptr), used(false)
 {}
 StmtFnDef::~StmtFnDef() {}
 StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk)

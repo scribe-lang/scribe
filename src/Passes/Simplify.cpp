@@ -84,6 +84,11 @@ bool SimplifyPass::visit(StmtType *stmt, Stmt **source)
 }
 bool SimplifyPass::visit(StmtSimple *stmt, Stmt **source)
 {
+	switch(stmt->getLexValue().getTok().getVal()) {
+	case lex::IDEN: break;
+	default: return true;
+	}
+	stmt->getLexValue().setDataStr(getMangledName(stmt->getLexValue().getDataStr(), stmt));
 	return true;
 }
 bool SimplifyPass::visit(StmtFnCallInfo *stmt, Stmt **source)
@@ -119,15 +124,29 @@ bool SimplifyPass::visit(StmtExpr *stmt, Stmt **source)
 }
 bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 {
-	if(!stmt->getValueID()) return true;
+	if(!stmt->getValueID()) {
+		err.set(stmt, "variable: '%s' has no value id",
+			stmt->getName().getDataStr().c_str());
+		return false;
+	}
+	stmt->getName().setDataStr(getMangledName(stmt->getName().getDataStr(), stmt));
 	if(stmt->getValue()->isImport()) {
 		*source = nullptr;
 		return true;
 	}
-	// if(stmt->getVVal() && stmt->getVVal()->getStmtType() == STRUCTDEF) {
-	// 	*source = nullptr;
-	// 	return true;
-	// }
+	if(stmt->getVVal() && stmt->getVVal()->getStmtType() == FNDEF) {
+		// set as entry point (main function) if signature matches
+		static bool maindone = false;
+		if(trySetMainFunction(stmt, stmt->getName().getDataStr())) {
+			if(maindone) {
+				err.set(stmt, "multiple main functions found");
+				return false;
+			}
+			as<StmtFnDef>(stmt->getVVal())->setUsed();
+			maindone = true;
+			stmt->getName().setDataStr("main");
+		}
+	}
 	bool had_val = stmt->getVVal();
 	if(stmt->getVVal() && !visit(stmt->getVVal(), &stmt->getVVal())) {
 		err.set(stmt, "failed to apply simplify pass on variable value expression");
@@ -185,6 +204,11 @@ bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
 		return false;
 	}
 	if(!stmt->getSig()) {
+		*source = nullptr;
+		return true;
+	}
+	if(!stmt->isUsed()) {
+		printf("unused: %s\n", stmt->getValue()->toStr().c_str());
 		*source = nullptr;
 		return true;
 	}
@@ -317,4 +341,28 @@ bool SimplifyPass::visit(StmtDefer *stmt, Stmt **source)
 {
 	return true;
 }
+
+bool SimplifyPass::trySetMainFunction(StmtVar *var, const std::string &varname)
+{
+	StmtFnDef *fn = as<StmtFnDef>(var->getVVal());
+	if(!startsWith(var->getName().getDataStr(), "main_0")) return false;
+	Type *retbase = fn->getSig()->getRetType()->getValueTy();
+	if(!retbase || !retbase->isInt()) return false;
+	// false => 0 args
+	// true => 2 args
+	bool zero_or_two = false;
+	if(fn->getSigArgs().empty()) { // int main()
+		return true;
+	} else if(fn->getSigArgs().size() == 2) { // int main(int argc, char **argv)
+		Type *a1 = fn->getSigArgs()[0]->getValueTy();
+		Type *a2 = fn->getSigArgs()[0]->getValueTy();
+		if(!a1->isInt()) return false;
+		if(!a2->isPtr()) return false;
+		if(!as<PtrTy>(a2)->getTo()->isPtr()) return false;
+		if(!as<PtrTy>(as<PtrTy>(a2)->getTo())->getTo()->isInt()) return false;
+		return true;
+	}
+	return false;
+}
+
 } // namespace sc

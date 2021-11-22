@@ -41,7 +41,6 @@ class CDriver : public CodeGenDriver
 	const std::string &getConstantDataVar(const lex::Lexeme &val, Type *ty);
 	std::string getNewConstantVar();
 	static bool acceptsSemicolon(Stmt *stmt);
-	bool trySetMainFunction(StmtVar *var, const std::string &varname, Writer &writer);
 	bool getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool arr_as_ptr);
 	bool getCValue(std::string &res, Stmt *stmt, Value *value, Type *type);
 	bool addStructDef(Stmt *stmt, StructTy *sty);
@@ -49,11 +48,6 @@ class CDriver : public CodeGenDriver
 			   Writer &writer);
 	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
 	std::string getSystemCompiler();
-
-	inline std::string getMangledName(const std::string &name, Stmt *stmt)
-	{
-		return name + std::to_string(stmt->getValueTy(true)->getID());
-	}
 
 public:
 	CDriver(RAIIParser &parser);

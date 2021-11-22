@@ -545,6 +545,7 @@ class StmtFnDef : public Stmt
 	StmtFnSig *sig;
 	StmtBlock *blk;
 	StmtVar *parentvar;
+	bool used; // if unused (false), will be deleted in SimplifyPass
 
 public:
 	StmtFnDef(const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk);
@@ -559,6 +560,14 @@ public:
 	inline void setParentVar(StmtVar *pvar)
 	{
 		parentvar = pvar;
+	}
+	inline void setUsed()
+	{
+		used = true;
+	}
+	inline void unsetUsed()
+	{
+		used = false;
 	}
 	inline StmtFnSig *&getSig()
 	{
@@ -588,6 +597,10 @@ public:
 	inline bool hasSigVariadic() const
 	{
 		return sig->hasVariadic();
+	}
+	inline bool isUsed()
+	{
+		return used;
 	}
 };
 

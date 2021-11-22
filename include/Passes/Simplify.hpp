@@ -20,6 +20,13 @@ namespace sc
 {
 class SimplifyPass : public Pass
 {
+	bool trySetMainFunction(StmtVar *var, const std::string &varname);
+
+	inline std::string getMangledName(const std::string &name, Stmt *stmt)
+	{
+		return name + std::to_string(stmt->getValueTy(true)->getID());
+	}
+
 public:
 	SimplifyPass(ErrMgr &err, Context &ctx);
 	~SimplifyPass();

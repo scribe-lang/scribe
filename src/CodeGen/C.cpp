@@ -219,23 +219,22 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 {
 	writer.clear();
 	switch(stmt->getLexValue().getTok().getVal()) {
+	case lex::IDEN: break;
 	case lex::TRUE:	 // fallthrough
 	case lex::FALSE: // fallthrough
 	case lex::NIL:	 // fallthrough
 	case lex::INT:	 // fallthrough
 	case lex::FLT:	 // fallthrough
 	case lex::CHAR:	 // fallthrough
-	case lex::STR:
-		writer.write(getConstantDataVar(stmt->getLexValue(), stmt->getValueTy()));
-		return true;
-	default: break;
+	case lex::STR: writer.write(getConstantDataVar(stmt->getLexValue(), stmt->getValueTy()));
+	default: return true;
 	}
 	// No perma data here as all variables lose permadata attribute
 	// in type assign pass for StmtVar
 	// The following part is only valid for existing variables.
 	// the part for variable declaration exists in Var visit
 	if(stmt->getValueTy(true)->hasRef()) writer.write("(*"); // for references
-	writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
+	writer.write(stmt->getLexValue().getDataStr());
 	if(stmt->getValueTy(true)->hasRef()) writer.write(")"); // for references
 	if(semicol) writer.write(";");
 	return true;
@@ -416,7 +415,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 {
 	writer.clear();
-	std::string varname = getMangledName(stmt->getName().getDataStr(), stmt);
+	std::string varname = stmt->getName().getDataStr();
 
 	if(stmt->getVVal() && stmt->getVVal()->getStmtType() == EXTERN) {
 		StmtExtern *ext	  = as<StmtExtern>(stmt->getVVal());
@@ -445,12 +444,6 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 		if(!visit(stmt->getVVal(), tmp, false)) {
 			err.set(stmt, "failed to generate C code for function def");
 			return false;
-		}
-		// set as entry point (main function) if signature matches
-		static bool maindone = false;
-		if(!maindone && trySetMainFunction(stmt, varname, writer)) {
-			maindone = true;
-			varname	 = "main";
 		}
 
 		StmtFnDef *fn	 = as<StmtFnDef>(stmt->getVVal());
@@ -844,29 +837,6 @@ bool CDriver::acceptsSemicolon(Stmt *stmt)
 	case CONTINUE: return true;
 	case BREAK: return true;
 	case DEFER: return true;
-	}
-	return false;
-}
-
-bool CDriver::trySetMainFunction(StmtVar *var, const std::string &varname, Writer &writer)
-{
-	StmtFnDef *fn = as<StmtFnDef>(var->getVVal());
-	if(!startsWith(var->getName().getDataStr(), "main_0")) return false;
-	Type *retbase = fn->getSig()->getRetType()->getValueTy();
-	if(!retbase || !retbase->isInt()) return false;
-	// false => 0 args
-	// true => 2 args
-	bool zero_or_two = false;
-	if(fn->getSigArgs().empty()) { // int main()
-		return true;
-	} else if(fn->getSigArgs().size() == 2) { // int main(int argc, char **argv)
-		Type *a1 = fn->getSigArgs()[0]->getValueTy();
-		Type *a2 = fn->getSigArgs()[0]->getValueTy();
-		if(!a1->isInt()) return false;
-		if(!a2->isPtr()) return false;
-		if(!as<PtrTy>(a2)->getTo()->isPtr()) return false;
-		if(!as<PtrTy>(as<PtrTy>(a2)->getTo())->getTo()->isInt()) return false;
-		return true;
 	}
 	return false;
 }
