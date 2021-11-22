@@ -111,27 +111,7 @@ bool CDriver::visit(Stmt *stmt, Writer &writer, const bool &semicol)
 		break;
 	}
 	}
-	if(!res) return false;
-
-	if(stmt->getCast()) {
-		writer.write("(");
-		std::string cty;
-		// bool has_ref = stmt->getCast()->hasRef();
-		// stmt->getCast()->unsetRef();
-		if(!getCTypeName(cty, stmt, stmt->getCast(), true)) {
-			err.set(stmt, "received invalid c type name for scribe cast type: %s",
-				stmt->getCast()->toStr().c_str());
-			return false;
-		}
-		// if(has_ref) stmt->getCast()->setRef();
-		writer.write(cty);
-		writer.write(")(");
-		writer.append(tmp);
-		writer.write(")");
-	} else {
-		writer.append(tmp);
-	}
-	return res;
+	return res && applyCast(stmt, writer, tmp);
 }
 
 bool CDriver::visit(StmtBlock *stmt, Writer &writer, const bool &semicol)
@@ -167,16 +147,6 @@ bool CDriver::visit(StmtType *stmt, Writer &writer, const bool &semicol)
 bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 {
 	writer.clear();
-	// if(stmt->getValue()->hasData()) {
-	// 	std::string cval;
-	// 	if(!getCValue(cval, stmt, stmt->getValue(), stmt->getValueTy())) {
-	// 		err.set(stmt, "failed to get C value for scribe value: %s",
-	// 			stmt->getValue()->toStr().c_str());
-	// 		return false;
-	// 	}
-	// 	writer.write(cval);
-	// 	return true;
-	// }
 	switch(stmt->getLexValue().getTok().getVal()) {
 	case lex::TRUE:	 // fallthrough
 	case lex::FALSE: // fallthrough
@@ -189,7 +159,9 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 		return true;
 	default: break;
 	}
-	// the following part is only valid for existing variables.
+	// No perma data here as all variables lose permadata attribute
+	// in type assign pass for StmtVar
+	// The following part is only valid for existing variables.
 	// the part for variable declaration exists in Var visit
 	if(stmt->getValueTy(true)->hasRef()) writer.write("(*"); // for references
 	writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
@@ -204,34 +176,32 @@ bool CDriver::visit(StmtFnCallInfo *stmt, Writer &writer, const bool &semicol)
 bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 {
 	writer.clear();
-	// if(stmt->getValue()->hasData()) {
-	// 	std::string cval;
-	// 	if(!getCValue(cval, stmt, stmt->getValue(), stmt->getValueTy())) {
-	// 		err.set(stmt, "failed to get C value for scribe value: %s",
-	// 			stmt->getValue()->toStr().c_str());
-	// 		return false;
-	// 	}
-	// 	if(!cval.empty()) {
-	// 		writer.write(cval);
-	// 		if(semicol) writer.write(";");
-	// 		return true;
-	// 	}
-	// }
+	if(stmt->getValue()->hasPermaData()) {
+		std::string cval;
+		if(!getCValue(cval, stmt, stmt->getValue(), stmt->getValueTy())) {
+			err.set(stmt, "failed to get C value for scribe value: %s",
+				stmt->getValue()->toStr().c_str());
+			return false;
+		}
+		if(!cval.empty()) {
+			writer.write(cval);
+			if(semicol) writer.write(";");
+			return true;
+		}
+	}
 
 	lex::TokType oper = stmt->getOper().getTok().getVal();
+	Stmt *&lhs	  = stmt->getLHS();
+	Stmt *&rhs	  = stmt->getRHS();
 	Writer l;
-	Stmt *&lhs = stmt->getLHS();
-	Stmt *&rhs = stmt->getRHS();
-	if(!visit(lhs, l, false)) {
-		err.set(stmt, "failed to generate C code for LHS in expression");
-		return false;
-	}
 	Writer r;
-	if(oper != lex::DOT && oper != lex::ARROW && oper != lex::FNCALL && rhs &&
-	   !visit(rhs, r, false)) {
-		rhs->disp(false);
-		err.set(stmt, "failed to generate C code for RHS in expression");
-		return false;
+	if(oper == lex::ARROW || oper == lex::DOT || oper == lex::FNCALL || oper == lex::STCALL ||
+	   oper == lex::UAND || oper == lex::UMUL)
+	{
+		if(!visit(lhs, l, false)) {
+			err.set(stmt, "failed to generate C code for LHS in expression");
+			return false;
+		}
 	}
 	switch(oper) {
 	case lex::ARROW:
@@ -246,49 +216,14 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 		std::string fname	  = as<StmtSimple>(lhs)->getLexValue().getDataStr();
 		std::vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
 		writer.write("%s%" PRIu64 "(", fname.c_str(), lhs->getValueTy()->getID());
-		FuncTy *fn = as<FuncTy>(lhs->getValueTy());
-		for(size_t i = 0; i < args.size(); ++i) {
-			Stmt *&a = args[i];
-			Type *at = fn->getArg(i);
-			Writer tmp(writer);
-			if(!visit(args[i], tmp, false)) {
-				err.set(stmt, "failed to generate C code for func call argument");
-				return false;
-			}
-			if(at->hasRef()) {
-				writer.write("&(");
-				writer.append(tmp);
-				writer.write(")");
-			} else {
-				writer.append(tmp);
-			}
-			if(i != args.size() - 1) writer.write(", ");
-		}
+		if(!writeCallArgs(stmt->getLoc(), args, lhs->getValueTy(), writer)) return false;
 		writer.write(")");
 		break;
 	}
 	case lex::STCALL: {
 		std::vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
 		writer.write("(struct_%" PRIu64 "){", lhs->getValueTy()->getID());
-		StructTy *st = as<StructTy>(lhs->getValueTy());
-		for(size_t i = 0; i < args.size(); ++i) {
-			Stmt *&a = args[i];
-			Type *at = st->getField(i);
-			Writer tmp(writer);
-			if(!visit(args[i], tmp, false)) {
-				err.set(stmt, "failed to generate C code"
-					      " for struct declaration argument");
-				return false;
-			}
-			if(at->hasRef()) {
-				writer.write("&(");
-				writer.append(tmp);
-				writer.write(")");
-			} else {
-				writer.append(tmp);
-			}
-			if(i != args.size() - 1) writer.write(", ");
-		}
+		if(!writeCallArgs(stmt->getLoc(), args, lhs->getValueTy(), writer)) return false;
 		writer.write("}");
 		break;
 	}
@@ -353,6 +288,14 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 	applyoperfn:
 		lex::Tok &optok = stmt->getOper().getTok();
 		if(oper == lex::SUBS && lhs->getValueTy()->isPtr()) {
+			if(!visit(lhs, l, false)) {
+				err.set(stmt, "failed to generate C code for LHS in expression");
+				return false;
+			}
+			if(!visit(rhs, r, false)) {
+				err.set(stmt, "failed to generate C code for LHS in expression");
+				return false;
+			}
 			writer.append(l);
 			writer.write("[");
 			writer.append(r);
@@ -361,6 +304,10 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 		}
 		if(lhs->getValueTy()->isPrimitiveOrPtr() &&
 		   (!rhs || rhs->getValueTy()->isPrimitiveOrPtr())) {
+			if(!visit(lhs, l, false)) {
+				err.set(stmt, "failed to generate C code for LHS in expression");
+				return false;
+			}
 			if(optok.isUnaryPre()) {
 				writer.write(optok.getUnaryNoCharCStr());
 				writer.append(l);
@@ -371,17 +318,21 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 				writer.write(optok.getUnaryNoCharCStr());
 				break;
 			}
+			if(!visit(rhs, r, false)) {
+				err.set(stmt, "failed to generate C code for LHS in expression");
+				return false;
+			}
 			writer.append(l);
 			writer.write(" %s ", lex::TokStrs[oper]);
 			writer.append(r);
 			break;
 		}
+		std::vector<Stmt *> args = {lhs};
+		if(rhs) args.push_back(rhs);
 		writer.write(optok.getOperCStr());
 		writer.write("(");
-		writer.append(l);
-		if(rhs) {
-			writer.write(", ");
-			writer.append(r);
+		if(!writeCallArgs(stmt->getLoc(), args, stmt->getCalledFn(), writer)) {
+			return false;
 		}
 		writer.write(")");
 		break;
@@ -1041,6 +992,55 @@ bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 	st.write("} struct_%" PRIu64 ";", sty->getID());
 	structdecls.push_back(st.getData());
 	declaredstructs.insert(sty->getID());
+	return true;
+}
+bool CDriver::applyCast(Stmt *stmt, Writer &writer, Writer &tmp)
+{
+	if(stmt->getCast()) {
+		writer.write("(");
+		std::string cty;
+		// bool has_ref = stmt->getCast()->hasRef();
+		// stmt->getCast()->unsetRef();
+		if(!getCTypeName(cty, stmt, stmt->getCast(), true)) {
+			err.set(stmt, "received invalid c type name for scribe cast type: %s",
+				stmt->getCast()->toStr().c_str());
+			return false;
+		}
+		// if(has_ref) stmt->getCast()->setRef();
+		writer.write(cty);
+		writer.write(")(");
+		writer.append(tmp);
+		writer.write(")");
+	} else {
+		writer.append(tmp);
+	}
+	return true;
+}
+bool CDriver::writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &args, Type *ty,
+			    Writer &writer)
+{
+	FuncTy *fn   = nullptr;
+	StructTy *st = nullptr;
+	if(ty->isFunc()) fn = as<FuncTy>(ty);
+	if(ty->isStruct()) st = as<StructTy>(ty);
+	for(size_t i = 0; i < args.size(); ++i) {
+		Stmt *a	 = args[i];
+		Type *at = fn ? fn->getArg(i) : st->getField(i);
+		Writer tmp(writer);
+		Type *cast = a->getCast();
+		a->castTo(nullptr);
+		if(!visit(a, tmp, false)) {
+			err.set(loc, "failed to generate C code for func call argument");
+			return false;
+		}
+		a->castTo(cast);
+		if(at->hasRef()) {
+			tmp.writeBefore("&(");
+			tmp.write(")");
+		}
+		if(!applyCast(a, writer, tmp)) return false;
+		if(i != args.size() - 1) writer.write(", ");
+	}
 	return true;
 }
 } // namespace sc

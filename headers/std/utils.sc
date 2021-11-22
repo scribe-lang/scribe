@@ -15,7 +15,7 @@ let countDigits = fn(data: i64): i32 {
 			data = -data;
 		}
 	}
-	while data > 9 {
+	while data > 0 {
 		data /= 10;
 		++res;
 	}

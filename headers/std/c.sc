@@ -1,6 +1,10 @@
+/*
+ * These are the core C functions used across standard library
+ */
+
 let puts = extern[puts, "<stdio.h>"] fn(data: *const i8): i32;
 let snprintf = extern[snprintf, "<stdio.h>"] fn(buf: *i8, bufsz: u64, fmt: *const i8, args: ...any): i32;
-let strlen = extern[strlen, "<string.h>"] fn(data: *const i8): i32;
+let strlen = extern[strlen, "<string.h>"] fn(data: *const i8): u64;
 let _malloc = extern[malloc, "<stdlib.h>"] fn(size: u64): *void;
 let _realloc = extern[realloc, "<stdlib.h>"] fn(data: *void, newsz: u64): *void;
 let _free = extern[free, "<stdlib.h>"] fn(data: *void);

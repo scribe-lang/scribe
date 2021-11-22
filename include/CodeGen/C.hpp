@@ -45,6 +45,9 @@ class CDriver : public CodeGenDriver
 	bool getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool arr_as_ptr);
 	bool getCValue(std::string &res, Stmt *stmt, Value *value, Type *type);
 	bool addStructDef(Stmt *stmt, StructTy *sty);
+	bool writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &args, Type *ty,
+			   Writer &writer);
+	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
 
 	inline std::string getMangledName(const std::string &name, Stmt *stmt)
 	{

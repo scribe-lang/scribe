@@ -558,8 +558,8 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		}
 		stmt->createAndSetValue(retval);
 		bool both_comptime = true;
-		if(!lhs->getValueTy()->hasComptime()) both_comptime = false;
-		if(rhs && !rhs->getValueTy()->hasComptime()) both_comptime = false;
+		if(!lhs->getValueTy(true)->hasComptime()) both_comptime = false;
+		if(rhs && !rhs->getValueTy(true)->hasComptime()) both_comptime = false;
 		if(stmt->getValueTy()->hasComptime() && !both_comptime) {
 			stmt->getValueTy()->unsetComptime();
 		}
@@ -670,6 +670,9 @@ post_mangling:
 
 	if(!stmt->getValueTy()->hasRef()) {
 		stmt->createAndSetValue(stmt->getValue()->clone(ctx));
+	} else if(stmt->getValue()->hasPermaData()) {
+		err.set(stmt, "a reference variable cannot have perma data");
+		return false;
 	}
 
 	if(vtype && val) applyPrimitiveTypeCoercion(vtype->getValueTy(), val);
@@ -1045,16 +1048,19 @@ void TypeAssignPass::applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex:
 	if(l->getID() == r->getID()) return;
 
 	if(oper.getTok().isAssign()) {
-		rhs->castTo(l);
+		rhs->castTo(l->clone(ctx));
+		if(l->hasRef()) rhs->getCast()->unsetRef();
 		return;
 	}
 	// 0 => lhs
 	// 1 => rhs
 	bool superior = chooseSuperiorPrimitiveType(l, r);
 	if(superior) {
-		rhs->castTo(l);
+		rhs->castTo(l->clone(ctx));
+		if(l->hasRef()) rhs->getCast()->unsetRef();
 	} else {
-		lhs->castTo(r);
+		lhs->castTo(r->clone(ctx));
+		if(r->hasRef()) lhs->getCast()->unsetRef();
 	}
 }
 
@@ -1118,6 +1124,8 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 				cfa->createAndSetValue(args[i]->getValue()->clone(ctx));
 			}
 			if(args[i]->getCast()) cfa->castTo(args[i]->getCast());
+			cfa->getValueTy()->appendInfo(cfa->getVType()->getInfoMask());
+			cf->setArg(i, cfa->getValueTy());
 			vmgr.addVar(cfa->getName().getDataStr(), cfa->getValueID(), cfa);
 			continue;
 		}
@@ -1141,6 +1149,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 			t->unsetStatic();
 			t->unsetVolatile();
 			t->appendInfo(cft->getInfo());
+			t->appendInfo(cfa->getVType()->getInfoMask());
 			if(t->hasRef()) {
 				newv->setValueID(args[i]);
 			} else {

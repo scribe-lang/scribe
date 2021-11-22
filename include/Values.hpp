@@ -93,7 +93,9 @@ public:
 	virtual void setHasData(ContainsData cd);
 	virtual void setContainsData();
 	virtual void setContainsPermaData();
+	virtual void unsetContainsPermaData();
 	virtual bool hasData();
+	virtual bool hasPermaData();
 	virtual void clearHasData();
 };
 
@@ -281,7 +283,9 @@ public:
 	void setHasData(ContainsData cd);
 	void setContainsData();
 	void setContainsPermaData();
+	void unsetContainsPermaData();
 	bool hasData();
+	bool hasPermaData();
 	void clearHasData();
 };
 } // namespace sc

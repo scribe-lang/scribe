@@ -48,9 +48,17 @@ void Value::setContainsPermaData()
 {
 	has_data = CDPERMA;
 }
+void Value::unsetContainsPermaData()
+{
+	if(has_data == CDPERMA) has_data = CDTRUE;
+}
 bool Value::hasData()
 {
 	return has_data == CDTRUE || has_data == CDPERMA;
+}
+bool Value::hasPermaData()
+{
+	return has_data == CDPERMA;
 }
 void Value::clearHasData()
 {
@@ -88,7 +96,7 @@ std::string IntVal::toStr()
 }
 Value *IntVal::clone(Context &c)
 {
-	return create(c, ty, has_data, data);
+	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, data);
 }
 bool IntVal::updateValue(Value *v)
 {
@@ -113,7 +121,7 @@ std::string FltVal::toStr()
 }
 Value *FltVal::clone(Context &c)
 {
-	return create(c, ty, has_data, data);
+	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, data);
 }
 bool FltVal::updateValue(Value *v)
 {
@@ -148,7 +156,7 @@ Value *VecVal::clone(Context &c)
 	for(auto &d : data) {
 		newdata.push_back(d->clone(c));
 	}
-	return create(c, ty, has_data, newdata);
+	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, newdata);
 }
 bool VecVal::updateValue(Value *v)
 {
@@ -213,7 +221,7 @@ Value *StructVal::clone(Context &c)
 	for(auto &d : data) {
 		newdata[d.first] = d.second->clone(c);
 	}
-	return create(c, ty, has_data, newdata);
+	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, newdata);
 }
 bool StructVal::updateValue(Value *v)
 {
@@ -336,9 +344,17 @@ void RefVal::setContainsPermaData()
 {
 	to->setContainsPermaData();
 }
+void RefVal::unsetContainsPermaData()
+{
+	to->unsetContainsPermaData();
+}
 bool RefVal::hasData()
 {
 	return to->hasData();
+}
+bool RefVal::hasPermaData()
+{
+	return to->hasPermaData();
 }
 void RefVal::clearHasData()
 {
