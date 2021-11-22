@@ -16,6 +16,8 @@
 #include <cassert>
 
 #include "CodeGen/C/Prelude.hpp"
+#include "Env.hpp"
+#include "FS.hpp"
 #include "Parser.hpp"
 #include "Utils.hpp"
 
@@ -26,7 +28,7 @@ CDriver::CDriver(RAIIParser &parser)
 {}
 CDriver::~CDriver() {}
 
-bool CDriver::compile(const std::string &outfile, const bool &ir_only)
+bool CDriver::compile(const std::string &outfile)
 {
 	Module *mainmod = parser.getModule(parser.getModuleStack().front());
 	Writer mainwriter;
@@ -68,13 +70,82 @@ bool CDriver::compile(const std::string &outfile, const bool &ir_only)
 	}
 	if(constants.size() > 0) finalmod.newLine();
 	finalmod.append(mainwriter);
-	if(ir_only) {
-		FILE *f = fopen(outfile.c_str(), "w+");
-		fprintf(f, "%s\n", finalmod.getData().c_str());
-		fclose(f);
-		return true;
+
+	args::ArgParser &cliargs = parser.getCommandArgs();
+	std::string opt		 = "2";
+	std::string std		 = "11";
+	bool ir_only		 = cliargs.has("ir");
+	bool llir		 = cliargs.has("llir");
+	if(cliargs.has("opt")) {
+		std::string res = cliargs.val("opt");
+		if(res.empty()) {
+			err.set(mainmod->getParseTree(),
+				"optimization option must have a value, found nothing");
+			err.show(stderr);
+			return false;
+		}
+		if(res != "0" && res != "1" && res != "2" && res != "3") {
+			err.set(mainmod->getParseTree(), "optimization option value must be"
+							 " one of 0, 1, 2, or 3; found nothing");
+			err.show(stderr);
+			return false;
+		}
+		opt = res;
 	}
-	// TODO: full compilation
+	if(cliargs.has("std")) {
+		std::string res = cliargs.val("std");
+		if(res.empty()) {
+			err.set(mainmod->getParseTree(),
+				"standard option must have a value, found nothing");
+			err.show(stderr);
+			return false;
+		}
+		if(res != "11" && res != "14" && res != "17") {
+			err.set(mainmod->getParseTree(), "standard option value must be"
+							 " one of 11, 14, or 17; found nothing");
+			err.show(stderr);
+			return false;
+		}
+		std = res;
+	}
+
+	std::string tmpfile;
+	if(ir_only) {
+		tmpfile = outfile + ".c";
+	} else {
+		auto loc = outfile.find_last_of('/');
+		tmpfile	 = (loc == std::string::npos ? outfile : outfile.substr(loc));
+		tmpfile	 = "/tmp/" + tmpfile + ".c";
+	}
+	FILE *f = fopen(tmpfile.c_str(), "w+");
+	if(!f) {
+		err.set(mainmod->getParseTree(), "failed to create file for writing C code: %s",
+			tmpfile.c_str());
+		err.show(stderr);
+		return false;
+	}
+	fprintf(f, "%s\n", finalmod.getData().c_str());
+	fclose(f);
+	if(ir_only) return true;
+
+	std::string cmd = getSystemCompiler();
+	cmd += " -std=c" + std + " -O" + opt + " ";
+	for(auto &h : headerflags) {
+		cmd += h + " ";
+	}
+	for(auto &l : libflags) {
+		cmd += l + " ";
+	}
+	cmd += tmpfile + " -o " + outfile;
+	if(llir) cmd += ".ll -S -emit-llvm";
+	int res = std::system(cmd.c_str());
+	res	= WEXITSTATUS(res);
+	if(res) {
+		err.set(mainmod->getParseTree(),
+			"failed to compiler code, got compiler exit status: %d", res);
+		err.show(stderr);
+		return false;
+	}
 	return true;
 }
 
@@ -1042,5 +1113,23 @@ bool CDriver::writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &arg
 		if(i != args.size() - 1) writer.write(", ");
 	}
 	return true;
+}
+std::string CDriver::getSystemCompiler()
+{
+	std::string compiler = env::get("C_COMPILER");
+	if(!compiler.empty()) {
+		if(compiler.front() == '/' || compiler.front() == '~' || compiler.front() == '.') {
+			compiler = fs::absPath(compiler);
+			return compiler;
+		}
+	} else {
+		compiler = "clang";
+	}
+	compiler = env::getExeFromPath(compiler);
+	if(compiler.empty()) {
+		compiler = "gcc";
+		compiler = env::getExeFromPath(compiler);
+	}
+	return compiler;
 }
 } // namespace sc

@@ -23,6 +23,8 @@ namespace env
 std::string get(const std::string &key);
 
 std::string getProcPath();
+
+std::string getExeFromPath(const std::string &exe);
 } // namespace env
 } // namespace sc
 

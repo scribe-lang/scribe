@@ -48,6 +48,7 @@ class CDriver : public CodeGenDriver
 	bool writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &args, Type *ty,
 			   Writer &writer);
 	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
+	std::string getSystemCompiler();
 
 	inline std::string getMangledName(const std::string &name, Stmt *stmt)
 	{
@@ -58,7 +59,7 @@ public:
 	CDriver(RAIIParser &parser);
 	~CDriver();
 
-	bool compile(const std::string &outfile, const bool &ir_only);
+	bool compile(const std::string &outfile);
 
 	bool visit(Stmt *stmt, Writer &writer, const bool &semicol);
 
