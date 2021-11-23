@@ -122,7 +122,7 @@ void StmtExtern::_setFuncUsed(const bool &inc)
 {
 	if(headers) headers->_setFuncUsed(inc);
 	if(libs) libs->_setFuncUsed(inc);
-	sig->_setFuncUsed(inc);
+	entity->_setFuncUsed(inc);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

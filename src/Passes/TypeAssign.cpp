@@ -749,13 +749,18 @@ bool TypeAssignPass::visit(StmtLib *stmt, Stmt **source)
 bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 {
 	vmgr.pushLayer();
-	if(!visit(stmt->getSig(), asStmt(&stmt->getSig()))) {
-		err.set(stmt, "failed to determine type of func signature");
+	if(!visit(stmt->getEntity(), &stmt->getEntity())) {
+		err.set(stmt, "failed to determine type of extern entity");
 		return false;
 	}
-	FuncVal *fn = as<FuncVal>(stmt->getSig()->getValue());
-	fn->getVal()->setExterned(true);
-	fn->getVal()->setVar(stmt->getParentVar());
+	if(stmt->getEntity()->isFnSig()) {
+		FuncVal *fn = as<FuncVal>(stmt->getEntity()->getValue());
+		fn->getVal()->setExterned(true);
+		fn->getVal()->setVar(stmt->getParentVar());
+	} else if(stmt->getEntity()->isStructDef()) {
+		TypeVal *st = as<TypeVal>(stmt->getEntity()->getValue());
+		as<StructTy>(st->getVal())->setExterned(true);
+	}
 	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
 		err.set(stmt, "failed to assign header type");
 		return false;
@@ -764,7 +769,7 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 		err.set(stmt, "failed to assign lib type");
 		return false;
 	}
-	stmt->setValueID(stmt->getSig());
+	stmt->setValueID(stmt->getEntity());
 	vmgr.popLayer();
 	return true;
 }
@@ -796,7 +801,8 @@ bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 	}
 	disabled_varname_mangling = false;
 
-	StructTy *st = StructTy::create(ctx, fieldnames, fieldtypes, templatenames, templates);
+	StructTy *st =
+	StructTy::create(ctx, fieldnames, fieldtypes, templatenames, templates, false);
 	stmt->createAndSetValue(TypeVal::create(ctx, st));
 	vmgr.popLayer();
 	return true;
@@ -1103,7 +1109,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 	} else if(cfvar->getVVal()->isExtern()) {
 		StmtExtern *cfext = as<StmtExtern>(cfvar->getVVal());
 		cfext->setParentVar(cfvar);
-		cfsig = cfext->getSig();
+		cfsig = as<StmtFnSig>(cfext->getEntity());
 	}
 	cfsig->disableTemplates();
 	cfsig->setVariadic(false);

@@ -227,11 +227,11 @@ bool SimplifyPass::visit(StmtLib *stmt, Stmt **source)
 }
 bool SimplifyPass::visit(StmtExtern *stmt, Stmt **source)
 {
-	if(!visit(stmt->getSig(), asStmt(&stmt->getSig()))) {
+	if(!visit(stmt->getEntity(), &stmt->getEntity())) {
 		err.set(stmt, "failed to apply simplify pass on func signature in definition");
 		return false;
 	}
-	if(!stmt->getSig()) {
+	if(!stmt->getEntity()) {
 		*source = nullptr;
 		return true;
 	}

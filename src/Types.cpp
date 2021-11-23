@@ -241,16 +241,6 @@ IntTy *IntTy::create(Context &c, const size_t &_bits, const bool &_sign)
 	return c.allocType<IntTy>(_bits, _sign);
 }
 
-const size_t &IntTy::getBits() const
-{
-	return bits;
-}
-
-const bool &IntTy::isSigned() const
-{
-	return sign;
-}
-
 Value *IntTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
 	return IntVal::create(c, this, cd, 0);
@@ -282,11 +272,6 @@ std::string FltTy::toStr()
 FltTy *FltTy::create(Context &c, const size_t &_bits)
 {
 	return c.allocType<FltTy>(_bits);
-}
-
-const size_t &FltTy::getBits() const
-{
-	return bits;
 }
 
 Value *FltTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
@@ -380,14 +365,6 @@ PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count)
 {
 	return c.allocType<PtrTy>(ptr_to, count);
 }
-Type *&PtrTy::getTo()
-{
-	return to;
-}
-const size_t &PtrTy::getCount()
-{
-	return count;
-}
 
 Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
@@ -410,9 +387,10 @@ Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData
 
 StructTy::StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields,
 		   const std::vector<std::string> &templatenames,
-		   const std::vector<TypeTy *> &templates)
+		   const std::vector<TypeTy *> &templates, const bool &externed)
 	: Type(TSTRUCT, 0, genTypeID()), fieldnames(fieldnames), fields(fields),
-	  templatenames(templatenames), templates(templates), has_template(templates.size())
+	  templatenames(templatenames), templates(templates), has_template(templates.size()),
+	  externed(externed)
 {
 	for(size_t i = 0; i < fieldnames.size(); ++i) {
 		fieldpos[fieldnames[i]] = i;
@@ -426,10 +404,11 @@ StructTy::StructTy(const size_t &info, const uint64_t &id,
 		   const std::unordered_map<std::string, size_t> &fieldpos,
 		   const std::vector<Type *> &fields, const std::vector<std::string> &templatenames,
 		   const std::unordered_map<std::string, size_t> &templatepos,
-		   const std::vector<TypeTy *> &templates, const bool &has_template)
+		   const std::vector<TypeTy *> &templates, const bool &has_template,
+		   const bool &externed)
 	: Type(TSTRUCT, info, id), fieldpos(fieldpos), fieldnames(fieldnames), fields(fields),
 	  templatepos(templatepos), templatenames(templatenames), templates(templates),
-	  has_template(has_template)
+	  has_template(has_template), externed(externed)
 {}
 StructTy::~StructTy() {}
 bool StructTy::isTemplate()
@@ -459,7 +438,8 @@ Type *StructTy::clone(Context &c, const bool &as_is)
 	for(auto &field : fields) newfields.push_back(field->clone(c, as_is));
 	for(auto &t : templates) newtemplates.push_back(as<TypeTy>(t->clone(c, as_is)));
 	return c.allocType<StructTy>(getInfo(), getBaseID(), fieldnames, fieldpos, newfields,
-				     templatenames, templatepos, newtemplates, has_template);
+				     templatenames, templatepos, newtemplates, has_template,
+				     externed);
 }
 bool StructTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
@@ -519,17 +499,9 @@ StructTy *StructTy::instantiate(Context &c, ErrMgr &e, ModuleLoc &loc,
 StructTy *StructTy::create(Context &c, const std::vector<std::string> &_fieldnames,
 			   const std::vector<Type *> &_fields,
 			   const std::vector<std::string> &_templatenames,
-			   const std::vector<TypeTy *> &_templates)
+			   const std::vector<TypeTy *> &_templates, const bool &_externed)
 {
-	return c.allocType<StructTy>(_fieldnames, _fields, _templatenames, _templates);
-}
-const std::string &StructTy::getFieldName(const size_t &idx)
-{
-	return fieldnames[idx];
-}
-std::vector<Type *> &StructTy::getFields()
-{
-	return fields;
+	return c.allocType<StructTy>(_fieldnames, _fields, _templatenames, _templates, _externed);
 }
 Type *StructTy::getField(const std::string &name)
 {
@@ -543,18 +515,6 @@ Type *StructTy::getField(const size_t &pos)
 {
 	if(pos >= fields.size()) return nullptr;
 	return fields[pos];
-}
-std::vector<TypeTy *> &StructTy::getTemplates()
-{
-	return templates;
-}
-void StructTy::clearTemplates()
-{
-	templates.clear();
-}
-void StructTy::setTemplate(const bool &has_templ)
-{
-	has_template = has_templ;
 }
 bool StructTy::hasTemplate()
 {
@@ -731,62 +691,9 @@ FuncTy *FuncTy::create(Context &c, StmtVar *_var, const std::vector<Type *> &_ar
 {
 	return c.allocType<FuncTy>(_var, _args, _ret, _intrin, _inty, _externed);
 }
-void FuncTy::setVar(StmtVar *v)
-{
-	var = v;
-}
-void FuncTy::setArg(const size_t &idx, Type *arg)
-{
-	args[idx] = arg;
-}
-void FuncTy::insertArg(const size_t &idx, Type *arg)
-{
-	args.insert(args.begin() + idx, arg);
-}
-void FuncTy::eraseArg(const size_t &idx)
-{
-	args.erase(args.begin() + idx);
-}
 void FuncTy::updateUniqID()
 {
 	uniqid = genFuncUniqID();
-}
-void FuncTy::setExterned(const bool &ext)
-{
-	externed = ext;
-}
-StmtVar *&FuncTy::getVar()
-{
-	return var;
-}
-std::vector<Type *> &FuncTy::getArgs()
-{
-	return args;
-}
-Type *FuncTy::getArg(const size_t &idx)
-{
-	if(args.size() > idx) return args[idx];
-	return nullptr;
-}
-Type *FuncTy::getRet()
-{
-	return ret;
-}
-bool FuncTy::isIntrinsic()
-{
-	return intrin != nullptr;
-}
-bool FuncTy::isParseIntrinsic()
-{
-	return inty == IPARSE;
-}
-bool FuncTy::isExtern()
-{
-	return externed;
-}
-IntrinsicFn FuncTy::getIntrinsicFn()
-{
-	return intrin;
 }
 bool FuncTy::callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
 			   std::vector<Stmt *> &callargs)
@@ -847,19 +754,6 @@ bool VariadicTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 VariadicTy *VariadicTy::create(Context &c, const std::vector<Type *> &_args)
 {
 	return c.allocType<VariadicTy>(_args);
-}
-void VariadicTy::addArg(Type *ty)
-{
-	args.push_back(ty);
-}
-std::vector<Type *> &VariadicTy::getArgs()
-{
-	return args;
-}
-Type *VariadicTy::getArg(const size_t &idx)
-{
-	if(args.size() > idx) return args[idx];
-	return nullptr;
 }
 Value *VariadicTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {

@@ -504,15 +504,15 @@ bool StmtLib::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtExtern::StmtExtern(const ModuleLoc &loc, const lex::Lexeme &fname, StmtHeader *headers,
-		       StmtLib *libs, StmtFnSig *sig)
-	: Stmt(EXTERN, loc), fname(fname), headers(headers), libs(libs), sig(sig),
+		       StmtLib *libs, Stmt *entity)
+	: Stmt(EXTERN, loc), fname(fname), headers(headers), libs(libs), entity(entity),
 	  parentvar(nullptr)
 {}
 StmtExtern::~StmtExtern() {}
 StmtExtern *StmtExtern::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &fname,
-			       StmtHeader *headers, StmtLib *libs, StmtFnSig *sig)
+			       StmtHeader *headers, StmtLib *libs, Stmt *entity)
 {
-	return c.allocStmt<StmtExtern>(loc, fname, headers, libs, sig);
+	return c.allocStmt<StmtExtern>(loc, fname, headers, libs, entity);
 }
 
 void StmtExtern::disp(const bool &has_next) const
@@ -521,22 +521,22 @@ void StmtExtern::disp(const bool &has_next) const
 	tio::print(has_next, "Extern for %s [has parent: %s]%s\n", fname.getDataStr().c_str(),
 		   parentvar ? "yes" : "no", getTypeString().c_str());
 	if(headers) {
-		tio::taba(libs || sig);
-		tio::print(libs || sig, "Headers:\n");
+		tio::taba(libs || entity);
+		tio::print(libs || entity, "Headers:\n");
 		headers->disp(false);
 		tio::tabr();
 	}
 	if(libs) {
-		tio::taba(sig);
-		tio::print(sig, "Libs:\n");
+		tio::taba(entity);
+		tio::print(entity, "Libs:\n");
 		libs->disp(false);
 		tio::tabr();
 	}
 
-	if(sig) {
+	if(entity) {
 		tio::taba(false);
-		tio::print(false, "Funtion Signature:\n");
-		sig->disp(false);
+		tio::print(false, "Entity:\n");
+		entity->disp(false);
 		tio::tabr();
 	}
 	tio::tabr();
@@ -544,7 +544,7 @@ void StmtExtern::disp(const bool &has_next) const
 
 bool StmtExtern::requiresTemplateInit()
 {
-	return sig->requiresTemplateInit();
+	return entity->requiresTemplateInit();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

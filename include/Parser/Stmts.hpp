@@ -676,19 +676,19 @@ public:
 
 class StmtExtern : public Stmt
 {
-	lex::Lexeme fname; // name of the function
+	lex::Lexeme fname; // name of the function/struct
 	StmtHeader *headers;
 	StmtLib *libs;
-	StmtFnSig *sig;
+	Stmt *entity; // StmtFnSig or StmtStruct
 	StmtVar *parentvar;
 
 public:
 	StmtExtern(const ModuleLoc &loc, const lex::Lexeme &fname, StmtHeader *headers,
-		   StmtLib *libs, StmtFnSig *sig);
+		   StmtLib *libs, Stmt *entity);
 	~StmtExtern();
 	// headers and libs can be set separately - by default nullptr
 	static StmtExtern *create(Context &c, const ModuleLoc &loc, const lex::Lexeme &fname,
-				  StmtHeader *headers, StmtLib *libs, StmtFnSig *sig);
+				  StmtHeader *headers, StmtLib *libs, Stmt *entity);
 
 	void disp(const bool &has_next) const;
 	Stmt *clone(Context &ctx);
@@ -701,7 +701,7 @@ public:
 		parentvar = var;
 	}
 
-	inline const lex::Lexeme &getFnName() const
+	inline const lex::Lexeme &getName() const
 	{
 		return fname;
 	}
@@ -716,26 +716,13 @@ public:
 		return libs;
 	}
 
-	inline StmtFnSig *&getSig()
+	inline Stmt *&getEntity()
 	{
-		return sig;
+		return entity;
 	}
 	inline StmtVar *&getParentVar()
 	{
 		return parentvar;
-	}
-
-	inline const std::vector<StmtVar *> &getSigArgs() const
-	{
-		return sig->getArgs();
-	}
-	inline StmtType *&getSigRetType()
-	{
-		return sig->getRetType();
-	}
-	inline bool hasSigVariadic() const
-	{
-		return sig->hasVariadic();
 	}
 };
 

@@ -159,8 +159,8 @@ Stmt *StmtExtern::clone(Context &ctx)
 {
 	StmtHeader *newheaders = headers ? as<StmtHeader>(headers->clone(ctx)) : nullptr;
 	StmtLib *newlibs       = libs ? as<StmtLib>(libs->clone(ctx)) : nullptr;
-	StmtFnSig *newsig      = as<StmtFnSig>(sig->clone(ctx));
-	Stmt *res = StmtExtern::create(ctx, getLoc(), fname, newheaders, newlibs, newsig);
+	Stmt *newent	       = entity->clone(ctx);
+	Stmt *res = StmtExtern::create(ctx, getLoc(), fname, newheaders, newlibs, newent);
 	res->castTo(getCast());
 	return res;
 }

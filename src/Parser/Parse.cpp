@@ -995,7 +995,7 @@ val:
 	if(p.accept(lex::ENUM)) {
 		if(!parse_enum(p, val)) return false;
 	} else if(p.accept(lex::STRUCT)) {
-		if(!parse_struct(p, val)) return false;
+		if(!parse_struct(p, val, true)) return false;
 	} else if(p.accept(lex::FN)) {
 		if(!parse_fndef(p, val)) return false;
 	} else if(p.accept(lex::EXTERN)) {
@@ -1191,7 +1191,8 @@ bool Parsing::parse_extern(ParseHelper &p, Stmt *&ext)
 	lex::Lexeme name; // name of the function
 	StmtHeader *headers = nullptr;
 	StmtLib *libs	    = nullptr;
-	StmtFnSig *sig	    = nullptr;
+	Stmt *entity	    = nullptr;
+	bool struct_kw	    = false;
 
 	if(!p.acceptn(lex::EXTERN)) {
 		err.set(p.peak(), "expected extern keyword here, found: %s",
@@ -1205,13 +1206,18 @@ bool Parsing::parse_extern(ParseHelper &p, Stmt *&ext)
 		return false;
 	}
 
+	if(p.acceptn(lex::STRUCT)) struct_kw = true;
 	if(!p.accept(lex::IDEN)) {
-		err.set(p.peak(), "expected function name identifier or string here, found: %s",
+		err.set(p.peak(), "expected identifier or string here, found: %s",
 			p.peak().getTok().cStr());
 		return false;
 	}
 	name = p.peak();
 	p.next();
+
+	// This is for handling typedefs and structs in C
+	// as 'struct' needs to be prepended for structs
+	if(struct_kw) name.setDataStr("struct " + name.getDataStr());
 
 	if(!p.acceptn(lex::COMMA)) goto endinfo;
 
@@ -1226,13 +1232,22 @@ endinfo:
 		return false;
 	}
 
-	if(!parse_fnsig(p, (Stmt *&)sig)) return false;
-	ext = StmtExtern::create(ctx, name.getLoc(), name, headers, libs, sig);
+	if(p.accept(lex::FN)) {
+		if(!parse_fnsig(p, entity)) return false;
+	} else if(p.accept(lex::STRUCT)) {
+		if(!parse_struct(p, entity, false)) return false;
+	} else {
+		err.set(p.peak(), "expected 'fn' or 'struct' for extern declaration, found: %s",
+			p.peak().getTok().cStr());
+		return false;
+	}
+
+	ext = StmtExtern::create(ctx, name.getLoc(), name, headers, libs, entity);
 	return true;
 fail:
 	if(headers) delete headers;
 	if(libs) delete libs;
-	if(sig) delete sig;
+	if(entity) delete entity;
 	return false;
 }
 
@@ -1270,7 +1285,7 @@ bool Parsing::parse_enum(ParseHelper &p, Stmt *&ed)
 	return true;
 }
 
-bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd)
+bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd, const bool &allowed_templs)
 {
 	sd = nullptr;
 
@@ -1287,6 +1302,10 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd)
 	}
 
 	if(p.acceptn(lex::LT)) {
+		if(!allowed_templs) {
+			err.set(p.peak(), "templates are not allowed in externed structs");
+			return false;
+		}
 		while(p.accept(lex::IDEN)) {
 			templates.push_back(p.peak());
 			p.next();

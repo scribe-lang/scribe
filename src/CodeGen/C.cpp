@@ -419,21 +419,29 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 	if(!stmt->isCodeGenMangled()) varname = getMangledName(varname, stmt);
 
 	if(stmt->getVVal() && stmt->getVVal()->getStmtType() == EXTERN) {
-		StmtExtern *ext	  = as<StmtExtern>(stmt->getVVal());
-		size_t args	  = ext->getSigArgs().size();
-		std::string macro = "#define " + varname + "(";
-		std::string argstr;
-		for(size_t i = 0; i < args; ++i) {
-			argstr += 'a' + i;
-			argstr += ", ";
+		StmtExtern *ext = as<StmtExtern>(stmt->getVVal());
+		Stmt *ent	= ext->getEntity();
+		if(ent->isStructDef()) {
+			std::string decl = "typedef " + ext->getName().getDataStr();
+			decl += " struct_" + std::to_string(ent->getValueTy()->getID());
+			decl += ";";
+			typedefs.push_back(decl);
+		} else if(ent->isFnSig()) {
+			size_t args	  = as<StmtFnSig>(ent)->getArgs().size();
+			std::string macro = "#define " + varname + "(";
+			std::string argstr;
+			for(size_t i = 0; i < args; ++i) {
+				argstr += 'a' + i;
+				argstr += ", ";
+			}
+			if(args) {
+				argstr.pop_back();
+				argstr.pop_back();
+			}
+			macro += argstr + ") ";
+			macro += ext->getName().getDataStr() + "(" + argstr + ")";
+			macros.push_back(macro);
 		}
-		if(args) {
-			argstr.pop_back();
-			argstr.pop_back();
-		}
-		macro += argstr + ") ";
-		macro += ext->getFnName().getDataStr() + "(" + argstr + ")";
-		macros.push_back(macro);
 		if(!visit(stmt->getVVal(), writer, false)) {
 			err.set(stmt, "failed to generate C code for extern variable");
 			return false;
@@ -581,7 +589,7 @@ bool CDriver::visit(StmtExtern *stmt, Writer &writer, const bool &semicol)
 {
 	if(stmt->getHeaders()) visit(stmt->getHeaders(), writer, false);
 	if(stmt->getLibs()) visit(stmt->getLibs(), writer, false);
-	// nothing to do of signature
+	// nothing to do of signature/struct
 	return true;
 }
 bool CDriver::visit(StmtEnum *stmt, Writer &writer, const bool &semicol)
@@ -1010,6 +1018,10 @@ bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 {
 	static std::unordered_set<uint64_t> declaredstructs;
 	if(declaredstructs.find(sty->getID()) != declaredstructs.end()) return true;
+	if(sty->isExtern()) { // externed structs are declared in StmtVar
+		declaredstructs.insert(sty->getID());
+		return true;
+	}
 	Writer st;
 	st.write("typedef struct {");
 	if(!sty->getFields().empty()) {
