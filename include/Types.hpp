@@ -228,8 +228,14 @@ public:
 
 	static IntTy *create(Context &c, const size_t &_bits, const bool &_sign);
 
-	const size_t &getBits() const;
-	const bool &isSigned() const;
+	inline const size_t &getBits() const
+	{
+		return bits;
+	}
+	inline const bool &isSigned() const
+	{
+		return sign;
+	}
 
 	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
@@ -249,7 +255,10 @@ public:
 
 	static FltTy *create(Context &c, const size_t &_bits);
 
-	const size_t &getBits() const;
+	inline const size_t &getBits() const
+	{
+		return bits;
+	}
 
 	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
@@ -292,9 +301,18 @@ public:
 
 	static PtrTy *create(Context &c, Type *ptr_to, const size_t &count);
 
-	Type *&getTo();
-	const size_t &getCount();
-	bool isArrayPtr();
+	inline Type *&getTo()
+	{
+		return to;
+	}
+	inline const size_t &getCount()
+	{
+		return count;
+	}
+	inline bool isArrayPtr()
+	{
+		return count > 0;
+	}
 
 	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };
@@ -308,16 +326,18 @@ class StructTy : public Type
 	std::vector<std::string> templatenames;
 	std::vector<TypeTy *> templates;
 	bool has_template;
+	bool externed;
 
 public:
 	StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields,
 		 const std::vector<std::string> &templatenames,
-		 const std::vector<TypeTy *> &templates);
+		 const std::vector<TypeTy *> &templates, const bool &externed);
 	StructTy(const size_t &info, const uint64_t &id, const std::vector<std::string> &fieldnames,
 		 const std::unordered_map<std::string, size_t> &fieldpos,
 		 const std::vector<Type *> &fields, const std::vector<std::string> &templatenames,
 		 const std::unordered_map<std::string, size_t> &templatepos,
-		 const std::vector<TypeTy *> &templates, const bool &has_template);
+		 const std::vector<TypeTy *> &templates, const bool &has_template,
+		 const bool &externed);
 	~StructTy();
 
 	bool isTemplate();
@@ -334,16 +354,40 @@ public:
 	static StructTy *create(Context &c, const std::vector<std::string> &_fieldnames,
 				const std::vector<Type *> &_fields,
 				const std::vector<std::string> &_templatenames,
-				const std::vector<TypeTy *> &_templates);
+				const std::vector<TypeTy *> &_templates, const bool &_externed);
 
-	const std::string &getFieldName(const size_t &idx);
-	std::vector<Type *> &getFields();
+	inline void setExterned(const bool &ext)
+	{
+		externed = ext;
+	}
+	inline const std::string &getFieldName(const size_t &idx)
+	{
+		return fieldnames[idx];
+	}
+	inline std::vector<Type *> &getFields()
+	{
+		return fields;
+	}
+	inline std::vector<TypeTy *> &getTemplates()
+	{
+		return templates;
+	}
+	inline void clearTemplates()
+	{
+		templates.clear();
+	}
+	inline void setTemplate(const bool &has_templ)
+	{
+		has_template = has_templ;
+	}
+	inline bool isExtern()
+	{
+		return externed;
+	}
+
 	Type *getField(const std::string &name);
 	Type *getField(const size_t &pos);
-	std::vector<TypeTy *> &getTemplates();
-	void clearTemplates();
 
-	void setTemplate(const bool &has_templ);
 	bool hasTemplate();
 
 	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
@@ -386,21 +430,59 @@ public:
 			      Type *_ret, IntrinsicFn _intrin, const IntrinType &_inty,
 			      const bool &_externed);
 
-	void setVar(StmtVar *v);
-	void setArg(const size_t &idx, Type *arg);
-	void insertArg(const size_t &idx, Type *arg);
-	void eraseArg(const size_t &idx);
+	inline void setVar(StmtVar *v)
+	{
+		var = v;
+	}
+	inline void setArg(const size_t &idx, Type *arg)
+	{
+		args[idx] = arg;
+	}
+	inline void insertArg(const size_t &idx, Type *arg)
+	{
+		args.insert(args.begin() + idx, arg);
+	}
+	inline void eraseArg(const size_t &idx)
+	{
+		args.erase(args.begin() + idx);
+	}
+	inline void setExterned(const bool &ext)
+	{
+		externed = ext;
+	}
+	inline StmtVar *&getVar()
+	{
+		return var;
+	}
+	inline std::vector<Type *> &getArgs()
+	{
+		return args;
+	}
+	inline Type *getArg(const size_t &idx)
+	{
+		return args.size() > idx ? args[idx] : nullptr;
+	}
+	inline Type *getRet()
+	{
+		return ret;
+	}
+	inline bool isIntrinsic()
+	{
+		return intrin != nullptr;
+	}
+	inline bool isParseIntrinsic()
+	{
+		return inty == IPARSE;
+	}
+	inline bool isExtern()
+	{
+		return externed;
+	}
+	inline IntrinsicFn getIntrinsicFn()
+	{
+		return intrin;
+	}
 	void updateUniqID();
-	void setExterned(const bool &ext);
-	StmtVar *&getVar();
-	std::vector<Type *> &getArgs();
-	Type *getArg(const size_t &idx);
-	Type *getRet();
-	bool isIntrinsic();
-	bool isParseIntrinsic();
-	const size_t &getTemplates() const;
-	bool isExtern();
-	IntrinsicFn getIntrinsicFn();
 	bool callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
 			   std::vector<Stmt *> &callargs);
 
@@ -423,9 +505,18 @@ public:
 
 	static VariadicTy *create(Context &c, const std::vector<Type *> &_args);
 
-	void addArg(Type *ty);
-	std::vector<Type *> &getArgs();
-	Type *getArg(const size_t &idx);
+	inline void addArg(Type *ty)
+	{
+		args.push_back(ty);
+	}
+	inline std::vector<Type *> &getArgs()
+	{
+		return args;
+	}
+	inline Type *getArg(const size_t &idx)
+	{
+		return args.size() > idx ? args[idx] : nullptr;
+	}
 
 	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
 };

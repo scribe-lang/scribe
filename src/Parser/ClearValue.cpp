@@ -129,7 +129,7 @@ void StmtExtern::clearValue()
 	if(values[valueid]) values[valueid]->clearHasData();
 	if(headers) headers->clearValue();
 	if(libs) libs->clearValue();
-	sig->clearValue();
+	entity->clearValue();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

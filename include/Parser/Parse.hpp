@@ -71,7 +71,7 @@ public:
 	bool parse_extern(ParseHelper &p, Stmt *&ext);
 
 	bool parse_enum(ParseHelper &p, Stmt *&ed);
-	bool parse_struct(ParseHelper &p, Stmt *&sd);
+	bool parse_struct(ParseHelper &p, Stmt *&sd, const bool &allowed_templs);
 
 	bool parse_vardecl(ParseHelper &p, Stmt *&vd); // combines VAR_DECL_BASE and VAR_DECL
 
