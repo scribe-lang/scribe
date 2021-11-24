@@ -804,7 +804,7 @@ bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 	bool is_intrinsic = false;
 
 	if(p.acceptn(lex::LPAREN)) {
-		if(!parse_expr(p, expr, disable_brace_after_iden)) {
+		if(!parse_expr(p, lhs, disable_brace_after_iden)) {
 			return false;
 		}
 		if(!p.acceptn(lex::RPAREN)) {
@@ -813,7 +813,6 @@ bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 				p.peak().getTok().cStr());
 			return false;
 		}
-		return true;
 	}
 
 begin:

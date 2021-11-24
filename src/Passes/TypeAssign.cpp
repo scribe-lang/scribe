@@ -277,8 +277,15 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		const std::string &fieldname = rsim->getLexValue().getDataStr();
 		// if value is struct, that's definitely not struct def
 		// struct def will be in TypeVal(Struct)
-		StructVal *sv = nullptr;
-		Value *res    = nullptr;
+		StructVal *sv	= nullptr;
+		Value *res	= nullptr;
+		Value *v	= lhs->getValue();
+		size_t ptrcount = 0;
+		while(v->getType()->isPtr()) {
+			v = as<VecVal>(v)->getValAt(0);
+			++ptrcount;
+		}
+		lhs->setDerefCount(ptrcount);
 		if(!lhs->getValue()->isStruct()) {
 			goto typefn;
 		}
@@ -395,7 +402,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		break;
 	}
 	case lex::STCALL: {
-		Value *&lv = lhs->getValue();
+		Value *lv = lhs->getValue();
 		if(!lv->isType() || !as<TypeVal>(lv)->getVal()->isStruct()) {
 			err.set(stmt,
 				"struct call is only applicable on struct definitions, found: %s",
@@ -428,7 +435,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		if(!lhs->getValue()->isType()) {
 			Type *t = lhs->getValueTy();
 			t	= PtrTy::create(ctx, t, 0, false);
-			stmt->createAndSetValue(RefVal::create(ctx, t, lhs->getValue()));
+			stmt->createAndSetValue(VecVal::create(ctx, t, CDFALSE, {lhs->getValue()}));
 			break;
 		}
 		Type *t = as<TypeVal>(lhs->getValue())->getVal();
@@ -446,8 +453,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 					t->toStr().c_str());
 				return false;
 			}
-			t = as<PtrTy>(t)->getTo();
-			stmt->createAndSetValue(RefVal::create(ctx, t, lhs->getValue()));
+			stmt->createAndSetValue(as<VecVal>(lhs->getValue())->getValAt(0));
 			break;
 		}
 		Type *t = as<TypeVal>(lhs->getValue())->getVal();
@@ -1064,7 +1070,7 @@ void TypeAssignPass::applyPrimitiveTypeCoercion(Type *to, Stmt *from)
 void TypeAssignPass::applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex::Lexeme &oper)
 {
 	if(!lhs || !rhs) return;
-	if(!lhs->getValueTy()->isPrimitive() || !rhs->getValueTy()->isPrimitive()) return;
+	if(!lhs->getValueTy()->isPrimitiveOrPtr() || !rhs->getValueTy()->isPrimitiveOrPtr()) return;
 	if(oper.getTok().getVal() == lex::SUBS) return;
 
 	Type *l = lhs->getValueTy();

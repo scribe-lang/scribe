@@ -200,8 +200,9 @@ public:
 		return data;
 	}
 
-	inline Value *&getField(const std::string &key)
+	inline Value *getField(const std::string &key)
 	{
+		if(data.find(key) == data.end()) return nullptr;
 		return data[key];
 	}
 };

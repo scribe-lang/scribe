@@ -19,5 +19,6 @@ let countDigits = fn(data: i64): i32 {
 		data /= 10;
 		++res;
 	}
+	if res == 0 { res = 1; }
 	return res;
 };
