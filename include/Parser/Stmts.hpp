@@ -59,6 +59,7 @@ protected:
 
 	uint64_t valueid;
 	Type *cast_to;
+	size_t derefcount; // number of dereferences to be done while generating code
 
 public:
 	Stmt(const Stmts &stmt_type, const ModuleLoc &loc);
@@ -153,26 +154,25 @@ public:
 		assert(valueid && "valueid cannot be zero for setValueTy()");
 		values[valueid]->setType(t);
 	}
+	inline void setDerefCount(const size_t &count)
+	{
+		derefcount = count;
+	}
 
 	inline const uint64_t &getValueID()
 	{
 		return valueid;
 	}
-	inline Value *&getValue()
-	{
-		assert(valueid && "valueid cannot be zero for getValue()");
-		return values[valueid];
-	}
+	Value *getValue();
 	// if exact = true, cast will be skipped
-	inline Type *&getValueTy(const bool &exact = false)
-	{
-		assert(valueid && "valueid cannot be zero for getValueTy()");
-		if(cast_to && !exact) return cast_to;
-		return values[valueid]->getType();
-	}
+	Type *getValueTy(const bool &exact = false);
 	inline Type *getCast()
 	{
 		return cast_to;
+	}
+	inline const size_t &getDerefCount()
+	{
+		return derefcount;
 	}
 };
 

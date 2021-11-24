@@ -189,12 +189,17 @@ static size_t SizeOf(Type *ty)
 		return as<FltTy>(ty)->getBits() / 8;
 	}
 	if(ty->isStruct()) {
-		StructTy *st = as<StructTy>(ty);
-		size_t sz    = 0;
+		StructTy *st   = as<StructTy>(ty);
+		size_t sz      = 0;
+		size_t biggest = 0;
 		for(auto &t : st->getFields()) {
-			sz += SizeOf(t);
+			size_t newsz = SizeOf(t);
+			if(newsz > biggest) biggest = newsz;
+			sz += newsz;
 		}
-		if(!sz) sz = 1;
+		while(sz % biggest != 0) {
+			++sz;
+		}
 		return sz;
 	}
 	return 0;

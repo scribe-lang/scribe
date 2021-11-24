@@ -383,7 +383,7 @@ PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count, const bool &
 Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
 	std::vector<Value *> vec;
-	Value *res = is_weak ? IntVal::create(c, IntTy::create(c, 64, 0), cd, 0)
+	Value *res = is_weak ? IntVal::create(c, IntTy::create(c, sizeof(void *) * 8, 0), cd, 0)
 			     : to->toDefaultValue(c, e, loc, cd);
 	if(!res) {
 		e.set(loc, "failed to get default value from array's type");

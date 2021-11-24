@@ -233,9 +233,11 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 	// in type assign pass for StmtVar
 	// The following part is only valid for existing variables.
 	// the part for variable declaration exists in Var visit
-	if(stmt->getValueTy(true)->hasRef()) writer.write("(*"); // for references
+	if(stmt->getValueTy(true)->hasRef() || stmt->getDerefCount()) writer.write("(");
+	if(stmt->getValueTy(true)->hasRef()) writer.write("*");
+	if(stmt->getDerefCount()) writer.write(std::string(stmt->getDerefCount(), '*'));
 	writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
-	if(stmt->getValueTy(true)->hasRef()) writer.write(")"); // for references
+	if(stmt->getValueTy(true)->hasRef() || stmt->getDerefCount()) writer.write(")");
 	if(semicol) writer.write(";");
 	return true;
 }
@@ -299,14 +301,16 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 	}
 	// address of
 	case lex::UAND: {
-		writer.write("&");
+		writer.write("(&");
 		writer.append(l);
+		writer.write(")");
 		break;
 	}
 	// dereference
 	case lex::UMUL: {
-		writer.write("*");
+		writer.write("(*");
 		writer.append(l);
+		writer.write(")");
 		break;
 	}
 	case lex::SUBS:

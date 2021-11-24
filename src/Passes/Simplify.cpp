@@ -314,6 +314,14 @@ bool SimplifyPass::visit(StmtFor *stmt, Stmt **source)
 }
 bool SimplifyPass::visit(StmtWhile *stmt, Stmt **source)
 {
+	if(stmt->getCond() && !visit(stmt->getCond(), &stmt->getCond())) {
+		err.set(stmt, "failed to apply simplify pass on while condition");
+		return false;
+	}
+	if(stmt->getBlk() && !visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
+		err.set(stmt, "failed to apply simplify pass on while block");
+		return false;
+	}
 	return true;
 }
 bool SimplifyPass::visit(StmtRet *stmt, Stmt **source)
