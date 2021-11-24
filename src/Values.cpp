@@ -181,7 +181,7 @@ VecVal *VecVal::createStr(Context &c, const std::string &val)
 	for(auto &ch : val) {
 		chars.push_back(IntVal::create(c, ty, CDTRUE, ch));
 	}
-	ty = mkPtrTy(c, ty, 0);
+	ty = mkPtrTy(c, ty, 0, false);
 	return c.allocVal<VecVal>(ty, CDTRUE, chars);
 }
 

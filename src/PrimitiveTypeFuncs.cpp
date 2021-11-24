@@ -70,7 +70,7 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 
 	i8str = IntTy::create(c, 8, true);
 	i8str->setConst();
-	i8str = PtrTy::create(c, i8str, 0);
+	i8str = PtrTy::create(c, i8str, 0, false);
 	i8str->setComptime();
 	g = TypeTy::create(c);
 	ADDFN("import", createFnVal(c, {i8str}, g, intrinsic_import, IPARSE));

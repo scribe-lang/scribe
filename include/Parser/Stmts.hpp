@@ -753,6 +753,7 @@ class StmtStruct : public Stmt
 {
 	std::vector<StmtVar *> fields;
 	std::vector<lex::Lexeme> templates;
+	bool is_externed; // required for setting up partial types correctly
 
 public:
 	StmtStruct(const ModuleLoc &loc, const std::vector<StmtVar *> &fields,
@@ -769,6 +770,10 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(const bool &inc);
 
+	inline void setExterned(const bool &externed)
+	{
+		is_externed = externed;
+	}
 	inline std::vector<StmtVar *> &getFields()
 	{
 		return fields;
@@ -776,6 +781,10 @@ public:
 	inline const std::vector<lex::Lexeme> &getTemplates()
 	{
 		return templates;
+	}
+	inline bool isExterned()
+	{
+		return is_externed;
 	}
 
 	std::vector<std::string> getTemplateNames();

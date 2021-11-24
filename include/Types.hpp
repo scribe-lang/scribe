@@ -289,18 +289,28 @@ class PtrTy : public Type
 {
 	Type *to;
 	size_t count; // 0 = normal pointer, > 0 = array pointer with count = size
+	bool is_weak; // required for self referencing members in struct
 
 public:
-	PtrTy(Type *to, const size_t &count);
-	PtrTy(const size_t &info, const uint64_t &id, Type *to, const size_t &count);
+	PtrTy(Type *to, const size_t &count, const bool &is_weak);
+	PtrTy(const size_t &info, const uint64_t &id, Type *to, const size_t &count,
+	      const bool &is_weak);
 	~PtrTy();
 
 	bool isTemplate();
 	std::string toStr();
 	Type *clone(Context &c, const bool &as_is = false);
 
-	static PtrTy *create(Context &c, Type *ptr_to, const size_t &count);
+	static PtrTy *create(Context &c, Type *ptr_to, const size_t &count, const bool &is_weak);
 
+	inline void setTo(Type *ty)
+	{
+		to = ty;
+	}
+	inline void setWeak(const bool &weak)
+	{
+		is_weak = weak;
+	}
 	inline Type *&getTo()
 	{
 		return to;
@@ -308,6 +318,10 @@ public:
 	inline const size_t &getCount()
 	{
 		return count;
+	}
+	inline bool isWeak()
+	{
+		return is_weak;
 	}
 	inline bool isArrayPtr()
 	{
@@ -356,6 +370,12 @@ public:
 				const std::vector<std::string> &_templatenames,
 				const std::vector<TypeTy *> &_templates, const bool &_externed);
 
+	inline void insertField(const std::string &name, Type *ty)
+	{
+		fieldpos[name] = fields.size();
+		fieldnames.push_back(name);
+		fields.push_back(ty);
+	}
 	inline void setExterned(const bool &ext)
 	{
 		externed = ext;
@@ -567,15 +587,15 @@ inline Type *mkF64Ty(Context &c)
 {
 	return FltTy::create(c, 64);
 }
-inline Type *mkPtrTy(Context &c, Type *to, const size_t &count)
+inline Type *mkPtrTy(Context &c, Type *to, const size_t &count, const bool &is_weak)
 {
-	return PtrTy::create(c, to, count);
+	return PtrTy::create(c, to, count, is_weak);
 }
 inline Type *mkStrTy(Context &c)
 {
 	Type *res = IntTy::create(c, 8, true);
 	res->setConst();
-	res = PtrTy::create(c, res, 0);
+	res = PtrTy::create(c, res, 0, false);
 	return res;
 }
 

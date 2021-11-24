@@ -105,7 +105,7 @@ INTRINSIC(ptr)
 {
 	// args[0] should be a TypeVal
 	Type *res = as<TypeVal>(args[0]->getValue())->getVal()->clone(c);
-	res	  = PtrTy::create(c, res, 0);
+	res	  = PtrTy::create(c, res, 0, false);
 	stmt->createAndSetValue(TypeVal::create(c, res));
 	return true;
 }
@@ -138,7 +138,7 @@ INTRINSIC(array)
 		counts.insert(counts.begin(), as<IntVal>(args[i]->getValue())->getVal());
 	}
 	for(auto &count : counts) {
-		resty = PtrTy::create(c, resty, count);
+		resty = PtrTy::create(c, resty, count, false);
 	}
 	Value *res = resty->toDefaultValue(c, err, stmt->getLoc(), CDTRUE);
 	if(!res) {
