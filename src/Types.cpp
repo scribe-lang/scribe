@@ -56,6 +56,10 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	if(!rhs) return false;
 	if(isAny()) return true;
 	if(isPtr() && rhs->isPtr()) {
+		if(as<PtrTy>(this)->isWeak() || as<PtrTy>(rhs)->isWeak()) {
+			return as<PtrTy>(this)->getTo()->getID() ==
+			       as<PtrTy>(rhs)->getTo()->getID();
+		}
 		return as<PtrTy>(this)->getTo()->isCompatible(c, as<PtrTy>(rhs)->getTo(), e, loc);
 	}
 	if(rhs->isTypeTy()) {
@@ -342,34 +346,45 @@ Value *TypeTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsDat
 // Pointer Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-PtrTy::PtrTy(Type *to, const size_t &count) : Type(TPTR, 0, TPTR), to(to), count(count) {}
-PtrTy::PtrTy(const size_t &info, const uint64_t &id, Type *to, const size_t &count)
-	: Type(TPTR, info, id), to(to), count(count)
+PtrTy::PtrTy(Type *to, const size_t &count, const bool &is_weak)
+	: Type(TPTR, 0, TPTR), to(to), count(count), is_weak(is_weak)
+{}
+PtrTy::PtrTy(const size_t &info, const uint64_t &id, Type *to, const size_t &count,
+	     const bool &is_weak)
+	: Type(TPTR, info, id), to(to), count(count), is_weak(is_weak)
 {}
 PtrTy::~PtrTy() {}
 bool PtrTy::isTemplate()
 {
-	return to->isTemplate();
+	return is_weak ? false : to->isTemplate();
 }
 std::string PtrTy::toStr()
 {
-	std::string countexpr;
-	if(count) countexpr = "[" + std::to_string(count) + "] ";
-	return "*" + countexpr + infoToStr() + to->toStr();
+	std::string extradata;
+	if(count) extradata = "[" + std::to_string(count) + "] ";
+	std::string res = "*" + extradata + infoToStr();
+	if(!is_weak) {
+		res += to->toStr();
+	} else {
+		res += to->infoToStr() + " weak<" + std::to_string(to->getID()) + ">";
+	}
+	return res;
 }
 Type *PtrTy::clone(Context &c, const bool &as_is)
 {
-	return c.allocType<PtrTy>(getInfo(), getBaseID(), to->clone(c, as_is), count);
+	return c.allocType<PtrTy>(getInfo(), getBaseID(), !is_weak ? to->clone(c, as_is) : to,
+				  count, is_weak);
 }
-PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count)
+PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count, const bool &is_weak)
 {
-	return c.allocType<PtrTy>(ptr_to, count);
+	return c.allocType<PtrTy>(ptr_to, count, is_weak);
 }
 
 Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
 {
 	std::vector<Value *> vec;
-	Value *res = to->toDefaultValue(c, e, loc, cd);
+	Value *res = is_weak ? IntVal::create(c, IntTy::create(c, 64, 0), cd, 0)
+			     : to->toDefaultValue(c, e, loc, cd);
 	if(!res) {
 		e.set(loc, "failed to get default value from array's type");
 		return nullptr;
@@ -782,7 +797,7 @@ size_t getPointerCount(Type *t)
 Type *applyPointerCount(Context &c, Type *t, const size_t &count)
 {
 	for(size_t i = 0; i < count; ++i) {
-		t = PtrTy::create(c, t, 0);
+		t = PtrTy::create(c, t, 0, false);
 	}
 	return t;
 }

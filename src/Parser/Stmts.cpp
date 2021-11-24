@@ -583,7 +583,7 @@ bool StmtEnum::requiresTemplateInit()
 
 StmtStruct::StmtStruct(const ModuleLoc &loc, const std::vector<StmtVar *> &fields,
 		       const std::vector<lex::Lexeme> &templates)
-	: Stmt(STRUCTDEF, loc), fields(fields), templates(templates)
+	: Stmt(STRUCTDEF, loc), fields(fields), templates(templates), is_externed(false)
 {}
 StmtStruct::~StmtStruct() {}
 StmtStruct *StmtStruct::create(Context &c, const ModuleLoc &loc,

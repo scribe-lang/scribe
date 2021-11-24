@@ -23,12 +23,18 @@ namespace sc
 {
 class TypeAssignPass : public Pass
 {
+	struct PartialType
+	{
+		PtrTy *ty;
+		size_t infomask;
+	};
 	ValueManager vmgr;
 	ValueAssignPass vpass;
 	DeferStack deferstack;
 	std::vector<StmtVar *> specfns; // specialized funcs
 	std::vector<size_t> valen;	// variadic length of current function
 	std::vector<bool> is_fn_va;
+	std::vector<PartialType> partialtypes;
 	bool disabled_varname_mangling;
 
 	std::string getMangledName(Stmt *stmt, const std::string &name,

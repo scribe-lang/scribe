@@ -121,11 +121,29 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 		err.set(stmt, "failed to determine type of type-expr");
 		return false;
 	}
-	Type *res = stmt->getExpr()->getValueTy()->clone(ctx);
-	res->setInfo(stmt->getInfoMask());
+	bool is_self = false;
+	// self referenced struct - must be a reference or pointer
+	if(stmt->getExpr()->isSimple() &&
+	   as<StmtSimple>(stmt->getExpr())->getLexValue().getDataStr() == "self")
+	{
+		if(!stmt->getPtrCount()) {
+			err.set(stmt, "self referencing struct member must be a pointer");
+			return false;
+		}
+		is_self = true;
+	}
+	Type *res = stmt->getExpr()->getValueTy();
+	if(!is_self) {
+		res = res->clone(ctx);
+		res->setInfo(stmt->getInfoMask());
+	}
 	// generate ptrs
 	for(size_t i = 0; i < stmt->getPtrCount(); ++i) {
-		res = PtrTy::create(ctx, res, 0);
+		res = PtrTy::create(ctx, res, 0, false);
+		if(is_self && i == stmt->getPtrCount() - 1) {
+			as<PtrTy>(res)->setWeak(true);
+			partialtypes.push_back({as<PtrTy>(res), stmt->getInfoMask()});
+		}
 	}
 	stmt->createAndSetValue(TypeVal::create(ctx, res));
 	return true;
@@ -409,7 +427,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	case lex::UAND: {
 		if(!lhs->getValue()->isType()) {
 			Type *t = lhs->getValueTy();
-			t	= PtrTy::create(ctx, t, 0);
+			t	= PtrTy::create(ctx, t, 0, false);
 			stmt->createAndSetValue(RefVal::create(ctx, t, lhs->getValue()));
 			break;
 		}
@@ -433,7 +451,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			break;
 		}
 		Type *t = as<TypeVal>(lhs->getValue())->getVal();
-		stmt->createAndSetValue(TypeVal::create(ctx, PtrTy::create(ctx, t, 0)));
+		stmt->createAndSetValue(TypeVal::create(ctx, PtrTy::create(ctx, t, 0, false)));
 		break;
 	}
 	case lex::SUBS: {
@@ -749,6 +767,9 @@ bool TypeAssignPass::visit(StmtLib *stmt, Stmt **source)
 bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 {
 	vmgr.pushLayer();
+	if(stmt->getEntity()->isStructDef()) {
+		as<StmtStruct>(stmt->getEntity())->setExterned(true);
+	}
 	if(!visit(stmt->getEntity(), &stmt->getEntity())) {
 		err.set(stmt, "failed to determine type of extern entity");
 		return false;
@@ -757,9 +778,6 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 		FuncVal *fn = as<FuncVal>(stmt->getEntity()->getValue());
 		fn->getVal()->setExterned(true);
 		fn->getVal()->setVar(stmt->getParentVar());
-	} else if(stmt->getEntity()->isStructDef()) {
-		TypeVal *st = as<TypeVal>(stmt->getEntity()->getValue());
-		as<StructTy>(st->getVal())->setExterned(true);
 	}
 	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
 		err.set(stmt, "failed to assign header type");
@@ -780,8 +798,6 @@ bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 {
 	vmgr.pushLayer();
-	std::vector<std::string> fieldnames;
-	std::vector<Type *> fieldtypes;
 	std::vector<TypeTy *> templates;
 	std::vector<std::string> templatenames = stmt->getTemplateNames();
 
@@ -791,20 +807,27 @@ bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 		uint64_t id = createValueIDWith(TypeVal::create(ctx, templates.back()));
 		vmgr.addVar(t, id, nullptr);
 	}
+
+	StructTy *st = StructTy::create(ctx, {}, {}, templatenames, templates, stmt->isExterned());
+	stmt->createAndSetValue(TypeVal::create(ctx, st));
+	uint64_t selfid = stmt->getValueID();
+	vmgr.addVar("self", selfid, nullptr);
 	for(auto &f : stmt->getFields()) {
 		if(!visit(f, asStmt(&f))) {
 			err.set(stmt, "failed to determine type of struct field");
 			return false;
 		}
-		fieldnames.push_back(f->getName().getDataStr());
-		fieldtypes.push_back(f->getValueTy());
+		st->insertField(f->getName().getDataStr(), f->getValueTy());
 	}
 	disabled_varname_mangling = false;
 
-	StructTy *st =
-	StructTy::create(ctx, fieldnames, fieldtypes, templatenames, templates, false);
-	stmt->createAndSetValue(TypeVal::create(ctx, st));
 	vmgr.popLayer();
+	for(auto &pt : partialtypes) {
+		StructTy *cl = as<StructTy>(st->clone(ctx));
+		cl->setInfo(pt.infomask);
+		pt.ty->setTo(cl);
+	}
+	partialtypes.clear();
 	return true;
 }
 bool TypeAssignPass::visit(StmtVarDecl *stmt, Stmt **source)
