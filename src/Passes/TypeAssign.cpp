@@ -301,7 +301,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		uint64_t vid = 0;
 		if(!(vid = vmgr.getTypeFn(lhs->getValueTy(), fieldname))) {
 			err.set(stmt, "no field or function '%s' in struct '%s'", fieldname.c_str(),
-				lhs->getValue()->toStr().c_str());
+				lhs->getValueTy()->toStr().c_str());
 			return false;
 		}
 		// erase the expression, replace with the rhs alone
@@ -859,7 +859,7 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 			err.set(stmt, "conditional expression type must be primitive");
 			return false;
 		}
-		if(!visit(b, asStmt(&b))) {
+		if(!stmt->isInline() && !visit(b, asStmt(&b))) {
 			err.set(stmt, "failed to determine types"
 				      " in inline conditional block");
 			return false;
@@ -1160,6 +1160,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 			}
 			if(args[i]->getCast()) cfa->castTo(args[i]->getCast());
 			cfa->getValueTy()->appendInfo(cfa->getVType()->getInfoMask());
+			if(cfa->getVType()->hasModifier(REF)) cfa->getValueTy()->unsetRef();
 			cf->setArg(i, cfa->getValueTy());
 			vmgr.addVar(cfa->getName().getDataStr(), cfa->getValueID(), cfa);
 			continue;

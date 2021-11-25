@@ -84,8 +84,8 @@ public:
 	bool requiresCast(Type *other);
 
 	virtual uint64_t getID();
-	virtual bool isTemplate();
-	virtual std::string toStr();
+	virtual bool isTemplate(const size_t &weak_depth = 0);
+	virtual std::string toStr(const size_t &weak_depth = 0);
 	virtual Type *clone(Context &c, const bool &as_is = false) = 0;
 	virtual bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 
@@ -118,7 +118,8 @@ public:
 		return isFlt();
 	}
 
-	virtual Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
+	virtual Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+				      const size_t &weak_depth = 0);
 
 #define SetModifierX(Fn, Mod) \
 	inline void set##Fn() \
@@ -191,11 +192,12 @@ public:
 	~VoidTy();
 
 	Type *clone(Context &c, const bool &as_is = false);
-	std::string toStr();
+	std::string toStr(const size_t &weak_depth = 0);
 
 	static VoidTy *create(Context &c);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth = 0);
 };
 class AnyTy : public Type
 {
@@ -205,11 +207,12 @@ public:
 	~AnyTy();
 
 	Type *clone(Context &c, const bool &as_is = false);
-	std::string toStr();
+	std::string toStr(const size_t &weak_depth = 0);
 
 	static AnyTy *create(Context &c);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth = 0);
 };
 
 class IntTy : public Type
@@ -224,7 +227,7 @@ public:
 
 	uint64_t getID();
 	Type *clone(Context &c, const bool &as_is = false);
-	std::string toStr();
+	std::string toStr(const size_t &weak_depth = 0);
 
 	static IntTy *create(Context &c, const size_t &_bits, const bool &_sign);
 
@@ -237,7 +240,8 @@ public:
 		return sign;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth = 0);
 };
 
 class FltTy : public Type
@@ -251,7 +255,7 @@ public:
 
 	uint64_t getID();
 	Type *clone(Context &c, const bool &as_is = false);
-	std::string toStr();
+	std::string toStr(const size_t &weak_depth = 0);
 
 	static FltTy *create(Context &c, const size_t &_bits);
 
@@ -260,7 +264,8 @@ public:
 		return bits;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth = 0);
 };
 
 class TypeTy : public Type
@@ -272,8 +277,8 @@ public:
 	TypeTy(const size_t &info, const uint64_t &id, const uint64_t &containedtyid);
 	~TypeTy();
 
-	bool isTemplate();
-	std::string toStr();
+	bool isTemplate(const size_t &weak_depth = 0);
+	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false);
 
 	static TypeTy *create(Context &c);
@@ -282,7 +287,8 @@ public:
 	void setContainedTy(Type *ty);
 	Type *getContainedTy();
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth = 0);
 };
 
 class PtrTy : public Type
@@ -297,8 +303,8 @@ public:
 	      const bool &is_weak);
 	~PtrTy();
 
-	bool isTemplate();
-	std::string toStr();
+	bool isTemplate(const size_t &weak_depth = 0);
+	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false);
 
 	static PtrTy *create(Context &c, Type *ptr_to, const size_t &count, const bool &is_weak);
@@ -328,7 +334,8 @@ public:
 		return count > 0;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth = 0);
 };
 
 class StructTy : public Type
@@ -354,8 +361,8 @@ public:
 		 const bool &externed);
 	~StructTy();
 
-	bool isTemplate();
-	std::string toStr();
+	bool isTemplate(const size_t &weak_depth = 0);
+	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 	// specializes a structure type
@@ -388,9 +395,13 @@ public:
 	{
 		return fields;
 	}
-	inline std::vector<TypeTy *> &getTemplates()
+	inline const std::vector<TypeTy *> &getTemplates()
 	{
 		return templates;
+	}
+	inline const std::vector<std::string> &getTemplateNames()
+	{
+		return templatenames;
 	}
 	inline void clearTemplates()
 	{
@@ -410,7 +421,8 @@ public:
 
 	bool hasTemplate();
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth = 0);
 };
 
 enum IntrinType
@@ -438,8 +450,8 @@ public:
 	~FuncTy();
 
 	uint64_t getID();
-	bool isTemplate();
-	std::string toStr();
+	bool isTemplate(const size_t &weak_depth = 0);
+	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 	// specializes a function type using StmtFnCallInfo
@@ -506,7 +518,8 @@ public:
 	bool callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
 			   std::vector<Stmt *> &callargs);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth = 0);
 };
 
 class VariadicTy : public Type
@@ -518,8 +531,8 @@ public:
 	VariadicTy(const size_t &info, const uint64_t &id, const std::vector<Type *> &args);
 	~VariadicTy();
 
-	bool isTemplate();
-	std::string toStr();
+	bool isTemplate(const size_t &weak_depth = 0);
+	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 
@@ -538,7 +551,8 @@ public:
 		return args.size() > idx ? args[idx] : nullptr;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd);
+	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth = 0);
 };
 
 // helpful functions
