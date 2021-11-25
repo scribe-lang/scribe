@@ -83,12 +83,12 @@ std::string Stmt::getTypeString() const
 	if(values[valueid]->hasData()) res += " ==> " + values[valueid]->toStr();
 	return res;
 }
-Value *Stmt::getValue()
+Value *Stmt::getValue(const bool &exact)
 {
 	assert(valueid && "valueid cannot be zero for getValue()");
 	size_t tmp = derefcount;
 	Value *v   = values[valueid];
-	while(tmp > 0) {
+	while(tmp > 0 && !exact) {
 		v = as<VecVal>(v)->getValAt(0);
 		--tmp;
 	}

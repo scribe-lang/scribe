@@ -16,6 +16,8 @@
 #include "Parser/Stmts.hpp"
 #include "Values.hpp"
 
+#define MAX_WEAKPTR_DEPTH 7
+
 namespace sc
 {
 static const char *TypeStrs[] = {
@@ -57,8 +59,10 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	if(isAny()) return true;
 	if(isPtr() && rhs->isPtr()) {
 		if(as<PtrTy>(this)->isWeak() || as<PtrTy>(rhs)->isWeak()) {
-			return as<PtrTy>(this)->getTo()->getID() ==
-			       as<PtrTy>(rhs)->getTo()->getID();
+			Type *lto = as<PtrTy>(this)->getTo();
+			Type *rto = as<PtrTy>(rhs)->getTo();
+			while(lto->isTypeTy()) lto = as<TypeTy>(lto)->getContainedTy();
+			return lto->getID() == rto->getID();
 		}
 		return as<PtrTy>(this)->getTo()->isCompatible(c, as<PtrTy>(rhs)->getTo(), e, loc);
 	}
@@ -149,11 +153,11 @@ uint64_t Type::getID()
 {
 	return getBaseID();
 }
-bool Type::isTemplate()
+bool Type::isTemplate(const size_t &weak_depth)
 {
 	return false;
 }
-std::string Type::toStr()
+std::string Type::toStr(const size_t &weak_depth)
 {
 	return baseToStr();
 }
@@ -162,7 +166,8 @@ bool Type::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	return isBaseCompatible(c, rhs, e, loc);
 }
 
-Value *Type::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
+Value *Type::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			    const size_t &weak_depth)
 {
 	e.set(loc, "invalid type for toDefaultValue(): %s", toStr().c_str());
 	return nullptr;
@@ -179,7 +184,7 @@ Type *VoidTy::clone(Context &c, const bool &as_is)
 {
 	return c.allocType<VoidTy>(getInfo());
 }
-std::string VoidTy::toStr()
+std::string VoidTy::toStr(const size_t &weak_depth)
 {
 	return "void";
 }
@@ -187,7 +192,8 @@ VoidTy *VoidTy::create(Context &c)
 {
 	return c.allocType<VoidTy>();
 }
-Value *VoidTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
+Value *VoidTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth)
 {
 	return VoidVal::create(c);
 }
@@ -203,7 +209,7 @@ Type *AnyTy::clone(Context &c, const bool &as_is)
 {
 	return c.allocType<AnyTy>(getInfo());
 }
-std::string AnyTy::toStr()
+std::string AnyTy::toStr(const size_t &weak_depth)
 {
 	return "any";
 }
@@ -212,7 +218,8 @@ AnyTy *AnyTy::create(Context &c)
 	return c.allocType<AnyTy>();
 }
 
-Value *AnyTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
+Value *AnyTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			     const size_t &weak_depth)
 {
 	return TypeVal::create(c, this);
 }
@@ -235,7 +242,7 @@ Type *IntTy::clone(Context &c, const bool &as_is)
 {
 	return c.allocType<IntTy>(getInfo(), getBaseID(), bits, sign);
 }
-std::string IntTy::toStr()
+std::string IntTy::toStr(const size_t &weak_depth)
 {
 	return infoToStr() + (sign ? "i" : "u") + std::to_string(bits);
 }
@@ -245,7 +252,8 @@ IntTy *IntTy::create(Context &c, const size_t &_bits, const bool &_sign)
 	return c.allocType<IntTy>(_bits, _sign);
 }
 
-Value *IntTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
+Value *IntTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			     const size_t &weak_depth)
 {
 	return IntVal::create(c, this, cd, 0);
 }
@@ -268,7 +276,7 @@ Type *FltTy::clone(Context &c, const bool &as_is)
 {
 	return c.allocType<FltTy>(getInfo(), getBaseID(), bits);
 }
-std::string FltTy::toStr()
+std::string FltTy::toStr(const size_t &weak_depth)
 {
 	return infoToStr() + "f" + std::to_string(bits);
 }
@@ -278,7 +286,8 @@ FltTy *FltTy::create(Context &c, const size_t &_bits)
 	return c.allocType<FltTy>(_bits);
 }
 
-Value *FltTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
+Value *FltTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			     const size_t &weak_depth)
 {
 	return FltVal::create(c, this, cd, 0.0);
 }
@@ -293,15 +302,15 @@ TypeTy::TypeTy(const size_t &info, const uint64_t &id, const uint64_t &contained
 {}
 TypeTy::~TypeTy() {}
 
-bool TypeTy::isTemplate()
+bool TypeTy::isTemplate(const size_t &weak_depth)
 {
 	return !getContainedTy();
 }
-std::string TypeTy::toStr()
+std::string TypeTy::toStr(const size_t &weak_depth)
 {
 	Type *ct = getContainedTy();
 	return infoToStr() + "typety<" +
-	       (ct ? ct->toStr() : "(none:" + std::to_string(containedtyid) + ")") + ">";
+	       (ct ? ct->toStr(weak_depth) : "(none:" + std::to_string(containedtyid) + ")") + ">";
 }
 Type *TypeTy::clone(Context &c, const bool &as_is)
 {
@@ -334,12 +343,13 @@ Type *TypeTy::getContainedTy()
 	return loc->second;
 }
 
-Value *TypeTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
+Value *TypeTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth)
 {
 	if(!getContainedTy()) {
 		return TypeVal::create(c, this);
 	}
-	return getContainedTy()->toDefaultValue(c, e, loc, cd);
+	return getContainedTy()->toDefaultValue(c, e, loc, cd, weak_depth);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -354,19 +364,19 @@ PtrTy::PtrTy(const size_t &info, const uint64_t &id, Type *to, const size_t &cou
 	: Type(TPTR, info, id), to(to), count(count), is_weak(is_weak)
 {}
 PtrTy::~PtrTy() {}
-bool PtrTy::isTemplate()
+bool PtrTy::isTemplate(const size_t &weak_depth)
 {
-	return is_weak ? false : to->isTemplate();
+	return weak_depth >= MAX_WEAKPTR_DEPTH ? false : to->isTemplate(weak_depth + is_weak);
 }
-std::string PtrTy::toStr()
+std::string PtrTy::toStr(const size_t &weak_depth)
 {
 	std::string extradata;
 	if(count) extradata = "[" + std::to_string(count) + "] ";
 	std::string res = "*" + extradata + infoToStr();
-	if(!is_weak) {
-		res += to->toStr();
-	} else {
+	if(weak_depth >= MAX_WEAKPTR_DEPTH) {
 		res += to->infoToStr() + " weak<" + std::to_string(to->getID()) + ">";
+	} else {
+		res += to->toStr(weak_depth + is_weak);
 	}
 	return res;
 }
@@ -380,11 +390,13 @@ PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count, const bool &
 	return c.allocType<PtrTy>(ptr_to, count, is_weak);
 }
 
-Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
+Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			     const size_t &weak_depth)
 {
 	std::vector<Value *> vec;
-	Value *res = is_weak ? IntVal::create(c, IntTy::create(c, sizeof(void *) * 8, 0), cd, 0)
-			     : to->toDefaultValue(c, e, loc, cd);
+	Value *res = weak_depth >= MAX_WEAKPTR_DEPTH
+		     ? IntVal::create(c, IntTy::create(c, sizeof(void *) * 8, 0), cd, 0)
+		     : to->toDefaultValue(c, e, loc, cd, weak_depth + is_weak);
 	if(!res) {
 		e.set(loc, "failed to get default value from array's type");
 		return nullptr;
@@ -426,18 +438,18 @@ StructTy::StructTy(const size_t &info, const uint64_t &id,
 	  has_template(has_template), externed(externed)
 {}
 StructTy::~StructTy() {}
-bool StructTy::isTemplate()
+bool StructTy::isTemplate(const size_t &weak_depth)
 {
 	for(auto &f : fields) {
-		if(f->isTemplate()) return true;
+		if(f->isTemplate(weak_depth)) return true;
 	}
 	return false;
 }
-std::string StructTy::toStr()
+std::string StructTy::toStr(const size_t &weak_depth)
 {
 	std::string res = infoToStr() + "struct<" + std::to_string(getID()) + ">{";
 	for(auto &f : fields) {
-		res += f->toStr() + ", ";
+		res += f->toStr(weak_depth) + ", ";
 	}
 	if(fields.size() > 0) {
 		res.pop_back();
@@ -540,16 +552,20 @@ bool StructTy::hasTemplate()
 	return false;
 }
 
-Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
+Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+				const size_t &weak_depth)
 {
 	std::unordered_map<std::string, Value *> st;
 	for(auto &f : fieldpos) {
-		Value *res = fields[f.second]->toDefaultValue(c, e, loc, cd);
+		Value *res = fields[f.second]->toDefaultValue(c, e, loc, cd, weak_depth);
 		if(!res) {
 			e.set(loc, "failed to get default value from array's type");
 			return nullptr;
 		}
 		st[f.first] = res;
+	}
+	for(auto &t : templatepos) {
+		st[t.first] = TypeVal::create(c, templates[t.second]);
 	}
 	return StructVal::create(c, this, cd, st);
 }
@@ -579,14 +595,14 @@ uint64_t FuncTy::getID()
 	res += ret->getID();
 	return res * 7;
 }
-bool FuncTy::isTemplate()
+bool FuncTy::isTemplate(const size_t &weak_depth)
 {
 	for(auto &a : args) {
-		if(a->isTemplate()) return true;
+		if(a->isTemplate(weak_depth)) return true;
 	}
-	return ret->isTemplate();
+	return ret->isTemplate(weak_depth);
 }
-std::string FuncTy::toStr()
+std::string FuncTy::toStr(const size_t &weak_depth)
 {
 	std::string res = infoToStr() + "function<" + std::to_string(getID());
 	if(intrin || externed) res += ", ";
@@ -598,13 +614,13 @@ std::string FuncTy::toStr()
 	}
 	res += ">(";
 	for(auto &a : args) {
-		res += a->toStr() + ", ";
+		res += a->toStr(weak_depth) + ", ";
 	}
 	if(args.size() > 0) {
 		res.pop_back();
 		res.pop_back();
 	}
-	res += "): " + ret->toStr();
+	res += "): " + ret->toStr(weak_depth);
 	return res;
 }
 Type *FuncTy::clone(Context &c, const bool &as_is)
@@ -715,7 +731,8 @@ bool FuncTy::callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **sourc
 {
 	return intrin(c, err, stmt, source, callargs);
 }
-Value *FuncTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
+Value *FuncTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+			      const size_t &weak_depth)
 {
 	return FuncVal::create(c, this);
 }
@@ -730,18 +747,18 @@ VariadicTy::VariadicTy(const size_t &info, const uint64_t &id, const std::vector
 	: Type(TVARIADIC, info, id), args(args)
 {}
 VariadicTy::~VariadicTy() {}
-bool VariadicTy::isTemplate()
+bool VariadicTy::isTemplate(const size_t &weak_depth)
 {
 	for(auto &a : args) {
-		if(a->isTemplate()) return true;
+		if(a->isTemplate(weak_depth)) return true;
 	}
 	return false;
 }
-std::string VariadicTy::toStr()
+std::string VariadicTy::toStr(const size_t &weak_depth)
 {
 	std::string res = infoToStr() + "variadic<";
 	for(auto &a : args) {
-		res += a->toStr() + ", ";
+		res += a->toStr(weak_depth) + ", ";
 	}
 	if(args.size() > 0) {
 		res.pop_back();
@@ -770,11 +787,12 @@ VariadicTy *VariadicTy::create(Context &c, const std::vector<Type *> &_args)
 {
 	return c.allocType<VariadicTy>(_args);
 }
-Value *VariadicTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd)
+Value *VariadicTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+				  const size_t &weak_depth)
 {
 	std::vector<Value *> vec;
 	for(auto &a : args) {
-		Value *v = a->toDefaultValue(c, e, loc, cd);
+		Value *v = a->toDefaultValue(c, e, loc, cd, weak_depth);
 		if(!v) {
 			e.set(loc, "failed to generate default value for type: %s",
 			      a->toStr().c_str());

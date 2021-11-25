@@ -233,11 +233,10 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 	// in type assign pass for StmtVar
 	// The following part is only valid for existing variables.
 	// the part for variable declaration exists in Var visit
-	if(stmt->getValueTy(true)->hasRef() || stmt->getDerefCount()) writer.write("(");
+	if(stmt->getValueTy(true)->hasRef()) writer.write("(");
 	if(stmt->getValueTy(true)->hasRef()) writer.write("*");
-	if(stmt->getDerefCount()) writer.write(std::string(stmt->getDerefCount(), '*'));
 	writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
-	if(stmt->getValueTy(true)->hasRef() || stmt->getDerefCount()) writer.write(")");
+	if(stmt->getValueTy(true)->hasRef()) writer.write(")");
 	if(semicol) writer.write(";");
 	return true;
 }
@@ -279,7 +278,14 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 	case lex::ARROW:
 	case lex::DOT: {
 		StmtSimple *rsim = as<StmtSimple>(rhs);
+		if(lhs->getDerefCount()) {
+			writer.write("(");
+			writer.write(std::string(lhs->getDerefCount(), '*'));
+		}
 		writer.append(l);
+		if(lhs->getDerefCount()) {
+			writer.write(")");
+		}
 		writer.write(".");
 		writer.write(rsim->getLexValue().getDataStr());
 		break;
@@ -1104,6 +1110,10 @@ bool CDriver::writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &arg
 			return false;
 		}
 		a->castTo(cast);
+		if(a->getDerefCount()) {
+			tmp.writeBefore("(" + std::string(a->getDerefCount(), '*'));
+			tmp.write(")");
+		}
 		if(at->hasRef()) {
 			tmp.writeBefore("&(");
 			tmp.write(")");

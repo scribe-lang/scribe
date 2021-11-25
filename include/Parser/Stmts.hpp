@@ -163,8 +163,9 @@ public:
 	{
 		return valueid;
 	}
-	Value *getValue();
-	// if exact = true, cast will be skipped
+	// if exact = true, cast and deref will be skipped
+	Value *getValue(const bool &exact = false);
+	// if exact = true, cast and deref will be skipped
 	Type *getValueTy(const bool &exact = false);
 	inline Type *getCast()
 	{
