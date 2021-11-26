@@ -75,7 +75,7 @@ public:
 	IsVal(Import, IMPORT);
 	IsVal(Ref, REF);
 
-	bool IsValStrLiteral();
+	bool isStrLiteral();
 
 	inline void setType(Type *t)
 	{

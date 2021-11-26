@@ -1160,7 +1160,6 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 			}
 			if(args[i]->getCast()) cfa->castTo(args[i]->getCast());
 			cfa->getValueTy()->appendInfo(cfa->getVType()->getInfoMask());
-			if(cfa->getVType()->hasModifier(REF)) cfa->getValueTy()->unsetRef();
 			cf->setArg(i, cfa->getValueTy());
 			vmgr.addVar(cfa->getName().getDataStr(), cfa->getValueID(), cfa);
 			continue;
