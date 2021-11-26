@@ -108,10 +108,6 @@ bool ValueAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		return false;
 	}
 	}
-	if(!stmt->getValue()->hasData()) {
-		err.set(stmt, "failed to assign value to entity: %s", tok.getDataStr().c_str());
-		return false;
-	}
 	return true;
 }
 bool ValueAssignPass::visit(StmtFnCallInfo *stmt, Stmt **source)
@@ -130,16 +126,14 @@ bool ValueAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	Stmt *&rhs	  = stmt->getRHS();
 	lex::TokType oper = stmt->getOper().getTok().getVal();
 
-	if(oper != lex::FNCALL && oper != lex::STCALL && lhs &&
-	   (!visit(lhs, &lhs) || !lhs->getValue()->hasData()))
-	{
+	if(oper != lex::FNCALL && oper != lex::STCALL && lhs && !visit(lhs, &lhs)) {
 		err.set(stmt, "failed to determine value of LHS in expression with operation: %s",
 			stmt->getOper().getTok().getOperCStr());
 		return false;
 	}
 
 	if((oper == lex::DOT || oper == lex::ARROW)) goto skip_rhs_val;
-	if(rhs && (!visit(rhs, &rhs) || (!rhs->isFnCallInfo() && !rhs->getValue()->hasData()))) {
+	if(rhs && (!visit(rhs, &rhs) || !rhs->isFnCallInfo())) {
 		err.set(stmt, "failed to determine value of RHS in expression with operation: %s",
 			stmt->getOper().getTok().getOperCStr());
 		return false;

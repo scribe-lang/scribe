@@ -30,7 +30,7 @@ static size_t SizeOf(Type *ty);
 
 INTRINSIC(import)
 {
-	if(!args[0]->getValue() || !args[0]->getValue()->IsValStrLiteral()) {
+	if(!args[0]->getValue() || !args[0]->getValue()->isStrLiteral()) {
 		err.set(stmt, "import must be a compile time computable string");
 		return false;
 	}
@@ -76,7 +76,7 @@ INTRINSIC(ismainsrc)
 INTRINSIC(isprimitive)
 {
 	bool is_prim = args[0]->getValueTy()->isPrimitive();
-	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDTRUE, is_prim));
+	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_prim));
 	return true;
 }
 INTRINSIC(szof)
