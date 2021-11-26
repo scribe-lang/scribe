@@ -72,7 +72,7 @@ bool CDriver::compile(const std::string &outfile)
 	finalmod.append(mainwriter);
 
 	args::ArgParser &cliargs = parser.getCommandArgs();
-	std::string opt		 = "2";
+	std::string opt		 = "0";
 	std::string std		 = "11";
 	bool ir_only		 = cliargs.has("ir");
 	bool llir		 = cliargs.has("llir");
@@ -142,7 +142,7 @@ bool CDriver::compile(const std::string &outfile)
 	res	= WEXITSTATUS(res);
 	if(res) {
 		err.set(mainmod->getParseTree(),
-			"failed to compiler code, got compiler exit status: %d", res);
+			"failed to compile code, got compiler exit status: %d", res);
 		err.show(stderr);
 		return false;
 	}

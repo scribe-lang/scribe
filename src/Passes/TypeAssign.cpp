@@ -319,7 +319,10 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		// a struct def = getValue()->isType() && getValueTy()->isStruct()
 		if(!lhs->getValueTy()->isFunc() &&
 		   !(lhs->getValue()->isType() && lhs->getValueTy()->isStruct())) {
-			err.set(stmt, "func call can be performed only on funcs or struct defs");
+			err.set(stmt,
+				"func call can be performed only on "
+				"funcs or struct defs, found: %s",
+				lhs->getValueTy()->toStr().c_str());
 			return false;
 		}
 		StmtFnCallInfo *callinfo  = as<StmtFnCallInfo>(rhs);
@@ -1153,10 +1156,13 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 		StmtVar *cfa = cfsig->getArg(i);
 		Type *cft    = cf->getArg(i);
 		if(!cft->isVariadic()) {
+			Type *t = args[i]->getValueTy()->clone(ctx);
 			if(cft->hasRef()) {
-				cfa->setValueID(args[i]);
+				RefVal *rv = RefVal::create(ctx, t, args[i]->getValue());
+				cfa->createAndSetValue(rv);
 			} else {
 				cfa->createAndSetValue(args[i]->getValue()->clone(ctx));
+				cfa->getValue()->setType(t);
 			}
 			if(args[i]->getCast()) cfa->castTo(args[i]->getCast());
 			cfa->getValueTy()->appendInfo(cfa->getVType()->getInfoMask());
@@ -1186,9 +1192,11 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 			t->appendInfo(cft->getInfo());
 			t->appendInfo(cfa->getVType()->getInfoMask());
 			if(t->hasRef()) {
-				newv->setValueID(args[i]);
+				RefVal *rv = RefVal::create(ctx, t, args[i]->getValue());
+				newv->createAndSetValue(rv);
 			} else {
 				newv->createAndSetValue(args[i]->getValue()->clone(ctx));
+				newv->getValue()->setType(t);
 			}
 			if(args[i]->getCast()) newv->castTo(args[i]->getCast());
 			vmgr.addVar(argn, newv->getValueID(), newv);

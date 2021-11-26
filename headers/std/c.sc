@@ -16,7 +16,8 @@ let malloc = fn(comptime T: type, count: u64): *T {
         return @as(@ptr(T), _malloc(sz * count));
 };
 let realloc = fn(comptime T: type, data: *T, count: u64): *T {
-        return @as(@ptr(T), _realloc(@as(@ptr(void), data), count));
+	let comptime sz = @sizeOf(T);
+        return @as(@ptr(T), _realloc(@as(@ptr(void), data), sz * count));
 };
 let free = fn(comptime T: type, data: *T) {
         _free(@as(@ptr(void), data));

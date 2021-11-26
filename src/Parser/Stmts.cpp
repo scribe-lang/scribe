@@ -74,20 +74,24 @@ const char *Stmt::getStmtTypeCString() const
 	return "";
 }
 
-std::string Stmt::getTypeString() const
+std::string Stmt::getTypeString()
 {
-	if(!values[valueid]) return "";
+	if(!getValueID()) return "";
+	Value *v	= getValue(true);
 	std::string res = " :<" + std::to_string(valueid) + ">: ";
-	res += values[valueid]->getType()->toStr();
+	res += v->getType()->toStr();
 	if(cast_to) res += " -> " + cast_to->toStr();
-	if(values[valueid]->hasData()) res += " ==> " + values[valueid]->toStr();
+	if(v->hasData()) res += " ==> " + v->toStr();
 	return res;
 }
 Value *Stmt::getValue(const bool &exact)
 {
 	assert(valueid && "valueid cannot be zero for getValue()");
+	Value *v = values[valueid];
+	if(!exact && v->isRef()) {
+		v = as<RefVal>(v)->getVal();
+	}
 	size_t tmp = derefcount;
-	Value *v   = values[valueid];
 	while(tmp > 0 && !exact) {
 		v = as<VecVal>(v)->getValAt(0);
 		--tmp;
@@ -121,7 +125,7 @@ StmtBlock *StmtBlock::create(Context &c, const ModuleLoc &loc, const std::vector
 	return c.allocStmt<StmtBlock>(loc, stmts, is_top);
 }
 
-void StmtBlock::disp(const bool &has_next) const
+void StmtBlock::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Block [top = %s]:%s\n", is_top ? "yes" : "no",
@@ -160,7 +164,7 @@ StmtType *StmtType::create(Context &c, const ModuleLoc &loc, const size_t &ptr, 
 	return c.allocStmt<StmtType>(loc, ptr, info, expr);
 }
 
-void StmtType::disp(const bool &has_next) const
+void StmtType::disp(const bool &has_next)
 {
 	std::string tname(ptr, '*');
 	if(info & REF) tname += "&";
@@ -223,7 +227,7 @@ StmtSimple *StmtSimple::create(Context &c, const ModuleLoc &loc, const lex::Lexe
 	return c.allocStmt<StmtSimple>(loc, val);
 }
 
-void StmtSimple::disp(const bool &has_next) const
+void StmtSimple::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Simple [decl = %s] [self = %s]: %s%s\n", decl ? "yes" : "no",
@@ -251,7 +255,7 @@ StmtFnCallInfo *StmtFnCallInfo::create(Context &c, const ModuleLoc &loc,
 	return c.allocStmt<StmtFnCallInfo>(loc, args);
 }
 
-void StmtFnCallInfo::disp(const bool &has_next) const
+void StmtFnCallInfo::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Function Call Info: %s\n", args.empty() ? "(empty)" : "");
@@ -290,7 +294,7 @@ StmtExpr *StmtExpr::create(Context &c, const ModuleLoc &loc, const size_t &comma
 	return c.allocStmt<StmtExpr>(loc, commas, lhs, oper, rhs, is_intrinsic_call);
 }
 
-void StmtExpr::disp(const bool &has_next) const
+void StmtExpr::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Expression [parsing intinsic: %s]:%s\n",
@@ -349,7 +353,7 @@ StmtVar *StmtVar::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &na
 	return c.allocStmt<StmtVar>(loc, name, vtype, vval, is_in, is_comptime, is_global);
 }
 
-void StmtVar::disp(const bool &has_next) const
+void StmtVar::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Variable [in = %s] [comptime = %s] [global = %s]: %s%s\n",
@@ -393,7 +397,7 @@ StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc &loc, std::vector<StmtV
 	return c.allocStmt<StmtFnSig>(loc, args, rettype, scope, has_variadic);
 }
 
-void StmtFnSig::disp(const bool &has_next) const
+void StmtFnSig::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Function signature [variadic = %s]%s\n", has_variadic ? "yes" : "no",
@@ -441,7 +445,7 @@ StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc &loc, StmtFnSig *sig, S
 	return c.allocStmt<StmtFnDef>(loc, sig, blk);
 }
 
-void StmtFnDef::disp(const bool &has_next) const
+void StmtFnDef::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Function definition [has parent: %s]%s\n", parentvar ? "yes" : "no",
@@ -477,7 +481,7 @@ StmtHeader *StmtHeader::create(Context &c, const ModuleLoc &loc, const lex::Lexe
 	return c.allocStmt<StmtHeader>(loc, names, flags);
 }
 
-void StmtHeader::disp(const bool &has_next) const
+void StmtHeader::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Header\n");
@@ -508,7 +512,7 @@ StmtLib *StmtLib::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &fl
 	return c.allocStmt<StmtLib>(loc, flags);
 }
 
-void StmtLib::disp(const bool &has_next) const
+void StmtLib::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Libs\n");
@@ -538,7 +542,7 @@ StmtExtern *StmtExtern::create(Context &c, const ModuleLoc &loc, const lex::Lexe
 	return c.allocStmt<StmtExtern>(loc, fname, headers, libs, entity);
 }
 
-void StmtExtern::disp(const bool &has_next) const
+void StmtExtern::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Extern for %s [has parent: %s]%s\n", fname.getDataStr().c_str(),
@@ -583,7 +587,7 @@ StmtEnum *StmtEnum::create(Context &c, const ModuleLoc &loc, const std::vector<l
 	return c.allocStmt<StmtEnum>(loc, items);
 }
 
-void StmtEnum::disp(const bool &has_next) const
+void StmtEnum::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Enumerations:%s\n", getTypeString().c_str());
@@ -616,7 +620,7 @@ StmtStruct *StmtStruct::create(Context &c, const ModuleLoc &loc,
 	return c.allocStmt<StmtStruct>(loc, fields, templates);
 }
 
-void StmtStruct::disp(const bool &has_next) const
+void StmtStruct::disp(const bool &has_next)
 {
 	std::string templatestr;
 	if(!templates.empty()) {
@@ -675,7 +679,7 @@ StmtVarDecl *StmtVarDecl::create(Context &c, const ModuleLoc &loc,
 	return c.allocStmt<StmtVarDecl>(loc, decls);
 }
 
-void StmtVarDecl::disp(const bool &has_next) const
+void StmtVarDecl::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Variable declarations\n");
@@ -711,7 +715,7 @@ StmtCond *StmtCond::create(Context &c, const ModuleLoc &loc, const std::vector<C
 	return c.allocStmt<StmtCond>(loc, conds, is_inline);
 }
 
-void StmtCond::disp(const bool &has_next) const
+void StmtCond::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Conditional [is inline = %s]\n", is_inline ? "yes" : "no");
@@ -756,7 +760,7 @@ StmtForIn *StmtForIn::create(Context &c, const ModuleLoc &loc, const lex::Lexeme
 	return c.allocStmt<StmtForIn>(loc, iter, in, blk);
 }
 
-void StmtForIn::disp(const bool &has_next) const
+void StmtForIn::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "For-in loop with iterator: %s:\n", iter.getDataStr().c_str());
@@ -792,7 +796,7 @@ StmtFor *StmtFor::create(Context &c, const ModuleLoc &loc, Stmt *init, Stmt *con
 	return c.allocStmt<StmtFor>(loc, init, cond, incr, blk, is_inline);
 }
 
-void StmtFor::disp(const bool &has_next) const
+void StmtFor::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "For [is inline = %s]\n", is_inline ? "yes" : "no");
@@ -843,7 +847,7 @@ StmtWhile *StmtWhile::create(Context &c, const ModuleLoc &loc, Stmt *cond, StmtB
 	return c.allocStmt<StmtWhile>(loc, cond, blk);
 }
 
-void StmtWhile::disp(const bool &has_next) const
+void StmtWhile::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "While\n");
@@ -874,7 +878,7 @@ StmtRet *StmtRet::create(Context &c, const ModuleLoc &loc, Stmt *val)
 	return c.allocStmt<StmtRet>(loc, val);
 }
 
-void StmtRet::disp(const bool &has_next) const
+void StmtRet::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Return%s\n", getTypeString().c_str());
@@ -902,7 +906,7 @@ StmtContinue *StmtContinue::create(Context &c, const ModuleLoc &loc)
 	return c.allocStmt<StmtContinue>(loc);
 }
 
-void StmtContinue::disp(const bool &has_next) const
+void StmtContinue::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Continue\n");
@@ -924,7 +928,7 @@ StmtBreak *StmtBreak::create(Context &c, const ModuleLoc &loc)
 	return c.allocStmt<StmtBreak>(loc);
 }
 
-void StmtBreak::disp(const bool &has_next) const
+void StmtBreak::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Break\n");
@@ -947,7 +951,7 @@ StmtDefer *StmtDefer::create(Context &c, const ModuleLoc &loc, Stmt *val)
 	return c.allocStmt<StmtDefer>(loc, val);
 }
 
-void StmtDefer::disp(const bool &has_next) const
+void StmtDefer::disp(const bool &has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, "Defer%s\n", getTypeString().c_str());
