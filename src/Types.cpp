@@ -669,9 +669,9 @@ bool FuncTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 			   const std::vector<Stmt *> &callargs)
 {
-	if(args.size() > callargs.size()) return nullptr;
 	bool has_va = false;
 	if(!args.empty() && args.back()->hasVariadic()) has_va = true;
+	if(args.size() - has_va > callargs.size()) return nullptr;
 	if(args.size() != callargs.size() && !has_va) return nullptr;
 	bool is_arg_compatible = true;
 	std::vector<Type *> variadics;
