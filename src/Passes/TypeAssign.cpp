@@ -856,8 +856,9 @@ bool TypeAssignPass::visit(StmtVarDecl *stmt, Stmt **source)
 bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 {
 	for(auto &cond : stmt->getConditionals()) {
-		Stmt *&c      = cond.getCond();
-		StmtBlock *&b = cond.getBlk();
+		Stmt *&c	= cond.getCond();
+		StmtBlock *&b	= cond.getBlk();
+		bool this_is_it = false;
 		if(c && !visit(c, &c)) {
 			err.set(stmt, "failed to determine type of conditional");
 			return false;
@@ -872,7 +873,7 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 			return false;
 		}
 		if(!stmt->isInline()) continue;
-		bool this_is_it = false;
+		if(!c) goto end;
 		if(!vpass.visit(c, &c)) {
 			err.set(stmt, "failed to get condition value for inline conditional");
 			return false;
@@ -888,6 +889,7 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 			this_is_it = as<FltVal>(c->getValue())->getVal() != 0.0;
 		}
 		if(!this_is_it) continue;
+	end:
 		if(!visit(b, asStmt(&b))) {
 			err.set(stmt, "failed to determine types in inline conditional block");
 			return false;
@@ -1195,6 +1197,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 			t->unsetVolatile();
 			t->appendInfo(cft->getInfo());
 			t->appendInfo(cfa->getVType()->getInfoMask());
+			t->unsetVariadic();
 			if(t->hasRef()) {
 				RefVal *rv = RefVal::create(ctx, t, args[i]->getValue());
 				newv->createAndSetValue(rv);

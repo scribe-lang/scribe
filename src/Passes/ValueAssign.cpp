@@ -133,7 +133,7 @@ bool ValueAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	}
 
 	if((oper == lex::DOT || oper == lex::ARROW)) goto skip_rhs_val;
-	if(rhs && (!visit(rhs, &rhs) || !rhs->isFnCallInfo())) {
+	if(rhs && !rhs->isFnCallInfo() && !visit(rhs, &rhs)) {
 		err.set(stmt, "failed to determine value of RHS in expression with operation: %s",
 			stmt->getOper().getTok().getOperCStr());
 		return false;
