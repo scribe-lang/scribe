@@ -151,7 +151,7 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 {
 	lex::Lexeme &lval = stmt->getLexValue();
-	switch(lval.getTok().getVal()) {
+	switch(lval.getTokVal()) {
 	case lex::VOID: stmt->createAndSetValue(VoidVal::create(ctx)); break;
 	case lex::ANY: stmt->createAndSetValue(TypeVal::create(ctx, AnyTy::create(ctx))); break;
 	case lex::TYPE: stmt->createAndSetValue(TypeVal::create(ctx, TypeTy::create(ctx))); break;
@@ -239,7 +239,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		err.set(stmt, "failed to determine type of LHS in expression");
 		return false;
 	}
-	lex::TokType oper = stmt->getOper().getTok().getVal();
+	lex::TokType oper = stmt->getOper().getTokVal();
 	if(oper != lex::DOT && oper != lex::ARROW && stmt->getRHS() &&
 	   !visit(stmt->getRHS(), &stmt->getRHS()))
 	{
@@ -1074,7 +1074,7 @@ void TypeAssignPass::applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex:
 {
 	if(!lhs || !rhs) return;
 	if(!lhs->getValueTy()->isPrimitiveOrPtr() || !rhs->getValueTy()->isPrimitiveOrPtr()) return;
-	if(oper.getTok().getVal() == lex::SUBS) return;
+	if(oper.getTokVal() == lex::SUBS) return;
 
 	Type *l = lhs->getValueTy();
 	Type *r = rhs->getValueTy();

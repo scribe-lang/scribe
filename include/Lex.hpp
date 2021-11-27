@@ -307,6 +307,10 @@ public:
 	{
 		return tok;
 	}
+	inline TokType getTokVal() const
+	{
+		return tok.getVal();
+	}
 	inline const ModuleLoc &getLoc() const
 	{
 		return loc;

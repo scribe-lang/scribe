@@ -106,7 +106,7 @@ bool SimplifyPass::visit(StmtExpr *stmt, Stmt **source)
 {
 	Stmt *&lhs	  = stmt->getLHS();
 	Stmt *&rhs	  = stmt->getRHS();
-	lex::TokType oper = stmt->getOper().getTok().getVal();
+	lex::TokType oper = stmt->getOper().getTokVal();
 	if(lhs && !visit(lhs, &lhs)) {
 		err.set(stmt, "failed to apply simplify pass on LHS in expression");
 		return false;
