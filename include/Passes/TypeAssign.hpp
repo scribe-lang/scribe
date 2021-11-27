@@ -42,7 +42,7 @@ class TypeAssignPass : public Pass
 	void applyPrimitiveTypeCoercion(Type *to, Stmt *from);
 	void applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex::Lexeme &oper);
 	bool chooseSuperiorPrimitiveType(Type *l, Type *r);
-	bool initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt *> &args);
+	bool initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stmt *> &args);
 
 	void pushFunc(FuncVal *fn, const bool &is_va, const size_t &va_len);
 	void popFunc();

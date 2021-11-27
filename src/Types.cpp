@@ -586,6 +586,15 @@ FuncTy::FuncTy(const size_t &info, const uint64_t &id, StmtVar *var,
 	  uniqid(uniqid), externed(externed)
 {}
 FuncTy::~FuncTy() {}
+uint64_t FuncTy::getNonUniqID()
+{
+	uint64_t res = getBaseID();
+	for(auto &a : args) {
+		res += a->getID();
+	}
+	res += ret->getID();
+	return res * 7;
+}
 uint64_t FuncTy::getID()
 {
 	uint64_t res = getBaseID() + uniqid;
