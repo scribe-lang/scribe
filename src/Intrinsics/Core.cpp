@@ -94,6 +94,12 @@ INTRINSIC(iscchar)
 	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_cchar));
 	return true;
 }
+INTRINSIC(isequalty)
+{
+	bool is_same_ty = args[0]->getValueTy()->getID() == args[1]->getValueTy()->getID();
+	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_same_ty));
+	return true;
+}
 INTRINSIC(szof)
 {
 	int64_t sz = SizeOf(args[0]->getValueTy());

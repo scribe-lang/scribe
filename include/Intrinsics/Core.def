@@ -3,6 +3,7 @@ INTRINSIC(ismainsrc);
 INTRINSIC(isprimitive);
 INTRINSIC(iscstring);
 INTRINSIC(iscchar);
+INTRINSIC(isequalty);
 INTRINSIC(as);
 INTRINSIC(typeof);
 INTRINSIC(ptr);

@@ -91,6 +91,11 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	g  = TypeTy::create(c);
 	ADDFN("isCChar", createFnVal(c, {g}, i1, intrinsic_iscchar, IPARSE));
 
+	i1 = IntTy::create(c, 1, true);
+	g  = TypeTy::create(c);
+	g2 = TypeTy::create(c);
+	ADDFN("isEqualTy", createFnVal(c, {g, g2}, i1, intrinsic_isequalty, IPARSE));
+
 	g  = TypeTy::create(c);
 	g2 = TypeTy::create(c);
 	ADDFN("as", createFnVal(c, {g, g2}, g, intrinsic_as, IPARSE));

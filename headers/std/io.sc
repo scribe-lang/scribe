@@ -9,6 +9,8 @@ let print = fn(data: ...any): i32 {
 			sum += c.fputs(data[i], c.stdout);
 		} elif @isCChar(data[i]) {
 			sum += c.fputc(data[i], c.stdout);
+		} elif @isEqualTy(data[i], string.String) {
+			sum += c.fputs(data[i].cStr(), c.stdout);
 		} else {
 			let s = data[i].str();
 			defer s.deinit();
@@ -26,6 +28,8 @@ let println = fn(data: ...any): i32 {
 			sum += c.fputs(data[i], c.stdout);
 		} elif @isCChar(data[i]) {
 			sum += c.fputc(data[i], c.stdout);
+		} elif @isEqualTy(data[i], string.String) {
+			sum += c.fputs(data[i].cStr(), c.stdout);
 		} else {
 			let s = data[i].str();
 			defer s.deinit();
@@ -39,7 +43,9 @@ let println = fn(data: ...any): i32 {
 inline if @isMainSrc() {
 
 let main = fn(): i32 {
-	print("On first line ", 1, ' ', 2);
+	let s = string.from("Hi there");
+	defer s.deinit();
+	print(s, "... On first line ", 1, ' ', 2);
 	println(" continuing on first line ", 5, ' ', 10);
 	return 0;
 };
