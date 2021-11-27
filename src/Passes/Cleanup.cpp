@@ -93,6 +93,15 @@ bool CleanupPass::visit(StmtExpr *stmt, Stmt **source)
 }
 bool CleanupPass::visit(StmtVar *stmt, Stmt **source)
 {
+	std::string varname = stmt->getName().getDataStr();
+	varname += std::to_string(stmt->getValueTy(true)->getID());
+	if(stmt->getVVal() && stmt->getVVal()->isFnDef()) {
+		if(funcs.find(varname) != funcs.end()) {
+			*source = nullptr;
+			return true;
+		}
+	}
+
 	bool had_val = stmt->getVVal();
 	if(stmt->getVVal() && !visit(stmt->getVVal(), &stmt->getVVal())) {
 		err.set(stmt, "failed to apply cleanup pass on variable value expression");
@@ -101,6 +110,10 @@ bool CleanupPass::visit(StmtVar *stmt, Stmt **source)
 	if(had_val && !stmt->getVVal()) {
 		*source = nullptr;
 		return true;
+	}
+
+	if(stmt->getVVal() && stmt->getVVal()->isFnDef()) {
+		funcs.insert(varname);
 	}
 	return true;
 }

@@ -18,6 +18,13 @@
 
 namespace sc
 {
+
+static uint64_t genIntermediateID()
+{
+	static uint64_t id = 1;
+	return id++;
+}
+
 SimplifyPass::SimplifyPass(ErrMgr &err, Context &ctx)
 	: Pass(Pass::genPassID<SimplifyPass>(), err, ctx)
 {}
@@ -60,6 +67,11 @@ bool SimplifyPass::visit(StmtBlock *stmt, Stmt **source)
 		if(!visit(stmts[i], &stmts[i])) {
 			err.set(stmt, "failed to perform simplify pass on stmt in block");
 			return false;
+		}
+		if(!intermediates.empty()) {
+			stmts.insert(stmts.begin() + i, intermediates.begin(), intermediates.end());
+			i += intermediates.size();
+			intermediates.clear();
 		}
 		if(!stmts[i]) {
 			stmts.erase(stmts.begin() + i);
@@ -115,6 +127,28 @@ bool SimplifyPass::visit(StmtExpr *stmt, Stmt **source)
 		err.set(stmt, "failed to apply simplify pass on LHS in expression");
 		return false;
 	}
+	if(!stmt->getCalledFn() || stmt->getValue()->hasPermaData()) return true;
+
+	FuncTy *cf = stmt->getCalledFn();
+	if(cf->isIntrinsic()) return true;
+
+	if(oper == lex::FNCALL) {
+		StmtFnCallInfo *ci = as<StmtFnCallInfo>(rhs);
+		for(size_t i = 0; i < ci->getArgs().size(); ++i) {
+			Stmt *a	   = ci->getArg(i);
+			Stmt *newa = createIntermediate(cf, a, i);
+			if(newa) ci->setArg(i, newa);
+		}
+	} else { // unary/binary operation
+		Stmt *l	   = lhs;
+		Stmt *newl = createIntermediate(cf, l, 0);
+		if(newl) lhs = newl;
+		if(rhs) {
+			Stmt *r	   = rhs;
+			Stmt *newr = createIntermediate(cf, r, 1);
+			if(newr) rhs = newr;
+		}
+	}
 	return true;
 }
 bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
@@ -128,7 +162,7 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 		*source = nullptr;
 		return true;
 	}
-	if(stmt->getVVal() && stmt->getVVal()->getStmtType() == FNDEF) {
+	if(stmt->getVVal() && stmt->getVVal()->isFnDef()) {
 		// set as entry point (main function) if signature matches
 		static bool maindone = false;
 		if(trySetMainFunction(stmt, stmt->getName().getDataStr())) {
@@ -366,5 +400,23 @@ bool SimplifyPass::trySetMainFunction(StmtVar *var, const std::string &varname)
 		return true;
 	}
 	return false;
+}
+Stmt *SimplifyPass::createIntermediate(FuncTy *cf, Stmt *a, const size_t &i)
+{
+	if(!a->isExpr() || as<StmtExpr>(a)->getOper().getTokVal() != lex::FNCALL) {
+		return nullptr;
+	}
+	// function call can never return a reference
+	if(!cf->getArg(i)->hasRef() || a->getValueTy()->isPtr()) return nullptr;
+	StmtExpr *ax  = as<StmtExpr>(a);
+	std::string n = as<StmtSimple>(ax->getLHS())->getLexValue().getDataStr();
+	n += "__interm" + std::to_string(genIntermediateID());
+	lex::Lexeme name(a->getLoc(), lex::IDEN, n);
+	StmtVar *v = StmtVar::create(ctx, a->getLoc(), name, nullptr, a, false, false, false);
+	v->createAndSetValue(a->getValue()->clone(ctx));
+	intermediates.push_back(v);
+	StmtSimple *newa = StmtSimple::create(ctx, a->getLoc(), name);
+	newa->setValueID(v);
+	return newa;
 }
 } // namespace sc
