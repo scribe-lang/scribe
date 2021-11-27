@@ -29,9 +29,9 @@ lex::Lexeme &ParseHelper::peak(const int offset)
 
 lex::TokType ParseHelper::peakt(const int offset) const
 {
-	if(offset < 0 && idx < (-offset)) return eof.getTok().getVal();
-	if(idx + offset >= toks.size()) return eof.getTok().getVal();
-	return toks[idx + offset].getTok().getVal();
+	if(offset < 0 && idx < (-offset)) return eof.getTokVal();
+	if(idx + offset >= toks.size()) return eof.getTokVal();
+	return toks[idx + offset].getTokVal();
 }
 
 lex::Lexeme &ParseHelper::next()
@@ -44,8 +44,8 @@ lex::Lexeme &ParseHelper::next()
 lex::TokType ParseHelper::nextt()
 {
 	++idx;
-	if(idx >= toks.size()) return eof.getTok().getVal();
-	return toks[idx].getTok().getVal();
+	if(idx >= toks.size()) return eof.getTokVal();
+	return toks[idx].getTokVal();
 }
 
 lex::Lexeme &ParseHelper::prev()
@@ -57,9 +57,9 @@ lex::Lexeme &ParseHelper::prev()
 
 lex::TokType ParseHelper::prevt()
 {
-	if(idx == 0) return invalid.getTok().getVal();
+	if(idx == 0) return invalid.getTokVal();
 	--idx;
-	return toks[idx].getTok().getVal();
+	return toks[idx].getTokVal();
 }
 
 const lex::Lexeme *ParseHelper::at(const size_t &idx) const

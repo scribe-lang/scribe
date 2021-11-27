@@ -218,7 +218,7 @@ bool CDriver::visit(StmtType *stmt, Writer &writer, const bool &semicol)
 bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 {
 	writer.clear();
-	switch(stmt->getLexValue().getTok().getVal()) {
+	switch(stmt->getLexValue().getTokVal()) {
 	case lex::IDEN: break;
 	case lex::TRUE:	 // fallthrough
 	case lex::FALSE: // fallthrough
@@ -261,7 +261,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 		}
 	}
 
-	lex::TokType oper = stmt->getOper().getTok().getVal();
+	lex::TokType oper = stmt->getOper().getTokVal();
 	Stmt *&lhs	  = stmt->getLHS();
 	Stmt *&rhs	  = stmt->getRHS();
 	Writer l;
@@ -772,7 +772,7 @@ const std::string &CDriver::getConstantDataVar(const lex::Lexeme &val, Type *ty)
 	std::string type;
 	std::string bits;
 	std::string is_sign;
-	switch(val.getTok().getVal()) {
+	switch(val.getTokVal()) {
 	case lex::TRUE:
 		value = "1";
 		key   = value + "i1";

@@ -237,7 +237,7 @@ void StmtSimple::disp(const bool &has_next)
 
 bool StmtSimple::requiresTemplateInit()
 {
-	if(val.getTok().getVal() == lex::ANY || val.getTok().getVal() == lex::TYPE) return true;
+	if(val.getTokVal() == lex::ANY || val.getTokVal() == lex::TYPE) return true;
 	return false;
 }
 

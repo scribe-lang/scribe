@@ -76,7 +76,7 @@ bool ValueAssignPass::visit(StmtType *stmt, Stmt **source)
 bool ValueAssignPass::visit(StmtSimple *stmt, Stmt **source)
 {
 	lex::Lexeme &tok = stmt->getLexValue();
-	switch(stmt->getLexValue().getTok().getVal()) {
+	switch(stmt->getLexValue().getTokVal()) {
 	case lex::TRUE:	 // fallthrough
 	case lex::FALSE: // fallthrough
 	case lex::NIL:	 // fallthrough
@@ -124,7 +124,7 @@ bool ValueAssignPass::visit(StmtExpr *stmt, Stmt **source)
 {
 	Stmt *&lhs	  = stmt->getLHS();
 	Stmt *&rhs	  = stmt->getRHS();
-	lex::TokType oper = stmt->getOper().getTok().getVal();
+	lex::TokType oper = stmt->getOper().getTokVal();
 
 	if(oper != lex::FNCALL && oper != lex::STCALL && lhs && !visit(lhs, &lhs)) {
 		err.set(stmt, "failed to determine value of LHS in expression with operation: %s",

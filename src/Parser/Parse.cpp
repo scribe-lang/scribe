@@ -736,15 +736,15 @@ bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	if(lhs->isSimple() && !opers.empty()) {
 		lex::Lexeme &val = as<StmtSimple>(lhs)->getLexValue();
-		lex::TokType tk	 = val.getTok().getVal();
+		lex::TokType tk	 = val.getTokVal();
 		if(tk == lex::INT) {
-			while(!opers.empty() && opers.front().getTok().getVal() == lex::USUB) {
+			while(!opers.empty() && opers.front().getTokVal() == lex::USUB) {
 				val.setDataInt(-val.getDataInt());
 				opers.erase(opers.begin());
 			}
 		}
 		if(tk == lex::FLT) {
-			while(!opers.empty() && opers.front().getTok().getVal() == lex::USUB) {
+			while(!opers.empty() && opers.front().getTokVal() == lex::USUB) {
 				val.setDataFlt(-val.getDataFlt());
 				opers.erase(opers.begin());
 			}
@@ -1080,7 +1080,7 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 		}
 		Stmt *vtexpr = var->getVType()->getExpr();
 		if(vtexpr->getStmtType() == SIMPLE &&
-		   as<StmtSimple>(vtexpr)->getLexValue().getTok().getVal() == lex::ANY && !found_va)
+		   as<StmtSimple>(vtexpr)->getLexValue().getTokVal() == lex::ANY && !found_va)
 		{
 			err.set(vtexpr, "type 'any' can be only used for variadic functions");
 			return false;
