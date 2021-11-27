@@ -18,7 +18,7 @@ let push in Vec = fn(d: &const self.T) {
 	if self.capacity == 0 {
 		self.capacity = 1;
 		self.data = c.malloc(self.T, 1);
-	} else if self.length >= self.capacity {
+	} elif self.length >= self.capacity {
 		self.capacity *= 2;
 		self.data = c.realloc(self.T, self.data, self.capacity);
 	}
