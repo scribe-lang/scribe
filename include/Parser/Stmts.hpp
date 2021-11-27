@@ -337,6 +337,10 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(const bool &inc);
 
+	inline void setArg(const size_t &idx, Stmt *a)
+	{
+		args[idx] = a;
+	}
 	inline std::vector<Stmt *> &getArgs()
 	{
 		return args;

@@ -21,6 +21,9 @@ namespace sc
 // Cleans up unused functions
 class CleanupPass : public Pass
 {
+	// maintained to prevent generation of duplicate functions (template functions)
+	std::unordered_set<std::string> funcs;
+
 public:
 	CleanupPass(ErrMgr &err, Context &ctx);
 	~CleanupPass();

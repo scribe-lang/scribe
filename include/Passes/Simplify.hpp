@@ -20,7 +20,12 @@ namespace sc
 {
 class SimplifyPass : public Pass
 {
+	// intermediate variables that have to be added
+	// in a block, before the location of usage
+	std::vector<StmtVar *> intermediates;
+
 	bool trySetMainFunction(StmtVar *var, const std::string &varname);
+	Stmt *createIntermediate(FuncTy *cf, Stmt *a, const size_t &i);
 
 public:
 	SimplifyPass(ErrMgr &err, Context &ctx);

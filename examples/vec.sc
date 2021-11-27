@@ -10,9 +10,7 @@ let main = fn(): i32 {
 	for let i = 0; i < 5; ++i {
 		v.pop();
 	}
-	// need to handle being able to do v.len().str().cStr()
-	let l = v.len();
-	let s = l.str();
+	let s = v.len().str();
 	defer s.deinit();
 	c.puts("Final length:");
 	c.puts(s.cStr()); // should be 5
