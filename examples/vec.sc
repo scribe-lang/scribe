@@ -1,4 +1,5 @@
 let c = @import("std/c");
+let io = @import("std/io");
 let vec = @import("std/vec");
 
 let main = fn(): i32 {
@@ -10,9 +11,6 @@ let main = fn(): i32 {
 	for let i = 0; i < 5; ++i {
 		v.pop();
 	}
-	let s = v.len().str();
-	defer s.deinit();
-	c.puts("Final length:");
-	c.puts(s.cStr()); // should be 5
+	io.println("Final length: ", v.len());
 	return 0;
 };
