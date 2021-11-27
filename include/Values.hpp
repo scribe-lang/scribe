@@ -220,7 +220,7 @@ public:
 
 	inline FuncTy *getVal()
 	{
-		return (FuncTy *&)(ty);
+		return (FuncTy *)ty;
 	}
 };
 
@@ -235,6 +235,10 @@ public:
 
 	static TypeVal *create(Context &c, Type *val);
 
+	inline void setVal(Type *v)
+	{
+		ty = v;
+	}
 	inline Type *&getVal()
 	{
 		return ty;

@@ -384,9 +384,10 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				err.set(stmt, "function is intrinsic - required '@' before call");
 				return false;
 			}
-			stmt->setCalledFnTy(fn);
 			// apply template specialization
 			if(!initTemplateFunc(stmt, fn, args)) return false;
+			fnval->setVal(fn);
+			stmt->setCalledFnTy(fn);
 		} else if(lhs->getValueTy()->isStruct()) {
 			StructTy *st = as<StructTy>(lhs->getValueTy());
 			std::vector<Type *> argtypes;
@@ -606,11 +607,13 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			err.set(stmt, "call to parse intrinsic failed");
 			return false;
 		}
-		stmt->setCalledFnTy(fn);
 		if(!initTemplateFunc(stmt, fn, args)) {
 			err.set(stmt, "failed to intialize template function");
 			return false;
 		}
+		// fnval->setVal(fn); is not required as fnval is used nowhere,
+		// and it points to fnid which would therefore be modified elsewhere
+		stmt->setCalledFnTy(fn);
 		break;
 	}
 	default: err.set(stmt->getOper(), "nonexistent operator"); return false;
@@ -754,6 +757,12 @@ bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 	FuncTy *sigty = fn->getVal();
 
 	sigty->setVar(stmt->getParentVar());
+
+	// TODO: must be done for template functions as well
+	if(stmt->getParentVar()) {
+		const std::string &name = stmt->getParentVar()->getName().getDataStr();
+		vmgr.addVar(name, stmt->getSig()->getValueID(), stmt->getParentVar());
+	}
 
 	if(stmt->requiresTemplateInit()) goto end;
 
@@ -1125,14 +1134,19 @@ bool TypeAssignPass::chooseSuperiorPrimitiveType(Type *l, Type *r)
 	return true;
 }
 
-bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt *> &args)
+bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stmt *> &args)
 {
+	static std::unordered_map<uint64_t, StmtVar *> beingtemplated;
 	// nothing to do if function has no definition
 	if(!cf->getVar() || !cf->getVar()->getVVal()) return true;
 	StmtVar *&cfvar = cf->getVar();
 	if(!cfvar) return true;
 	if(!cfvar->getVVal()->requiresTemplateInit()) {
 		if(cfvar->getVVal()->isFnDef()) as<StmtFnDef>(cfvar->getVVal())->incUsed();
+		return true;
+	}
+	if(beingtemplated.find(cf->getNonUniqID()) != beingtemplated.end()) {
+		cf = as<FuncTy>(beingtemplated[cf->getNonUniqID()]->getValueTy());
 		return true;
 	}
 	cfvar		 = as<StmtVar>(cfvar->clone(ctx)); // template must be cloned
@@ -1227,12 +1241,14 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *cf, std::vector<Stmt
 		err.set(caller, "function definition for specialization has no block");
 		return false;
 	}
+	beingtemplated[cf->getNonUniqID()] = cfvar;
 	pushFunc(cfn, va_count > 0, va_count);
 	if(!visit(cfblk, asStmt(&cfblk))) {
 		err.set(caller, "failed to assign type for called template function's var");
 		return false;
 	}
 	popFunc();
+	beingtemplated.erase(cf->getNonUniqID());
 end:
 	vmgr.popLayer();
 
