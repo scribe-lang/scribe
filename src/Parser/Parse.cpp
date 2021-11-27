@@ -999,6 +999,10 @@ val:
 		if(!parse_fndef(p, val)) return false;
 	} else if(p.accept(lex::EXTERN)) {
 		if(!parse_extern(p, val)) return false;
+		if(!as<StmtExtern>(val)->getEntity() && !type) {
+			err.set(name, "variable extern must have a type");
+			return false;
+		}
 	} else if(!parse_expr_16(p, val, false)) {
 		return false;
 	}
@@ -1235,12 +1239,9 @@ endinfo:
 		if(!parse_fnsig(p, entity)) return false;
 	} else if(p.accept(lex::STRUCT)) {
 		if(!parse_struct(p, entity, false)) return false;
-	} else {
-		err.set(p.peak(), "expected 'fn' or 'struct' for extern declaration, found: %s",
-			p.peak().getTok().cStr());
-		return false;
 	}
 
+end:
 	ext = StmtExtern::create(ctx, name.getLoc(), name, headers, libs, entity);
 	return true;
 fail:

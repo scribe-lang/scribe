@@ -626,19 +626,21 @@ bool TypeAssignPass::visit(StmtVar *stmt, Stmt **source)
 	Stmt *&val	 = stmt->getVVal();
 	StmtType *&vtype = stmt->getVType();
 	Type *inty	 = nullptr;
+	bool skip_val	 = false;
 	if(val && val->isFnDef()) {
 		as<StmtFnDef>(val)->setParentVar(stmt);
 		if(stmt->isIn()) goto post_mangling;
 	}
 	if(val && val->isExtern()) {
 		as<StmtExtern>(val)->setParentVar(stmt);
+		if(!as<StmtExtern>(val)->getEntity()) skip_val = true;
 	}
 	if(stmt->isGlobal()) goto post_mangling;
 	if(disabled_varname_mangling || stmt->isAppliedModuleID()) goto post_mangling;
 	stmt->getName().setDataStr(getMangledName(stmt, stmt->getName().getDataStr()));
 	stmt->setAppliedModuleID(true);
 post_mangling:
-	if(val && (!visit(val, &val) || !val->getValueTy())) {
+	if(val && (!visit(val, &val) || (!skip_val && !val->getValueTy()))) {
 		err.set(stmt, "unable to determine type of value of this variable");
 		return false;
 	}
@@ -661,16 +663,17 @@ post_mangling:
 			stmt->getName().getDataStr().c_str());
 		return false;
 	}
-	if(val && val->getValueTy()->isVoid()) {
+	if(val && !skip_val && val->getValueTy()->isVoid()) {
 		err.set(stmt, "value expression returns void, which cannot be assigned to a var");
 		return false;
 	}
-	if(vtype && val &&
-	   !vtype->getValueTy()->isCompatible(ctx, val->getValueTy(), err, stmt->getLoc())) {
+	if(vtype && val && !skip_val &&
+	   !vtype->getValueTy()->isCompatible(ctx, val->getValueTy(), err, stmt->getLoc()))
+	{
 		err.set(stmt, "incompatible given type and value of the variable decl");
 		return false;
 	}
-	if(val && stmt->isComptime()) {
+	if(val && !skip_val && stmt->isComptime()) {
 		if(!vpass.visit(val, &val) || !val->getValue()->hasData()) {
 			err.set(stmt, "value of comptime variable could not be calculated");
 			return false;
@@ -703,7 +706,7 @@ post_mangling:
 		return false;
 	}
 
-	if(vtype && val) applyPrimitiveTypeCoercion(vtype->getValueTy(), val);
+	if(vtype && val && !skip_val) applyPrimitiveTypeCoercion(vtype->getValueTy(), val);
 	if(stmt->isIn()) {
 		StmtFnDef *def = as<StmtFnDef>(stmt->getVVal());
 		StmtVar *self  = def->getSigArgs()[0];
@@ -775,6 +778,15 @@ bool TypeAssignPass::visit(StmtLib *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 {
+	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
+		err.set(stmt, "failed to assign header type");
+		return false;
+	}
+	if(stmt->getLibs() && !visit(stmt->getLibs(), asStmt(&stmt->getLibs()))) {
+		err.set(stmt, "failed to assign lib type");
+		return false;
+	}
+	if(!stmt->getEntity()) return true;
 	vmgr.pushLayer();
 	if(stmt->getEntity()->isStructDef()) {
 		as<StmtStruct>(stmt->getEntity())->setExterned(true);
@@ -787,14 +799,6 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 		FuncVal *fn = as<FuncVal>(stmt->getEntity()->getValue());
 		fn->getVal()->setExterned(true);
 		fn->getVal()->setVar(stmt->getParentVar());
-	}
-	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
-		err.set(stmt, "failed to assign header type");
-		return false;
-	}
-	if(stmt->getLibs() && !visit(stmt->getLibs(), asStmt(&stmt->getLibs()))) {
-		err.set(stmt, "failed to assign lib type");
-		return false;
 	}
 	stmt->setValueID(stmt->getEntity());
 	vmgr.popLayer();

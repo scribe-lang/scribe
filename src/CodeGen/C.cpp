@@ -428,10 +428,14 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 	std::string varname = stmt->getName().getDataStr();
 	if(!stmt->isCodeGenMangled()) varname = getMangledName(varname, stmt);
 
-	if(stmt->getVVal() && stmt->getVVal()->getStmtType() == EXTERN) {
+	if(stmt->getVVal() && stmt->getVVal()->isExtern()) {
 		StmtExtern *ext = as<StmtExtern>(stmt->getVVal());
 		Stmt *ent	= ext->getEntity();
-		if(ent->isStructDef()) {
+		if(!ent) {
+			std::string macro = "#define " + varname;
+			macro += " " + ext->getName().getDataStr();
+			macros.push_back(macro);
+		} else if(ent->isStructDef()) {
 			std::string decl = "typedef " + ext->getName().getDataStr();
 			decl += " struct_" + std::to_string(ent->getValueTy()->getID());
 			decl += ";";
@@ -458,7 +462,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 		}
 		return true;
 	}
-	if(stmt->getVVal() && stmt->getVVal()->getStmtType() == FNDEF) {
+	if(stmt->getVVal() && stmt->getVVal()->isFnDef()) {
 		Writer tmp(writer);
 		if(!visit(stmt->getVVal(), tmp, false)) {
 			err.set(stmt, "failed to generate C code for function def");
@@ -488,7 +492,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 		funcdecls.push_back(decl.getData());
 		return true;
 	}
-	if(stmt->getVVal() && stmt->getVVal()->getStmtType() == STRUCTDEF) {
+	if(stmt->getVVal() && stmt->getVVal()->isStructDef()) {
 		// structs are not defined by themselves
 		// they are defined when a struct type is encountered
 		return true;
@@ -600,7 +604,7 @@ bool CDriver::visit(StmtExtern *stmt, Writer &writer, const bool &semicol)
 {
 	if(stmt->getHeaders()) visit(stmt->getHeaders(), writer, false);
 	if(stmt->getLibs()) visit(stmt->getLibs(), writer, false);
-	// nothing to do of signature/struct
+	// nothing to do of entity
 	return true;
 }
 bool CDriver::visit(StmtEnum *stmt, Writer &writer, const bool &semicol)
