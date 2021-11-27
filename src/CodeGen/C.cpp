@@ -806,12 +806,12 @@ const std::string &CDriver::getConstantDataVar(const lex::Lexeme &val, Type *ty)
 		type  = "const f" + bits;
 		break;
 	case lex::CHAR:
-		value = '\'' + std::to_string(val.getDataStr()[0]) + '\'';
+		value = '\'' + getRawString(val.getDataStr()) + '\'';
 		key   = value;
 		type  = "const i8";
 		break;
 	case lex::STR:
-		value = '"' + val.getDataStr() + '"';
+		value = '"' + getRawString(val.getDataStr()) + '"';
 		key   = value;
 		type  = "const i8*";
 		break;
@@ -916,7 +916,7 @@ bool CDriver::getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool arr_as_p
 			return false;
 		}
 		if(arr_as_ptr || as<PtrTy>(ty)->getCount() == 0) {
-			res = cty + "*";
+			res = pre + cty + "*" + post;
 			return true;
 		}
 		std::string arrcount = "[" + std::to_string(as<PtrTy>(ty)->getCount()) + "]";

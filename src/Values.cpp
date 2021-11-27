@@ -182,6 +182,7 @@ VecVal *VecVal::createStr(Context &c, const std::string &val)
 		chars.push_back(IntVal::create(c, ty, CDTRUE, ch));
 	}
 	ty = mkPtrTy(c, ty, 0, false);
+	ty->setConst();
 	return c.allocVal<VecVal>(ty, CDTRUE, chars);
 }
 

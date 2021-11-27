@@ -2,7 +2,16 @@
  * These are the core C functions used across standard library
  */
 
+let FILE = extern[FILE, "<stdio.h>"] struct {};
+
+let stdin: *FILE = extern[stdin, "<stdio.h>"];
+let stdout: *FILE = extern[stdout, "<stdio.h>"];
+let stderr: *FILE = extern[stderr, "<stdio.h>"];
+
+let putc = extern[putc, "<stdio.h>"] fn(data: const i8): i32;
+let fputc = extern[fputc, "<stdio.h>"] fn(data: const i8, file: *FILE): i32;
 let puts = extern[puts, "<stdio.h>"] fn(data: *const i8): i32;
+let fputs = extern[fputs, "<stdio.h>"] fn(data: *const i8, file: *FILE): i32;
 let snprintf = extern[snprintf, "<stdio.h>"] fn(buf: *i8, bufsz: u64, fmt: *const i8, args: ...any): i32;
 let strlen = extern[strlen, "<string.h>"] fn(data: *const i8): u64;
 let _malloc = extern[malloc, "<stdlib.h>"] fn(size: u64): *void;

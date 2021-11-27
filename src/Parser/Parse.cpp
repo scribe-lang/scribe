@@ -1407,7 +1407,7 @@ bool Parsing::parse_conds(ParseHelper &p, Stmt *&conds)
 	lex::Lexeme &start = p.peak();
 
 cond:
-	if(!p.acceptn(lex::IF)) {
+	if(!p.acceptn(lex::IF, lex::ELIF)) {
 		err.set(p.peak(), "expected 'if' here, found: %s", p.peak().getTok().cStr());
 		return false;
 	}
@@ -1426,11 +1426,8 @@ blk:
 	cvec.emplace_back(c.getCond(), c.getBlk());
 	c.reset();
 
-	if(p.peakt() == lex::ELSE) {
-		p.next();
-		if(p.peakt() == lex::IF) goto cond;
-		goto blk;
-	}
+	if(p.accept(lex::ELIF)) goto cond;
+	if(p.acceptn(lex::ELSE)) goto blk;
 
 	conds = StmtCond::create(ctx, start.getLoc(), cvec, is_inline);
 	return true;

@@ -79,6 +79,21 @@ INTRINSIC(isprimitive)
 	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_prim));
 	return true;
 }
+INTRINSIC(iscstring)
+{
+	bool is_cstr = args[0]->getValue()->isStrLiteral();
+	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_cstr));
+	return true;
+}
+INTRINSIC(iscchar)
+{
+	bool is_cchar = args[0]->getValueTy()->isInt();
+	IntTy *t      = as<IntTy>(args[0]->getValueTy());
+	is_cchar &= t->getBits() == 8;
+	is_cchar &= t->isSigned();
+	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_cchar));
+	return true;
+}
 INTRINSIC(szof)
 {
 	int64_t sz = SizeOf(args[0]->getValueTy());

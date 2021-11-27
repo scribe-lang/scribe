@@ -1,6 +1,8 @@
 INTRINSIC(import);
 INTRINSIC(ismainsrc);
 INTRINSIC(isprimitive);
+INTRINSIC(iscstring);
+INTRINSIC(iscchar);
 INTRINSIC(as);
 INTRINSIC(typeof);
 INTRINSIC(ptr);
