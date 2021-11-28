@@ -1040,7 +1040,7 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 		err.set(stmt, "failed to determine type of the return argument");
 		return false;
 	}
-	Type *valtype = val ? val->getValueTy() : VoidTy::create(ctx);
+	Type *valtype = val ? val->getValueTy()->clone(ctx) : VoidTy::create(ctx);
 	FuncTy *fn    = vmgr.getTopFunc();
 	if(!fn->getVar()) {
 		err.set(stmt, "function type has no declaration");
@@ -1056,7 +1056,9 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 	}
 	stmt->setFnBlk(as<StmtFnDef>(fn->getVar()->getVVal())->getBlk());
 	if(val) {
-		stmt->setValueID(val);
+		valtype->appendInfo(fnretty->getInfo());
+		RefVal *rv = RefVal::create(ctx, valtype, val->getValue());
+		stmt->createAndSetValue(rv);
 	} else {
 		stmt->createAndSetValue(VoidVal::create(ctx));
 	}
