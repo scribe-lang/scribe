@@ -1,4 +1,3 @@
-let c = @import("std/c");
 let io = @import("std/io");
 let vec = @import("std/vec");
 
