@@ -519,6 +519,10 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
 
+	inline void insertArg(StmtVar *arg)
+	{
+		args.push_back(arg);
+	}
 	inline void insertArg(const size_t &pos, StmtVar *arg)
 	{
 		args.insert(args.begin() + pos, arg);

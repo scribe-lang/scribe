@@ -471,6 +471,10 @@ public:
 	{
 		args[idx] = arg;
 	}
+	inline void insertArg(Type *arg)
+	{
+		args.push_back(arg);
+	}
 	inline void insertArg(const size_t &idx, Type *arg)
 	{
 		args.insert(args.begin() + idx, arg);

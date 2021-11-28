@@ -330,6 +330,23 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		if(lhs->isSimple() && as<StmtSimple>(lhs)->getSelf()) {
 			args.insert(args.begin(), as<StmtSimple>(lhs)->getSelf());
 		}
+		if(!args.empty() && args.back()->getValueTy()->isVariadic()) {
+			assert(args.back()->isSimple() &&
+			       "variadic argument must be a simple stmt");
+			StmtSimple *a = as<StmtSimple>(args.back());
+			args.pop_back();
+			assert(a->getValue()->isVec() && "variadic value must be a vector");
+			std::string name = a->getLexValue().getDataStr();
+			VecVal *vv	 = as<VecVal>(a->getValue());
+			VariadicTy *vt	 = as<VariadicTy>(vv->getType());
+			for(size_t i = 0; i < vt->getArgs().size(); ++i) {
+				std::string newn = name + "__" + std::to_string(i);
+				StmtSimple *newa = as<StmtSimple>(a->clone(ctx));
+				newa->getLexValue().setDataStr(newn);
+				newa->createAndSetValue(vv->getValAt(i));
+				args.push_back(newa);
+			}
+		}
 		if(lhs->getValue()->isFunc()) {
 			TypeVal *fnval = as<TypeVal>(lhs->getValue());
 			FuncTy *fn     = as<FuncTy>(fnval->getVal());
@@ -1195,8 +1212,8 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 		Type *vaty	     = cft;
 		cfsig->getArgs().pop_back();
 		cf->getArgs().pop_back();
-		std::vector<Value *> vtmp(args.size() - i, nullptr);
-		uint64_t vavid = createValueIDWith(VecVal::create(ctx, vaty, CDFALSE, vtmp));
+		VecVal *vtmp   = VecVal::create(ctx, vaty, CDFALSE, {});
+		uint64_t vavid = createValueIDWith(vtmp);
 		vmgr.addVar(va_name.getDataStr(), vavid, cfa);
 		while(i < args.size()) {
 			std::string argn = va_name.getDataStr() + "__" + std::to_string(va_count);
@@ -1220,9 +1237,10 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 				newv->getValue()->setType(t);
 			}
 			if(args[i]->getCast()) newv->castTo(args[i]->getCast());
+			vtmp->insertVal(newv->getValue());
+			cfsig->insertArg(newv);
+			cf->insertArg(t);
 			vmgr.addVar(argn, newv->getValueID(), newv);
-			cfsig->getArgs().push_back(newv);
-			cf->getArgs().push_back(t);
 			++va_count;
 			++i;
 		}

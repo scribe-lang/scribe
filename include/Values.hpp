@@ -169,6 +169,10 @@ public:
 			      const std::vector<Value *> &val);
 	static VecVal *createStr(Context &c, const std::string &val);
 
+	inline void insertVal(Value *v)
+	{
+		data.push_back(v);
+	}
 	inline std::vector<Value *> &getVal()
 	{
 		return data;
