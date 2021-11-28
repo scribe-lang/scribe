@@ -182,7 +182,17 @@ bool CDriver::visit(Stmt *stmt, Writer &writer, const bool &semicol)
 		break;
 	}
 	}
-	return res && applyCast(stmt, writer, tmp);
+	if(!semicol &&
+	   (stmt->isExpr() ||
+	    (stmt->isSimple() && as<StmtSimple>(stmt)->getLexValue().getTokVal() == lex::IDEN)) &&
+	   stmt->getValueTy(true)->hasRef())
+	{
+		tmp.writeBefore("(*");
+		tmp.write(")");
+	}
+	res &= applyCast(stmt, writer, tmp);
+	if(semicol) writer.write(";");
+	return res;
 }
 
 bool CDriver::visit(StmtBlock *stmt, Writer &writer, const bool &semicol)
@@ -207,7 +217,6 @@ bool CDriver::visit(StmtBlock *stmt, Writer &writer, const bool &semicol)
 		writer.newLine();
 		writer.write("}");
 	}
-	if(semicol) writer.write(";");
 	return true;
 }
 bool CDriver::visit(StmtType *stmt, Writer &writer, const bool &semicol)
@@ -233,11 +242,7 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 	// in type assign pass for StmtVar
 	// The following part is only valid for existing variables.
 	// the part for variable declaration exists in Var visit
-	if(stmt->getValueTy(true)->hasRef()) writer.write("(");
-	if(stmt->getValueTy(true)->hasRef()) writer.write("*");
 	writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
-	if(stmt->getValueTy(true)->hasRef()) writer.write(")");
-	if(semicol) writer.write(";");
 	return true;
 }
 bool CDriver::visit(StmtFnCallInfo *stmt, Writer &writer, const bool &semicol)
@@ -256,7 +261,6 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 		}
 		if(!cval.empty()) {
 			writer.write(cval);
-			if(semicol) writer.write(";");
 			return true;
 		}
 	}
@@ -419,7 +423,6 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 	}
 	default: err.set(stmt->getOper(), "nonexistent operator"); return false;
 	}
-	if(semicol) writer.write(";");
 	return true;
 }
 bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
@@ -489,6 +492,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 			return false;
 		}
 		decl.insertAfter(retcty.size(), " " + varname);
+		decl.write(";");
 		funcdecls.push_back(decl.getData());
 		return true;
 	}
@@ -513,7 +517,6 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 		}
 		writer.write("%s %s%s = %s", cty.c_str(), varname.c_str(), arrcount.c_str(),
 			     cval.c_str());
-		if(semicol) writer.write(";");
 		return true;
 	}
 
@@ -541,7 +544,6 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 			writer.append(tmp);
 		}
 	}
-	if(semicol) writer.write(";");
 	return true;
 }
 bool CDriver::visit(StmtFnSig *stmt, Writer &writer, const bool &semicol)
@@ -565,7 +567,6 @@ bool CDriver::visit(StmtFnSig *stmt, Writer &writer, const bool &semicol)
 		if(i < stmt->getArgs().size() - 1) writer.write(", ");
 	}
 	writer.write(")");
-	if(semicol) writer.write(";");
 	return true;
 }
 bool CDriver::visit(StmtFnDef *stmt, Writer &writer, const bool &semicol)
@@ -741,7 +742,6 @@ bool CDriver::visit(StmtRet *stmt, Writer &writer, const bool &semicol)
 {
 	if(!stmt->getVal()) {
 		writer.write("return");
-		if(semicol) writer.write(";");
 		return true;
 	}
 	Writer tmp(writer);
@@ -750,20 +750,23 @@ bool CDriver::visit(StmtRet *stmt, Writer &writer, const bool &semicol)
 		return false;
 	}
 	writer.write("return ");
-	writer.append(tmp);
-	if(semicol) writer.write(";");
+	if(stmt->getValueTy()->hasRef()) {
+		writer.write("&(");
+		writer.append(tmp);
+		writer.write(")");
+	} else {
+		writer.append(tmp);
+	}
 	return true;
 }
 bool CDriver::visit(StmtContinue *stmt, Writer &writer, const bool &semicol)
 {
 	writer.write("continue");
-	if(semicol) writer.write(";");
 	return true;
 }
 bool CDriver::visit(StmtBreak *stmt, Writer &writer, const bool &semicol)
 {
 	writer.write("break");
-	if(semicol) writer.write(";");
 	return true;
 }
 bool CDriver::visit(StmtDefer *stmt, Writer &writer, const bool &semicol)

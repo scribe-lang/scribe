@@ -1,7 +1,7 @@
 let c = @import("std/c");
 let string = @import("std/string");
 
-let print = fn(data: ...any): i32 {
+let print = fn(data: ...&const any): i32 {
 	let comptime len = @valen();
 	let sum = 0;
 	inline for let comptime i = 0; i < len; ++i {
@@ -20,7 +20,7 @@ let print = fn(data: ...any): i32 {
 	return sum;
 };
 
-let println = fn(data: ...any): i32 {
+let println = fn(data: ...&const any): i32 {
 	let comptime len = @valen();
 	let sum = print(data);
 	sum += c.fputc('\n', c.stdout);

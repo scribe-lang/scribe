@@ -18,20 +18,24 @@ let getPrecision = fn(): i32 {
 
 let String = struct {
 	data: *i8;
-	len: u64;
-	cap: u64;
+	length: u64;
+	capacity: u64;
 };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Creation/Deletion Functions
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 let new = fn(): String {
 	return String{nil, 0, 0};
 };
 
-let withCap = fn(cap: u64): String {
-	let res = String{nil, 0, cap};
-	if cap < 1 { return res; }
-	res.cap = cap + 1; // for null terminator
-	res.data = c.malloc(i8, res.cap);
-	c.memset(@as(@ptr(void), res.data), 0, res.cap);
+let withCap = fn(capacity: u64): String {
+	let res = String{nil, 0, capacity};
+	if capacity < 1 { return res; }
+	res.capacity = capacity + 1; // for null terminator
+	res.data = c.malloc(i8, res.capacity);
+	c.memset(@as(@ptr(void), res.data), 0, res.capacity);
 	return res;
 };
 
@@ -41,25 +45,61 @@ let from = fn(data: *const i8): String {
 	res.data = c.malloc(i8, count);
 	c.memcpy(@as(@ptr(void), res.data), @as(@ptr(void), data), count);
 	res.data[count - 1] = 0;
-	res.len = count;
-	res.cap = count;
+	res.length = count - 1;
+	res.capacity = count;
 	return res;
 };
 
 let deinit in String = fn() {
 	if @as(u64, self.data) == nil { return; }
 	c.free(i8, self.data);
-	self.len = 0;
-	self.cap = 0;
+	self.length = 0;
+	self.capacity = 0;
 };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Utility Functions
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 let getBuf in String = fn(): *i8 {
 	return self.data;
 };
 
-let cStr in String = fn(): *const i8 {
+let cStr in const String = fn(): *const i8 {
 	if @as(u64, self.data) == nil { return ""; }
 	return self.data;
+};
+
+let len in const String = fn(): u64 {
+	return self.length;
+};
+
+let cap in const String = fn(): u64 {
+	return self.capacity;
+};
+
+let __assn__ in String = fn(other: &const String): &String {
+	self.deinit();
+	let count = other.len() + 1;
+	self.data = c.malloc(i8, count);
+	c.memcpy(@as(@ptr(void), self.data), @as(@ptr(void), other.data), count);
+	self.data[count - 1] = 0;
+	self.length = count - 1;
+	self.capacity = count;
+	return self;
+};
+
+let __add_assn__ in String = fn(other: &const String): &String {
+	if other.length == 0 { return self; }
+	if self.capacity == 0 {
+		self.capacity = other.length + 1;
+		self.data = c.malloc(i8, self.capacity);
+	} elif self.capacity < self.length + other.length + 1 {
+		self.capacity = self.length + other.length + 1;
+		self.data = c.realloc(i8, self.data, self.capacity);
+	}
+	c.memcpy(@as(@ptr(void), &self.data[self.length]), @as(@ptr(void), other.data), other.length + 1);
+	return self;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,20 +107,20 @@ let cStr in String = fn(): *const i8 {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 let iToStr = fn(comptime T: type, data: &const T): String {
-	let len = utils.countDigits(data);
-	let res = withCap(len);
+	let length = utils.countDigits(data);
+	let res = withCap(length);
 	// + 1 because snprintf includes space for null terminator
 	// which is also taken care of by withCap()
-	c.snprintf(res.getBuf(), len + 1, "%lld", data);
+	c.snprintf(res.getBuf(), length + 1, "%lld", data);
 	return res;
 };
 
 let fToStr = fn(comptime T: type, data: &const T): String {
-	let len = utils.countDigits(data) + getPrecision() + 1; // + 1 for decimal point
-	let res = withCap(len);
+	let length = utils.countDigits(data) + getPrecision() + 1; // + 1 for decimal point
+	let res = withCap(length);
 	// + 1 because snprintf includes space for null terminator
 	// which is also taken care of by withCap()
-	c.snprintf(res.getBuf(), len + 1, "%.*lf", getPrecision(), data);
+	c.snprintf(res.getBuf(), length + 1, "%.*lf", getPrecision(), data);
 	return res;
 };
 
