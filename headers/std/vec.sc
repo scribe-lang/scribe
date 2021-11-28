@@ -57,6 +57,18 @@ let deinit in Vec = fn() {
 	}
 };
 
+let str in const Vec = fn(): string.String {
+	let res = string.from("[");
+	for let i = 0; i < self.length; ++i {
+		let tmp = self.data[i].str();
+		defer tmp.deinit();
+		res += tmp;
+		if i < self.length - 1 { res.appendCStr(", "); }
+	}
+	res.appendCStr("]");
+	return res;
+};
+
 // usage
 inline if @isMainSrc() {
 

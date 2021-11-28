@@ -10,6 +10,8 @@ let main = fn(): i32 {
 	for let i = 0; i < 5; ++i {
 		v.pop();
 	}
-	io.println("Final length: ", v.len());
+	let s = v.str();
+	defer s.deinit();
+	io.println("Final Vector: ", s);
 	return 0;
 };
