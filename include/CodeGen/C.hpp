@@ -41,13 +41,13 @@ class CDriver : public CodeGenDriver
 	const std::string &getConstantDataVar(const lex::Lexeme &val, Type *ty);
 	std::string getNewConstantVar();
 	static bool acceptsSemicolon(Stmt *stmt);
-	bool getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool arr_as_ptr, bool for_decl,
-			  bool is_weak);
+	bool getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool for_decl, bool is_weak);
 	bool getCValue(std::string &res, Stmt *stmt, Value *value, Type *type);
 	bool addStructDef(Stmt *stmt, StructTy *sty);
 	bool writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &args, Type *ty,
 			   Writer &writer);
 	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
+	std::string getArrCount(Type *&t);
 	std::string getSystemCompiler();
 
 	inline std::string getMangledName(const std::string &name, Stmt *stmt)
