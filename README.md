@@ -5,7 +5,7 @@ Scribe is a statically typed, compiled (currently, to C), procedural systems pro
 It attempts to find a balance between the complexities of C++ and the barebones nature of C. As such, it is mostly inspired by C, while containing the member function syntax like that in C++.
 There are also features taken from the Zig programming language.
 
-## Examples
+# Examples
 
 1. Hello World
 
@@ -91,3 +91,37 @@ let main = fn(): i32 {
 	return 0;
 };
 ```
+
+# Installation
+
+## Prerequisites
+
+To install `Scribe`, the following programs are required:
+* A C++11 standard compliant compiler
+* CMake (build system - for compiling the project)
+
+**Note**: Scribe doesn't yet support Windows.
+
+## Building
+
+Once the prerequisites have been met, clone this repository:
+```sh
+git clone https://github.com/scribelang/scribe.git
+```
+
+Inside the repository, create a directory (say `build`), `cd` in it and run the commands for building and installing Scribe:
+```sh
+cd scribe && mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release # optionally PREFIX_DIR=<dir> can be set before this
+make -j install
+```
+
+By default, `PREFIX_DIR=$HOME/.scribe`.
+Once installation is done, execute the installed `scribe` binary (`$PREFIX_DIR/bin/scribe`) to use the Scribe language.
+
+# Syntax Highlighting Extensions
+
+As of right now, there is a language syntax highlighting extension available for `Visual Studio Code` editor.
+Installation steps can be found on its repository.
+
+Visual Studio Code: [scribelang/scribecode](https://github.com/scribelang/scribecode.git)
