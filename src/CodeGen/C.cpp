@@ -409,7 +409,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 		}
 		std::vector<Stmt *> args = {lhs};
 		if(rhs) args.push_back(rhs);
-		writer.write(optok.getOperCStr());
+		writer.write(getMangledName(optok.getOperCStr(), stmt->getCalledFn()));
 		writer.write("(");
 		if(!writeCallArgs(stmt->getLoc(), args, stmt->getCalledFn(), writer)) {
 			return false;

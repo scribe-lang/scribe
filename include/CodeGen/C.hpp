@@ -54,6 +54,10 @@ class CDriver : public CodeGenDriver
 	{
 		return name + std::to_string(stmt->getValueTy(true)->getID());
 	}
+	inline std::string getMangledName(const std::string &name, Type *ty)
+	{
+		return name + std::to_string(ty->getID());
+	}
 
 public:
 	CDriver(RAIIParser &parser);
