@@ -407,8 +407,9 @@ Stmt *SimplifyPass::createIntermediate(FuncTy *cf, Stmt *a, const size_t &i)
 	if(!a->isExpr() || as<StmtExpr>(a)->getOper().getTokVal() != lex::FNCALL) {
 		return nullptr;
 	}
-	// function call can never return a reference
-	if(!cf->getArg(i)->hasRef() || a->getValueTy()->isPtr()) return nullptr;
+	if(!cf->getArg(i)->hasRef() || a->getValueTy()->isPtr() || a->getValueTy()->hasRef()) {
+		return nullptr;
+	}
 	StmtExpr *ax  = as<StmtExpr>(a);
 	std::string n = as<StmtSimple>(ax->getLHS())->getLexValue().getDataStr();
 	n += "__interm" + std::to_string(genIntermediateID());
