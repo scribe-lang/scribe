@@ -205,6 +205,20 @@ let __assn__ in String = fn(other: &const String): &String {
 	return self;
 };
 
+let __add__ in const String = fn(other: &const String): String {
+	let res = withCap(self.length + other.length);
+	if self.length > 0 {
+		c.memcpy(@as(@ptr(void), res.data), @as(@ptr(void), self.data), self.length);
+		res.length = self.length;
+	}
+	if other.length > 0 {
+		c.memcpy(@as(@ptr(void), &res.data[res.length]), @as(@ptr(void), other.data), other.length);
+		res.length += other.length;
+	}
+	res.data[res.length] = 0;
+	return res;
+};
+
 let __add_assn__ in String = fn(other: &const String): &String {
 	return self.append(other);
 };
