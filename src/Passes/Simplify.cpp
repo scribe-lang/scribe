@@ -404,14 +404,20 @@ bool SimplifyPass::trySetMainFunction(StmtVar *var, const std::string &varname)
 }
 Stmt *SimplifyPass::createIntermediate(FuncTy *cf, Stmt *a, const size_t &i)
 {
-	if(!a->isExpr() || as<StmtExpr>(a)->getOper().getTokVal() != lex::FNCALL) {
+	if(!a->isExpr()) {
 		return nullptr;
 	}
-	if(!cf->getArg(i)->hasRef() || a->getValueTy()->isPtr() || a->getValueTy()->hasRef()) {
+	// hasRef() will not be here as functions can return references
+	if(!cf->getArg(i)->hasRef() || a->getValueTy()->isPtr()) {
 		return nullptr;
 	}
-	StmtExpr *ax  = as<StmtExpr>(a);
-	std::string n = as<StmtSimple>(ax->getLHS())->getLexValue().getDataStr();
+	StmtExpr *ax = as<StmtExpr>(a);
+	std::string n;
+	if(as<StmtExpr>(a)->getOper().getTokVal() == lex::FNCALL) {
+		n = as<StmtSimple>(ax->getLHS())->getLexValue().getDataStr();
+	} else {
+		n = ax->getOper().getTok().getOperCStr();
+	}
 	n += "__interm" + std::to_string(genIntermediateID());
 	lex::Lexeme name(a->getLoc(), lex::IDEN, n);
 	StmtVar *v = StmtVar::create(ctx, a->getLoc(), name, nullptr, a, false, false, false);

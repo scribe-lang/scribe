@@ -775,7 +775,6 @@ bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 
 	sigty->setVar(stmt->getParentVar());
 
-	// TODO: must be done for template functions as well
 	if(stmt->getParentVar()) {
 		const std::string &name = stmt->getParentVar()->getName().getDataStr();
 		vmgr.addVar(name, stmt->getSig()->getValueID(), stmt->getParentVar());
@@ -1237,7 +1236,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 				newv->getValue()->setType(t);
 			}
 			if(args[i]->getCast()) newv->castTo(args[i]->getCast());
-			vtmp->insertVal(newv->getValue());
+			vtmp->insertVal(newv->getValue(true));
 			cfsig->insertArg(newv);
 			cf->insertArg(t);
 			vmgr.addVar(argn, newv->getValueID(), newv);
