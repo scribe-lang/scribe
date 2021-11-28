@@ -58,7 +58,7 @@ let deinit in String = fn() {
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// Utility Functions
+// Core Utility Functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 let getBuf in String = fn(): *i8 {
@@ -78,36 +78,12 @@ let cap in const String = fn(): u64 {
 	return self.capacity;
 };
 
-let __assn__ in String = fn(other: &const String): &String {
-	self.deinit();
-	let count = other.len() + 1;
-	self.data = c.malloc(i8, count);
-	c.memcpy(@as(@ptr(void), self.data), @as(@ptr(void), other.data), count);
-	self.data[count - 1] = 0;
-	self.length = count - 1;
-	self.capacity = count;
-	return self;
-};
-
-let __add_assn__ in String = fn(other: &const String): &String {
-	if other.length == 0 { return self; }
-	if self.capacity == 0 {
-		self.capacity = other.length + 1;
-		self.data = c.malloc(i8, self.capacity);
-	} elif self.capacity < self.length + other.length + 1 {
-		self.capacity = self.length + other.length + 1;
-		self.data = c.realloc(i8, self.data, self.capacity);
-	}
-	c.memcpy(@as(@ptr(void), &self.data[self.length]), @as(@ptr(void), other.data), other.length + 1);
-	return self;
-};
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // str() Functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 let iToStr = fn(comptime T: type, data: &const T): String {
-	let length = utils.countDigits(data);
+	let length = utils.countIntDigits(data);
 	let res = withCap(length);
 	// + 1 because snprintf includes space for null terminator
 	// which is also taken care of by withCap()
@@ -115,8 +91,17 @@ let iToStr = fn(comptime T: type, data: &const T): String {
 	return res;
 };
 
+let uToStr = fn(comptime T: type, data: &const T): String {
+	let length = utils.countUIntDigits(data);
+	let res = withCap(length);
+	// + 1 because snprintf includes space for null terminator
+	// which is also taken care of by withCap()
+	c.snprintf(res.getBuf(), length + 1, "%llu", data);
+	return res;
+};
+
 let fToStr = fn(comptime T: type, data: &const T): String {
-	let length = utils.countDigits(data) + getPrecision() + 1; // + 1 for decimal point
+	let length = utils.countIntDigits(data) + getPrecision() + 1; // + 1 for decimal point
 	let res = withCap(length);
 	// + 1 because snprintf includes space for null terminator
 	// which is also taken care of by withCap()
@@ -133,13 +118,96 @@ let str in const i16 = fn(): String { return iToStr(i16, self); };
 let str in const i32 = fn(): String { return iToStr(i32, self); };
 let str in const i64 = fn(): String { return iToStr(i64, self); };
 
-let str in const u8 = fn(): String { return iToStr(u8, self); };
-let str in const u16 = fn(): String { return iToStr(u16, self); };
-let str in const u32 = fn(): String { return iToStr(u32, self); };
-let str in const u64 = fn(): String { return iToStr(u64, self); };
+let str in const u8 = fn(): String { return uToStr(u8, self); };
+let str in const u16 = fn(): String { return uToStr(u16, self); };
+let str in const u32 = fn(): String { return uToStr(u32, self); };
+let str in const u64 = fn(): String { return uToStr(u64, self); };
 
 let str in const f32 = fn(): String { return fToStr(f32, self); };
 let str in const f64 = fn(): String { return fToStr(f64, self); };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Utility Functions
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+let appendCStr in String = fn(other: *const i8): &String {
+	let otherlen = c.strlen(other);
+	if !otherlen { return self; }
+	if self.capacity == 0 {
+		self.capacity = otherlen + 1;
+		self.data = c.malloc(i8, self.capacity);
+	} elif self.capacity < self.length + otherlen + 1 {
+		self.capacity = self.length + otherlen + 1;
+		self.data = c.realloc(i8, self.data, self.capacity);
+	}
+	c.memcpy(@as(@ptr(void), &self.data[self.length]), @as(@ptr(void), other), otherlen + 1);
+	self.length += otherlen;
+	return self;
+};
+
+let appendInt in String = fn(data: i64): &String {
+	let otherlen = utils.countIntDigits(data);
+	if self.capacity == 0 {
+		self.capacity = otherlen + 1;
+		self.data = c.malloc(i8, self.capacity);
+	} elif self.capacity < self.length + otherlen + 1 {
+		self.capacity = self.length + otherlen + 1;
+		self.data = c.realloc(i8, self.data, self.capacity);
+	}
+	c.snprintf(&self.data[self.length], otherlen + 1, "%lld", data);
+	self.length += otherlen;
+	self.data[self.length] = 0;
+	return self;
+};
+
+let appendUInt in String = fn(data: i64): &String {
+	let otherlen = utils.countUIntDigits(data);
+	if self.capacity == 0 {
+		self.capacity = otherlen + 1;
+		self.data = c.malloc(i8, self.capacity);
+	} elif self.capacity < self.length + otherlen + 1 {
+		self.capacity = self.length + otherlen + 1;
+		self.data = c.realloc(i8, self.data, self.capacity);
+	}
+	c.snprintf(&self.data[self.length], otherlen + 1, "%llu", data);
+	self.length += otherlen;
+	self.data[self.length] = 0;
+	return self;
+};
+
+let appendFlt in String = fn(data: f64): &String {
+	let otherlen = utils.countIntDigits(data) + getPrecision() + 1;
+	if self.capacity == 0 {
+		self.capacity = otherlen + 1;
+		self.data = c.malloc(i8, self.capacity);
+	} elif self.capacity < self.length + otherlen + 1 {
+		self.capacity = self.length + otherlen + 1;
+		self.data = c.realloc(i8, self.data, self.capacity);
+	}
+	c.snprintf(&self.data[self.length], otherlen + 1, "%.*lf", getPrecision(), data);
+	self.length += otherlen;
+	self.data[self.length] = 0;
+	return self;
+};
+
+let append in String = fn(other: &const String): &String {
+	return self.appendCStr(other.cStr());
+};
+
+let __assn__ in String = fn(other: &const String): &String {
+	self.deinit();
+	let count = other.len() + 1;
+	self.data = c.malloc(i8, count);
+	c.memcpy(@as(@ptr(void), self.data), @as(@ptr(void), other.data), count);
+	self.data[count - 1] = 0;
+	self.length = count - 1;
+	self.capacity = count;
+	return self;
+};
+
+let __add_assn__ in String = fn(other: &const String): &String {
+	return self.append(other);
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Tests
