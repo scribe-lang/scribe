@@ -65,22 +65,25 @@ let string = @import("std/string");
 
 let Point = struct {
 	x: i32;
-	y: i32;
+	y: u32;
+	z: f64;
 };
 
-let str in Point = fn(): string.String {
+let str in const Point = fn(): string.String {
 	let str = string.new();
 	str.appendCStr("{");
-	str.appendI32(self.x);
+	str.appendInt(self.x);
 	str.appendCStr(", ");
-	str.appendI32(self.y);
+	str.appendUInt(self.y);
+	str.appendCStr(", ");
+	str.appendFlt(self.z);
 	str.appendCStr("}");
 	return str;
 };
 
 let main = fn(): i32 {
-	let point = Point{1, 2};
-	io.println("Point: ", point.str());
+	let point = Point{1, 2, 3.25};
+	io.println("Point: ", point);
 	// another way:
 	let str = point.str();
 	defer str.deinit();

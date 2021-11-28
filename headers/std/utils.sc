@@ -4,7 +4,7 @@
 
 let c = @import("std/c");
 
-let countDigits = fn(data: i64): i32 {
+let countIntDigits = fn(data: i64): i32 {
 	let res = 0;
 	// for minus sign
 	if data < 0 {
@@ -15,6 +15,16 @@ let countDigits = fn(data: i64): i32 {
 			data = -data;
 		}
 	}
+	while data > 0 {
+		data /= 10;
+		++res;
+	}
+	if res == 0 { res = 1; }
+	return res;
+};
+
+let countUIntDigits = fn(data: u64): i32 {
+	let res = 0;
 	while data > 0 {
 		data /= 10;
 		++res;
