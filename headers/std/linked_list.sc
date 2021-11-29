@@ -3,7 +3,7 @@ let string = @import("std/string");
 
 let Node = struct {
 	data: i32;
-	next: *self;
+	next: *Self;
 };
 
 let newNode = fn(data: i32): *Node {

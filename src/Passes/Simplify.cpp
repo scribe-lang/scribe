@@ -82,7 +82,6 @@ bool SimplifyPass::visit(StmtBlock *stmt, Stmt **source)
 		   as<StmtBlock>(stmts[i])->getStmts().size() == 1) {
 			StmtBlock *inner = as<StmtBlock>(stmts[i]);
 			stmts.erase(stmts.begin() + i);
-			--i;
 			stmts.insert(stmts.begin() + i, inner->getStmts().begin(),
 				     inner->getStmts().end());
 			i += inner->getStmts().size();
@@ -412,8 +411,9 @@ Stmt *SimplifyPass::createIntermediate(FuncTy *cf, Stmt *a, const size_t &i)
 		return nullptr;
 	}
 	StmtExpr *ax = as<StmtExpr>(a);
+	if(!ax->getCalledFn()) return nullptr;
 	std::string n;
-	if(as<StmtExpr>(a)->getOper().getTokVal() == lex::FNCALL) {
+	if(ax->getOper().getTokVal() == lex::FNCALL) {
 		n = as<StmtSimple>(ax->getLHS())->getLexValue().getDataStr();
 	} else {
 		n = ax->getOper().getTok().getOperCStr();

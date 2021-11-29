@@ -124,7 +124,7 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 	bool is_self = false;
 	// self referenced struct - must be a reference or pointer
 	if(stmt->getExpr()->isSimple() &&
-	   as<StmtSimple>(stmt->getExpr())->getLexValue().getDataStr() == "self")
+	   as<StmtSimple>(stmt->getExpr())->getLexValue().getDataStr() == "Self")
 	{
 		if(!stmt->getPtrCount()) {
 			err.set(stmt, "self referencing struct member must be a pointer");
@@ -135,7 +135,7 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 	Type *res = stmt->getExpr()->getValueTy();
 	if(!is_self) {
 		res = res->clone(ctx);
-		res->setInfo(stmt->getInfoMask());
+		res->appendInfo(stmt->getInfoMask());
 	}
 	// generate ptrs
 	for(size_t i = 0; i < stmt->getPtrCount(); ++i) {
@@ -849,7 +849,7 @@ bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 	StructTy *st = StructTy::create(ctx, {}, {}, templatenames, templates, stmt->isExterned());
 	stmt->createAndSetValue(TypeVal::create(ctx, st));
 	uint64_t selfid = stmt->getValueID();
-	vmgr.addVar("self", selfid, nullptr);
+	vmgr.addVar("Self", selfid, nullptr);
 	for(auto &f : stmt->getFields()) {
 		if(!visit(f, asStmt(&f))) {
 			err.set(stmt, "failed to determine type of struct field");
