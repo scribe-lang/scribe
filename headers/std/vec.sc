@@ -14,7 +14,9 @@ let new = fn(comptime T: type, managed: i1): Vec(T) {
 };
 
 // a function inside a struct which has at least one field of type 'type' has to be specialized (generic)
-let push in Vec = fn(d: &const self.T) {
+// in return type, since Vec(self.T) would be self referencing, it must not be used
+let push in Vec = fn(d: &const self.T): self {
+	let comptime sz = @sizeOf(self.T);
 	if self.capacity == 0 {
 		self.capacity = 1;
 		self.data = c.malloc(self.T, 1);
@@ -22,7 +24,8 @@ let push in Vec = fn(d: &const self.T) {
 		self.capacity *= 2;
 		self.data = c.realloc(self.T, self.data, self.capacity);
 	}
-	self.data[self.length++] = d;
+	c.memcpy(@as(@ptr(void), &self.data[self.length++]), @as(@ptr(void), &d), sz);
+	return self;
 };
 
 let pop in Vec = fn() {
@@ -60,9 +63,13 @@ let deinit in Vec = fn() {
 let str in const Vec = fn(): string.String {
 	let res = string.from("[");
 	for let i = 0; i < self.length; ++i {
-		let tmp = self.data[i].str();
-		defer tmp.deinit();
-		res += tmp;
+		inline if @isEqualTy(self.T, string.String) {
+			res += self.data[i];
+		} else {
+			let tmp = self.data[i].str();
+			defer tmp.deinit();
+			res += tmp;
+		}
 		if i < self.length - 1 { res.appendCStr(", "); }
 	}
 	res.appendCStr("]");
