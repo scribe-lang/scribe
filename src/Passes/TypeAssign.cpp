@@ -1227,13 +1227,13 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 		StmtVar *cfa = cfsig->getArg(i);
 		Type *cft    = cf->getArg(i);
 		if(!cft->isVariadic()) {
-			Type *t = args[i]->getValueTy()->clone(ctx);
-			if(cft->hasRef()) {
-				RefVal *rv = RefVal::create(ctx, t, args[i]->getValue());
+			Type *cftc = cft->clone(ctx);
+			if(cftc->hasRef()) {
+				RefVal *rv = RefVal::create(ctx, cftc, args[i]->getValue());
 				cfa->createAndSetValue(rv);
 			} else {
 				cfa->createAndSetValue(args[i]->getValue()->clone(ctx));
-				cfa->getValue()->setType(t);
+				cfa->getValue()->setType(cftc);
 			}
 			if(args[i]->getCast()) cfa->castTo(args[i]->getCast());
 			cfa->getValueTy()->appendInfo(cfa->getVType()->getInfoMask());
