@@ -30,6 +30,20 @@ let println = fn(data: ...&const any): i32 {
 	return print(data, '\n');
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Filesystem Functions
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+let fopen = c.fopen;
+let close in c.FILE = fn(): i32 { return c.fclose(&self); };
+let flush in c.FILE = fn(): i32 { return c.fflush(&self); };
+let print in c.FILE = fn(data: ...&const any): i32 {
+	return fprint(&self, data);
+};
+let println in c.FILE = fn(data: ...&const any): i32 {
+	return fprintln(&self, data);
+};
+
 inline if @isMainSrc() {
 
 let main = fn(): i32 {

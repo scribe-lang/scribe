@@ -502,6 +502,18 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 		return true;
 	}
 	if(stmt->getVVal() && stmt->getValue()->hasData()) {
+		// variable is an existing function or struct (FuncVal || TypeTy)
+		if(stmt->getValue()->isFunc() || stmt->getValue()->isType()) {
+			Writer tmp(writer);
+			Stmt *val = stmt->getVVal();
+			if(!visit(val, tmp, false)) {
+				err.set(stmt, "failed to get C value for scribe value: %s",
+					stmt->getValue()->toStr().c_str());
+				return false;
+			}
+			macros.push_back("#define " + varname + " " + tmp.getData());
+			return true;
+		}
 		std::string cty, arrcount, cval;
 		Type *t	 = stmt->getValueTy();
 		arrcount = getArrCount(t);

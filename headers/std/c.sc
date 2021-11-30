@@ -8,6 +8,9 @@ let stdin: *FILE = extern[stdin, "<stdio.h>"];
 let stdout: *FILE = extern[stdout, "<stdio.h>"];
 let stderr: *FILE = extern[stderr, "<stdio.h>"];
 
+let fopen = extern[fopen, "<stdio.h>"] fn(name: *const i8, mode: *const i8): *FILE;
+let fclose = extern[fclose, "<stdio.h>"] fn(file: *FILE): i32;
+let fflush = extern[fflush, "<stdio.h>"] fn(file: *FILE): i32;
 let putc = extern[putc, "<stdio.h>"] fn(data: const i8): i32;
 let fputc = extern[fputc, "<stdio.h>"] fn(data: const i8, file: *FILE): i32;
 let puts = extern[puts, "<stdio.h>"] fn(data: *const i8): i32;
