@@ -449,6 +449,8 @@ public:
 	       const IntrinType &inty, const uint64_t &uniqid, const bool &externed);
 	~FuncTy();
 
+	// returns ID of parameters + ret type
+	uint64_t getSignatureID();
 	uint64_t getNonUniqID();
 	uint64_t getID();
 	bool isTemplate(const size_t &weak_depth = 0);

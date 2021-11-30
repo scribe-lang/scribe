@@ -57,6 +57,9 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
 	if(!rhs) return false;
 	if(isAny()) return true;
+	if(isFunc() && rhs->isFunc()) {
+		return as<FuncTy>(this)->getSignatureID() == as<FuncTy>(rhs)->getSignatureID();
+	}
 	if(isPtr() && rhs->isPtr()) {
 		if(as<PtrTy>(this)->isWeak() || as<PtrTy>(rhs)->isWeak()) {
 			Type *lto = as<PtrTy>(this)->getTo();
@@ -65,6 +68,14 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 			return lto->getID() == rto->getID();
 		}
 		return as<PtrTy>(this)->getTo()->isCompatible(c, as<PtrTy>(rhs)->getTo(), e, loc);
+	}
+	// useful for passing functions with templates as arguments (callbacks)
+	if(isTypeTy() && rhs->isTypeTy()) {
+		if(!as<TypeTy>(this)->getContainedTy() && !as<TypeTy>(rhs)->getContainedTy()) {
+			// return true;
+			e.set(loc, "both typetys contain no type - currently unsupported");
+			return false;
+		}
 	}
 	if(rhs->isTypeTy()) {
 		return this->isCompatible(c, as<TypeTy>(rhs)->getContainedTy(), e, loc);
@@ -586,6 +597,15 @@ FuncTy::FuncTy(const size_t &info, const uint64_t &id, StmtVar *var,
 	  uniqid(uniqid), externed(externed)
 {}
 FuncTy::~FuncTy() {}
+uint64_t FuncTy::getSignatureID()
+{
+	uint64_t res = TFUNC;
+	for(auto &a : args) {
+		res += a->getID();
+	}
+	res += ret->getID();
+	return res * 7;
+}
 uint64_t FuncTy::getNonUniqID()
 {
 	uint64_t res = getBaseID();

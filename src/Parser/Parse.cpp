@@ -1083,12 +1083,6 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 			found_va = true;
 		}
 		Stmt *vtexpr = var->getVType()->getExpr();
-		if(vtexpr->getStmtType() == SIMPLE &&
-		   as<StmtSimple>(vtexpr)->getLexValue().getTokVal() == lex::ANY && !found_va)
-		{
-			err.set(vtexpr, "type 'any' can be only used for variadic functions");
-			return false;
-		}
 		args.push_back(var);
 		var = nullptr;
 		if(!p.acceptn(lex::COMMA)) break;
