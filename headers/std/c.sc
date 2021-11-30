@@ -12,6 +12,7 @@ let putc = extern[putc, "<stdio.h>"] fn(data: const i8): i32;
 let fputc = extern[fputc, "<stdio.h>"] fn(data: const i8, file: *FILE): i32;
 let puts = extern[puts, "<stdio.h>"] fn(data: *const i8): i32;
 let fputs = extern[fputs, "<stdio.h>"] fn(data: *const i8, file: *FILE): i32;
+let fprintf = extern[fprintf, "<stdio.h>"] fn(file: *FILE, fmt: *const i8, args: ...any): i32;
 let snprintf = extern[snprintf, "<stdio.h>"] fn(buf: *i8, bufsz: u64, fmt: *const i8, args: ...any): i32;
 let strlen = extern[strlen, "<string.h>"] fn(data: *const i8): u64;
 let strcmp = extern[strcmp, "<string.h>"] fn(lhs: *const i8, rhs: *const i8): i32;

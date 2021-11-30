@@ -330,29 +330,32 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		if(lhs->isSimple() && as<StmtSimple>(lhs)->getSelf()) {
 			args.insert(args.begin(), as<StmtSimple>(lhs)->getSelf());
 		}
-		if(!args.empty() && args.back()->getValueTy()->isVariadic()) {
-			assert(args.back()->isSimple() &&
-			       "variadic argument must be a simple stmt");
-			StmtSimple *a = as<StmtSimple>(args.back());
-			args.pop_back();
+		for(size_t i = 0; i < args.size(); ++i) {
+			if(!args[i]->getValueTy()->isVariadic()) continue;
+			StmtSimple *a = as<StmtSimple>(args[i]);
 			assert(a->getValue()->isVec() && "variadic value must be a vector");
+			args.erase(args.begin() + i);
 			std::string name = a->getLexValue().getDataStr();
 			VecVal *vv	 = as<VecVal>(a->getValue());
 			VariadicTy *vt	 = as<VariadicTy>(vv->getType());
-			for(size_t i = 0; i < vt->getArgs().size(); ++i) {
-				std::string newn = name + "__" + std::to_string(i);
+			for(size_t j = 0; j < vt->getArgs().size(); ++j) {
+				std::string newn = name + "__" + std::to_string(j);
 				StmtSimple *newa = as<StmtSimple>(a->clone(ctx));
 				newa->getLexValue().setDataStr(newn);
-				newa->createAndSetValue(vv->getValAt(i));
-				args.push_back(newa);
+				newa->createAndSetValue(vv->getValAt(j));
+				args.insert(args.begin() + i, newa);
+				++i;
 			}
+			if(vt->getArgs().size() > 0) --i;
 		}
 		if(lhs->getValue()->isFunc()) {
 			TypeVal *fnval = as<TypeVal>(lhs->getValue());
 			FuncTy *fn     = as<FuncTy>(fnval->getVal());
 			bool has_va    = fn->hasVariadic();
+			FuncTy *tmpfn  = fn;
 			if(!(fn = fn->createCall(ctx, err, stmt->getLoc(), args))) {
-				err.set(stmt, "function is incompatible with call arguments");
+				err.set(stmt, "function '%s' is incompatible with call arguments",
+					tmpfn->toStr().c_str());
 				return false;
 			}
 			fnval = TypeVal::create(ctx, fn);
@@ -595,6 +598,24 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 
 		std::vector<Stmt *> args = {lhs};
 		if(rhs) args.push_back(rhs);
+		for(size_t i = 0; i < args.size(); ++i) {
+			if(!args[i]->getValueTy()->isVariadic()) continue;
+			StmtSimple *a = as<StmtSimple>(args[i]);
+			assert(a->getValue()->isVec() && "variadic value must be a vector");
+			args.erase(args.begin() + i);
+			std::string name = a->getLexValue().getDataStr();
+			VecVal *vv	 = as<VecVal>(a->getValue());
+			VariadicTy *vt	 = as<VariadicTy>(vv->getType());
+			for(size_t j = 0; j < vt->getArgs().size(); ++j) {
+				std::string newn = name + "__" + std::to_string(j);
+				StmtSimple *newa = as<StmtSimple>(a->clone(ctx));
+				newa->getLexValue().setDataStr(newn);
+				newa->createAndSetValue(vv->getValAt(j));
+				args.insert(args.begin() + i, newa);
+				++i;
+			}
+			if(vt->getArgs().size() > 0) --i;
+		}
 		if(!(fn = fn->createCall(ctx, err, stmt->getLoc(), args))) {
 			err.set(stmt, "function is incompatible with call arguments");
 			return false;
