@@ -227,6 +227,15 @@ let __subscr__ in String = fn(idx: u64): &i8 {
 	return self.data[idx];
 };
 
+let __eq__ in const String = fn(other: &const String): i1 {
+	if c.strcmp(self.cStr(), other.cStr()) == 0 { return true; }
+	return false;
+};
+
+let __ne__ in const String = fn(other: &const String): i1 {
+	return !(self == other);
+};
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Tests
 ///////////////////////////////////////////////////////////////////////////////////////////////////
