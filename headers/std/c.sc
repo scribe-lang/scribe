@@ -18,8 +18,8 @@ let strcmp = extern[strcmp, "<string.h>"] fn(lhs: *const i8, rhs: *const i8): i3
 let _malloc = extern[malloc, "<stdlib.h>"] fn(size: u64): *void;
 let _realloc = extern[realloc, "<stdlib.h>"] fn(data: *void, newsz: u64): *void;
 let _free = extern[free, "<stdlib.h>"] fn(data: *void);
-let _memcpy = extern[memcpy, "<string.h>"] fn(dest: *void, src: *const void, count: u64): *void;
-let _memset = extern[memset, "<string.h>"] fn(dest: *void, ch: i32, count: u64): *void;
+let memcpy = extern[memcpy, "<string.h>"] fn(dest: *void, src: *const void, count: u64): *void;
+let memset = extern[memset, "<string.h>"] fn(dest: *void, ch: i32, count: u64): *void;
 
 let malloc = fn(comptime T: type, count: u64): *T {
         let comptime sz = @sizeOf(T);
@@ -31,13 +31,6 @@ let realloc = fn(comptime T: type, data: *T, count: u64): *T {
 };
 let free = fn(comptime T: type, data: *T) {
         _free(@as(@ptr(void), data));
-};
-
-let memcpy = fn(dest: *void, src: *const void, count: u64) {
-        _memcpy(dest, src, count);
-};
-let memset = fn(dest: *void, fill_byte: i32, count: u64) {
-        _memset(dest, fill_byte, count);
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
