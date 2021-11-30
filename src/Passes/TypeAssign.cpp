@@ -367,6 +367,12 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 					--i;
 				}
 				applyPrimitiveTypeCoercion(coerced_to, arg);
+				if(arg->getValueTy()->isFunc()) {
+					FuncTy *f = as<FuncTy>(arg->getValueTy());
+					if(f->getVar() && f->getVar()->getVVal()->isFnDef()) {
+						as<StmtFnDef>(f->getVar()->getVVal())->incUsed();
+					}
+				}
 				if(!coerced_to->hasComptime() || vpass.visit(args[j], &args[j])) {
 					continue;
 				}
@@ -612,6 +618,12 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		for(size_t i = 0; i < args.size(); ++i) {
 			Type *coerced_to = fn->getArg(i);
 			Stmt *&arg	 = args[i];
+			if(arg->getValueTy()->isFunc()) {
+				FuncTy *f = as<FuncTy>(arg->getValueTy());
+				if(f->getVar() && f->getVar()->getVVal()->isFnDef()) {
+					as<StmtFnDef>(f->getVar()->getVVal())->incUsed();
+				}
+			}
 			if(!both_comptime || vpass.visit(args[i], &args[i])) {
 				continue;
 			}

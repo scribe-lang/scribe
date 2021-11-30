@@ -47,6 +47,7 @@ class CDriver : public CodeGenDriver
 	bool writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &args, Type *ty,
 			   Writer &writer);
 	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
+	bool getFuncPointer(std::string &res, FuncTy *f, Stmt *stmt, bool for_decl, bool is_weak);
 	std::string getArrCount(Type *&t);
 	std::string getSystemCompiler();
 

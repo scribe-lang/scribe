@@ -924,32 +924,7 @@ bool CDriver::getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool for_decl
 		return true;
 	}
 	if(ty->isFunc()) {
-		FuncTy *f = as<FuncTy>(ty);
-		std::string cty;
-		if(!getCTypeName(cty, stmt, f->getRet(), for_decl, is_weak)) {
-			err.set(stmt, "failed to determine C type for scribe type: %s",
-				f->getRet()->toStr().c_str());
-			return false;
-		}
-		res += cty;
-		res += "(*func_" + std::to_string(f->getID()) + ")";
-		res += "(";
-		for(auto &t : f->getArgs()) {
-			cty = "";
-			if(!getCTypeName(cty, stmt, t, for_decl, is_weak)) {
-				err.set(stmt, "failed to determine C type for scribe type: %s",
-					t->toStr().c_str());
-				return false;
-			}
-			res += cty;
-			res += ", ";
-		}
-		if(f->getArgs().size() > 0) {
-			res.pop_back();
-			res.pop_back();
-		}
-		res += ")";
-		return true;
+		return getFuncPointer(res, as<FuncTy>(ty), stmt, for_decl, is_weak);
 	}
 	if(ty->isStruct()) {
 		StructTy *s = as<StructTy>(ty);
@@ -961,7 +936,8 @@ bool CDriver::getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool for_decl
 		res = pre + "struct_" + std::to_string(s->getID()) + post;
 		return true;
 	}
-	return "";
+	err.set(stmt, "invalid scribe type encountered: %s", ty->toStr().c_str());
+	return false;
 }
 bool CDriver::getCValue(std::string &res, Stmt *stmt, Value *value, Type *type)
 {
@@ -1127,6 +1103,40 @@ bool CDriver::writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &arg
 		if(!applyCast(a, writer, tmp)) return false;
 		if(i != args.size() - 1) writer.write(", ");
 	}
+	return true;
+}
+bool CDriver::getFuncPointer(std::string &res, FuncTy *f, Stmt *stmt, bool for_decl, bool is_weak)
+{
+	static std::unordered_set<uint64_t> funcids;
+	std::string decl = "typedef ";
+	std::string cty;
+	res = "func_" + std::to_string(f->getID());
+	if(funcids.find(f->getID()) != funcids.end()) return true;
+	if(!getCTypeName(cty, stmt, f->getRet(), for_decl, is_weak)) {
+		err.set(stmt, "failed to determine C type for scribe type: %s",
+			f->getRet()->toStr().c_str());
+		return false;
+	}
+	decl += cty;
+	decl += " (*" + res + ")";
+	decl += "(";
+	for(auto &t : f->getArgs()) {
+		cty.clear();
+		if(!getCTypeName(cty, stmt, t, for_decl, is_weak)) {
+			err.set(stmt, "failed to determine C type for scribe type: %s",
+				t->toStr().c_str());
+			return false;
+		}
+		decl += cty;
+		decl += ", ";
+	}
+	if(f->getArgs().size() > 0) {
+		decl.pop_back();
+		decl.pop_back();
+	}
+	decl += ");";
+	typedefs.push_back(decl);
+	funcids.insert(f->getID());
 	return true;
 }
 std::string CDriver::getArrCount(Type *&t)
