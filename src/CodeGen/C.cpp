@@ -1004,7 +1004,6 @@ bool CDriver::getCValue(std::string &res, Stmt *stmt, Value *value, Type *type)
 		return true;
 	}
 	case VSTRUCT: {
-		std::string res;
 		StructTy *st = as<StructTy>(type);
 
 		res = "{";
@@ -1016,7 +1015,7 @@ bool CDriver::getCValue(std::string &res, Stmt *stmt, Value *value, Type *type)
 					fv->toStr().c_str());
 				return false;
 			}
-			res += cval;
+			res += cval + ", ";
 		}
 		if(st->getFields().size() > 0) {
 			res.pop_back();

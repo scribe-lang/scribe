@@ -7,4 +7,7 @@ let add = fn(data: ...i32): i32 {
 	return res + len;
 };
 
-let comptime res = add(5, 6, 7, 8); // must be 30
+let main = fn(): i32 {
+	let comptime res = add(5, 6, 7, 8); // must be 30
+	return 0;
+};

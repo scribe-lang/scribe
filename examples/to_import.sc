@@ -16,3 +16,11 @@ let __assn__ in st = fn(other: &const st): &st {
 	self.c = other.c;
 	return self;
 };
+
+inline if @isMainSrc() {
+
+let main = fn(): i32 {
+	return 0;
+};
+
+}
