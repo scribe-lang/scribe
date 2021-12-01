@@ -4,6 +4,7 @@
  */
 
 let c = @import("std/c");
+let vec = @import("std/vec"); // required for vec.str() and str.delim()
 let utils = @import("std/utils");
 
 let float_precision = 3;
@@ -50,6 +51,17 @@ let from = fn(data: *const i8): String {
 	return res;
 };
 
+let fromSlice = fn(data: *const i8, count: u64): String {
+	let count = count + 1; // + 1 for null terminator
+	let res = new();
+	res.data = c.malloc(i8, count);
+	c.memcpy(@as(@ptr(void), res.data), @as(@ptr(void), data), count);
+	res.data[count - 1] = 0;
+	res.length = count - 1;
+	res.capacity = count;
+	return res;
+};
+
 let deinit in String = fn() {
 	if @as(u64, self.data) == nil { return; }
 	c.free(i8, self.data);
@@ -76,6 +88,16 @@ let len in const String = fn(): u64 {
 
 let cap in const String = fn(): u64 {
 	return self.capacity;
+};
+
+let clear in String = fn() {
+	if self.length == 0 { return; }
+	c.memset(@as(@ptr(void), self.data), 0, self.length);
+	self.length = 0;
+};
+
+let copy in const String = fn(): String {
+	return from(self.data);
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -126,9 +148,38 @@ let str in const u64 = fn(): String { return uToStr(u64, self); };
 let str in const f32 = fn(): String { return fToStr(f32, self); };
 let str in const f64 = fn(): String { return fToStr(f64, self); };
 
+let str in const vec.Vec = fn(): String {
+	let res = from("[");
+	for let i = 0; i < self.length; ++i {
+		inline if @isEqualTy(self.T, String) {
+			res += self.data[i];
+		} else {
+			let tmp = self.data[i].str();
+			defer tmp.deinit();
+			res += tmp;
+		}
+		if i < self.length - 1 { res.appendCStr(", "); }
+	}
+	res.appendCStr("]");
+	return res;
+};
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Utility Functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+let appendChar in String = fn(ch: i8): &String {
+	if self.capacity == 0 {
+		self.capacity = 2;
+		self.data = c.malloc(i8, self.capacity);
+	} elif self.capacity < self.length + 2 {
+		self.capacity = self.capacity * 2;
+		self.data = c.realloc(i8, self.data, self.capacity);
+	}
+	self.data[self.length++] = ch;
+	self.data[self.length] = 0;
+	return self;
+};
 
 let appendCStr in String = fn(other: *const i8): &String {
 	let otherlen = c.strlen(other);
@@ -234,6 +285,30 @@ let __eq__ in const String = fn(other: &const String): i1 {
 
 let __ne__ in const String = fn(other: &const String): i1 {
 	return !(self == other);
+};
+
+let delim in const String = fn(ch: i8): vec.Vec(String) {
+	let res = vec.new(String, true);
+	let last = 0;
+	for let i = 0; i < self.length; ++i {
+		if self.data[i] == ch && i >= last {
+			if i == last {
+				res.push(new());
+			} else {
+				res.push(fromSlice(&self.data[last], i - last));
+			}
+			last = i + 1;
+			continue;
+		}
+	}
+	if self.length >= last {
+		if self.length == last {
+			res.push(new());
+		} else {
+			res.push(fromSlice(&self.data[last], self.length - last));
+		}
+	}
+	return res;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

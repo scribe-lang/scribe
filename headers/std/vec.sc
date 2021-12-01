@@ -1,5 +1,4 @@
 let c = @import("std/c");
-let string = @import("std/string");
 
 let Vec = struct<T> {
 	capacity: u64;
@@ -58,22 +57,6 @@ let deinit in Vec = fn() {
 			self.data[i].deinit();
 		}
 	}
-};
-
-let str in const Vec = fn(): string.String {
-	let res = string.from("[");
-	for let i = 0; i < self.length; ++i {
-		inline if @isEqualTy(self.T, string.String) {
-			res += self.data[i];
-		} else {
-			let tmp = self.data[i].str();
-			defer tmp.deinit();
-			res += tmp;
-		}
-		if i < self.length - 1 { res.appendCStr(", "); }
-	}
-	res.appendCStr("]");
-	return res;
 };
 
 // usage
