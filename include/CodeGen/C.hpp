@@ -23,6 +23,7 @@ class CDriver : public CodeGenDriver
 {
 	std::vector<std::string> headerflags;
 	std::vector<std::string> libflags;
+	std::vector<std::string> preheadermacros;
 	std::vector<std::string> headers;
 	std::vector<std::string> macros;
 	std::vector<std::string> typedefs;

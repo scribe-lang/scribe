@@ -406,8 +406,7 @@ Stmt *SimplifyPass::createIntermediate(FuncTy *cf, Stmt *a, const size_t &i)
 	if(!a->isExpr()) {
 		return nullptr;
 	}
-	// hasRef() will not be here as functions can return references
-	if(!cf->getArg(i)->hasRef() || a->getValueTy()->isPtr()) {
+	if(!cf->getArg(i)->hasRef()) {
 		return nullptr;
 	}
 	StmtExpr *ax = as<StmtExpr>(a);
