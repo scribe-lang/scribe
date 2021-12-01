@@ -4,6 +4,10 @@ let string = @import("std/string");
 
 let main = fn(): i32 {
 	let p = os.getEnv("PATH");
+	if @as(u64, p) == nil {
+		io.println("No PATH available");
+		return 1;
+	}
 	io.println("PATH is: ", p);
 
 	let newpath = string.from(p);
