@@ -24,6 +24,8 @@ let _realloc = extern[realloc, "<stdlib.h>"] fn(data: *void, newsz: u64): *void;
 let _free = extern[free, "<stdlib.h>"] fn(data: *void);
 let memcpy = extern[memcpy, "<string.h>"] fn(dest: *void, src: *const void, count: u64): *void;
 let memset = extern[memset, "<string.h>"] fn(dest: *void, ch: i32, count: u64): *void;
+let getenv = extern[getenv, "<stdlib.h>"] fn(name: *const i8): *const i8; // in C, actually returns *i8
+let setenv = extern[setenv, "<stdlib.h>"] fn(name: *const i8, val: *const i8, overwrite: i1): i32;
 
 let malloc = fn(comptime T: type, count: u64): *T {
         let comptime sz = @sizeOf(T);

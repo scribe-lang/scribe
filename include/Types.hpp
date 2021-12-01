@@ -615,8 +615,8 @@ inline Type *mkPtrTy(Context &c, Type *to, const size_t &count, const bool &is_w
 inline Type *mkStrTy(Context &c)
 {
 	Type *res = IntTy::create(c, 8, true);
+	res	  = PtrTy::create(c, res, 0, false);
 	res->setConst();
-	res = PtrTy::create(c, res, 0, false);
 	return res;
 }
 

@@ -17,6 +17,8 @@
 
 namespace sc
 {
+// required for, say, setenv()
+static const std::vector<std::string> default_preheadermacros = {"#define _DEFAULT_SOURCE"};
 static const std::vector<std::string> default_includes = {"<stdio.h>", "<inttypes.h>", "<stdlib.h>",
 							  "<stdbool.h>"};
 

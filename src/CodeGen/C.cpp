@@ -24,7 +24,8 @@
 namespace sc
 {
 CDriver::CDriver(RAIIParser &parser)
-	: CodeGenDriver(parser), headers(default_includes), typedefs(default_typedefs)
+	: CodeGenDriver(parser), preheadermacros(default_preheadermacros),
+	  headers(default_includes), typedefs(default_typedefs)
 {}
 CDriver::~CDriver() {}
 
@@ -39,6 +40,11 @@ bool CDriver::compile(const std::string &outfile)
 		return false;
 	}
 	Writer finalmod;
+	for(auto &ph : preheadermacros) {
+		finalmod.write(ph);
+		finalmod.newLine();
+	}
+	if(preheadermacros.size() > 0) finalmod.newLine();
 	for(auto &h : headers) {
 		finalmod.write("#include " + h);
 		finalmod.newLine();
@@ -182,6 +188,7 @@ bool CDriver::visit(Stmt *stmt, Writer &writer, const bool &semicol)
 		break;
 	}
 	}
+	if(tmp.empty()) return true;
 	if(!semicol &&
 	   (stmt->isExpr() ||
 	    (stmt->isSimple() && as<StmtSimple>(stmt)->getLexValue().getTokVal() == lex::IDEN)) &&
@@ -209,6 +216,7 @@ bool CDriver::visit(StmtBlock *stmt, Writer &writer, const bool &semicol)
 			err.set(stmt, "failed to generate IR for block");
 			return false;
 		}
+		if(tmp.empty()) continue;
 		writer.append(tmp);
 		if(i < stmt->getStmts().size() - 1) writer.newLine();
 	}

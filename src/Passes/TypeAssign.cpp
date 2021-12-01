@@ -133,10 +133,7 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 		is_self = true;
 	}
 	Type *res = stmt->getExpr()->getValueTy();
-	if(!is_self) {
-		res = res->clone(ctx);
-		res->appendInfo(stmt->getInfoMask());
-	}
+	if(!is_self) res = res->clone(ctx);
 	// generate ptrs
 	for(size_t i = 0; i < stmt->getPtrCount(); ++i) {
 		res = PtrTy::create(ctx, res, 0, false);
@@ -145,6 +142,7 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 			partialtypes.push_back({as<PtrTy>(res), stmt->getInfoMask()});
 		}
 	}
+	if(!is_self) res->appendInfo(stmt->getInfoMask());
 	stmt->createAndSetValue(TypeVal::create(ctx, res));
 	return true;
 }
