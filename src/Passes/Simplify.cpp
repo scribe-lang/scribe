@@ -391,8 +391,8 @@ bool SimplifyPass::trySetMainFunction(StmtVar *var, const std::string &varname)
 	if(fn->getSigArgs().empty()) { // int main()
 		return true;
 	} else if(fn->getSigArgs().size() == 2) { // int main(int argc, char **argv)
-		Type *a1 = fn->getSigArgs()[0]->getValueTy();
-		Type *a2 = fn->getSigArgs()[0]->getValueTy();
+		Type *a1 = fn->getSigArg(0)->getValueTy();
+		Type *a2 = fn->getSigArg(1)->getValueTy();
 		if(!a1->isInt()) return false;
 		if(!a2->isPtr()) return false;
 		if(!as<PtrTy>(a2)->getTo()->isPtr()) return false;
