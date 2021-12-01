@@ -95,10 +95,10 @@ configure_file("${PROJECT_SOURCE_DIR}/include/Config.hpp.in" "${PROJECT_SOURCE_D
 # )
 
 # Install C++ Includes
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/"
-	DESTINATION "${CMAKE_INSTALL_PREFIX}/include/scribe/compiler"
-	FILES_MATCHING PATTERN "*.hpp"
-)
+# install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/"
+# 	DESTINATION "${CMAKE_INSTALL_PREFIX}/include/scribe/compiler"
+# 	FILES_MATCHING PATTERN "*.hpp"
+# )
 
 # Install Scribe Includes
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/headers/"
