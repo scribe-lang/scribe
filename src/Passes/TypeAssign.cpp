@@ -1093,6 +1093,9 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 	} else {
 		stmt->createAndSetValue(VoidVal::create(ctx));
 	}
+	if(val && fnretty->requiresCast(valtype)) {
+		val->castTo(fnretty);
+	}
 	stmt->getFnBlk()->setValueID(stmt);
 	return true;
 }
@@ -1225,7 +1228,9 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 		StmtVar *cfa = cfsig->getArg(i);
 		Type *cft    = cf->getArg(i);
 		if(!cft->isVariadic()) {
-			Type *cftc = cft->clone(ctx);
+			Type *cftc = cft->isAny() ? args[i]->getValueTy() : cft;
+			cftc	   = cftc->clone(ctx);
+			cftc->appendInfo(cft->getInfo());
 			if(cftc->hasRef()) {
 				RefVal *rv = RefVal::create(ctx, cftc, args[i]->getValue());
 				cfa->createAndSetValue(rv);

@@ -85,6 +85,7 @@ bool SimplifyPass::visit(StmtBlock *stmt, Stmt **source)
 			stmts.insert(stmts.begin() + i, inner->getStmts().begin(),
 				     inner->getStmts().end());
 			i += inner->getStmts().size();
+			--i;
 		}
 	}
 	return true;

@@ -5,3 +5,7 @@ inline if 0 {
 } else {
 	let q = 100;
 }
+
+let main = fn(): i32 {
+	return 0;
+};

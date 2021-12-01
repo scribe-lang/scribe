@@ -6,5 +6,8 @@ let f = fn(p: i32): i32 { // no need for 'comptime' before p, but the value actu
 	return sum;
 };
 
-let n = 5;
-let comptime x = f(n); // should be 15
+let main = fn(): i32 {
+	let n = 5;
+	let comptime x = f(n); // should be 15
+	return 0;
+};
