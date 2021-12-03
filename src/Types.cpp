@@ -717,11 +717,9 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 	}
 	if(!is_arg_compatible) return nullptr;
 
-	FuncTy *res   = this;
-	size_t va_len = res->args.size();
-	if(!variadics.empty()) {
-		res = as<FuncTy>(clone(c));
-		--va_len;
+	FuncTy *res = this;
+	if(has_va) {
+		res	     = as<FuncTy>(clone(c));
 		Type *vabase = res->args.back();
 		res->args.pop_back();
 		vabase->unsetVariadic();

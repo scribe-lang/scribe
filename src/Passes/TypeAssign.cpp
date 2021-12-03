@@ -1224,7 +1224,9 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 	vmgr.pushLayer();
 
 	size_t va_count = 0;
-	for(size_t i = 0; i < args.size(); ++i) {
+	bool no_va_arg	= cf->getArgs().size() > 0 && cf->getArgs().back()->isVariadic() &&
+			 args.size() < cf->getArgs().size();
+	for(size_t i = 0; i < args.size() + no_va_arg; ++i) {
 		StmtVar *cfa = cfsig->getArg(i);
 		Type *cft    = cf->getArg(i);
 		if(!cft->isVariadic()) {

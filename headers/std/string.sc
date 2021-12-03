@@ -67,13 +67,14 @@ let deinit in String = fn() {
 	c.free(i8, self.data);
 	self.length = 0;
 	self.capacity = 0;
+	self.data = nil;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Core Utility Functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-let getBuf in String = fn(): *i8 {
+let getBuf in String = fn(): *&i8 {
 	return self.data;
 };
 
@@ -88,6 +89,10 @@ let len in const String = fn(): u64 {
 
 let cap in const String = fn(): u64 {
 	return self.capacity;
+};
+
+let empty in const String = fn(): i1 {
+	return self.length == 0;
 };
 
 let clear in String = fn() {

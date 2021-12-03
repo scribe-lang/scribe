@@ -43,6 +43,14 @@ let print in c.FILE = fn(data: ...&const any): i32 {
 let println in c.FILE = fn(data: ...&const any): i32 {
 	return fprintln(&self, data);
 };
+let read in c.FILE = fn(buf: &string.String): i64 {
+	buf.deinit();
+	let res = c.getline(&buf.getBuf(), &buf.length, &self);
+	if buf.length > 0 {
+		buf.capacity = buf.length + 1;
+	}
+	return res;
+};
 
 inline if @isMainSrc() {
 
