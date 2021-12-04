@@ -1,6 +1,7 @@
 INTRINSIC(import);
 INTRINSIC(ismainsrc);
 INTRINSIC(isprimitive);
+INTRINSIC(isprimitiveorptr);
 INTRINSIC(iscstring);
 INTRINSIC(iscchar);
 INTRINSIC(isequalty);
@@ -12,3 +13,4 @@ INTRINSIC(szof);
 INTRINSIC(valen);
 INTRINSIC(array);
 INTRINSIC(assn_ptr);
+INTRINSIC(compileerror);

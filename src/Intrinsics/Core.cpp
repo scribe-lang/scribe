@@ -75,8 +75,14 @@ INTRINSIC(ismainsrc)
 }
 INTRINSIC(isprimitive)
 {
-	bool is_prim = args[0]->getValueTy()->isPrimitive();
+	bool is_prim = args[0]->getValue()->getType()->isPrimitive();
 	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_prim));
+	return true;
+}
+INTRINSIC(isprimitiveorptr)
+{
+	bool is_prim_or_ptr = args[0]->getValue()->getType()->isPrimitiveOrPtr();
+	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_prim_or_ptr));
 	return true;
 }
 INTRINSIC(iscstring)
@@ -87,8 +93,8 @@ INTRINSIC(iscstring)
 }
 INTRINSIC(iscchar)
 {
-	bool is_cchar = args[0]->getValueTy()->isInt();
-	IntTy *t      = as<IntTy>(args[0]->getValueTy());
+	IntTy *t      = as<IntTy>(args[0]->getValue()->getType());
+	bool is_cchar = t->isInt();
 	is_cchar &= t->getBits() == 8;
 	is_cchar &= t->isSigned();
 	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_cchar));
@@ -174,6 +180,19 @@ INTRINSIC(assn_ptr)
 	args[0]->updateValue(c, args[1]->getValue());
 	stmt->updateValue(c, args[0]->getValue());
 	return true;
+}
+INTRINSIC(compileerror)
+{
+	std::string e;
+	for(auto &a : args) {
+		if(a->getValue()->hasData() && a->getValue()->isStrLiteral()) {
+			e += as<VecVal>(a->getValue())->getAsString();
+		} else {
+			e += a->getValue()->toStr().c_str();
+		}
+	}
+	err.set(stmt, e.c_str());
+	return false;
 }
 
 static bool IsValidSource(std::string &modname)

@@ -60,6 +60,7 @@ void addFltFn(Context &c, ValueManager &vmgr, const std::string &name, const uin
 
 void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 {
+	AnyTy *a     = nullptr;
 	TypeTy *g    = nullptr; // g = generic
 	TypeTy *g2   = nullptr;
 	IntTy *i1    = nullptr;
@@ -67,6 +68,7 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	IntTy *i32va = nullptr;
 	IntTy *u64   = nullptr;
 	Type *i8str  = nullptr;
+	VoidTy *v    = nullptr;
 
 	i8str = mkStrTy(c);
 	i8str->setComptime();
@@ -80,6 +82,10 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	i1 = mkI1Ty(c);
 	g  = mkTypeTy(c);
 	ADDFN("isPrimitive", createFnVal(c, {g}, i1, intrinsic_isprimitive, IPARSE));
+
+	i1 = mkI1Ty(c);
+	g  = mkTypeTy(c);
+	ADDFN("isPrimitiveOrPtr", createFnVal(c, {g}, i1, intrinsic_isprimitiveorptr, IPARSE));
 
 	i1 = mkI1Ty(c);
 	g  = mkTypeTy(c);
@@ -117,6 +123,11 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	i32 = mkI32Ty(c);
 	i32->setComptime();
 	ADDFN("valen", createFnVal(c, {}, i32, intrinsic_valen, IVALUE));
+
+	a = mkAnyTy(c);
+	a->setVariadic();
+	v = mkVoidTy(c);
+	ADDFN("compileError", createFnVal(c, {a}, v, intrinsic_compileerror, IPARSE));
 
 	g   = mkTypeTy(c);
 	g2  = mkTypeTy(c);
