@@ -1,6 +1,10 @@
 let c = @import("std/c");
 let string = @import("std/string");
 
+let stdin = c.stdin;
+let stdout = c.stdout;
+let stderr = c.stderr;
+
 let fprint = fn(f: *c.FILE, data: ...&const any): i32 {
 	let comptime len = @valen();
 	let sum = 0;
@@ -18,6 +22,16 @@ let fprint = fn(f: *c.FILE, data: ...&const any): i32 {
 		}
 	}
 	return sum;
+};
+
+let fprintf = fn(f: *c.FILE, fmt: *const i8, data: ...&const any): i32 {
+	let comptime len = @valen();
+	inline for let comptime i = 0; i < len; ++i {
+		inline if !@isPrimitiveOrPtr(data[i]) && !@isCString(data[i]) {
+			@compileError("Only primitive types and C strings can be passed to fprintf, found: ", @typeOf(data[i]));
+		}
+	}
+	return c.fprintf(f, fmt, data);
 };
 
 let fprintln = fn(f: *c.FILE, data: ...&const any): i32 {
@@ -42,6 +56,9 @@ let print in c.FILE = fn(data: ...&const any): i32 {
 };
 let println in c.FILE = fn(data: ...&const any): i32 {
 	return fprintln(&self, data);
+};
+let printf in c.FILE = fn(fmt: *const i8, data: ...&const any): i32 {
+	return fprintf(&self, fmt, data);
 };
 let read in c.FILE = fn(buf: &string.String): i64 {
 	buf.deinit();

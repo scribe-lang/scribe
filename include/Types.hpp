@@ -619,7 +619,15 @@ inline Type *mkStrTy(Context &c)
 	res->setConst();
 	return res;
 }
+inline VoidTy *mkVoidTy(Context &c)
+{
+	return VoidTy::create(c);
+}
 
+inline AnyTy *mkAnyTy(Context &c)
+{
+	return AnyTy::create(c);
+}
 inline TypeTy *mkTypeTy(Context &c)
 {
 	return TypeTy::create(c);
