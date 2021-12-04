@@ -20,14 +20,14 @@ ParseHelper::ParseHelper(Module *mod, std::vector<lex::Lexeme> &toks, const size
 	  eof(ModuleLoc(mod, 0, 0), lex::FEOF), idx(begin)
 {}
 
-lex::Lexeme &ParseHelper::peak(const int offset)
+lex::Lexeme &ParseHelper::peek(const int offset)
 {
 	if(offset < 0 && idx < (-offset)) return eof;
 	if(idx + offset >= toks.size()) return eof;
 	return toks[idx + offset];
 }
 
-lex::TokType ParseHelper::peakt(const int offset) const
+lex::TokType ParseHelper::peekt(const int offset) const
 {
 	if(offset < 0 && idx < (-offset)) return eof.getTokVal();
 	if(idx + offset >= toks.size()) return eof.getTokVal();

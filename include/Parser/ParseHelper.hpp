@@ -30,8 +30,8 @@ class ParseHelper
 public:
 	ParseHelper(Module *mod, std::vector<lex::Lexeme> &toks, const size_t &begin = 0);
 
-	lex::Lexeme &peak(const int offset = 0);
-	lex::TokType peakt(const int offset = 0) const;
+	lex::Lexeme &peek(const int offset = 0);
+	lex::TokType peekt(const int offset = 0) const;
 
 	lex::Lexeme &next();
 	lex::TokType nextt();
@@ -46,16 +46,16 @@ public:
 
 	inline bool accept(const lex::TokType type)
 	{
-		return peakt() == type;
+		return peekt() == type;
 	}
 	inline bool accept(const lex::TokType t1, const lex::TokType t2)
 	{
-		const lex::TokType t = peakt();
+		const lex::TokType t = peekt();
 		return t == t1 || t == t2;
 	}
 	inline bool accept(const lex::TokType t1, const lex::TokType t2, const lex::TokType t3)
 	{
-		const lex::TokType t = peakt();
+		const lex::TokType t = peekt();
 		return t == t1 || t == t2 || t == t3;
 	}
 
@@ -86,7 +86,7 @@ public:
 
 	inline bool acceptd()
 	{
-		return peak().getTok().isData();
+		return peek().getTok().isData();
 	}
 
 	inline bool isValid()
