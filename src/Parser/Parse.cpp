@@ -30,12 +30,12 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_bra
 	std::vector<Stmt *> stmts;
 	Stmt *stmt = nullptr;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(with_brace) {
 		if(!p.acceptn(lex::LBRACE)) {
-			err.set(p.peak(), "expected opening braces '{' for block, found: %s",
-				p.peak().getTok().cStr());
+			err.set(p.peek(), "expected opening braces '{' for block, found: %s",
+				p.peek().getTok().cStr());
 			return false;
 		}
 	}
@@ -43,7 +43,7 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_bra
 	while(p.isValid() && (!with_brace || !p.accept(lex::RBRACE))) {
 		// TODO: this must be during simplify as all inline stuff is resolved as well
 		// if(!with_brace && !p.accept(lex::LET)) {
-		// 	err.set(p.peak(), "top level block can contain only 'let' declarations");
+		// 	err.set(p.peek(), "top level block can contain only 'let' declarations");
 		// 	return false;
 		// }
 		bool skip_cols = false;
@@ -54,19 +54,19 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_bra
 			if(!parse_conds(p, stmt)) return false;
 			skip_cols = true;
 		} else if(p.accept(lex::INLINE)) {
-			if(p.peakt(1) == lex::FOR) {
+			if(p.peekt(1) == lex::FOR) {
 				if(!parse_for(p, stmt)) return false;
 				skip_cols = true;
-			} else if(p.peakt(1) == lex::IF) {
+			} else if(p.peekt(1) == lex::IF) {
 				if(!parse_conds(p, stmt)) return false;
 				skip_cols = true;
 			} else {
-				err.set(p.peak(1), "'inline' is not applicable on '%s' statement",
-					p.peak(1).getTok().cStr());
+				err.set(p.peek(1), "'inline' is not applicable on '%s' statement",
+					p.peek(1).getTok().cStr());
 				return false;
 			}
 		} else if(p.accept(lex::FOR)) {
-			if(p.peakt(1) == lex::IDEN && p.peakt(2) == lex::IN) {
+			if(p.peekt(1) == lex::IDEN && p.peekt(2) == lex::IN) {
 				if(!parse_forin(p, stmt)) return false;
 			} else {
 				if(!parse_for(p, stmt)) return false;
@@ -95,15 +95,15 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_bra
 			stmt = nullptr;
 			continue;
 		}
-		err.set(p.peak(), "expected semicolon for end of statement, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected semicolon for end of statement, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(with_brace) {
 		if(!p.acceptn(lex::RBRACE)) {
-			err.set(p.peak(), "expected closing braces '}' for block, found: %s",
-				p.peak().getTok().cStr());
+			err.set(p.peek(), "expected closing braces '}' for block, found: %s",
+				p.peek().getTok().cStr());
 			return false;
 		}
 	}
@@ -122,7 +122,7 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 	Stmt *expr    = nullptr;
 	bool dot_turn = false; // to ensure type name is in the form <name><dot><name>...
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(p.accept(lex::COMPTIME, lex::FN)) {
 		if(!parse_fnsig(p, expr)) return false;
@@ -140,7 +140,7 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 	if(p.acceptn(lex::VOLATILE)) info |= TypeInfoMask::VOLATILE;
 
 	if(!parse_expr_01(p, expr, true)) {
-		err.set(p.peak(), "failed to parse type expression");
+		err.set(p.peek(), "failed to parse type expression");
 		return false;
 	}
 
@@ -156,12 +156,12 @@ bool Parsing::parse_simple(ParseHelper &p, Stmt *&data)
 {
 	data = nullptr;
 
-	if(!p.peak().getTok().isData()) {
-		err.set(p.peak(), "expected data here, found: %s", p.peak().getTok().cStr());
+	if(!p.peek().getTok().isData()) {
+		err.set(p.peek(), "expected data here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
-	lex::Lexeme &val = p.peak();
+	lex::Lexeme &val = p.peek();
 	p.next();
 
 	data = StmtSimple::create(ctx, val.getLoc(), val);
@@ -184,7 +184,7 @@ bool Parsing::parse_expr_17(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	size_t commas = 0;
 
@@ -194,7 +194,7 @@ bool Parsing::parse_expr_17(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	while(p.accept(lex::COMMA)) {
 		++commas;
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_16(p, lhs, disable_brace_after_iden)) {
 			return false;
@@ -227,7 +227,7 @@ bool Parsing::parse_expr_16(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_15(p, lhs, disable_brace_after_iden)) {
 		return false;
@@ -237,7 +237,7 @@ bool Parsing::parse_expr_16(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 		return true;
 	}
 
-	oper = p.peak();
+	oper = p.peek();
 	p.next();
 	lex::Lexeme oper_inside;
 
@@ -245,11 +245,11 @@ bool Parsing::parse_expr_16(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 		return false;
 	}
 	if(!p.accept(lex::COL)) {
-		err.set(p.peak(), "expected ':' for ternary operator, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected ':' for ternary operator, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
-	oper_inside = p.peak();
+	oper_inside = p.peek();
 	p.next();
 	if(!parse_expr_15(p, lhs_rhs, disable_brace_after_iden)) {
 		return false;
@@ -278,14 +278,14 @@ bool Parsing::parse_expr_15(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_14(p, rhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::ASSN)) {
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_14(p, lhs, disable_brace_after_iden)) {
 			return false;
@@ -318,7 +318,7 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_13(p, lhs, disable_brace_after_iden)) {
 		return false;
@@ -329,7 +329,7 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 	      p.accept(lex::RSHIFT_ASSN, lex::BAND_ASSN, lex::BOR_ASSN) ||
 	      p.accept(lex::BNOT_ASSN, lex::BXOR_ASSN))
 	{
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_13(p, rhs, disable_brace_after_iden)) {
 			return false;
@@ -343,7 +343,7 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 	if(!p.acceptn(lex::OR)) return true;
 
 	if(p.accept(lex::IDEN)) {
-		or_blk_var = p.peak();
+		or_blk_var = p.peek();
 		p.next();
 	}
 
@@ -372,14 +372,14 @@ bool Parsing::parse_expr_13(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_12(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::LOR)) {
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_12(p, rhs, disable_brace_after_iden)) {
 			return false;
@@ -406,14 +406,14 @@ bool Parsing::parse_expr_12(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_11(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::LAND)) {
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_11(p, rhs, disable_brace_after_iden)) {
 			return false;
@@ -440,14 +440,14 @@ bool Parsing::parse_expr_11(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_10(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::BOR)) {
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_10(p, rhs, disable_brace_after_iden)) {
 			return false;
@@ -474,14 +474,14 @@ bool Parsing::parse_expr_10(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_09(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::BAND)) {
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_09(p, rhs, disable_brace_after_iden)) {
 			return false;
@@ -508,14 +508,14 @@ bool Parsing::parse_expr_09(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_08(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::BAND)) {
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_08(p, rhs, disable_brace_after_iden)) {
 			return false;
@@ -542,14 +542,14 @@ bool Parsing::parse_expr_08(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_07(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::EQ, lex::NE)) {
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_07(p, rhs, disable_brace_after_iden)) {
 			return false;
@@ -577,14 +577,14 @@ bool Parsing::parse_expr_07(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_06(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::LT, lex::LE) || p.accept(lex::GT, lex::GE)) {
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_06(p, rhs, disable_brace_after_iden)) {
 			return false;
@@ -611,14 +611,14 @@ bool Parsing::parse_expr_06(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_05(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::LSHIFT, lex::RSHIFT)) {
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_05(p, rhs, disable_brace_after_iden)) {
 			return false;
@@ -645,14 +645,14 @@ bool Parsing::parse_expr_05(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_04(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::ADD, lex::SUB)) {
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_04(p, rhs, disable_brace_after_iden)) {
 			return false;
@@ -679,14 +679,14 @@ bool Parsing::parse_expr_04(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	lex::Lexeme oper;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_03(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::MUL, lex::DIV, lex::MOD)) {
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(!parse_expr_03(p, rhs, disable_brace_after_iden)) {
 			return false;
@@ -715,18 +715,18 @@ bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	std::vector<lex::Lexeme> opers;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	while(p.accept(lex::XINC, lex::XDEC) || p.accept(lex::ADD, lex::SUB) ||
 	      p.accept(lex::MUL, lex::BAND) || p.accept(lex::LNOT, lex::BNOT))
 	{
-		if(p.peakt() == lex::XINC) p.sett(lex::INCX);
-		if(p.peakt() == lex::XDEC) p.sett(lex::DECX);
-		if(p.peakt() == lex::ADD) p.sett(lex::UADD);
-		if(p.peakt() == lex::SUB) p.sett(lex::USUB);
-		if(p.peakt() == lex::MUL) p.sett(lex::UMUL);
-		if(p.peakt() == lex::BAND) p.sett(lex::UAND);
-		opers.insert(opers.begin(), p.peak());
+		if(p.peekt() == lex::XINC) p.sett(lex::INCX);
+		if(p.peekt() == lex::XDEC) p.sett(lex::DECX);
+		if(p.peekt() == lex::ADD) p.sett(lex::UADD);
+		if(p.peekt() == lex::SUB) p.sett(lex::USUB);
+		if(p.peekt() == lex::MUL) p.sett(lex::UMUL);
+		if(p.peekt() == lex::BAND) p.sett(lex::UAND);
+		opers.insert(opers.begin(), p.peek());
 		p.next();
 	}
 
@@ -772,15 +772,15 @@ bool Parsing::parse_expr_02(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	std::vector<lex::Lexeme> opers;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_expr_01(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	if(p.accept(lex::XINC, lex::XDEC, lex::PreVA)) {
-		if(p.peakt() == lex::PreVA) p.sett(lex::PostVA);
-		lhs = StmtExpr::create(ctx, p.peak().getLoc(), 0, lhs, p.peak(), nullptr, false);
+		if(p.peekt() == lex::PreVA) p.sett(lex::PostVA);
+		lhs = StmtExpr::create(ctx, p.peek().getLoc(), 0, lhs, p.peek(), nullptr, false);
 		p.next();
 	}
 
@@ -794,7 +794,7 @@ bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 {
 	expr = nullptr;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 	lex::Lexeme dot;
 
 	Stmt *lhs = nullptr;
@@ -808,9 +808,9 @@ bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 			return false;
 		}
 		if(!p.acceptn(lex::RPAREN)) {
-			err.set(p.peak(),
+			err.set(p.peek(),
 				"expected ending parenthesis ')' for expression, found: %s",
-				p.peak().getTok().cStr());
+				p.peek().getTok().cStr());
 			return false;
 		}
 	}
@@ -831,10 +831,10 @@ begin_brack:
 	if(p.accept(lex::LBRACK)) {
 		lex::Lexeme oper;
 		p.sett(lex::SUBS);
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(is_intrinsic) {
-			err.set(p.peak(), "only function calls can be intrinsic;"
+			err.set(p.peek(), "only function calls can be intrinsic;"
 					  " attempted subscript here");
 			return false;
 		}
@@ -843,29 +843,29 @@ begin_brack:
 			return false;
 		}
 		if(!p.acceptn(lex::RBRACK)) {
-			err.set(p.peak(),
+			err.set(p.peek(),
 				"expected closing bracket for"
 				" subscript expression, found: %s",
-				p.peak().getTok().cStr());
+				p.peek().getTok().cStr());
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, oper.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 		if(p.accept(lex::LBRACK, lex::LPAREN) ||
-		   (p.peakt() == lex::DOT && p.peakt(1) == lex::LT))
+		   (p.peekt() == lex::DOT && p.peekt(1) == lex::LT))
 			goto begin_brack;
 	} else if(p.accept(lex::LPAREN) || (!disable_brace_after_iden && p.accept(lex::LBRACE))) {
 		bool fncall = p.accept(lex::LPAREN);
 		lex::Lexeme oper;
 		if(!p.accept(lex::LPAREN, lex::LBRACE)) {
-			err.set(p.peak(),
+			err.set(p.peek(),
 				"expected opening parenthesis/brace"
 				" for function/struct call, found: %s",
-				p.peak().getTok().cStr());
+				p.peek().getTok().cStr());
 			return false;
 		}
 		p.sett(fncall ? lex::FNCALL : lex::STCALL);
-		oper = p.peak();
+		oper = p.peek();
 		p.next();
 		if(p.acceptn(fncall ? lex::RPAREN : lex::RBRACE)) {
 			goto post_args;
@@ -878,10 +878,10 @@ begin_brack:
 			if(!p.acceptn(lex::COMMA)) break;
 		}
 		if(!p.acceptn(fncall ? lex::RPAREN : lex::RBRACE)) {
-			err.set(p.peak(),
+			err.set(p.peek(),
 				"expected closing parenthesis/brace after function/struct"
 				" call arguments, found: %s",
-				p.peak().getTok().cStr());
+				p.peek().getTok().cStr());
 			return false;
 		}
 	post_args:
@@ -898,10 +898,10 @@ dot:
 	if(p.acceptn(lex::DOT, lex::ARROW)) {
 		if(lhs && rhs) {
 			lhs =
-			StmtExpr::create(ctx, p.peak(-1).getLoc(), 0, lhs, p.peak(-1), rhs, false);
+			StmtExpr::create(ctx, p.peek(-1).getLoc(), 0, lhs, p.peek(-1), rhs, false);
 			rhs = nullptr;
 		}
-		dot = p.peak(-1);
+		dot = p.peek(-1);
 		goto after_dot;
 	}
 
@@ -933,11 +933,11 @@ bool Parsing::parse_var(ParseHelper &p, StmtVar *&var, const Occurs &intype, con
 	}
 
 	if(!p.accept(lex::IDEN)) {
-		err.set(p.peak(), "expected identifier for variable name, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected identifier for variable name, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
-	lex::Lexeme &name = p.peak();
+	lex::Lexeme &name = p.peek();
 	p.next();
 	StmtType *in   = nullptr;
 	StmtType *type = nullptr;
@@ -945,32 +945,32 @@ bool Parsing::parse_var(ParseHelper &p, StmtVar *&var, const Occurs &intype, con
 
 in:
 	if(intype == Occurs::NO && p.accept(lex::IN)) {
-		err.set(p.peak(), "unexpected 'in' here");
+		err.set(p.peek(), "unexpected 'in' here");
 		return false;
 	}
 	if(!p.acceptn(lex::IN)) {
 		goto type;
 	}
 	if(comptime) {
-		err.set(p.peak(), "comptime can be used only for data variables");
+		err.set(p.peek(), "comptime can be used only for data variables");
 		return false;
 	}
 	if(!parse_type(p, in)) {
-		err.set(p.peak(), "failed to parse in-type for variable: %s",
+		err.set(p.peek(), "failed to parse in-type for variable: %s",
 			name.getDataStr().c_str());
 		return false;
 	}
 
 type:
 	if(otype == Occurs::NO && p.accept(lex::COL)) {
-		err.set(p.peak(), "unexpected beginning of type here");
+		err.set(p.peek(), "unexpected beginning of type here");
 		return false;
 	}
 	if(!p.acceptn(lex::COL)) {
 		goto val;
 	}
 	if(!parse_type(p, type)) {
-		err.set(p.peak(), "failed to parse type for variable: %s",
+		err.set(p.peek(), "failed to parse type for variable: %s",
 			name.getDataStr().c_str());
 		return false;
 	}
@@ -981,14 +981,14 @@ type:
 
 val:
 	if(oval == Occurs::NO && p.accept(lex::ASSN)) {
-		err.set(p.peak(), "unexpected beginning of value assignment here");
+		err.set(p.peek(), "unexpected beginning of value assignment here");
 		return false;
 	}
 	if(!p.acceptn(lex::ASSN)) {
 		goto done;
 	}
 	if(comptime && (p.accept(lex::ENUM, lex::STRUCT) || p.accept(lex::FN, lex::EXTERN))) {
-		err.set(p.peak(), "comptime declaration can only have an expression as value");
+		err.set(p.peek(), "comptime declaration can only have an expression as value");
 		return false;
 	}
 	if(p.accept(lex::ENUM)) {
@@ -1051,16 +1051,16 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 	std::unordered_set<std::string> argnames;
 	bool found_va	   = false;
 	StmtType *rettype  = nullptr;
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::FN)) {
-		err.set(p.peak(), "expected 'fn' here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'fn' here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(!p.acceptn(lex::LPAREN)) {
-		err.set(p.peak(), "expected opening parenthesis for function args, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected opening parenthesis for function args, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 	if(p.acceptn(lex::RPAREN)) goto post_args;
@@ -1069,12 +1069,12 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 	while(true) {
 		bool is_comptime = false;
 		if(p.acceptn(lex::COMPTIME)) is_comptime = true;
-		if(argnames.find(p.peak().getDataStr()) != argnames.end()) {
-			err.set(p.peak(), "this argument name is already used "
+		if(argnames.find(p.peek().getDataStr()) != argnames.end()) {
+			err.set(p.peek(), "this argument name is already used "
 					  "before in this function signature");
 			return false;
 		}
-		argnames.insert(p.peak().getDataStr());
+		argnames.insert(p.peek().getDataStr());
 		if(is_comptime) p.setPos(p.getPos() - 1);
 		if(!parse_var(p, var, Occurs::NO, Occurs::YES, Occurs::NO)) {
 			return false;
@@ -1087,24 +1087,24 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 		var = nullptr;
 		if(!p.acceptn(lex::COMMA)) break;
 		if(found_va) {
-			err.set(p.peak(), "no parameter can exist after variadic");
+			err.set(p.peek(), "no parameter can exist after variadic");
 			return false;
 		}
 	}
 
 	if(!p.acceptn(lex::RPAREN)) {
-		err.set(p.peak(), "expected closing parenthesis after function args, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected closing parenthesis after function args, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 
 post_args:
 	if(p.acceptn(lex::COL) && !parse_type(p, rettype)) {
-		err.set(p.peak(), "failed to parse return type for function");
+		err.set(p.peek(), "failed to parse return type for function");
 		return false;
 	}
 	if(!rettype) {
-		lex::Lexeme voideme = lex::Lexeme(p.peak(-1).getLoc(), lex::VOID, "void");
+		lex::Lexeme voideme = lex::Lexeme(p.peek(-1).getLoc(), lex::VOID, "void");
 		StmtSimple *voidsim = StmtSimple::create(ctx, voideme.getLoc(), voideme);
 		rettype		    = StmtType::create(ctx, voidsim->getLoc(), 0, 0, voidsim);
 	}
@@ -1123,7 +1123,7 @@ bool Parsing::parse_fndef(ParseHelper &p, Stmt *&fndef)
 
 	Stmt *sig	   = nullptr;
 	StmtBlock *blk	   = nullptr;
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!parse_fnsig(p, sig)) return false;
 	if(!parse_block(p, blk)) return false;
@@ -1143,21 +1143,21 @@ bool Parsing::parse_header(ParseHelper &p, StmtHeader *&header)
 	lex::Lexeme names, flags;
 
 	if(!p.accept(lex::IDEN, lex::STR)) {
-		err.set(p.peak(), "expected string or identifier for the name of header, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected string or identifier for the name of header, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
-	names = p.peak();
+	names = p.peek();
 	p.next();
 
 	if(!p.acceptn(lex::COL)) goto done;
 
 	if(!p.accept(lex::IDEN, lex::STR)) {
-		err.set(p.peak(), "expected string or identifier for the header flags, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected string or identifier for the header flags, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
-	flags = p.peak();
+	flags = p.peek();
 	p.next();
 
 done:
@@ -1171,11 +1171,11 @@ bool Parsing::parse_lib(ParseHelper &p, StmtLib *&lib)
 	lex::Lexeme flags;
 
 	if(!p.accept(lex::IDEN, lex::STR)) {
-		err.set(p.peak(), "expected string or identifier for the lib flags, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected string or identifier for the lib flags, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
-	flags = p.peak();
+	flags = p.peek();
 	p.next();
 
 	lib = StmtLib::create(ctx, flags.getLoc(), flags);
@@ -1192,24 +1192,24 @@ bool Parsing::parse_extern(ParseHelper &p, Stmt *&ext)
 	bool struct_kw	    = false;
 
 	if(!p.acceptn(lex::EXTERN)) {
-		err.set(p.peak(), "expected extern keyword here, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected extern keyword here, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(!p.acceptn(lex::LBRACK)) {
-		err.set(p.peak(), "expected opening bracket for extern information, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected opening bracket for extern information, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(p.acceptn(lex::STRUCT)) struct_kw = true;
 	if(!p.accept(lex::IDEN)) {
-		err.set(p.peak(), "expected identifier or string here, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected identifier or string here, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
-	name = p.peak();
+	name = p.peek();
 	p.next();
 
 	// This is for handling typedefs and structs in C
@@ -1224,8 +1224,8 @@ bool Parsing::parse_extern(ParseHelper &p, Stmt *&ext)
 
 endinfo:
 	if(!p.acceptn(lex::RBRACK)) {
-		err.set(p.peak(), "expected closing bracket after extern information, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected closing bracket after extern information, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 
@@ -1249,26 +1249,26 @@ bool Parsing::parse_enum(ParseHelper &p, Stmt *&ed)
 {
 	std::vector<lex::Lexeme> enumvars;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::ENUM)) {
-		err.set(p.peak(), "expected 'enum' keyword here, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'enum' keyword here, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 	if(!p.acceptn(lex::LBRACE)) {
-		err.set(p.peak(), "expected left braces for beginning of enum list, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected left braces for beginning of enum list, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 	while(p.accept(lex::IDEN)) {
-		enumvars.push_back(p.peak());
+		enumvars.push_back(p.peek());
 		p.next();
 		if(!p.acceptn(lex::COMMA)) break;
 	}
 	if(!p.acceptn(lex::RBRACE)) {
-		err.set(p.peak(), "expected right braces for end of enum list, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected right braces for end of enum list, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 	if(enumvars.empty()) {
@@ -1287,41 +1287,41 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd, const bool &allowed_templs
 	std::vector<lex::Lexeme> templates;
 	StmtVar *field = nullptr;
 	std::unordered_set<std::string> fieldnames;
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::STRUCT)) {
-		err.set(p.peak(), "expected 'struct' keyword here, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'struct' keyword here, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(p.acceptn(lex::LT)) {
 		if(!allowed_templs) {
-			err.set(p.peak(), "templates are not allowed in externed structs");
+			err.set(p.peek(), "templates are not allowed in externed structs");
 			return false;
 		}
 		while(p.accept(lex::IDEN)) {
-			templates.push_back(p.peak());
+			templates.push_back(p.peek());
 			p.next();
 			if(!p.acceptn(lex::COMMA)) break;
 		}
 		if(!p.acceptn(lex::GT)) {
-			err.set(p.peak(), "expected '>' for end of struct template list, found: %s",
-				p.peak().getTok().cStr());
+			err.set(p.peek(), "expected '>' for end of struct template list, found: %s",
+				p.peek().getTok().cStr());
 			return false;
 		}
 	}
 
 	if(!p.acceptn(lex::LBRACE)) {
-		err.set(p.peak(), "expected opening braces for struct definition, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected opening braces for struct definition, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 
 	while(p.accept(lex::IDEN, lex::COMPTIME)) {
 		if(!parse_var(p, field, Occurs::NO, Occurs::YES, Occurs::NO)) return false;
 		if(fieldnames.find(field->getName().getDataStr()) != fieldnames.end()) {
-			err.set(p.peak(), "this field name is already used "
+			err.set(p.peek(), "this field name is already used "
 					  "before in this same structure");
 			return false;
 		}
@@ -1331,10 +1331,10 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd, const bool &allowed_templs
 		if(!p.acceptn(lex::COLS)) break;
 	}
 	if(!p.acceptn(lex::RBRACE)) {
-		err.set(p.peak(),
+		err.set(p.peek(),
 			"expected closing brace for struct/trait"
 			" declaration/definition, found: %s",
-			p.peak().getTok().cStr());
+			p.peek().getTok().cStr());
 		return false;
 	}
 
@@ -1354,11 +1354,11 @@ bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
 
 	std::vector<StmtVar *> decls;
 	StmtVar *decl	   = nullptr;
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::LET)) {
-		err.set(p.peak(), "expected 'let' keyword here, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'let' keyword here, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 
@@ -1398,22 +1398,22 @@ bool Parsing::parse_conds(ParseHelper &p, Stmt *&conds)
 
 	if(p.acceptn(lex::INLINE)) is_inline = true;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 cond:
 	if(!p.acceptn(lex::IF, lex::ELIF)) {
-		err.set(p.peak(), "expected 'if' here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'if' here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(!parse_expr_15(p, c.getCond(), true)) {
-		err.set(p.peak(), "failed to parse condition for if/else if statement");
+		err.set(p.peek(), "failed to parse condition for if/else if statement");
 		return false;
 	}
 
 blk:
 	if(!parse_block(p, c.getBlk())) {
-		err.set(p.peak(), "failed to parse block for conditional");
+		err.set(p.peek(), "failed to parse block for conditional");
 		return false;
 	}
 
@@ -1442,39 +1442,39 @@ bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 	lex::Lexeme iter;
 	Stmt *in	   = nullptr; // L01
 	StmtBlock *blk	   = nullptr;
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::FOR)) {
-		err.set(p.peak(), "expected 'for' here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'for' here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(!p.accept(lex::IDEN)) {
-		err.set(p.peak(), "expected iterator (identifier) here, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected iterator (identifier) here, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
-	iter = p.peak();
+	iter = p.peek();
 	p.next();
 
 	if(!p.acceptn(lex::IN)) {
-		err.set(p.peak(), "expected 'in' here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'in' here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(!parse_expr_01(p, in, true)) {
-		err.set(p.peak(), "failed to parse expression for 'in'");
+		err.set(p.peek(), "failed to parse expression for 'in'");
 		return false;
 	}
 
 	if(!p.accept(lex::LBRACE)) {
-		err.set(p.peak(), "expected block for for-in construct, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected block for for-in construct, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(!parse_block(p, blk)) {
-		err.set(p.peak(), "failed to parse block for for-in construct");
+		err.set(p.peek(), "failed to parse block for for-in construct");
 		return false;
 	}
 
@@ -1494,12 +1494,12 @@ bool Parsing::parse_for(ParseHelper &p, Stmt *&f)
 	Stmt *incr	   = nullptr;
 	StmtBlock *blk	   = nullptr;
 	bool is_inline	   = false;
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(p.acceptn(lex::INLINE)) is_inline = true;
 
 	if(!p.acceptn(lex::FOR)) {
-		err.set(p.peak(), "expected 'for' here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'for' here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
@@ -1512,7 +1512,7 @@ init:
 		if(!parse_expr(p, init, false)) return false;
 	}
 	if(!p.acceptn(lex::COLS)) {
-		err.set(p.peak(), "expected semicolon here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected semicolon here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
@@ -1521,7 +1521,7 @@ cond:
 
 	if(!parse_expr_16(p, cond, false)) return false;
 	if(!p.acceptn(lex::COLS)) {
-		err.set(p.peak(), "expected semicolon here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected semicolon here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
@@ -1530,14 +1530,14 @@ incr:
 
 	if(!parse_expr(p, incr, true)) return false;
 	if(!p.accept(lex::LBRACE)) {
-		err.set(p.peak(), "expected braces for body here, found: %s",
-			p.peak().getTok().cStr());
+		err.set(p.peek(), "expected braces for body here, found: %s",
+			p.peek().getTok().cStr());
 		return false;
 	}
 
 body:
 	if(!parse_block(p, blk)) {
-		err.set(p.peak(), "failed to parse block for 'for' construct");
+		err.set(p.peek(), "failed to parse block for 'for' construct");
 		return false;
 	}
 
@@ -1556,17 +1556,17 @@ bool Parsing::parse_while(ParseHelper &p, Stmt *&w)
 
 	Stmt *cond	   = nullptr;
 	StmtBlock *blk	   = nullptr;
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::WHILE)) {
-		err.set(p.peak(), "expected 'while' here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'while' here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(!parse_expr_16(p, cond, true)) return false;
 
 	if(!parse_block(p, blk)) {
-		err.set(p.peak(), "failed to parse block for 'for' construct");
+		err.set(p.peek(), "failed to parse block for 'for' construct");
 		return false;
 	}
 
@@ -1582,17 +1582,17 @@ bool Parsing::parse_ret(ParseHelper &p, Stmt *&ret)
 	ret = nullptr;
 
 	Stmt *val	   = nullptr;
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::RETURN)) {
-		err.set(p.peak(), "expected 'return' here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'return' here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(p.accept(lex::COLS)) goto done;
 
 	if(!parse_expr_16(p, val, false)) {
-		err.set(p.peak(), "failed to parse expression for return value");
+		err.set(p.peek(), "failed to parse expression for return value");
 		return false;
 	}
 
@@ -1607,10 +1607,10 @@ bool Parsing::parse_continue(ParseHelper &p, Stmt *&cont)
 {
 	cont = nullptr;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::CONTINUE)) {
-		err.set(p.peak(), "expected 'continue' here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'continue' here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
@@ -1621,10 +1621,10 @@ bool Parsing::parse_break(ParseHelper &p, Stmt *&brk)
 {
 	brk = nullptr;
 
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::BREAK)) {
-		err.set(p.peak(), "expected 'break' here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'break' here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
@@ -1636,15 +1636,15 @@ bool Parsing::parse_defer(ParseHelper &p, Stmt *&defer)
 	defer = nullptr;
 
 	Stmt *val	   = nullptr;
-	lex::Lexeme &start = p.peak();
+	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::DEFER)) {
-		err.set(p.peak(), "expected 'defer' here, found: %s", p.peak().getTok().cStr());
+		err.set(p.peek(), "expected 'defer' here, found: %s", p.peek().getTok().cStr());
 		return false;
 	}
 
 	if(!parse_expr_16(p, val, false)) {
-		err.set(p.peak(), "failed to parse expression for return value");
+		err.set(p.peek(), "failed to parse expression for return value");
 		return false;
 	}
 
