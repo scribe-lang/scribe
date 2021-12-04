@@ -138,17 +138,6 @@ public:
 		valueid		= genValueID();
 		values[valueid] = v;
 	}
-	// changes the value at the valueid (valueid is unchanged)
-	// changeValue() cannot exist because the inner (dot) members will be invalidated
-	inline bool updateValue(Value *v)
-	{
-		assert(valueid && "valueid cannot be zero for updateValue()");
-		if(!values[valueid]) {
-			values[valueid] = v;
-			return true;
-		}
-		return values[valueid]->updateValue(v);
-	}
 	inline void setValueTy(Type *t)
 	{
 		assert(valueid && "valueid cannot be zero for setValueTy()");
@@ -163,6 +152,9 @@ public:
 	{
 		return valueid;
 	}
+	// changes the value at the valueid (valueid is unchanged)
+	// changeValue() cannot exist because the inner (dot) members will be invalidated
+	bool updateValue(Context &c, Value *v);
 	// if exact = true, cast and deref will be skipped
 	Value *getValue(const bool &exact = false);
 	// if exact = true, cast and deref will be skipped

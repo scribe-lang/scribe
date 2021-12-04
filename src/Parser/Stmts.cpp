@@ -84,6 +84,18 @@ std::string Stmt::getTypeString()
 	if(v->hasData()) res += " ==> " + v->toStr();
 	return res;
 }
+bool Stmt::updateValue(Context &c, Value *v)
+{
+	assert(valueid && "valueid cannot be zero for updateValue()");
+	if(!values[valueid]) {
+		values[valueid] = v;
+		return true;
+	}
+	Value *self = values[valueid];
+	while(self->isRef()) self = as<RefVal>(self)->getVal();
+	while(v->isRef()) v = as<RefVal>(v)->getVal();
+	return self->updateValue(c, v);
+}
 Value *Stmt::getValue(const bool &exact)
 {
 	assert(valueid && "valueid cannot be zero for getValue()");

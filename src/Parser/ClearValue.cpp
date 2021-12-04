@@ -43,6 +43,7 @@ void StmtType::clearValue()
 
 void StmtSimple::clearValue()
 {
+	return;
 	if(values[valueid]) values[valueid]->clearHasData();
 }
 
