@@ -564,51 +564,51 @@ public:
 
 // helpful functions
 
-inline Type *mkI1Ty(Context &c)
+inline IntTy *mkI1Ty(Context &c)
 {
 	return IntTy::create(c, 1, true);
 }
-inline Type *mkI8Ty(Context &c)
+inline IntTy *mkI8Ty(Context &c)
 {
 	return IntTy::create(c, 8, true);
 }
-inline Type *mkI16Ty(Context &c)
+inline IntTy *mkI16Ty(Context &c)
 {
 	return IntTy::create(c, 16, true);
 }
-inline Type *mkI32Ty(Context &c)
+inline IntTy *mkI32Ty(Context &c)
 {
 	return IntTy::create(c, 32, true);
 }
-inline Type *mkI64Ty(Context &c)
+inline IntTy *mkI64Ty(Context &c)
 {
 	return IntTy::create(c, 64, true);
 }
-inline Type *mkU8Ty(Context &c)
+inline IntTy *mkU8Ty(Context &c)
 {
 	return IntTy::create(c, 8, false);
 }
-inline Type *mkU16Ty(Context &c)
+inline IntTy *mkU16Ty(Context &c)
 {
 	return IntTy::create(c, 16, false);
 }
-inline Type *mkU32Ty(Context &c)
+inline IntTy *mkU32Ty(Context &c)
 {
 	return IntTy::create(c, 32, false);
 }
-inline Type *mkU64Ty(Context &c)
+inline IntTy *mkU64Ty(Context &c)
 {
 	return IntTy::create(c, 64, false);
 }
-inline Type *mkF32Ty(Context &c)
+inline FltTy *mkF32Ty(Context &c)
 {
 	return FltTy::create(c, 32);
 }
-inline Type *mkF64Ty(Context &c)
+inline FltTy *mkF64Ty(Context &c)
 {
 	return FltTy::create(c, 64);
 }
-inline Type *mkPtrTy(Context &c, Type *to, const size_t &count, const bool &is_weak)
+inline PtrTy *mkPtrTy(Context &c, Type *to, const size_t &count, const bool &is_weak)
 {
 	return PtrTy::create(c, to, count, is_weak);
 }
@@ -620,6 +620,10 @@ inline Type *mkStrTy(Context &c)
 	return res;
 }
 
+inline TypeTy *mkTypeTy(Context &c)
+{
+	return TypeTy::create(c);
+}
 } // namespace sc
 
 #endif // TYPES_HPP

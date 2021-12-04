@@ -181,7 +181,10 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		stmt->createAndSetValue(fv);
 		break;
 	}
-	case lex::STR: stmt->createAndSetValue(VecVal::createStr(ctx, lval.getDataStr())); break;
+	case lex::STR: {
+		stmt->createAndSetValue(VecVal::createStr(ctx, lval.getDataStr(), CDPERMA));
+		break;
+	}
 	case lex::I1: stmt->createAndSetValue(TypeVal::create(ctx, mkI1Ty(ctx))); break;
 	case lex::I8: stmt->createAndSetValue(TypeVal::create(ctx, mkI8Ty(ctx))); break;
 	case lex::I16: stmt->createAndSetValue(TypeVal::create(ctx, mkI16Ty(ctx))); break;
@@ -374,7 +377,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 						as<StmtFnDef>(f->getVar()->getVVal())->incUsed();
 					}
 				}
-				if(!coerced_to->hasComptime() || vpass.visit(args[j], &args[j])) {
+				if(!coerced_to->hasComptime() || vpass.visit(arg, &arg)) {
 					continue;
 				}
 				err.set(stmt, "failed to determine value for comptime arg");
@@ -726,6 +729,7 @@ post_mangling:
 	}
 	if(val && !skip_val && stmt->isComptime()) {
 		if(!vpass.visit(val, &val) || !val->getValue()->hasData()) {
+			stmt->disp(false);
 			err.set(stmt, "value of comptime variable could not be calculated");
 			return false;
 		}
@@ -803,6 +807,7 @@ bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 	}
 	FuncVal *fn   = as<FuncVal>(stmt->getSig()->getValue());
 	FuncTy *sigty = fn->getVal();
+	Value *dv     = nullptr;
 
 	sigty->setVar(stmt->getParentVar());
 
@@ -814,6 +819,8 @@ bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 	if(stmt->requiresTemplateInit()) goto end;
 
 	pushFunc(fn, false, 0);
+	dv = sigty->getRet()->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
+	stmt->getBlk()->createAndSetValue(dv);
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
 		err.set(stmt, "failed to determine type of function block");
 		return false;
@@ -1071,13 +1078,14 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 		err.set(stmt, "failed to determine type of the return argument");
 		return false;
 	}
-	Type *valtype = val ? val->getValueTy()->clone(ctx) : VoidTy::create(ctx);
-	FuncTy *fn    = vmgr.getTopFunc();
+	FuncTy *fn = vmgr.getTopFunc();
 	if(!fn->getVar()) {
 		err.set(stmt, "function type has no declaration");
 		return false;
 	}
 	Type *fnretty = fn->getRet();
+	Type *valtype = val ? val->getValueTy()->clone(ctx) : VoidTy::create(ctx);
+	valtype->appendInfo(fnretty->getInfo());
 	if(!fnretty->isCompatible(ctx, valtype, err, stmt->getLoc())) {
 		err.set(stmt,
 			"function return type and deduced return type are"
@@ -1086,17 +1094,9 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 		return false;
 	}
 	stmt->setFnBlk(as<StmtFnDef>(fn->getVar()->getVVal())->getBlk());
-	if(val) {
-		valtype->appendInfo(fnretty->getInfo());
-		RefVal *rv = RefVal::create(ctx, valtype, val->getValue());
-		stmt->createAndSetValue(rv);
-	} else {
-		stmt->createAndSetValue(VoidVal::create(ctx));
-	}
-	if(val && fnretty->requiresCast(valtype)) {
-		val->castTo(fnretty);
-	}
-	stmt->getFnBlk()->setValueID(stmt);
+	stmt->setValueID(stmt->getFnBlk());
+	stmt->setValueTy(valtype);
+	if(val && fnretty->requiresCast(valtype)) val->castTo(fnretty);
 	return true;
 }
 bool TypeAssignPass::visit(StmtContinue *stmt, Stmt **source)
@@ -1291,6 +1291,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 	cfvar->getVVal()->setValueID(cfsig);
 	cfvar->setValueID(cfsig);
 
+	Value *dv = nullptr;
 	if(cf->isExtern()) {
 		goto end;
 	}
@@ -1299,6 +1300,8 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 		return false;
 	}
 	beingtemplated[cf->getNonUniqID()] = cfvar;
+	dv = cf->getRet()->toDefaultValue(ctx, err, caller->getLoc(), CDFALSE);
+	cfblk->createAndSetValue(dv);
 	pushFunc(cfn, va_count > 0, va_count);
 	if(!visit(cfblk, asStmt(&cfblk))) {
 		err.set(caller, "failed to assign type for called template function's var");

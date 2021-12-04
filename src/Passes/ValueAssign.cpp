@@ -186,9 +186,9 @@ skip_rhs_val:
 		}
 		for(size_t i = 0; i < defargs.size(); ++i) {
 			Value *aval = callargs[i]->getValue();
-			def->getSigArg(i)->updateValue(aval);
+			def->getSigArg(i)->updateValue(ctx, aval);
 		}
-		if(!visit(def, &fndef)) {
+		if(!visit(fndef, &fndef)) {
 			err.set(stmt, "failed to determine value from function definition");
 			return false;
 		}
@@ -196,11 +196,11 @@ skip_rhs_val:
 		for(size_t i = 0; i < defargs.size(); ++i) {
 			Value *aval = callargs[i]->getValue();
 			if(def->getSigArg(i)->getValueTy()->hasRef()) {
-				aval->updateValue(defargs[i]->getValue());
+				aval->updateValue(ctx, defargs[i]->getValue());
 			}
 		}
 
-		stmt->updateValue(def->getBlk()->getValue());
+		stmt->updateValue(ctx, def->getBlk()->getValue());
 		def->clearValue();
 		break;
 	}
@@ -231,7 +231,7 @@ skip_rhs_val:
 			err.set(stmt, "index out of bounds of pointer/array");
 			return false;
 		}
-		stmt->updateValue(vaval->getValAt(iv->getVal()));
+		stmt->updateValue(ctx, vaval->getValAt(iv->getVal()));
 		break;
 	}
 	case lex::ASSN:
@@ -310,9 +310,9 @@ skip_rhs_val:
 		}
 		for(size_t i = 0; i < defargs.size(); ++i) {
 			Value *aval = args[i]->getValue();
-			def->getSigArg(i)->updateValue(aval);
+			def->getSigArg(i)->updateValue(ctx, aval);
 		}
-		if(!visit(def, &fndef)) {
+		if(!visit(fndef, &fndef)) {
 			err.set(stmt, "failed to determine value from function definition");
 			return false;
 		}
@@ -320,10 +320,10 @@ skip_rhs_val:
 		for(size_t i = 0; i < defargs.size(); ++i) {
 			Value *aval = args[i]->getValue();
 			if(def->getSigArg(i)->getValueTy()->hasRef()) {
-				aval->updateValue(def->getSigArg(i)->getValue());
+				aval->updateValue(ctx, def->getSigArg(i)->getValue());
 			}
 		}
-		stmt->updateValue(def->getBlk()->getValue());
+		stmt->updateValue(ctx, def->getBlk()->getValue());
 		def->clearValue();
 		break;
 	}
@@ -341,7 +341,7 @@ bool ValueAssignPass::visit(StmtVar *stmt, Stmt **source)
 		err.set(stmt, "failed to determine value for variable");
 		return false;
 	}
-	stmt->updateValue(val->getValue());
+	stmt->updateValue(ctx, val->getValue());
 	return true;
 }
 bool ValueAssignPass::visit(StmtFnSig *stmt, Stmt **source)
@@ -360,7 +360,7 @@ bool ValueAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 		err.set(stmt, "failed to determine value from function definition block");
 		return false;
 	}
-	stmt->updateValue(blk->getValue());
+	stmt->updateValue(ctx, blk->getValue());
 	return true;
 }
 bool ValueAssignPass::visit(StmtHeader *stmt, Stmt **source)
@@ -523,8 +523,7 @@ bool ValueAssignPass::visit(StmtRet *stmt, Stmt **source)
 	}
 	// nothing to do for VoidVal
 	if(!val) return true;
-	stmt->updateValue(val->getValue());
-	stmt->getFnBlk()->updateValue(stmt->getValue());
+	stmt->updateValue(ctx, val->getValue());
 	return true;
 }
 bool ValueAssignPass::visit(StmtContinue *stmt, Stmt **source)

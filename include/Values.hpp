@@ -56,9 +56,9 @@ public:
 	Value(const Values &vty, Type *ty, ContainsData has_data);
 	virtual ~Value();
 
-	virtual std::string toStr()	   = 0;
-	virtual Value *clone(Context &c)   = 0;
-	virtual bool updateValue(Value *v) = 0;
+	virtual std::string toStr()		       = 0;
+	virtual Value *clone(Context &c)	       = 0;
+	virtual bool updateValue(Context &c, Value *v) = 0;
 
 #define IsVal(ty, vt)                \
 	inline bool is##ty()         \
@@ -111,7 +111,7 @@ public:
 
 	std::string toStr();
 	Value *clone(Context &c);
-	bool updateValue(Value *v);
+	bool updateValue(Context &c, Value *v);
 
 	static VoidVal *create(Context &c);
 };
@@ -125,7 +125,7 @@ public:
 
 	std::string toStr();
 	Value *clone(Context &c);
-	bool updateValue(Value *v);
+	bool updateValue(Context &c, Value *v);
 
 	static IntVal *create(Context &c, Type *ty, ContainsData has_data, const int64_t &val);
 
@@ -144,7 +144,7 @@ public:
 
 	std::string toStr();
 	Value *clone(Context &c);
-	bool updateValue(Value *v);
+	bool updateValue(Context &c, Value *v);
 
 	static FltVal *create(Context &c, Type *ty, ContainsData has_data, const long double &val);
 
@@ -163,11 +163,11 @@ public:
 
 	std::string toStr();
 	Value *clone(Context &c);
-	bool updateValue(Value *v);
+	bool updateValue(Context &c, Value *v);
 
 	static VecVal *create(Context &c, Type *ty, ContainsData has_data,
 			      const std::vector<Value *> &val);
-	static VecVal *createStr(Context &c, const std::string &val);
+	static VecVal *createStr(Context &c, const std::string &val, ContainsData has_data);
 
 	inline void insertVal(Value *v)
 	{
@@ -194,7 +194,7 @@ public:
 
 	std::string toStr();
 	Value *clone(Context &c);
-	bool updateValue(Value *v);
+	bool updateValue(Context &c, Value *v);
 
 	static StructVal *create(Context &c, Type *ty, ContainsData has_data,
 				 const std::unordered_map<std::string, Value *> &val);
@@ -218,7 +218,7 @@ public:
 
 	std::string toStr();
 	Value *clone(Context &c);
-	bool updateValue(Value *v);
+	bool updateValue(Context &c, Value *v);
 
 	static FuncVal *create(Context &c, FuncTy *val);
 
@@ -235,7 +235,7 @@ public:
 
 	std::string toStr();
 	Value *clone(Context &c);
-	bool updateValue(Value *v);
+	bool updateValue(Context &c, Value *v);
 
 	static TypeVal *create(Context &c, Type *val);
 
@@ -258,7 +258,7 @@ public:
 
 	std::string toStr();
 	Value *clone(Context &c);
-	bool updateValue(Value *v);
+	bool updateValue(Context &c, Value *v);
 
 	static ImportVal *create(Context &c, const std::string &val);
 
@@ -279,7 +279,7 @@ public:
 
 	std::string toStr();
 	Value *clone(Context &c);
-	bool updateValue(Value *v);
+	bool updateValue(Context &c, Value *v);
 
 	static RefVal *create(Context &c, Type *ty, Value *to);
 

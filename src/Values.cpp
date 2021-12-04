@@ -76,7 +76,7 @@ Value *VoidVal::clone(Context &c)
 {
 	return create(c);
 }
-bool VoidVal::updateValue(Value *v)
+bool VoidVal::updateValue(Context &c, Value *v)
 {
 	return v->isVoid();
 }
@@ -98,7 +98,7 @@ Value *IntVal::clone(Context &c)
 {
 	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, data);
 }
-bool IntVal::updateValue(Value *v)
+bool IntVal::updateValue(Context &c, Value *v)
 {
 	if(!v->isInt()) return false;
 	data	 = as<IntVal>(v)->getVal();
@@ -123,7 +123,7 @@ Value *FltVal::clone(Context &c)
 {
 	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, data);
 }
-bool FltVal::updateValue(Value *v)
+bool FltVal::updateValue(Context &c, Value *v)
 {
 	if(!v->isFlt()) return false;
 	data	 = as<FltVal>(v)->getVal();
@@ -158,14 +158,21 @@ Value *VecVal::clone(Context &c)
 	}
 	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, newdata);
 }
-bool VecVal::updateValue(Value *v)
+bool VecVal::updateValue(Context &c, Value *v)
 {
 	if(!v->isVec()) return false;
 	VecVal *vv = as<VecVal>(v);
+	if(ty->isPtr() && !as<PtrTy>(ty)->getCount()) {
+		data.clear();
+		// only valid for pointers of unknown size
+		for(auto &d : vv->getVal()) data.push_back(d->clone(c));
+		goto end;
+	}
 	if(data.size() != vv->getVal().size()) return false;
 	for(size_t i = 0; i < data.size(); ++i) {
-		if(!data[i]->updateValue(vv->getValAt(i))) return false;
+		if(!data[i]->updateValue(c, vv->getValAt(i))) return false;
 	}
+end:
 	has_data = v->getHasData() == CDTRUE || v->getHasData() == CDPERMA ? CDTRUE : CDFALSE;
 	return true;
 }
@@ -174,16 +181,16 @@ VecVal *VecVal::create(Context &c, Type *ty, ContainsData has_data, const std::v
 {
 	return c.allocVal<VecVal>(ty, has_data, val);
 }
-VecVal *VecVal::createStr(Context &c, const std::string &val)
+VecVal *VecVal::createStr(Context &c, const std::string &val, ContainsData has_data)
 {
 	std::vector<Value *> chars;
 	Type *ty = mkI8Ty(c);
 	for(auto &ch : val) {
-		chars.push_back(IntVal::create(c, ty, CDTRUE, ch));
+		chars.push_back(IntVal::create(c, ty, has_data, ch));
 	}
 	ty = mkPtrTy(c, ty, 0, false);
 	ty->setConst();
-	return c.allocVal<VecVal>(ty, CDTRUE, chars);
+	return c.allocVal<VecVal>(ty, has_data, chars);
 }
 
 std::string VecVal::getAsString()
@@ -224,13 +231,13 @@ Value *StructVal::clone(Context &c)
 	}
 	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, newdata);
 }
-bool StructVal::updateValue(Value *v)
+bool StructVal::updateValue(Context &c, Value *v)
 {
 	if(!v->isStruct()) return false;
 	StructVal *sv = as<StructVal>(v);
 	if(data.size() != sv->getVal().size()) return false;
 	for(auto &f : data) {
-		if(!f.second->updateValue(sv->getField(f.first))) return false;
+		if(!f.second->updateValue(c, sv->getField(f.first))) return false;
 	}
 	has_data = v->getHasData() == CDTRUE || v->getHasData() == CDPERMA ? CDTRUE : CDFALSE;
 	return true;
@@ -252,7 +259,7 @@ Value *FuncVal::clone(Context &c)
 {
 	return create(c, as<FuncTy>(ty->clone(c)));
 }
-bool FuncVal::updateValue(Value *v)
+bool FuncVal::updateValue(Context &c, Value *v)
 {
 	return true;
 }
@@ -272,7 +279,7 @@ Value *TypeVal::clone(Context &c)
 {
 	return create(c, ty->clone(c));
 }
-bool TypeVal::updateValue(Value *v)
+bool TypeVal::updateValue(Context &c, Value *v)
 {
 	return true;
 }
@@ -294,7 +301,7 @@ Value *ImportVal::clone(Context &c)
 {
 	return create(c, val);
 }
-bool ImportVal::updateValue(Value *v)
+bool ImportVal::updateValue(Context &c, Value *v)
 {
 	if(!v->isImport()) return false;
 	val	 = as<ImportVal>(v)->getVal();
@@ -317,11 +324,11 @@ Value *RefVal::clone(Context &c)
 {
 	return create(c, ty, to->clone(c));
 }
-bool RefVal::updateValue(Value *v)
+bool RefVal::updateValue(Context &c, Value *v)
 {
 	if(!v->isRef()) return false;
 	to->setHasData(v->getHasData());
-	return to->updateValue(as<RefVal>(v)->getVal());
+	return to->updateValue(c, as<RefVal>(v)->getVal());
 }
 
 RefVal *RefVal::create(Context &c, Type *ty, Value *to)

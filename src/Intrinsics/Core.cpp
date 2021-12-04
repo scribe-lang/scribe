@@ -30,7 +30,7 @@ static size_t SizeOf(Type *ty);
 
 INTRINSIC(import)
 {
-	if(!args[0]->getValue() || !args[0]->getValue()->isStrLiteral()) {
+	if(!args[0]->getValue()->hasData() || !args[0]->getValue()->isStrLiteral()) {
 		err.set(stmt, "import must be a compile time computable string");
 		return false;
 	}
@@ -171,8 +171,8 @@ INTRINSIC(array)
 }
 INTRINSIC(assn_ptr)
 {
-	args[0]->updateValue(args[1]->getValue());
-	stmt->updateValue(args[0]->getValue());
+	args[0]->updateValue(c, args[1]->getValue());
+	stmt->updateValue(c, args[0]->getValue());
 	return true;
 }
 
