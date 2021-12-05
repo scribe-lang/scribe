@@ -545,6 +545,15 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 		err.set(stmt, "failed to generate C code from scribe declaration value");
 		return false;
 	}
+	// check if value is itself an externed variable, if so, make this a macro
+	if(stmt->getVVal() && stmt->getVVal()->isSimple()) {
+		StmtSimple *sim = as<StmtSimple>(stmt->getVVal());
+		if(sim->getDecl() && sim->getDecl()->getVVal() &&
+		   sim->getDecl()->getVVal()->isExtern()) {
+			macros.push_back("#define " + varname + " " + tmp.getData());
+			return true;
+		}
+	}
 	std::string cty, arrcount;
 	Type *valty = stmt->getCast() ? stmt->getCast() : stmt->getValueTy();
 	arrcount    = getArrCount(valty);
