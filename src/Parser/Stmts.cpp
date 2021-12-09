@@ -398,15 +398,15 @@ bool StmtVar::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtFnSig::StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtType *rettype,
-		     const size_t &scope, const bool &has_variadic)
-	: Stmt(FNSIG, loc), args(args), rettype(rettype), scope(scope), disable_template(false),
+		     const bool &has_variadic)
+	: Stmt(FNSIG, loc), args(args), rettype(rettype), disable_template(false),
 	  has_variadic(has_variadic)
 {}
 StmtFnSig::~StmtFnSig() {}
 StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc &loc, std::vector<StmtVar *> &args,
-			     StmtType *rettype, const size_t &scope, const bool &has_variadic)
+			     StmtType *rettype, const bool &has_variadic)
 {
-	return c.allocStmt<StmtFnSig>(loc, args, rettype, scope, has_variadic);
+	return c.allocStmt<StmtFnSig>(loc, args, rettype, has_variadic);
 }
 
 void StmtFnSig::disp(const bool &has_next)

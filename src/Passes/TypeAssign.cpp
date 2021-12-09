@@ -790,7 +790,6 @@ bool TypeAssignPass::visit(StmtFnSig *stmt, Stmt **source)
 	for(auto &a : args) {
 		argst.push_back(a->getValueTy());
 	}
-	stmt->setScope(vmgr.getCurrentLayerIndex() - 1);
 	Type *retty = stmt->getRetType()->getValueTy();
 	FuncTy *ft  = FuncTy::create(ctx, nullptr, argst, retty, nullptr, INONE, false);
 	stmt->createAndSetValue(FuncVal::create(ctx, ft));
@@ -800,6 +799,7 @@ bool TypeAssignPass::visit(StmtFnSig *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 {
+	vmgr.lockScopeBelow(vmgr.getCurrentLayerIndex());
 	vmgr.pushLayer();
 	if(!visit(stmt->getSig(), asStmt(&stmt->getSig()))) {
 		err.set(stmt, "failed to determine type of func signature");
@@ -829,6 +829,7 @@ bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 end:
 	stmt->setValueID(stmt->getSig());
 	vmgr.popLayer();
+	vmgr.unlockScope();
 	return true;
 }
 bool TypeAssignPass::visit(StmtHeader *stmt, Stmt **source)
@@ -850,6 +851,7 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 		return false;
 	}
 	if(!stmt->getEntity()) return true;
+	vmgr.lockScopeBelow(vmgr.getCurrentLayerIndex());
 	vmgr.pushLayer();
 	if(stmt->getEntity()->isStructDef()) {
 		as<StmtStruct>(stmt->getEntity())->setExterned(true);
@@ -865,6 +867,7 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 	}
 	stmt->setValueID(stmt->getEntity());
 	vmgr.popLayer();
+	vmgr.unlockScope();
 	return true;
 }
 bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
@@ -1188,7 +1191,7 @@ bool TypeAssignPass::chooseSuperiorPrimitiveType(Type *l, Type *r)
 
 bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stmt *> &args)
 {
-	static std::unordered_map<uint64_t, StmtVar *> beingtemplated;
+	static std::unordered_map<std::string, StmtVar *> beingtemplated;
 	// nothing to do if function has no definition
 	if(!cf->getVar() || !cf->getVar()->getVVal()) return true;
 	StmtVar *&cfvar = cf->getVar();
@@ -1197,8 +1200,9 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 		if(cfvar->getVVal()->isFnDef()) as<StmtFnDef>(cfvar->getVVal())->incUsed();
 		return true;
 	}
-	if(beingtemplated.find(cf->getNonUniqID()) != beingtemplated.end()) {
-		cf = as<FuncTy>(beingtemplated[cf->getNonUniqID()]->getValueTy());
+	std::string uniqname = cfvar->getName().getDataStr() + std::to_string(cf->getNonUniqID());
+	if(beingtemplated.find(uniqname) != beingtemplated.end()) {
+		cf = as<FuncTy>(beingtemplated[uniqname]->getValueTy());
 		return true;
 	}
 	cfvar		 = as<StmtVar>(cfvar->clone(ctx)); // template must be cloned
@@ -1218,7 +1222,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 	cfsig->disableTemplates();
 	cfsig->setVariadic(false);
 	if(caller->getMod()->getID() == cfvar->getVVal()->getMod()->getID()) {
-		vmgr.lockScopeBelow(cfsig->getScope());
+		vmgr.lockScopeBelow(vmgr.getCurrentLayerIndex());
 	}
 
 	vmgr.pushLayer();
@@ -1299,7 +1303,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 		err.set(caller, "function definition for specialization has no block");
 		return false;
 	}
-	beingtemplated[cf->getNonUniqID()] = cfvar;
+	beingtemplated[uniqname] = cfvar;
 	dv = cf->getRet()->toDefaultValue(ctx, err, caller->getLoc(), CDFALSE);
 	cfblk->createAndSetValue(dv);
 	pushFunc(cfn, va_count > 0, va_count);
@@ -1308,7 +1312,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 		return false;
 	}
 	popFunc();
-	beingtemplated.erase(cf->getNonUniqID());
+	beingtemplated.erase(uniqname);
 end:
 	vmgr.popLayer();
 

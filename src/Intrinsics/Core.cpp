@@ -75,13 +75,13 @@ INTRINSIC(ismainsrc)
 }
 INTRINSIC(isprimitive)
 {
-	bool is_prim = args[0]->getValue()->getType()->isPrimitive();
+	bool is_prim = args[0]->getValueTy()->isPrimitive();
 	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_prim));
 	return true;
 }
 INTRINSIC(isprimitiveorptr)
 {
-	bool is_prim_or_ptr = args[0]->getValue()->getType()->isPrimitiveOrPtr();
+	bool is_prim_or_ptr = args[0]->getValueTy()->isPrimitiveOrPtr();
 	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_prim_or_ptr));
 	return true;
 }
@@ -93,10 +93,12 @@ INTRINSIC(iscstring)
 }
 INTRINSIC(iscchar)
 {
-	IntTy *t      = as<IntTy>(args[0]->getValue()->getType());
-	bool is_cchar = t->isInt();
-	is_cchar &= t->getBits() == 8;
-	is_cchar &= t->isSigned();
+	bool is_cchar = args[0]->getValueTy()->isInt();
+	if(is_cchar) {
+		IntTy *t = as<IntTy>(args[0]->getValueTy());
+		is_cchar &= t->getBits() == 8;
+		is_cchar &= t->isSigned();
+	}
 	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_cchar));
 	return true;
 }

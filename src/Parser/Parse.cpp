@@ -1109,7 +1109,7 @@ post_args:
 		rettype		    = StmtType::create(ctx, voidsim->getLoc(), 0, 0, voidsim);
 	}
 
-	fsig = StmtFnSig::create(ctx, start.getLoc(), args, rettype, 0, found_va);
+	fsig = StmtFnSig::create(ctx, start.getLoc(), args, rettype, found_va);
 	return true;
 fail:
 	if(var) delete var;
