@@ -111,7 +111,7 @@ Stmt *StmtFnSig::clone(Context &ctx)
 		newargs.push_back(as<StmtVar>(a->clone(ctx)));
 	}
 	StmtType *newrettype = rettype ? as<StmtType>(rettype->clone(ctx)) : nullptr;
-	Stmt *res = StmtFnSig::create(ctx, getLoc(), newargs, newrettype, scope, has_variadic);
+	Stmt *res	     = StmtFnSig::create(ctx, getLoc(), newargs, newrettype, has_variadic);
 	res->castTo(getCast());
 	return res;
 }

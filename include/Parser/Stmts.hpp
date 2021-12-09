@@ -494,16 +494,15 @@ class StmtFnSig : public Stmt
 	// StmtVar contains only type here, no val
 	std::vector<StmtVar *> args;
 	StmtType *rettype;
-	size_t scope;	       // for locking scopes during type assign
 	bool disable_template; // this function is in use, contains no template
 	bool has_variadic;
 
 public:
 	StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtType *rettype,
-		  const size_t &scope, const bool &has_variadic);
+		  const bool &has_variadic);
 	~StmtFnSig();
 	static StmtFnSig *create(Context &c, const ModuleLoc &loc, std::vector<StmtVar *> &args,
-				 StmtType *rettype, const size_t &scope, const bool &has_variadic);
+				 StmtType *rettype, const bool &has_variadic);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
@@ -518,10 +517,6 @@ public:
 	inline void insertArg(const size_t &pos, StmtVar *arg)
 	{
 		args.insert(args.begin() + pos, arg);
-	}
-	inline void setScope(const size_t &s)
-	{
-		scope = s;
 	}
 	inline void disableTemplates()
 	{
@@ -543,10 +538,6 @@ public:
 	inline StmtType *&getRetType()
 	{
 		return rettype;
-	}
-	inline const size_t &getScope() const
-	{
-		return scope;
 	}
 	inline bool hasTemplatesDisabled()
 	{

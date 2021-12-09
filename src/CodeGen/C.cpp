@@ -188,6 +188,7 @@ bool CDriver::visit(Stmt *stmt, Writer &writer, const bool &semicol)
 		break;
 	}
 	}
+	if(!res) return false;
 	if(tmp.empty()) return true;
 	if(!semicol &&
 	   (stmt->isExpr() ||
