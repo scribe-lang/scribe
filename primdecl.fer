@@ -45,20 +45,39 @@ let getOperCStr = fn(op) {
 	if op == 'subs' { return "__subs__"; }
 };
 
-let twoparam_templ = `
-	g = TypeTy::create(c);
-	ADD{tycap}FN("{opname}", createFn(c, \\{g, g}, g, intrinsic_{opn}_{ty}));`;
+let twoparamint_templ = `
+	g = mkTypeTy(c);
+	i0 = mkI0Ty(c);
+	i0->setRef();
+	i0->setConst();
+	ADD{tycap}FN("{opname}", createFnVal(c, \\{g, i0}, g, intrinsic_{opn}_{ty}, IVALUE));`;
+let twoparamflt_templ = `
+	g = mkTypeTy(c);
+	f0 = mkF0Ty(c);
+	f0->setRef();
+	f0->setConst();
+	ADD{tycap}FN("{opname}", createFnVal(c, \\{g, f0}, g, intrinsic_{opn}_{ty}, IVALUE));`;
 let oneparam_templ = `
-	g = TypeTy::create(c);
-	ADD{tycap}FN("{opname}", createFn(c, \\{g}, g, intrinsic_{opn}_{ty}));`;
-let twoparambool_templ = `
-	i1 = IntTy::create(c, 1, true);
-	g = TypeTy::create(c);
-	ADD{tycap}FN("{opname}", createFn(c, \\{g, g}, i1, intrinsic_{opn}_{ty}));`;
+	g = mkTypeTy(c);
+	ADD{tycap}FN("{opname}", createFnVal(c, \\{g}, g, intrinsic_{opn}_{ty}, IVALUE));`;
+let twoparamintbool_templ = `
+	i1 = mkI1Ty(c);
+	g = mkTypeTy(c);
+	i0 = mkI0Ty(c);
+	i0->setRef();
+	i0->setConst();
+	ADD{tycap}FN("{opname}", createFnVal(c, \\{g, i0}, i1, intrinsic_{opn}_{ty}, IVALUE));`;
+let twoparamfltbool_templ = `
+	i1 = mkI1Ty(c);
+	g = mkTypeTy(c);
+	f0 = mkF0Ty(c);
+	f0->setRef();
+	f0->setConst();
+	ADD{tycap}FN("{opname}", createFnVal(c, \\{g, f0}, i1, intrinsic_{opn}_{ty}, IVALUE));`;
 let oneparambool_templ = `
-	i1 = IntTy::create(c, 1, true);
-	g = TypeTy::create(c);
-	ADD{tycap}FN("{opname}", createFn(c, \\{g}, i1, intrinsic_{opn}_{ty}));`;
+	i1 = mkI1Ty(c);
+	g = mkTypeTy(c);
+	ADD{tycap}FN("{opname}", createFnVal(c, \\{g}, i1, intrinsic_{opn}_{ty}, IVALUE));`;
 
 # int
 {
@@ -67,7 +86,7 @@ let oneparambool_templ = `
 	let opname = getOperCStr(opn);
 	let ty = 'int';
 	let tycap = 'INT';
-	io.println(fmt.template(twoparam_templ));
+	io.println(fmt.template(twoparamint_templ));
 	io.println();
 }
 # flt
@@ -77,7 +96,7 @@ let oneparambool_templ = `
 	let opname = getOperCStr(opn);
 	let ty = 'flt';
 	let tycap = 'FLT';
-	io.println(fmt.template(twoparam_templ));
+	io.println(fmt.template(twoparamflt_templ));
 	io.println();
 }
 
@@ -91,7 +110,7 @@ for let i = 0; i < arith_ops.len(); ++i {
 	let opname = getOperCStr(opn);
 	let ty = 'int';
 	let tycap = 'INT';
-	io.println(fmt.template(twoparam_templ));
+	io.println(fmt.template(twoparamint_templ));
 	io.println();
 }
 # flt
@@ -102,7 +121,7 @@ for let i = 0; i < arith_ops.len(); ++i {
 	let opname = getOperCStr(opn);
 	let ty = 'flt';
 	let tycap = 'FLT';
-	io.println(fmt.template(twoparam_templ));
+	io.println(fmt.template(twoparamflt_templ));
 	io.println();
 }
 
@@ -116,7 +135,7 @@ for let i = 0; i < arithassn_ops.len(); ++i {
 	let opname = getOperCStr(opn);
 	let ty = 'int';
 	let tycap = 'INT';
-	io.println(fmt.template(twoparam_templ));
+	io.println(fmt.template(twoparamint_templ));
 	io.println();
 }
 # flt
@@ -127,7 +146,7 @@ for let i = 0; i < arithassn_ops.len(); ++i {
 	let opname = getOperCStr(opn);
 	let ty = 'flt';
 	let tycap = 'FLT';
-	io.println(fmt.template(twoparam_templ));
+	io.println(fmt.template(twoparamflt_templ));
 	io.println();
 }
 
@@ -141,7 +160,7 @@ for let i = 0; i < log_ops.len(); ++i {
 	let opname = getOperCStr(opn);
 	let ty = 'int';
 	let tycap = 'INT';
-	io.println(fmt.template(twoparambool_templ));
+	io.println(fmt.template(twoparamintbool_templ));
 	io.println();
 }
 # flt
@@ -151,7 +170,7 @@ for let i = 0; i < log_ops.len(); ++i {
 	let opname = getOperCStr(opn);
 	let ty = 'flt';
 	let tycap = 'FLT';
-	io.println(fmt.template(twoparambool_templ));
+	io.println(fmt.template(twoparamfltbool_templ));
 	io.println();
 }
 

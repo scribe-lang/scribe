@@ -1,11 +1,25 @@
-let cbfn = fn(a: i32): i32 {
-	return a + 5;
+let io = @import("std/io");
+let vec = @import("std/vec");
+let string = @import("std/string");
+
+let accum = fn(data: &const i32, sum: &i32) {
+	sum += data;
 };
 
-let x = fn(comptime T: type, d: T, cb: any): T {
-	return cb(d);
+let doEach in vec.Vec = fn(cb: any, args: ...&any) {
+	for let i = 0; i < self.length; ++i {
+		cb(self.data[i], args);
+	}
 };
 
 let main = fn(): i32 {
-	return x(i32, 10, cbfn);
+	let v = vec.new(i32, true);
+	defer v.deinit();
+	for let i = 0; i < 10; ++i {
+		v.push(i);
+	}
+	let sum = 0;
+	v.doEach(accum, sum);
+	io.println("Sum: ", sum);
+	return 0;
 };
