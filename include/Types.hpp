@@ -564,6 +564,10 @@ public:
 
 // helpful functions
 
+inline IntTy *mkI0Ty(Context &c)
+{
+	return IntTy::create(c, 0, true);
+}
 inline IntTy *mkI1Ty(Context &c)
 {
 	return IntTy::create(c, 1, true);
@@ -599,6 +603,10 @@ inline IntTy *mkU32Ty(Context &c)
 inline IntTy *mkU64Ty(Context &c)
 {
 	return IntTy::create(c, 64, false);
+}
+inline FltTy *mkF0Ty(Context &c)
+{
+	return FltTy::create(c, 0);
 }
 inline FltTy *mkF32Ty(Context &c)
 {

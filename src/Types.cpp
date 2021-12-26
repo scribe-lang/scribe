@@ -152,10 +152,12 @@ bool Type::requiresCast(Type *other)
 	if(getID() != other->getID()) return true;
 	// since id matching is done, both must be of same type only
 	if(isInt() && other->isInt()) {
+		if(!as<IntTy>(this)->getBits()) return false;
 		return as<IntTy>(this)->getBits() != as<IntTy>(other)->getBits() ||
 		       as<IntTy>(this)->isSigned() != as<IntTy>(other)->isSigned();
 	}
 	if(isFlt() && other->isFlt()) {
+		if(!as<FltTy>(this)->getBits()) return false;
 		return as<FltTy>(this)->getBits() != as<FltTy>(other)->getBits();
 	}
 	return false;
