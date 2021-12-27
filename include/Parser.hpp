@@ -69,8 +69,11 @@ class RAIIParser
 	PassManager defaultpmpermodule, defaultpmcombined;
 
 	// as new sources are imported, they'll be pushed back
-	// the reverse iteration of this list will give the order of imports
 	std::vector<std::string> modulestack;
+
+	// the iteration of this list will give the order of imports
+	// this list does NOT contain the main module
+	std::vector<std::string> moduleorder;
 
 	std::unordered_map<std::string, Module *> modules;
 

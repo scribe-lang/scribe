@@ -44,21 +44,10 @@ let free = fn(comptime T: type, data: *T) {
 // Numeric Limits
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-let i32Min = fn(): i32 {
-        return -2147483648;
-};
-
-let i32Max = fn(): i32 {
-        return 2147483647;
-};
-
-let i64Min = fn(): i64 {
-        return -9223372036854775807;
-};
-
-let i64Max = fn(): i64 {
-        return 9223372036854775807;
-};
+let comptime i32min: const i32 = -2147483648;
+let comptime i32max: const i32 = 2147483647;
+let comptime i64min: const i64 = -9223372036854775807;
+let comptime i64max: const i64 = 9223372036854775807;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Tests
