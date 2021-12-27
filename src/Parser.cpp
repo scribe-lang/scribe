@@ -107,16 +107,20 @@ RAIIParser::~RAIIParser()
 void RAIIParser::combineAllModules()
 {
 	if(modulestack.size() <= 1) return;
-	Module *mainmod = modules[modulestack.front()];
-	for(auto modit = modulestack.begin() + 1; modit != modulestack.end(); ++modit) {
-		Module *mod		       = modules[*modit];
-		StmtBlock *mainptree	       = as<StmtBlock>(mainmod->getParseTree());
-		StmtBlock *modptree	       = as<StmtBlock>(mod->getParseTree());
-		std::vector<Stmt *> &mainstmts = mainptree->getStmts();
-		std::vector<Stmt *> &modstmts  = modptree->getStmts();
-		mainstmts.insert(mainstmts.begin(), modstmts.begin(), modstmts.end());
+	std::vector<Stmt *> allmodstmts;
+	for(auto &mpath : moduleorder) {
+		Module *mod		      = modules[mpath];
+		StmtBlock *modptree	      = as<StmtBlock>(mod->getParseTree());
+		std::vector<Stmt *> &modstmts = modptree->getStmts();
+		allmodstmts.insert(allmodstmts.end(), modstmts.begin(), modstmts.end());
 		modstmts.clear();
 	}
+
+	Module *mainmod		       = modules[modulestack.front()];
+	StmtBlock *mainptree	       = as<StmtBlock>(mainmod->getParseTree());
+	std::vector<Stmt *> &mainstmts = mainptree->getStmts();
+	mainstmts.insert(mainstmts.begin(), allmodstmts.begin(), allmodstmts.end());
+
 	size_t count = modulestack.size() - 1;
 	while(count--) {
 		modulestack.pop_back();
@@ -165,6 +169,8 @@ bool RAIIParser::parse(const std::string &path, const bool &main_module)
 	if(main_module) {
 		combineAllModules();
 		res = modules[path]->executePasses(defaultpmcombined);
+	} else {
+		moduleorder.push_back(path);
 	}
 end:
 	if(!res) err.show(stderr);

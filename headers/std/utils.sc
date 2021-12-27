@@ -9,8 +9,8 @@ let countIntDigits = fn(data: i64): i32 {
 	// for minus sign
 	if data < 0 {
 		++res;
-		if data == c.i64Min() {
-			data = c.i64Max();
+		if data == c.i64min {
+			data = c.i64max;
 		} else {
 			data = -data;
 		}
