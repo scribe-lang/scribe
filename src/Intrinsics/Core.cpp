@@ -183,6 +183,39 @@ INTRINSIC(assn_ptr)
 	stmt->updateValue(c, args[0]->getValue());
 	return true;
 }
+// enum is:
+//   Unknown = 0
+//   Linux = 1
+//   Windows = 2
+//   Apple = 3
+//   Android = 4
+//   FreeBSD = 5
+//   NetBSD = 6
+//   OpenBSD = 7
+//   DragonFly = 8
+INTRINSIC(getosid)
+{
+	int res = 0;
+#if defined(__linux__)
+	res = 1;
+#elif defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+	res = 2;
+#elif defined(__APPLE__)
+	res = 3;
+#elif defined(__ANDROID__)
+	res = 4;
+#elif defined(__FreeBSD__)
+	res = 5;
+#elif defined(__NetBSD__)
+	res = 6;
+#elif defined(__OpenBSD__)
+	res = 7;
+#elif defined(__DragonFly__)
+	res = 8;
+#endif
+	stmt->createAndSetValue(IntVal::create(c, mkI32Ty(c), CDPERMA, res));
+	return true;
+}
 INTRINSIC(compileerror)
 {
 	std::string e;

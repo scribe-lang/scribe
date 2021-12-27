@@ -119,12 +119,16 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	ADDFN("ref", createFnVal(c, {g}, g2, intrinsic_ptr, IPARSE));
 
 	g   = mkTypeTy(c);
-	u64 = IntTy::create(c, 64, false);
+	u64 = mkU64Ty(c);
 	ADDFN("sizeOf", createFnVal(c, {g}, u64, intrinsic_szof, IVALUE));
 
+	// valen must be IPARSE since the value has to be decided during type assignment
+	// ie, cannot be decided during value assignment pass
 	i32 = mkI32Ty(c);
-	i32->setComptime();
-	ADDFN("valen", createFnVal(c, {}, i32, intrinsic_valen, IVALUE));
+	ADDFN("valen", createFnVal(c, {}, i32, intrinsic_valen, IPARSE));
+
+	i32 = mkI32Ty(c);
+	ADDFN("getOSID", createFnVal(c, {}, i32, intrinsic_getosid, IVALUE));
 
 	a = mkAnyTy(c);
 	a->setVariadic();
