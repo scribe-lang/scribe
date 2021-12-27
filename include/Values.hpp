@@ -31,7 +31,7 @@ enum Values
 	VSTRUCT,
 	VFUNC,
 	VTYPE, // value is type
-	VIMPORT,
+	VNAMESPACE,
 	VREF,
 };
 enum ContainsData
@@ -72,7 +72,7 @@ public:
 	IsVal(Struct, STRUCT);
 	IsVal(Func, FUNC);
 	IsVal(Type, TYPE);
-	IsVal(Import, IMPORT);
+	IsVal(Namespace, NAMESPACE);
 	IsVal(Ref, REF);
 
 	bool isStrLiteral();
@@ -249,18 +249,18 @@ public:
 	}
 };
 
-class ImportVal : public Value
+class NamespaceVal : public Value
 {
 	std::string val;
 
 public:
-	ImportVal(Context &c, const std::string &val);
+	NamespaceVal(Context &c, const std::string &val);
 
 	std::string toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
-	static ImportVal *create(Context &c, const std::string &val);
+	static NamespaceVal *create(Context &c, const std::string &val);
 
 	inline const std::string &getVal()
 	{

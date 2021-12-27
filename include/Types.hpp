@@ -40,7 +40,6 @@ enum Types
 	TPTR,
 	TFUNC,
 	TSTRUCT,
-	TENUM,
 	TVARIADIC,
 
 	_LAST
@@ -158,7 +157,6 @@ public:
 	IsTyX(Ptr, PTR);
 	IsTyX(Func, FUNC);
 	IsTyX(Struct, STRUCT);
-	IsTyX(Enum, ENUM);
 	IsTyX(Variadic, VARIADIC);
 
 #define IsModifierX(Fn, Mod)        \

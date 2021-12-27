@@ -104,10 +104,10 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 	}
 	deferstack.popFrame();
 
-	// insert all the specfns
+	// insert all the additionalvars
 	if(stmt->isTop()) {
-		stmts.insert(stmts.begin(), specfns.begin(), specfns.end());
-		specfns.clear();
+		stmts.insert(stmts.begin(), additionalvars.begin(), additionalvars.end());
+		additionalvars.clear();
 	}
 
 	if(stmt->isTop()) deferstack.popFunc();
@@ -259,9 +259,9 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	case lex::DOT: {
 		assert(rhs && rhs->isSimple() && "RHS stmt type for dot operation must be simple");
 		StmtSimple *rsim = as<StmtSimple>(rhs);
-		if(lhs->getValue()->isImport()) {
+		if(lhs->getValue()->isNamespace()) {
 			const std::string &rdata = rsim->getLexValue().getDataStr();
-			ImportVal *import	 = as<ImportVal>(lhs->getValue());
+			NamespaceVal *import	 = as<NamespaceVal>(lhs->getValue());
 			std::string mangled	 = getMangledName(rhs, rdata, import);
 			rsim->updateLexDataStr(mangled);
 			rsim->setAppliedModuleID(true);
@@ -729,7 +729,6 @@ post_mangling:
 	}
 	if(val && !skip_val && stmt->isComptime()) {
 		if(!vpass.visit(val, &val) || !val->getValue()->hasData()) {
-			stmt->disp(false);
 			err.set(stmt, "value of comptime variable could not be calculated");
 			return false;
 		}
@@ -872,6 +871,22 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 {
+	ModuleLoc &loc		= stmt->getLoc();
+	static size_t enum_id	= 0;
+	std::string enum_mangle = "enum_" + std::to_string(enum_id++);
+	NamespaceVal *ns	= NamespaceVal::create(ctx, enum_mangle);
+	size_t i		= 0;
+	for(auto &e : stmt->getItems()) {
+		e.setDataStr(getMangledName(stmt, e.getDataStr(), ns));
+		uint64_t vid = createValueIDWith(IntVal::create(ctx, mkI32Ty(ctx), CDPERMA, i));
+		Stmt *val    = StmtSimple::create(ctx, loc, lex::Lexeme(loc, (int64_t)i++));
+		StmtVar *var = StmtVar::create(ctx, loc, e, nullptr, val, false, true, false);
+		var->setAppliedModuleID(true);
+		var->setValueID(vid);
+		additionalvars.push_back(var);
+		vmgr.addVar(e.getDataStr(), vid, var);
+	}
+	stmt->createAndSetValue(ns);
 	return true;
 }
 bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
@@ -934,8 +949,8 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 			return false;
 		}
 		if(!stmt->isInline() && !visit(b, asStmt(&b))) {
-			err.set(stmt, "failed to determine types"
-				      " in inline conditional block");
+			err.set(stmt, "failed to determine type"
+				      " in conditional block");
 			return false;
 		}
 		if(!stmt->isInline()) continue;
@@ -1122,13 +1137,13 @@ bool TypeAssignPass::visit(StmtDefer *stmt, Stmt **source)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 std::string TypeAssignPass::getMangledName(Stmt *stmt, const std::string &name,
-					   ImportVal *import) const
+					   NamespaceVal *ns) const
 {
 	if(stmt->isSimple()) {
 		StmtSimple *sim = as<StmtSimple>(stmt);
 		if(sim->isAppliedModuleID()) return name;
 	}
-	return name + "_" + (import ? import->getVal() : stmt->getMod()->getID());
+	return name + "_" + (ns ? ns->getVal() : stmt->getMod()->getID());
 }
 
 void TypeAssignPass::applyPrimitiveTypeCoercion(Type *to, Stmt *from)
@@ -1320,7 +1335,7 @@ end:
 		vmgr.unlockScope();
 	}
 
-	specfns.push_back(cfvar);
+	additionalvars.push_back(cfvar);
 	return true;
 }
 

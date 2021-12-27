@@ -289,29 +289,29 @@ TypeVal *TypeVal::create(Context &c, Type *val)
 	return c.allocVal<TypeVal>(val);
 }
 
-ImportVal::ImportVal(Context &c, const std::string &val)
-	: Value(VIMPORT, mkStrTy(c), CDTRUE), val(val)
+NamespaceVal::NamespaceVal(Context &c, const std::string &val)
+	: Value(VNAMESPACE, mkStrTy(c), CDTRUE), val(val)
 {}
 
-std::string ImportVal::toStr()
+std::string NamespaceVal::toStr()
 {
 	return val;
 }
-Value *ImportVal::clone(Context &c)
+Value *NamespaceVal::clone(Context &c)
 {
 	return create(c, val);
 }
-bool ImportVal::updateValue(Context &c, Value *v)
+bool NamespaceVal::updateValue(Context &c, Value *v)
 {
-	if(!v->isImport()) return false;
-	val	 = as<ImportVal>(v)->getVal();
+	if(!v->isNamespace()) return false;
+	val	 = as<NamespaceVal>(v)->getVal();
 	has_data = v->getHasData() == CDTRUE || v->getHasData() == CDPERMA ? CDTRUE : CDFALSE;
 	return true;
 }
 
-ImportVal *ImportVal::create(Context &c, const std::string &val)
+NamespaceVal *NamespaceVal::create(Context &c, const std::string &val)
 {
-	return c.allocVal<ImportVal>(val);
+	return c.allocVal<NamespaceVal>(val);
 }
 
 RefVal::RefVal(Context &c, Type *ty, Value *to) : Value(VREF, ty, CDTRUE), to(to) {}

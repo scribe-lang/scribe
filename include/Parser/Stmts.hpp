@@ -736,7 +736,7 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
 
-	inline const std::vector<lex::Lexeme> &getItems() const
+	inline std::vector<lex::Lexeme> &getItems()
 	{
 		return items;
 	}
