@@ -1,5 +1,4 @@
 let c = @import("std/c");
-let string = @import("std/string");
 
 // list of operating system names
 let id = enum {
