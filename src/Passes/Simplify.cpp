@@ -158,7 +158,7 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 			stmt->getName().getDataStr().c_str());
 		return false;
 	}
-	if(stmt->getValue()->isImport()) {
+	if(stmt->getValue()->isNamespace()) {
 		*source = nullptr;
 		return true;
 	}

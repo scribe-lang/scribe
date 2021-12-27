@@ -31,14 +31,16 @@ class TypeAssignPass : public Pass
 	ValueManager vmgr;
 	ValueAssignPass vpass;
 	DeferStack deferstack;
-	std::vector<StmtVar *> specfns; // specialized funcs
-	std::vector<size_t> valen;	// variadic length of current function
+	// vars created during type assign - enums, specialized funcs
+	std::vector<StmtVar *> additionalvars;
+	// variadic length of current function
+	std::vector<size_t> valen;
 	std::vector<bool> is_fn_va;
 	std::vector<PartialType> partialtypes;
 	bool disabled_varname_mangling;
 
 	std::string getMangledName(Stmt *stmt, const std::string &name,
-				   ImportVal *import = nullptr) const;
+				   NamespaceVal *ns = nullptr) const;
 	void applyPrimitiveTypeCoercion(Type *to, Stmt *from);
 	void applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex::Lexeme &oper);
 	bool chooseSuperiorPrimitiveType(Type *l, Type *r);

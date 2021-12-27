@@ -64,7 +64,7 @@ INTRINSIC(import)
 	topblk = as<StmtBlock>(topmod->getParseTree());
 
 gen_import:
-	stmt->createAndSetValue(ImportVal::create(c, mod->getID()));
+	stmt->createAndSetValue(NamespaceVal::create(c, mod->getID()));
 	return true;
 }
 INTRINSIC(ismainsrc)

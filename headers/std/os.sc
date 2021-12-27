@@ -1,6 +1,21 @@
 let c = @import("std/c");
 let string = @import("std/string");
 
+// list of operating system names
+let id = enum {
+	Unknown,
+	Linux,
+	Windows,
+	Apple,
+	Android,
+	FreeBSD,
+	NetBSD,
+	OpenBSD,
+	DragonFly,
+};
+
+let comptime currentOS = @getOSID();
+
 let getEnv = fn(key: *const i8): *const i8 {
 	return c.getenv(key);
 };
