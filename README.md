@@ -106,7 +106,7 @@ To install `Scribe`, the following programs are required:
 
 Once the prerequisites have been met, clone this repository:
 ```sh
-git clone https://github.com/scribelang/scribe.git
+git clone https://github.com/scribe-lang/scribe.git
 ```
 
 Inside the repository, create a directory (say `build`), `cd` in it and run the commands for building and installing Scribe:
@@ -119,9 +119,15 @@ make -j install
 By default, `PREFIX_DIR=$HOME/.scribe`.
 Once installation is done, execute the installed `scribe` binary (`$PREFIX_DIR/bin/scribe`) to use the Scribe language.
 
+# Usage
+
+Once you have the scribe binary, simply using `${path_to_scribe_binary}/scribe <file name>` to compile a scribe program.
+
+That will generate a `<file name>` binary in your current directory - without the `.sc` extension. The generated binary is the executable.
+
 # Syntax Highlighting Extensions
 
 As of right now, there is a language syntax highlighting extension available for `Visual Studio Code` editor.
 Installation steps can be found on its repository.
 
-Visual Studio Code: [scribelang/scribecode](https://github.com/scribelang/scribecode.git)
+Visual Studio Code: [scribe-lang/scribecode](https://github.com/scribe-lang/scribecode.git)
