@@ -178,6 +178,11 @@ bool Type::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
 	return isBaseCompatible(c, rhs, e, loc);
 }
+bool Type::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
+{
+	return false;
+}
+void Type::unmergeTemplates(const size_t &weak_depth) {}
 
 Value *Type::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
 			    const size_t &weak_depth)
@@ -327,8 +332,27 @@ std::string TypeTy::toStr(const size_t &weak_depth)
 }
 Type *TypeTy::clone(Context &c, const bool &as_is)
 {
-	if(!as_is && getContainedTy()) return getContainedTy()->clone(c, as_is);
+	if(!as_is && getContainedTy()) {
+		Type *res = getContainedTy()->clone(c, as_is);
+		res->appendInfo(getInfo());
+		return res;
+	}
 	return c.allocType<TypeTy>(getInfo(), getBaseID(), containedtyid);
+}
+bool TypeTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
+{
+	if(getContainedTy()) return true;
+	if(!ty->isTypeTy()) {
+		setContainedTy(ty);
+		return true;
+	}
+	if(!as<TypeTy>(ty)->getContainedTy()) return true;
+	setContainedTy(as<TypeTy>(ty)->getContainedTy());
+	return true;
+}
+void TypeTy::unmergeTemplates(const size_t &weak_depth)
+{
+	clearContainedTy();
 }
 
 TypeTy *TypeTy::create(Context &c)
@@ -397,6 +421,17 @@ Type *PtrTy::clone(Context &c, const bool &as_is)
 {
 	return c.allocType<PtrTy>(getInfo(), getBaseID(), !is_weak ? to->clone(c, as_is) : to,
 				  count, is_weak);
+}
+bool PtrTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
+{
+	if(weak_depth >= MAX_WEAKPTR_DEPTH) return false;
+	if(!ty->isPtr()) return false;
+	return to->mergeTemplatesFrom(as<PtrTy>(ty)->getTo(), weak_depth + is_weak);
+}
+void PtrTy::unmergeTemplates(const size_t &weak_depth)
+{
+	if(weak_depth >= MAX_WEAKPTR_DEPTH) return;
+	to->unmergeTemplates(weak_depth + is_weak);
 }
 PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count, const bool &is_weak)
 {
@@ -480,6 +515,21 @@ Type *StructTy::clone(Context &c, const bool &as_is)
 	return c.allocType<StructTy>(getInfo(), getBaseID(), fieldnames, fieldpos, newfields,
 				     templatenames, templatepos, newtemplates, has_template,
 				     externed);
+}
+bool StructTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
+{
+	if(!ty->isStruct()) return false;
+	StructTy *other = as<StructTy>(ty);
+	if(fields.size() != other->fields.size()) return false;
+	bool has_templ = false;
+	for(size_t i = 0; i < fields.size(); ++i) {
+		has_templ |= fields[i]->mergeTemplatesFrom(other->fields[i], weak_depth);
+	}
+	return has_templ;
+}
+void StructTy::unmergeTemplates(const size_t &weak_depth)
+{
+	for(auto &f : fields) f->unmergeTemplates(weak_depth);
 }
 bool StructTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
@@ -661,6 +711,23 @@ Type *FuncTy::clone(Context &c, const bool &as_is)
 	return c.allocType<FuncTy>(getInfo(), getBaseID(), var, newargs, ret->clone(c, as_is),
 				   intrin, inty, uniqid, externed);
 }
+bool FuncTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
+{
+	if(!ty->isFunc()) return false;
+	FuncTy *other = as<FuncTy>(ty);
+	if(args.size() != other->args.size()) return false;
+	bool has_templ = false;
+	for(size_t i = 0; i < args.size(); ++i) {
+		has_templ |= args[i]->mergeTemplatesFrom(other->args[i], weak_depth);
+	}
+	has_templ |= ret->mergeTemplatesFrom(other->ret, weak_depth);
+	return has_templ;
+}
+void FuncTy::unmergeTemplates(const size_t &weak_depth)
+{
+	for(auto &a : args) a->unmergeTemplates(weak_depth);
+	ret->unmergeTemplates(weak_depth);
+}
 bool FuncTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {
 	if(!isBaseCompatible(c, rhs, e, loc)) return false;
@@ -698,10 +765,8 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 	bool is_arg_compatible = true;
 	std::vector<Type *> variadics;
 	bool has_templ = false;
-	for(size_t i = 0; i < args.size(); ++i) {
-		if(!args[i]->isTypeTy()) continue;
-		as<TypeTy>(args[i])->setContainedTy(callargs[i]->getValueTy());
-		has_templ = true;
+	for(size_t i = 0; i < args.size() && i < callargs.size(); ++i) {
+		has_templ |= args[i]->mergeTemplatesFrom(callargs[i]->getValueTy());
 	}
 	for(size_t i = 0, j = 0; i < this->args.size() && j < callargs.size(); ++i, ++j) {
 		Type *sa      = this->args[i];
@@ -737,13 +802,10 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 		has_templ = true;
 	}
 	res = as<FuncTy>(res->clone(c));
-	for(size_t i = 0; i < args.size(); ++i) {
-		if(args[i]->isTypeTy()) {
-			as<TypeTy>(args[i])->clearContainedTy();
-			continue;
-		}
+	if(has_templ) {
+		unmergeTemplates();
+		res->updateUniqID();
 	}
-	if(has_templ) res->updateUniqID();
 	return res;
 }
 FuncTy *FuncTy::create(Context &c, StmtVar *_var, const std::vector<Type *> &_args, Type *_ret,
@@ -801,6 +863,21 @@ Type *VariadicTy::clone(Context &c, const bool &as_is)
 	std::vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is));
 	return c.allocType<VariadicTy>(getInfo(), getBaseID(), newargs);
+}
+bool VariadicTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
+{
+	if(!ty->isVariadic()) return false;
+	VariadicTy *other = as<VariadicTy>(ty);
+	if(args.size() != other->args.size()) return false;
+	bool has_templ = false;
+	for(size_t i = 0; i < args.size(); ++i) {
+		has_templ |= args[i]->mergeTemplatesFrom(other->args[i], weak_depth);
+	}
+	return has_templ;
+}
+void VariadicTy::unmergeTemplates(const size_t &weak_depth)
+{
+	for(auto &a : args) a->unmergeTemplates(weak_depth);
 }
 bool VariadicTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 {

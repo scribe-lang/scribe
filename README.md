@@ -1,6 +1,6 @@
 # About
 
-Scribe is a statically typed, compiled (currently, to C), procedural systems programming langauge with a focus on minimalism, simplicity, and utility.
+Scribe is a statically typed, compiled (currently, to C), procedural systems programming language with a focus on minimalism, simplicity, and utility.
 
 It attempts to find a balance between the complexities of C++ and the barebones nature of C. As such, it is mostly inspired by C, while containing the member function syntax like that in C++.
 There are also features taken from the Zig programming language.

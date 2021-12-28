@@ -41,6 +41,10 @@ let pop in Vec = fn() {
 	}
 };
 
+let __subscr__ in Vec = fn(idx: u64): &self.T {
+	return self.data[idx];
+};
+
 let len in Vec = fn(): u64 {
 	return self.length;
 };

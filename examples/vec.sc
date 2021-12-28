@@ -10,6 +10,9 @@ let main = fn(): i32 {
 	for let i = 0; i < 5; ++i {
 		v.pop();
 	}
+	// subscript function
+	io.println("Changing item ", v[1], " at index 1 to 25");
+	v[1] = 25;
 	let s = v.str();
 	defer s.deinit();
 	io.println("Final Vector: ", s);
