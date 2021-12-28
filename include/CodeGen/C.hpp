@@ -43,7 +43,8 @@ class CDriver : public CodeGenDriver
 	std::string getNewConstantVar();
 	static bool acceptsSemicolon(Stmt *stmt);
 	bool getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool for_decl, bool is_weak);
-	bool getCValue(std::string &res, Stmt *stmt, Value *value, Type *type);
+	bool getCValue(std::string &res, Stmt *stmt, Value *value, Type *type,
+		       bool i8_to_char = true);
 	bool addStructDef(Stmt *stmt, StructTy *sty);
 	bool writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &args, Type *ty,
 			   Writer &writer);
