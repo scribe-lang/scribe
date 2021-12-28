@@ -86,6 +86,8 @@ public:
 	virtual bool isTemplate(const size_t &weak_depth = 0);
 	virtual std::string toStr(const size_t &weak_depth = 0);
 	virtual Type *clone(Context &c, const bool &as_is = false) = 0;
+	virtual bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
+	virtual void unmergeTemplates(const size_t &weak_depth = 0);
 	virtual bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 
 	inline void setInfo(const size_t &inf)
@@ -278,6 +280,8 @@ public:
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false);
+	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
+	void unmergeTemplates(const size_t &weak_depth = 0);
 
 	static TypeTy *create(Context &c);
 
@@ -304,6 +308,8 @@ public:
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false);
+	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
+	void unmergeTemplates(const size_t &weak_depth = 0);
 
 	static PtrTy *create(Context &c, Type *ptr_to, const size_t &count, const bool &is_weak);
 
@@ -362,6 +368,8 @@ public:
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false);
+	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
+	void unmergeTemplates(const size_t &weak_depth = 0);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 	// specializes a structure type
 	StructTy *applyTemplates(Context &c, ErrMgr &e, ModuleLoc &loc,
@@ -454,6 +462,8 @@ public:
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false);
+	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
+	void unmergeTemplates(const size_t &weak_depth = 0);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 	// specializes a function type using StmtFnCallInfo
 	FuncTy *createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
@@ -539,6 +549,8 @@ public:
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false);
+	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
+	void unmergeTemplates(const size_t &weak_depth = 0);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
 
 	static VariadicTy *create(Context &c, const std::vector<Type *> &_args);

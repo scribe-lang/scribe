@@ -26,5 +26,11 @@ let main = fn(): i32 {
 	let str = point.str();
 	defer str.deinit();
 	io.println("Point: ", str);
+
+	// subscript test
+	let a = string.from("Hello");
+	defer a.deinit();
+	a[4] = 'a';
+	io.println(a); // "Hella"
 	return 0;
 };
