@@ -144,6 +144,11 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 		return false;
 	}
 
+	if(!expr) {
+		err.set(start, "no type expression found");
+		goto fail;
+	}
+
 	type = StmtType::create(ctx, start.getLoc(), ptr, info, expr);
 	return true;
 fail:

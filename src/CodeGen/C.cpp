@@ -969,14 +969,14 @@ bool CDriver::getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool for_decl
 	err.set(stmt, "invalid scribe type encountered: %s", ty->toStr().c_str());
 	return false;
 }
-bool CDriver::getCValue(std::string &res, Stmt *stmt, Value *value, Type *type)
+bool CDriver::getCValue(std::string &res, Stmt *stmt, Value *value, Type *type, bool i8_to_char)
 {
 	switch(value->getValType()) {
 	// in case of VVOID, since res will be empty, it will cause actual expression to emit
 	case VVOID: return true;
 	case VINT: {
 		IntTy *t = as<IntTy>(type);
-		if(t->getBits() == 8 && t->isSigned()) {
+		if(i8_to_char && t->getBits() == 8 && t->isSigned()) {
 			res = "'" + std::string(1, as<IntVal>(value)->getVal()) + "'";
 			return true;
 		}
@@ -990,6 +990,7 @@ bool CDriver::getCValue(std::string &res, Stmt *stmt, Value *value, Type *type)
 		if(as<PtrTy>(type)->getTo()->isInt()) {
 			IntTy *t = as<IntTy>(as<PtrTy>(type)->getTo());
 			if(t->getBits() == 8 && t->isSigned()) is_str = true;
+			if(as<PtrTy>(type)->isArrayPtr()) is_str = false;
 		}
 		if(is_str) {
 			res = "\"" + as<VecVal>(value)->getAsString() + "\"";
@@ -999,7 +1000,7 @@ bool CDriver::getCValue(std::string &res, Stmt *stmt, Value *value, Type *type)
 		Type *to = as<PtrTy>(type)->getTo();
 		for(auto &e : as<VecVal>(value)->getVal()) {
 			std::string cval;
-			if(!getCValue(cval, stmt, e, to)) {
+			if(!getCValue(cval, stmt, e, to, is_str)) {
 				err.set(stmt, "failed to determine C value of scribe value: %s",
 					e->toStr().c_str());
 				return false;
