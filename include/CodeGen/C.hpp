@@ -50,7 +50,7 @@ class CDriver : public CodeGenDriver
 			   Writer &writer);
 	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
 	bool getFuncPointer(std::string &res, FuncTy *f, Stmt *stmt, bool for_decl, bool is_weak);
-	std::string getArrCount(Type *&t);
+	std::string getArrCount(Type *t);
 	std::string getSystemCompiler();
 
 	inline std::string getMangledName(const std::string &name, Stmt *stmt)

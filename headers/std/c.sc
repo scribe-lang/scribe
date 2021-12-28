@@ -27,6 +27,9 @@ let memcpy = extern[memcpy, "<string.h>"] fn(dest: *void, src: *const void, coun
 let memset = extern[memset, "<string.h>"] fn(dest: *void, ch: i32, count: u64): *void;
 let getenv = extern[getenv, "<stdlib.h>"] fn(name: *const i8): *const i8; // in C, actually returns *i8
 let setenv = extern[setenv, "<stdlib.h>"] fn(name: *const i8, val: *const i8, overwrite: i1): i32;
+let system = extern[system, "<stdlib.h>"] fn(command: *const i8): i32;
+let getcwd = extern[getcwd, "<unistd.h>"] fn(buf: *i8, size: u64): *i8;
+let chdir = extern[chdir, "<unistd.h>"] fn(path: *const i8): i32;
 
 let malloc = fn(comptime T: type, count: u64): *T {
         let comptime sz = @sizeOf(T);
