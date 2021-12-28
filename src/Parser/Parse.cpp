@@ -739,6 +739,11 @@ bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 		return false;
 	}
 
+	if(!lhs) {
+		err.set(start, "invalid expression");
+		return false;
+	}
+
 	if(lhs->isSimple() && !opers.empty()) {
 		lex::Lexeme &val = as<StmtSimple>(lhs)->getLexValue();
 		lex::TokType tk	 = val.getTokVal();
@@ -1360,6 +1365,7 @@ bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
 	std::vector<StmtVar *> decls;
 	StmtVar *decl	   = nullptr;
 	lex::Lexeme &start = p.peek();
+	size_t var_info	   = 0;
 
 	if(!p.acceptn(lex::LET)) {
 		err.set(p.peek(), "expected 'let' keyword here, found: %s",
@@ -1367,12 +1373,18 @@ bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
 		return false;
 	}
 
-	while(p.accept(lex::IDEN, lex::COMPTIME, lex::GLOBAL)) {
+	while(p.accept(lex::IDEN, lex::COMPTIME, lex::GLOBAL) ||
+	      p.accept(lex::STATIC, lex::VOLATILE, lex::CONST))
+	{
 		bool global   = false;
 		bool comptime = false;
-		while(p.accept(lex::COMPTIME, lex::GLOBAL)) {
+		while(p.accept(lex::COMPTIME, lex::GLOBAL) ||
+		      p.accept(lex::STATIC, lex::VOLATILE, lex::CONST)) {
 			if(p.acceptn(lex::COMPTIME)) comptime = true;
 			if(p.acceptn(lex::GLOBAL)) global = true;
+			if(p.acceptn(lex::STATIC)) var_info |= TypeInfoMask::STATIC;
+			if(p.acceptn(lex::VOLATILE)) var_info |= TypeInfoMask::VOLATILE;
+			if(p.acceptn(lex::CONST)) var_info |= TypeInfoMask::CONST;
 		}
 		if(global) p.setPos(p.getPos() - 1);
 		if(comptime) p.setPos(p.getPos() - 1);
@@ -1382,6 +1394,10 @@ bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
 		decls.push_back(decl);
 		decl = nullptr;
 		if(!p.acceptn(lex::COMMA)) break;
+	}
+
+	if(var_info) {
+		for(auto &d : decls) d->setInfo(var_info);
 	}
 
 	vd = StmtVarDecl::create(ctx, start.getLoc(), decls);

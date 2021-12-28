@@ -420,7 +420,8 @@ class StmtVar : public Stmt
 {
 	lex::Lexeme name;
 	StmtType *vtype;
-	Stmt *vval; // either of expr, funcdef, enumdef, or structdef
+	Stmt *vval;  // either of expr, funcdef, enumdef, or structdef
+	size_t info; // from TypeInfoMask
 	bool is_in;
 	bool is_comptime;
 	bool is_global;
@@ -462,6 +463,14 @@ public:
 	inline Stmt *&getVVal()
 	{
 		return vval;
+	}
+	inline const size_t &getInfo()
+	{
+		return info;
+	}
+	inline void setInfo(const size_t &inf)
+	{
+		info = inf;
 	}
 	inline void setAppliedModuleID(const bool &apply)
 	{

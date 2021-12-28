@@ -83,7 +83,7 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 	bool inserted_defers = false;
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(stmts[i]->isReturn() && !inserted_defers) {
-			std::vector<Stmt *> deferred = deferstack.getAllStmts();
+			std::vector<Stmt *> deferred = deferstack.getAllStmts(ctx);
 			stmts.insert(stmts.begin() + i, deferred.begin(), deferred.end());
 			inserted_defers = true;
 			--i;
@@ -98,7 +98,7 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 			--i;
 		}
 		if(i != stmts.size() - 1 || inserted_defers) continue;
-		std::vector<Stmt *> &deferred = deferstack.getTopStmts();
+		std::vector<Stmt *> deferred = deferstack.getTopStmts(ctx);
 		stmts.insert(stmts.end(), deferred.begin(), deferred.end());
 		inserted_defers = true;
 	}
@@ -767,6 +767,8 @@ post_mangling:
 		return vmgr.addTypeFn(self->getValueTy(), stmt->getName().getDataStr(),
 				      stmt->getValueID());
 	}
+	// append modifiers applied via 'let'
+	stmt->getValueTy()->appendInfo(stmt->getInfo());
 	return vmgr.addVar(stmt->getName().getDataStr(), stmt->getValueID(), stmt,
 			   stmt->isGlobal());
 }

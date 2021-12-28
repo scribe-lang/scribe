@@ -9,6 +9,8 @@
 	furnished to do so.
 */
 
+#include <limits.h>
+
 #include "Config.hpp"
 #include "FS.hpp"
 #include "Intrinsics.hpp"
@@ -214,6 +216,11 @@ INTRINSIC(getosid)
 	res = 8;
 #endif
 	stmt->createAndSetValue(IntVal::create(c, mkI32Ty(c), CDPERMA, res));
+	return true;
+}
+INTRINSIC(syspathmax)
+{
+	stmt->createAndSetValue(IntVal::create(c, mkI32Ty(c), CDPERMA, PATH_MAX));
 	return true;
 }
 INTRINSIC(compileerror)

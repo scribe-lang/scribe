@@ -130,6 +130,9 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	i32 = mkI32Ty(c);
 	ADDFN("getOSID", createFnVal(c, {}, i32, intrinsic_getosid, IVALUE));
 
+	i32 = mkI32Ty(c);
+	ADDFN("sysPathMax", createFnVal(c, {}, i32, intrinsic_syspathmax, IVALUE));
+
 	a = mkAnyTy(c);
 	a->setVariadic();
 	v = mkVoidTy(c);

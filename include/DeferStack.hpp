@@ -50,11 +50,8 @@ public:
 	{
 		stack.back().back().push_back(s);
 	}
-	inline std::vector<Stmt *> &getTopStmts()
-	{
-		return stack.back().back();
-	}
-	std::vector<Stmt *> getAllStmts();
+	std::vector<Stmt *> getTopStmts(Context &c);
+	std::vector<Stmt *> getAllStmts(Context &c);
 };
 } // namespace sc
 

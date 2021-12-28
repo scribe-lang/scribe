@@ -16,7 +16,13 @@
 namespace sc
 {
 DeferStack::DeferStack() {}
-std::vector<Stmt *> DeferStack::getAllStmts()
+std::vector<Stmt *> DeferStack::getTopStmts(Context &c)
+{
+	std::vector<Stmt *> res = stack.back().back();
+	for(auto &s : res) s = s->clone(c);
+	return res;
+}
+std::vector<Stmt *> DeferStack::getAllStmts(Context &c)
 {
 	std::vector<Stmt *> res;
 	for(auto stackit = stack.back().rbegin(); stackit != stack.back().rend(); ++stackit) {
@@ -26,6 +32,7 @@ std::vector<Stmt *> DeferStack::getAllStmts()
 			res.push_back(stmt);
 		}
 	}
+	for(auto &s : res) s = s->clone(c);
 	return res;
 }
 } // namespace sc

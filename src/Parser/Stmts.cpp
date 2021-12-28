@@ -353,7 +353,7 @@ bool StmtExpr::requiresTemplateInit()
 
 StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
 		 const bool &is_in, const bool &is_comptime, const bool &is_global)
-	: Stmt(VAR, loc), name(name), is_in(is_in), vtype(vtype), vval(vval),
+	: Stmt(VAR, loc), name(name), is_in(is_in), vtype(vtype), vval(vval), info(0),
 	  is_comptime(is_comptime), is_global(is_global), applied_module_id(false),
 	  applied_codegen_mangle(false)
 {}

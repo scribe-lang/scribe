@@ -950,7 +950,7 @@ bool CDriver::getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool for_decl
 				to->toStr().c_str());
 			return false;
 		}
-		res = pre + cty + "*" + post;
+		res = pre + cty + (!as<PtrTy>(ty)->getCount() ? "*" : "") + post;
 		return true;
 	}
 	if(ty->isFunc()) {
@@ -1169,7 +1169,7 @@ bool CDriver::getFuncPointer(std::string &res, FuncTy *f, Stmt *stmt, bool for_d
 	funcids.insert(f->getID());
 	return true;
 }
-std::string CDriver::getArrCount(Type *&t)
+std::string CDriver::getArrCount(Type *t)
 {
 	std::string res;
 	while(t->isPtr() && as<PtrTy>(t)->getCount()) {
