@@ -251,13 +251,8 @@ let append in String = fn(other: &const String): &String {
 };
 
 let __assn__ in String = fn(other: &const String): &String {
-	self.deinit();
-	let count = other.len() + 1;
-	self.data = c.malloc(i8, count);
-	c.memcpy(@as(@ptr(void), self.data), @as(@ptr(void), other.data), count);
-	self.data[count - 1] = 0;
-	self.length = count - 1;
-	self.capacity = count;
+	self.clear();
+	self.append(other);
 	return self;
 };
 
