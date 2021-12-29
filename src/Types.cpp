@@ -145,6 +145,7 @@ bool Type::requiresCast(Type *other)
 {
 	if(!isPrimitiveOrPtr() || !other->isPrimitiveOrPtr()) return false;
 	if(isPtr() && other->isPtr()) {
+		if(hasConst() != other->hasConst()) return true;
 		return as<PtrTy>(this)->getTo()->requiresCast(as<PtrTy>(other)->getTo());
 	}
 
