@@ -1160,11 +1160,12 @@ void TypeAssignPass::applyPrimitiveTypeCoercion(Type *to, Stmt *from)
 void TypeAssignPass::applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex::Lexeme &oper)
 {
 	if(!lhs || !rhs) return;
-	if(!lhs->getValueTy()->isPrimitiveOrPtr() || !rhs->getValueTy()->isPrimitiveOrPtr()) return;
-	if(oper.getTokVal() == lex::SUBS) return;
 
 	Type *l = lhs->getValueTy();
 	Type *r = rhs->getValueTy();
+
+	if(!l->isPrimitiveOrPtr() || !r->isPrimitiveOrPtr()) return;
+	if(oper.getTokVal() == lex::SUBS) return;
 
 	if(l->getID() == r->getID()) return;
 
