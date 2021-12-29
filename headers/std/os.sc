@@ -1,4 +1,5 @@
 let c = @import("std/c");
+let fs = @import("std/fs");
 let string = @import("std/string");
 
 // this way is done so the value is usable at compile time - externs cannot be used at comptime
@@ -35,3 +36,24 @@ let getCWD = fn(): string.String {
 	return path;
 };
 let setCWD = c.chdir;
+
+let getExePath = fn(exe: *const i8): string.String {
+	let res = string.new();
+	if @as(u64, exe) == nil { return res; }
+	let p = getEnv("PATH");
+	if @as(u64, p) == nil { return res; }
+
+	let path = string.from(p);
+	defer path.deinit();
+	let delimpath = path.delim(':');
+	defer delimpath.deinit();
+
+	for let i = 0; i < delimpath.len(); ++i {
+		res = delimpath[i];
+		res.appendCStr("/");
+		res.appendCStr(exe);
+		if fs.exists(res.cStr()) { break; }
+		res.clear();
+	}
+	return res;
+};
