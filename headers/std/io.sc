@@ -62,11 +62,13 @@ let printf in c.FILE = fn(fmt: *const i8, data: ...&const any): i32 {
 };
 let read in c.FILE = fn(buf: &string.String): i64 {
 	buf.deinit();
-	let res = c.getline(&buf.getBuf(), &buf.length, &self);
-	if buf.length > 0 {
+	let bufsz: u64 = 0;
+	let sz = c.getline(&buf.getBuf(), &bufsz, &self);
+	if sz > 0 {
+		buf.length = sz;
 		buf.capacity = buf.length + 1;
 	}
-	return res;
+	return sz;
 };
 
 inline if @isMainSrc() {

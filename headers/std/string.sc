@@ -169,6 +169,10 @@ let str in const vec.Vec = fn(): String {
 	return res;
 };
 
+let isSpace in const i8 = fn(): i1 {
+	return c.isspace(self);
+};
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Utility Functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -250,6 +254,16 @@ let append in String = fn(other: &const String): &String {
 	return self.appendCStr(other.cStr());
 };
 
+let erase in String = fn(idx: u64): i1 {
+	if self.length <= idx { return false; }
+	for let i = idx; i < self.length; ++i {
+		// this works since length = capacity - 1, always
+		self.data[i] = self.data[i + 1];
+	}
+	--self.length;
+	return true;
+};
+
 let __assn__ in String = fn(other: &const String): &String {
 	self.clear();
 	self.append(other);
@@ -309,6 +323,20 @@ let delim in const String = fn(ch: i8): vec.Vec(String) {
 		}
 	}
 	return res;
+};
+
+let trim in String = fn() {
+	while self.length > 0 {
+		if !self.data[0].isSpace() { break; }
+		self.erase(0);
+	}
+	let i: u64 = 0;
+	if self.length > 0 { i = self.length - 1; }
+	while i > 0 {
+		if !self.data[i].isSpace() { break; }
+		self.erase(i);
+		--i;
+	}
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
