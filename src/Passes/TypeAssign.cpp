@@ -735,7 +735,13 @@ post_mangling:
 		val->getValueTy()->setComptime();
 	}
 	if(val && !vtype) {
-		stmt->setValueID(val);
+		if(val->getCast()) { // TODO: maybe a better way to do this?
+			Type *t	  = val->getCast();
+			Value *rv = t->toDefaultValue(ctx, err, val->getLoc(), CDFALSE);
+			stmt->createAndSetValue(rv);
+		} else {
+			stmt->setValueID(val);
+		}
 	} else if(vtype) {
 		stmt->setValueID(vtype);
 	}
