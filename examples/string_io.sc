@@ -1,4 +1,4 @@
-let c = @import("std/c");
+let io = @import("std/io");
 let string = @import("std/string");
 
 let main = fn(): i32 {
@@ -9,8 +9,16 @@ let main = fn(): i32 {
 	defer str.deinit();
 	defer numstr.deinit();
 	defer fltstr.deinit();
-	c.puts(str.cStr());
-	c.puts(numstr.cStr());
-	c.puts(fltstr.cStr());
+	io.println(str);
+	io.println(numstr);
+	io.println(fltstr);
+
+	// input
+	let input = string.new();
+	defer input.deinit();
+	io.println("Enter data:");
+	io.stdin.read(input);
+	input.trim();
+	io.println(input);
 	return 0;
 };
