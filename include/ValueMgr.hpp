@@ -93,7 +93,7 @@ public:
 	}
 	inline void lockScopeBelow(const size_t &idx)
 	{
-		layerlock.push_back(idx);
+		layerlock.push_back(idx > 0 ? idx - 1 : idx);
 	}
 	inline void unlockScope()
 	{
