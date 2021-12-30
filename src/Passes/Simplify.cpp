@@ -78,8 +78,7 @@ bool SimplifyPass::visit(StmtBlock *stmt, Stmt **source)
 			--i;
 			continue;
 		}
-		if(stmts[i]->getStmtType() == BLOCK &&
-		   as<StmtBlock>(stmts[i])->getStmts().size() == 1) {
+		if(stmts[i]->getStmtType() == BLOCK && stmt->isTop()) {
 			StmtBlock *inner = as<StmtBlock>(stmts[i]);
 			stmts.erase(stmts.begin() + i);
 			stmts.insert(stmts.begin() + i, inner->getStmts().begin(),
