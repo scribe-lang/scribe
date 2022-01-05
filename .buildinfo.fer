@@ -1,4 +1,5 @@
 let cmake = 'cmake ..';
 let make = 'make -j install';
 #let test = 'feral testdir ../tests';
+let codecov = 'make scribe_cov';
 let compcommands = true; # generate compile_commands.json
