@@ -47,6 +47,7 @@ class TypeAssignPass : public Pass
 	bool initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stmt *> &args);
 
 	void pushFunc(FuncVal *fn, const bool &is_va, const size_t &va_len);
+	void updateLastFunc(FuncVal *fn, const bool &is_va, const size_t &va_len);
 	void popFunc();
 
 public:

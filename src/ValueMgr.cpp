@@ -17,6 +17,47 @@
 
 namespace sc
 {
+bool LayerStack::exists(const std::string &name, const bool &top_only)
+{
+	size_t i     = layers.size() - 1;
+	bool is_done = false;
+	while(!is_done && i >= 0) {
+		if(i == 0) is_done = true;
+		if(layers[i].exists(name)) return true;
+		if(top_only) break;
+		--i;
+	}
+	return false;
+}
+uint64_t LayerStack::getVal(const std::string &name, const bool &top_only)
+{
+	size_t i     = layers.size() - 1;
+	bool is_done = false;
+	while(!is_done && i >= 0) {
+		if(i == 0) is_done = true;
+		uint64_t res = layers[i].getVal(name);
+		if(res) return res;
+		if(top_only) break;
+		--i;
+	}
+	return 0;
+}
+StmtVar *LayerStack::getDecl(const std::string &name, const bool &top_only)
+{
+	size_t i     = layers.size() - 1;
+	bool is_done = false;
+	while(!is_done && i >= 0) {
+		if(i == 0) is_done = true;
+		StmtVar *res = layers[i].getDecl(name);
+		if(res) return res;
+		if(top_only) break;
+		--i;
+	}
+	return nullptr;
+}
+
+Function::Function(FuncTy *ty) : fty(ty) {}
+
 ValueManager::ValueManager(Context &c)
 {
 	AddPrimitiveFuncs(c, *this);
@@ -28,7 +69,8 @@ bool ValueManager::addVar(const std::string &var, const uint64_t &vid, StmtVar *
 		globals[var] = {vid, decl};
 		return true;
 	}
-	return layers.back().add(var, vid, decl);
+	if(!funcstack.empty()) return funcstack.back().add(var, vid, decl);
+	return layers.add(var, vid, decl);
 }
 bool ValueManager::addTypeFn(Type *ty, const std::string &name, const uint64_t &fn)
 {
@@ -46,21 +88,13 @@ bool ValueManager::addTypeFn(const uint64_t &id, const std::string &name, const 
 }
 bool ValueManager::exists(const std::string &var, bool top_only, bool include_globals)
 {
-	size_t iter   = layers.size() - 1;
-	size_t locked = layerlock.size() > 0 ? layerlock.back() : 0;
-	bool is_done  = false;
-	while(!is_done && iter >= 0) {
-		if(iter == 0) is_done = true;
-		if(locked && iter && iter <= locked) {
-			--iter;
-			if(top_only) return false;
-			continue;
-		}
-		if(layers[iter].exists(var)) return true;
-		if(top_only) return false;
-		--iter;
+	if(!funcstack.empty()) {
+		bool res = funcstack.back().exists(var, top_only);
+		if(res || top_only) return res;
 	}
-	return include_globals ? globals.find(var) != globals.end() : false;
+	bool res = layers.exists(var, top_only);
+	if(res || top_only || !include_globals) return res;
+	return globals.find(var) != globals.end();
 }
 bool ValueManager::existsTypeFn(Type *ty, const std::string &name)
 {
@@ -73,42 +107,24 @@ bool ValueManager::existsTypeFn(Type *ty, const std::string &name)
 }
 uint64_t ValueManager::getVar(const std::string &var, bool top_only, bool include_globals)
 {
-	size_t iter   = layers.size() - 1;
-	size_t locked = layerlock.size() > 0 ? layerlock.back() : 0;
-	bool is_done  = false;
-	while(!is_done && iter >= 0) {
-		if(iter == 0) is_done = true;
-		if(locked && iter && iter <= locked) {
-			--iter;
-			if(top_only) return 0;
-			continue;
-		}
-		uint64_t res = layers[iter].getVal(var);
-		if(res) return res;
-		if(top_only) return 0;
-		--iter;
+	if(!funcstack.empty()) {
+		uint64_t res = funcstack.back().getVal(var, top_only);
+		if(res || top_only) return res;
 	}
+	uint64_t res = layers.getVal(var, top_only);
+	if(res || top_only || !include_globals) return res;
 	auto gres = globals.find(var);
 	if(gres != globals.end()) return gres->second.valueid;
 	return 0;
 }
 StmtVar *ValueManager::getDecl(const std::string &var, bool top_only, bool include_globals)
 {
-	size_t iter   = layers.size() - 1;
-	size_t locked = layerlock.size() > 0 ? layerlock.back() : 0;
-	bool is_done  = false;
-	while(!is_done && iter >= 0) {
-		if(iter == 0) is_done = true;
-		if(locked && iter && iter <= locked) {
-			--iter;
-			if(top_only) return nullptr;
-			continue;
-		}
-		StmtVar *res = layers[iter].getDecl(var);
-		if(res) return res;
-		if(top_only) return nullptr;
-		--iter;
+	if(!funcstack.empty()) {
+		StmtVar *res = funcstack.back().getDecl(var, top_only);
+		if(res || top_only) return res;
 	}
+	StmtVar *res = layers.getDecl(var, top_only);
+	if(res || top_only || !include_globals) return res;
 	auto gres = globals.find(var);
 	if(gres != globals.end()) return gres->second.decl;
 	return nullptr;

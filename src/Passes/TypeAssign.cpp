@@ -806,8 +806,7 @@ bool TypeAssignPass::visit(StmtFnSig *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 {
-	vmgr.lockScopeBelow(vmgr.getCurrentLayerIndex());
-	vmgr.pushLayer();
+	pushFunc(nullptr, false, 0); // functy is set later
 	if(!visit(stmt->getSig(), asStmt(&stmt->getSig()))) {
 		err.set(stmt, "failed to determine type of func signature");
 		return false;
@@ -818,6 +817,8 @@ bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 
 	sigty->setVar(stmt->getParentVar());
 
+	vmgr.getTopFunc().setTy(sigty);
+
 	if(stmt->getParentVar()) {
 		const std::string &name = stmt->getParentVar()->getName().getDataStr();
 		vmgr.addVar(name, stmt->getSig()->getValueID(), stmt->getParentVar());
@@ -825,18 +826,15 @@ bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 
 	if(stmt->requiresTemplateInit()) goto end;
 
-	pushFunc(fn, false, 0);
 	dv = sigty->getRet()->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
 	stmt->getBlk()->createAndSetValue(dv);
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
 		err.set(stmt, "failed to determine type of function block");
 		return false;
 	}
-	popFunc();
 end:
 	stmt->setValueID(stmt->getSig());
-	vmgr.popLayer();
-	vmgr.unlockScope();
+	popFunc();
 	return true;
 }
 bool TypeAssignPass::visit(StmtHeader *stmt, Stmt **source)
@@ -858,7 +856,6 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 		return false;
 	}
 	if(!stmt->getEntity()) return true;
-	vmgr.lockScopeBelow(vmgr.getCurrentLayerIndex());
 	vmgr.pushLayer();
 	if(stmt->getEntity()->isStructDef()) {
 		as<StmtStruct>(stmt->getEntity())->setExterned(true);
@@ -874,7 +871,6 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 	}
 	stmt->setValueID(stmt->getEntity());
 	vmgr.popLayer();
-	vmgr.unlockScope();
 	return true;
 }
 bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
@@ -1104,7 +1100,7 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 		err.set(stmt, "failed to determine type of the return argument");
 		return false;
 	}
-	FuncTy *fn = vmgr.getTopFunc();
+	FuncTy *fn = vmgr.getTopFunc().getTy();
 	if(!fn->getVar()) {
 		err.set(stmt, "function type has no declaration");
 		return false;
@@ -1245,11 +1241,8 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 	}
 	cfsig->disableTemplates();
 	cfsig->setVariadic(false);
-	if(caller->getMod()->getID() == cfvar->getVVal()->getMod()->getID()) {
-		vmgr.lockScopeBelow(vmgr.getCurrentLayerIndex());
-	}
 
-	vmgr.pushLayer();
+	pushFunc(nullptr, false, 0); // data set a bit later
 
 	size_t va_count = 0;
 	bool no_va_arg	= cf->getArgs().size() > 0 && cf->getArgs().back()->isVariadic() &&
@@ -1330,19 +1323,14 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 	beingtemplated[uniqname] = cfvar;
 	dv = cf->getRet()->toDefaultValue(ctx, err, caller->getLoc(), CDFALSE);
 	cfblk->createAndSetValue(dv);
-	pushFunc(cfn, va_count > 0, va_count);
+	updateLastFunc(cfn, va_count > 0, va_count);
 	if(!visit(cfblk, asStmt(&cfblk))) {
 		err.set(caller, "failed to assign type for called template function's var");
 		return false;
 	}
-	popFunc();
 	beingtemplated.erase(uniqname);
 end:
-	vmgr.popLayer();
-
-	if(caller->getMod()->getID() == cfvar->getVVal()->getMod()->getID()) {
-		vmgr.unlockScope();
-	}
+	popFunc();
 
 	additionalvars.push_back(cfvar);
 	return true;
@@ -1350,14 +1338,22 @@ end:
 
 void TypeAssignPass::pushFunc(FuncVal *fn, const bool &is_va, const size_t &va_len)
 {
-	vmgr.pushFunc(fn->getVal());
+	vmgr.pushFunc(fn ? fn->getVal() : nullptr);
+	vmgr.pushLayer();
 	deferstack.pushFunc();
 	is_fn_va.push_back(is_va);
 	valen.push_back(va_len);
 }
+void TypeAssignPass::updateLastFunc(FuncVal *fn, const bool &is_va, const size_t &va_len)
+{
+	vmgr.getTopFunc().setTy(fn->getVal());
+	is_fn_va.back() = is_va;
+	valen.back()	= va_len;
+}
 void TypeAssignPass::popFunc()
 {
 	deferstack.popFunc();
+	vmgr.popLayer();
 	vmgr.popFunc();
 	is_fn_va.pop_back();
 	valen.pop_back();
