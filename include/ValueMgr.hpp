@@ -53,16 +53,11 @@ public:
 		return items;
 	}
 };
-class ValueManager
+class LayerStack
 {
-	std::unordered_map<std::string, ValDecl> globals;
 	std::vector<Layer> layers;
-	std::unordered_map<uint64_t, std::unordered_map<std::string, uint64_t>> typefuncs;
-	std::vector<size_t> layerlock;
-	std::vector<FuncTy *> funcstack;
 
 public:
-	ValueManager(Context &c);
 	inline void pushLayer()
 	{
 		layers.emplace_back();
@@ -71,33 +66,74 @@ public:
 	{
 		layers.pop_back();
 	}
+	inline size_t size()
+	{
+		return layers.size();
+	}
+	inline bool add(const std::string &name, const uint64_t &vid, StmtVar *decl)
+	{
+		return layers.back().add(name, vid, decl);
+	}
+	bool exists(const std::string &name, const bool &top_only);
+	uint64_t getVal(const std::string &name, const bool &top_only);
+	StmtVar *getDecl(const std::string &name, const bool &top_only);
+};
+class Function : public LayerStack
+{
+	FuncTy *fty;
+
+public:
+	Function(FuncTy *ty);
+
+	inline void setTy(FuncTy *ty)
+	{
+		fty = ty;
+	}
+	inline FuncTy *getTy()
+	{
+		return fty;
+	}
+};
+class ValueManager
+{
+	std::unordered_map<uint64_t, std::unordered_map<std::string, uint64_t>> typefuncs;
+	std::unordered_map<std::string, ValDecl> globals;
+	LayerStack layers; // outside function
+	std::vector<Function> funcstack;
+
+public:
+	ValueManager(Context &c);
+	inline void pushLayer()
+	{
+		if(funcstack.empty()) {
+			layers.pushLayer();
+		} else {
+			funcstack.back().pushLayer();
+		}
+	}
+	inline void popLayer()
+	{
+		if(funcstack.empty()) {
+			layers.popLayer();
+		} else {
+			funcstack.back().popLayer();
+		}
+	}
 	inline void pushFunc(FuncTy *fn)
 	{
-		funcstack.push_back(fn);
+		funcstack.emplace_back(fn);
 	}
 	inline void popFunc()
 	{
 		funcstack.pop_back();
 	}
-	inline FuncTy *getTopFunc()
+	inline Function &getTopFunc()
 	{
 		return funcstack.back();
 	}
 	inline bool hasFunc()
 	{
 		return !funcstack.empty();
-	}
-	inline size_t getCurrentLayerIndex()
-	{
-		return layers.size() - 1;
-	}
-	inline void lockScopeBelow(const size_t &idx)
-	{
-		layerlock.push_back(idx > 0 ? idx - 1 : idx);
-	}
-	inline void unlockScope()
-	{
-		layerlock.pop_back();
 	}
 	bool addVar(const std::string &var, const uint64_t &vid, StmtVar *decl,
 		    bool global = false);

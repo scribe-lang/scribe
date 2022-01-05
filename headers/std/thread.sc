@@ -1,5 +1,3 @@
-let io = @import("std/io");
-
 let pthread_t: u64 = extern[pthread_t, "<pthread.h>", "-pthread"];
 let pthread_attr_t = extern[pthread_attr_t, "<pthread.h>", "-pthread"] struct {};
 
@@ -30,6 +28,8 @@ let join in Thread = fn(): i32 {
 
 // usage
 inline if @isMainSrc() {
+
+let io = @import("std/io");
 
 let func = fn(data: *void): *void {
 	let tid = @as(u64, data);
