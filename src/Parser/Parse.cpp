@@ -146,15 +146,11 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 
 	if(!expr) {
 		err.set(start, "no type expression found");
-		goto fail;
+		return false;
 	}
 
 	type = StmtType::create(ctx, start.getLoc(), ptr, info, expr);
 	return true;
-fail:
-	if(count) delete count;
-	if(expr) delete expr;
-	return false;
 }
 
 bool Parsing::parse_simple(ParseHelper &p, Stmt *&data)
@@ -214,10 +210,6 @@ bool Parsing::parse_expr_17(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = rhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Left Associative
 // ?:
@@ -265,12 +257,6 @@ bool Parsing::parse_expr_16(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 after_quest:
 	expr = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
 	return true;
-fail:
-	if(lhs_rhs) delete lhs_rhs;
-	if(lhs_lhs) delete lhs_lhs;
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Right Associative
 // =
@@ -301,10 +287,6 @@ bool Parsing::parse_expr_15(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = rhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Left Associative
 // += -=
@@ -360,11 +342,6 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 	}
 	as<StmtExpr>(expr)->setOr(or_blk, or_blk_var);
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	if(or_blk) delete or_blk;
-	return false;
 }
 // Left Associative
 // ||
@@ -395,10 +372,6 @@ bool Parsing::parse_expr_13(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Left Associative
 // &&
@@ -429,10 +402,6 @@ bool Parsing::parse_expr_12(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Left Associative
 // |
@@ -463,10 +432,6 @@ bool Parsing::parse_expr_11(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Left Associative
 // ^
@@ -497,10 +462,6 @@ bool Parsing::parse_expr_10(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Left Associative
 // &
@@ -531,10 +492,6 @@ bool Parsing::parse_expr_09(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Left Associative
 // == !=
@@ -565,10 +522,6 @@ bool Parsing::parse_expr_08(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Left Associative
 // < <=
@@ -600,10 +553,6 @@ bool Parsing::parse_expr_07(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Left Associative
 // << >>
@@ -634,10 +583,6 @@ bool Parsing::parse_expr_06(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Left Associative
 // + -
@@ -668,10 +613,6 @@ bool Parsing::parse_expr_05(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Left Associative
 // * / %
@@ -702,10 +643,6 @@ bool Parsing::parse_expr_04(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	return false;
 }
 // Right Associative (single operand)
 // ++ -- (pre)
@@ -767,9 +704,6 @@ bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	return false;
 }
 // Left Associative
 // ++ -- (post)
@@ -796,9 +730,6 @@ bool Parsing::parse_expr_02(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	return false;
 }
 bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
 {
@@ -922,12 +853,6 @@ done:
 	}
 	expr = lhs;
 	return true;
-fail:
-	if(lhs) delete lhs;
-	if(rhs) delete rhs;
-	for(auto &a : args) delete a;
-	if(arg) delete arg;
-	return false;
 }
 
 bool Parsing::parse_var(ParseHelper &p, StmtVar *&var, const Occurs &intype, const Occurs &otype,
@@ -1045,11 +970,6 @@ done:
 	}
 	var = StmtVar::create(ctx, name.getLoc(), name, type, val, in, comptime, global);
 	return true;
-fail:
-	if(in) delete in;
-	if(type) delete type;
-	if(val) delete val;
-	return false;
 }
 
 bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
@@ -1121,11 +1041,6 @@ post_args:
 
 	fsig = StmtFnSig::create(ctx, start.getLoc(), args, rettype, found_va);
 	return true;
-fail:
-	if(var) delete var;
-	for(auto &p : args) delete p;
-	if(rettype) delete rettype;
-	return false;
 }
 bool Parsing::parse_fndef(ParseHelper &p, Stmt *&fndef)
 {
@@ -1140,10 +1055,6 @@ bool Parsing::parse_fndef(ParseHelper &p, Stmt *&fndef)
 
 	fndef = StmtFnDef::create(ctx, start.getLoc(), (StmtFnSig *)sig, blk);
 	return true;
-fail:
-	if(sig) delete sig;
-	if(blk) delete blk;
-	return false;
 }
 
 bool Parsing::parse_header(ParseHelper &p, StmtHeader *&header)
@@ -1248,11 +1159,6 @@ endinfo:
 end:
 	ext = StmtExtern::create(ctx, name.getLoc(), name, headers, libs, entity);
 	return true;
-fail:
-	if(headers) delete headers;
-	if(libs) delete libs;
-	if(entity) delete entity;
-	return false;
 }
 
 bool Parsing::parse_enum(ParseHelper &p, Stmt *&ed)
@@ -1351,11 +1257,6 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd, const bool &allowed_templs
 done:
 	sd = StmtStruct::create(ctx, start.getLoc(), fields, templates);
 	return true;
-
-fail:
-	if(field) delete field;
-	for(auto &f : fields) delete f;
-	return false;
 }
 
 bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
@@ -1402,11 +1303,6 @@ bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
 
 	vd = StmtVarDecl::create(ctx, start.getLoc(), decls);
 	return true;
-
-fail:
-	if(decl) delete decl;
-	for(auto &decl : decls) delete decl;
-	return false;
 }
 
 bool Parsing::parse_conds(ParseHelper &p, Stmt *&conds)
@@ -1446,15 +1342,6 @@ blk:
 
 	conds = StmtCond::create(ctx, start.getLoc(), cvec, is_inline);
 	return true;
-
-fail:
-	if(c.getCond()) delete c.getCond();
-	if(c.getBlk()) delete c.getBlk();
-	for(auto &ce : cvec) {
-		if(ce.getCond()) delete ce.getCond();
-		if(ce.getBlk()) delete ce.getBlk();
-	}
-	return false;
 }
 bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 {
@@ -1501,10 +1388,6 @@ bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 
 	fin = StmtForIn::create(ctx, start.getLoc(), iter, in, blk);
 	return true;
-fail:
-	if(in) delete in;
-	if(blk) delete blk;
-	return false;
 }
 bool Parsing::parse_for(ParseHelper &p, Stmt *&f)
 {
@@ -1564,12 +1447,6 @@ body:
 
 	f = StmtFor::create(ctx, start.getLoc(), init, cond, incr, blk, is_inline);
 	return true;
-fail:
-	if(init) delete init;
-	if(cond) delete cond;
-	if(incr) delete incr;
-	if(blk) delete blk;
-	return false;
 }
 bool Parsing::parse_while(ParseHelper &p, Stmt *&w)
 {
@@ -1593,10 +1470,6 @@ bool Parsing::parse_while(ParseHelper &p, Stmt *&w)
 
 	w = StmtWhile::create(ctx, start.getLoc(), cond, blk);
 	return true;
-fail:
-	if(cond) delete cond;
-	if(blk) delete blk;
-	return false;
 }
 bool Parsing::parse_ret(ParseHelper &p, Stmt *&ret)
 {
@@ -1620,9 +1493,6 @@ bool Parsing::parse_ret(ParseHelper &p, Stmt *&ret)
 done:
 	ret = StmtRet::create(ctx, start.getLoc(), val);
 	return true;
-fail:
-	if(val) delete val;
-	return false;
 }
 bool Parsing::parse_continue(ParseHelper &p, Stmt *&cont)
 {
@@ -1672,8 +1542,5 @@ bool Parsing::parse_defer(ParseHelper &p, Stmt *&defer)
 done:
 	defer = StmtDefer::create(ctx, start.getLoc(), val);
 	return true;
-fail:
-	if(val) delete val;
-	return false;
 }
 } // namespace sc
