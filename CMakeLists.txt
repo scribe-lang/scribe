@@ -84,6 +84,12 @@ if(ANDROID)
 	set(EXTRA_LD_FLAGS "-z global")
 endif()
 
+if(CMAKE_COMPILER_IS_GNUCXX)
+    include(CodeCoverage)
+    APPEND_COVERAGE_COMPILER_FLAGS()
+    setup_target_for_coverage_gcovr_html(NAME scribe_cov EXECUTABLE ${PROJECT_SOURCE_DIR}/codecov.sh ${PROJECT_SOURCE_DIR})
+endif()
+
 # Finally! The sources!!!!!
 
 # Set Config.hpp.in template
