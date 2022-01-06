@@ -383,18 +383,18 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				err.set(stmt, "failed to determine value for comptime arg");
 				return false;
 			}
-			// clone() is called to resolve any TypeTy's
-			Value *retval =
-			fn->getRet()->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
-			if(!retval) {
-				err.set(stmt,
-					"failed to generate a default"
-					" value for function return type: %s",
-					fn->getRet()->toStr().c_str());
-				return false;
-			}
-			stmt->createAndSetValue(retval);
 			if(stmt->isIntrinsicCall()) {
+				// clone() is called to resolve any TypeTy's
+				Value *retval =
+				fn->getRet()->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
+				if(!retval) {
+					err.set(stmt,
+						"failed to generate a default"
+						" value for function return type: %s",
+						fn->getRet()->toStr().c_str());
+					return false;
+				}
+				stmt->createAndSetValue(retval);
 				if(!fn->isIntrinsic()) {
 					err.set(stmt, "function call is intrinsic but the function "
 						      "itself is not");
@@ -415,6 +415,15 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			if(!initTemplateFunc(stmt, fn, args)) return false;
 			fnval->setVal(fn);
 			stmt->setCalledFnTy(fn);
+			Value *rv = fn->getRet()->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
+			if(!rv) {
+				err.set(stmt,
+					"failed to generate a default"
+					" value for function return type: %s",
+					fn->getRet()->toStr().c_str());
+				return false;
+			}
+			stmt->createAndSetValue(rv);
 		} else if(lhs->getValueTy()->isStruct()) {
 			StructTy *st = as<StructTy>(lhs->getValueTy());
 			std::vector<Type *> argtypes;
@@ -621,21 +630,9 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			err.set(stmt, "function is incompatible with call arguments");
 			return false;
 		}
-		Value *retval = fn->getRet()->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
-		if(!retval) {
-			err.set(stmt,
-				"failed to generate a default"
-				" value for function return type: %s",
-				fn->getRet()->toStr().c_str());
-			return false;
-		}
-		stmt->createAndSetValue(retval);
 		bool both_comptime = true;
 		if(!lhs->getValueTy(true)->hasComptime()) both_comptime = false;
 		if(rhs && !rhs->getValueTy(true)->hasComptime()) both_comptime = false;
-		if(stmt->getValueTy()->hasComptime() && !both_comptime) {
-			stmt->getValueTy()->unsetComptime();
-		}
 
 		for(size_t i = 0; i < args.size(); ++i) {
 			Type *coerced_to = fn->getArg(i);
@@ -653,18 +650,52 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			return false;
 		}
 
-		if(fn->isParseIntrinsic() && both_comptime &&
-		   !fn->callIntrinsic(ctx, err, stmt, source, args)) {
-			err.set(stmt, "call to parse intrinsic failed");
-			return false;
+		if(fn->isParseIntrinsic()) {
+			Value *retval =
+			fn->getRet()->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
+			if(!retval) {
+				err.set(stmt,
+					"failed to generate a default"
+					" value for function return type: %s",
+					fn->getRet()->toStr().c_str());
+				return false;
+			}
+			stmt->createAndSetValue(retval);
+			if(!both_comptime) {
+				err.set(stmt, "arguments to parse intrinsic are not comptime");
+				return false;
+			}
+			if(!fn->callIntrinsic(ctx, err, stmt, source, args)) {
+				err.set(stmt, "call to parse intrinsic failed");
+				return false;
+			}
 		}
 		if(!initTemplateFunc(stmt, fn, args)) {
 			err.set(stmt, "failed to intialize template function");
 			return false;
 		}
+
+		// don't return reference if both are primitive and operator ain't one of assignment
+		bool both_primitive = true;
+		if(!lhs->getValueTy(true)->isPrimitiveOrPtr()) both_primitive = false;
+		if(rhs && !rhs->getValueTy(true)->isPrimitiveOrPtr()) both_primitive = false;
+		if(both_primitive && !optok.isAssign()) fn->getRet()->unsetRef();
+
 		// fnval->setVal(fn); is not required as fnval is used nowhere,
 		// and it points to fnid which would therefore be modified elsewhere
 		stmt->setCalledFnTy(fn);
+		Value *rv = fn->getRet()->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
+		if(!rv) {
+			err.set(stmt,
+				"failed to generate a default"
+				" value for function return type: %s",
+				fn->getRet()->toStr().c_str());
+			return false;
+		}
+		stmt->createAndSetValue(rv);
+		if(stmt->getValueTy()->hasComptime() && !both_comptime) {
+			stmt->getValueTy()->unsetComptime();
+		}
 		break;
 	}
 	default: err.set(stmt->getOper(), "nonexistent operator"); return false;
@@ -1100,22 +1131,32 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 		err.set(stmt, "failed to determine type of the return argument");
 		return false;
 	}
-	FuncTy *fn = vmgr.getTopFunc().getTy();
+	FuncTy *fn	 = vmgr.getTopFunc().getTy();
+	StmtBlock *fnblk = as<StmtFnDef>(fn->getVar()->getVVal())->getBlk();
 	if(!fn->getVar()) {
 		err.set(stmt, "function type has no declaration");
 		return false;
 	}
-	Type *fnretty = fn->getRet();
 	Type *valtype = val ? val->getValueTy()->clone(ctx) : VoidTy::create(ctx);
+	bool was_any  = false;
+	if(fn->getRet()->isAny()) {
+		Type *rt   = fn->getRet();
+		Type *newr = valtype->clone(ctx);
+		newr->appendInfo(rt->getInfo());
+		fn->setRet(newr);
+		fnblk->changeValue(newr->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE));
+		was_any = true;
+	}
+	Type *fnretty = fn->getRet();
 	valtype->appendInfo(fnretty->getInfo());
-	if(!fnretty->isCompatible(ctx, valtype, err, stmt->getLoc())) {
+	if(!was_any && !fnretty->isCompatible(ctx, valtype, err, stmt->getLoc())) {
 		err.set(stmt,
 			"function return type and deduced return type are"
 			" incompatible (function return type: %s, deduced: %s)",
 			fnretty->toStr().c_str(), valtype->toStr().c_str());
 		return false;
 	}
-	stmt->setFnBlk(as<StmtFnDef>(fn->getVar()->getVVal())->getBlk());
+	stmt->setFnBlk(fnblk);
 	stmt->setValueID(stmt->getFnBlk());
 	stmt->setValueTy(valtype);
 	if(val && fnretty->requiresCast(valtype)) val->castTo(fnretty);
@@ -1312,6 +1353,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 	cfvar->getVVal()->setValueID(cfsig);
 	cfvar->setValueID(cfsig);
 
+	// dv: default return value
 	Value *dv = nullptr;
 	if(cf->isExtern()) {
 		goto end;
@@ -1328,6 +1370,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 		err.set(caller, "failed to assign type for called template function's var");
 		return false;
 	}
+	cfsig->getRetType()->setValueTy(cf->getRet());
 	beingtemplated.erase(uniqname);
 end:
 	popFunc();

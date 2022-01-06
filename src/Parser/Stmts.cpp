@@ -424,7 +424,7 @@ void StmtFnSig::disp(const bool &has_next)
 	}
 	if(rettype) {
 		tio::taba(false);
-		tio::print(false, "Return Type:\n");
+		tio::print(false, "Return Type%s\n", rettype->getTypeString().c_str());
 		rettype->disp(false);
 		tio::tabr();
 	}
@@ -437,9 +437,11 @@ bool StmtFnSig::requiresTemplateInit()
 	if(has_variadic) return true;
 	for(auto &a : args) {
 		if(a->getValue()->getType()->isTemplate()) return true;
+		if(a->getValue()->getType()->isAny()) return true;
 		if(a->isComptime()) return true;
 	}
 	if(rettype->getValue()->getType()->isTemplate()) return true;
+	if(rettype->getValue()->getType()->isAny()) return true;
 	disable_template = true;
 	return false;
 }

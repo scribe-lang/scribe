@@ -171,7 +171,7 @@ INTRINSIC(array)
 	for(auto &count : counts) {
 		resty = PtrTy::create(c, resty, count, false);
 	}
-	Value *res = resty->toDefaultValue(c, err, stmt->getLoc(), CDTRUE);
+	Value *res = resty->toDefaultValue(c, err, stmt->getLoc(), CDPERMA);
 	if(!res) {
 		err.set(stmt, "failed to get default value from array's type");
 		return false;

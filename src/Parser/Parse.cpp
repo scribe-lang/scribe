@@ -1343,6 +1343,21 @@ blk:
 	conds = StmtCond::create(ctx, start.getLoc(), cvec, is_inline);
 	return true;
 }
+// For-In transformation:
+//
+// for e in vec.eachRev() {
+// 	...
+// }
+// ----------------------
+// will generate
+// ----------------------
+// {
+// let e_interm = vec.eachRev();
+// for let _e = e_interm.begin(); _e != e_interm.end(); _e = e_interm.next(_e) {
+// 	let e = e_interm.at(_e); // e is a reference
+// 	...
+// }
+// }
 bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 {
 	fin = nullptr;
@@ -1386,7 +1401,85 @@ bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 		return false;
 	}
 
-	fin = StmtForIn::create(ctx, start.getLoc(), iter, in, blk);
+	const ModuleLoc &loc	= iter.getLoc();
+	lex::Lexeme in_interm	= iter; // e_interm
+	lex::Lexeme iter_interm = iter; // _e
+	lex::Lexeme lexbegin	= lex::Lexeme(loc, lex::IDEN, "begin");
+	lex::Lexeme lexend	= lex::Lexeme(loc, lex::IDEN, "end");
+	lex::Lexeme lexnext	= lex::Lexeme(loc, lex::IDEN, "next");
+	lex::Lexeme lexat	= lex::Lexeme(loc, lex::IDEN, "at");
+	lex::Lexeme dot_op	= lex::Lexeme(loc, lex::DOT);
+	lex::Lexeme call_op	= lex::Lexeme(loc, lex::FNCALL);
+	lex::Lexeme ne_op	= lex::Lexeme(loc, lex::NE);
+	lex::Lexeme assn_op	= lex::Lexeme(loc, lex::ASSN);
+
+	in_interm.setDataStr(in_interm.getDataStr() + "_interm");
+	iter_interm.setDataStr("_" + iter_interm.getDataStr());
+
+	StmtVar *in_interm_var =
+	StmtVar::create(ctx, in_interm.getLoc(), in_interm, nullptr, in, false, false, false);
+	// block statement 1:
+	StmtVarDecl *in_interm_vardecl = StmtVarDecl::create(ctx, loc, {in_interm_var});
+
+	// init:
+	// let <iter_interm> = <in_interm>.begin()
+	StmtSimple *init_lhs	= StmtSimple::create(ctx, loc, in_interm);
+	StmtSimple *init_rhs	= StmtSimple::create(ctx, loc, lexbegin);
+	StmtExpr *init_dot_expr = StmtExpr::create(ctx, loc, 0, init_lhs, dot_op, init_rhs, false);
+	StmtFnCallInfo *init_call_info = StmtFnCallInfo::create(ctx, loc, {});
+	StmtExpr *init_expr =
+	StmtExpr::create(ctx, loc, 0, init_dot_expr, call_op, init_call_info, false);
+	StmtVar *init_iter_interm_var = StmtVar::create(ctx, iter_interm.getLoc(), iter_interm,
+							nullptr, init_expr, false, false, false);
+	StmtVarDecl *init = StmtVarDecl::create(ctx, iter_interm.getLoc(), {init_iter_interm_var});
+
+	// cond:
+	// <iter_interm> != <in_interm>.end()
+	StmtSimple *cond_rhs_lhs = StmtSimple::create(ctx, loc, in_interm);
+	StmtSimple *cond_rhs_rhs = StmtSimple::create(ctx, loc, lexend);
+	StmtExpr *cond_dot_expr =
+	StmtExpr::create(ctx, loc, 0, cond_rhs_lhs, dot_op, cond_rhs_rhs, false);
+	StmtFnCallInfo *cond_call_info = StmtFnCallInfo::create(ctx, loc, {});
+	StmtExpr *cond_rhs =
+	StmtExpr::create(ctx, loc, 0, cond_dot_expr, call_op, cond_call_info, false);
+	StmtSimple *cond_lhs = StmtSimple::create(ctx, iter_interm.getLoc(), iter_interm);
+	StmtExpr *cond	     = StmtExpr::create(ctx, loc, 0, cond_lhs, ne_op, cond_rhs, false);
+
+	// incr:
+	// <iter_interm> = <in_interm>.next(<iter_interm>)
+	StmtSimple *incr_lhs_lhs = StmtSimple::create(ctx, loc, in_interm);
+	StmtSimple *incr_lhs_rhs = StmtSimple::create(ctx, loc, lexnext);
+	StmtExpr *incr_dot_expr =
+	StmtExpr::create(ctx, loc, 0, incr_lhs_lhs, dot_op, incr_lhs_rhs, false);
+	StmtSimple *incr_call_arg      = StmtSimple::create(ctx, loc, iter_interm);
+	StmtFnCallInfo *incr_call_info = StmtFnCallInfo::create(ctx, loc, {incr_call_arg});
+	StmtExpr *incr_lhs =
+	StmtExpr::create(ctx, loc, 0, incr_dot_expr, call_op, incr_call_info, false);
+	StmtSimple *incr_rhs = StmtSimple::create(ctx, iter_interm.getLoc(), iter_interm);
+	StmtExpr *incr	     = StmtExpr::create(ctx, loc, 0, incr_lhs, assn_op, incr_rhs, false);
+
+	// inside loop block:
+	// let <iter> = <in_interm>.at(<iter_interm>)
+	StmtSimple *loop_var_val_lhs = StmtSimple::create(ctx, loc, in_interm);
+	StmtSimple *loop_var_val_rhs = StmtSimple::create(ctx, loc, lexat);
+	StmtExpr *loop_var_val_dot_expr =
+	StmtExpr::create(ctx, loc, 0, loop_var_val_lhs, dot_op, loop_var_val_rhs, false);
+	StmtSimple *loop_var_val_call_arg = StmtSimple::create(ctx, loc, iter_interm);
+	StmtFnCallInfo *loop_var_val_call_info =
+	StmtFnCallInfo::create(ctx, loc, {loop_var_val_call_arg});
+	StmtExpr *loop_var_val = StmtExpr::create(ctx, loc, 0, loop_var_val_dot_expr, call_op,
+						  loop_var_val_call_info, false);
+	StmtVar *loop_var =
+	StmtVar::create(ctx, loc, iter, nullptr, loop_var_val, false, false, false);
+	StmtVarDecl *loop_vardecl = StmtVarDecl::create(ctx, loc, {loop_var});
+	blk->getStmts().insert(blk->getStmts().begin(), loop_vardecl);
+
+	// StmtFor - block statement 2:
+	StmtFor *loop = StmtFor::create(ctx, start.getLoc(), init, cond, incr, blk, false);
+
+	// StmtBlock
+	std::vector<Stmt *> outerblkstmts = {in_interm_vardecl, loop};
+	fin = StmtBlock::create(ctx, start.getLoc(), outerblkstmts, false);
 	return true;
 }
 bool Parsing::parse_for(ParseHelper &p, Stmt *&f)

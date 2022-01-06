@@ -20,6 +20,7 @@ namespace sc
 {
 static bool break_stmt	  = false;
 static bool continue_stmt = false;
+static bool return_stmt	  = false;
 
 ValueAssignPass::ValueAssignPass(ErrMgr &err, Context &ctx)
 	: Pass(Pass::genPassID<ValueAssignPass>(), err, ctx)
@@ -65,7 +66,7 @@ bool ValueAssignPass::visit(StmtBlock *stmt, Stmt **source)
 			err.set(stmt, "failed to assign type to stmt in block");
 			return false;
 		}
-		if(break_stmt || continue_stmt) break;
+		if(break_stmt || continue_stmt || return_stmt) break;
 	}
 	return true;
 }
@@ -145,6 +146,12 @@ skip_rhs_val:
 	case lex::DOT: {
 		// nothing to be done for dot operation since all that is required
 		// is already done in type assign pass
+		StructVal *sv		     = as<StructVal>(lhs->getValue());
+		StmtSimple *rsim	     = as<StmtSimple>(rhs);
+		const std::string &fieldname = rsim->getLexValue().getDataStr();
+		// struct field names are not mangled with the module ids
+		Value *res = sv->getField(fieldname);
+		if(res && stmt->getValue() != res) stmt->changeValue(res);
 		break;
 	}
 	case lex::FNCALL: {
@@ -202,6 +209,7 @@ skip_rhs_val:
 
 		stmt->updateValue(ctx, def->getBlk()->getValue());
 		def->clearValue();
+		return_stmt = false;
 		break;
 	}
 	case lex::STCALL: {
@@ -231,7 +239,7 @@ skip_rhs_val:
 			err.set(stmt, "index out of bounds of pointer/array");
 			return false;
 		}
-		stmt->updateValue(ctx, vaval->getValAt(iv->getVal()));
+		stmt->changeValue(vaval->getValAt(iv->getVal()));
 		break;
 	}
 	case lex::ASSN:
@@ -325,6 +333,7 @@ skip_rhs_val:
 		}
 		stmt->updateValue(ctx, def->getBlk()->getValue());
 		def->clearValue();
+		return_stmt = false;
 		break;
 	}
 	default: err.set(stmt->getOper(), "nonexistent operator"); return false;
@@ -524,6 +533,7 @@ bool ValueAssignPass::visit(StmtRet *stmt, Stmt **source)
 	// nothing to do for VoidVal
 	if(!val) return true;
 	stmt->updateValue(ctx, val->getValue());
+	return_stmt = true;
 	return true;
 }
 bool ValueAssignPass::visit(StmtContinue *stmt, Stmt **source)
