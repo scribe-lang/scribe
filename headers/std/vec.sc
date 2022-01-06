@@ -72,12 +72,12 @@ let at in Vec = fn(idx: u64): &self.T {
 	return self.data[idx];
 };
 
-let each in Vec = fn(): iter.U64Iter(self) {
-	return iter.U64Iter(self){self, 0, self.length, 1};
+let each in Vec = fn(): iter.Iter(self, u64) {
+	return iter.Iter(self, u64){self, 0, self.length, 1};
 };
 
-let eachRev in Vec = fn(): iter.U64Iter(self) {
-	return iter.U64Iter(self){self, self.length - 1, -1, -1};
+let eachRev in Vec = fn(): iter.Iter(self, u64) {
+	return iter.Iter(self, u64){self, self.length - 1, -1, -1};
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

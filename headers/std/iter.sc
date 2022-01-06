@@ -2,25 +2,25 @@
 // Iterator for U64
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-let U64Iter = struct<T> {
+let Iter = struct<T, E> {
 	of: &T;
-	from: u64;
-	to: u64;
-	incr: i64;
+	from: E;
+	to: E;
+	incr: E;
 };
 
-let begin in U64Iter = fn(): u64 {
+let begin in Iter = fn(): self.E {
 	return self.from;
 };
 
-let end in U64Iter = fn(): u64 {
+let end in Iter = fn(): self.E {
 	return self.to;
 };
 
-let next in U64Iter = fn(e: u64): u64 {
+let next in Iter = fn(e: self.E): self.E {
 	return e + self.incr;
 };
 
-let at in U64Iter = fn(idx: u64): &any {
+let at in Iter = fn(idx: self.E): any {
 	return self.of.at(idx);
 };
