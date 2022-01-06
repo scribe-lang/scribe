@@ -16,9 +16,6 @@ $SCRIBE no_file.sc >/dev/null 2>&1
 echo "$SCRIBE error_examples/compile_error.sc"
 $SCRIBE error_examples/compile_error.sc >/dev/null 2>&1
 
-# all examples
-for x in examples/*; do echo "$SCRIBE $x"; $SCRIBE $x -s >/dev/null; rm $(basename ${x%.*}); done
-
 # version info
 echo "$SCRIBE -v"
 $SCRIBE -v >/dev/null 2>&1
@@ -26,5 +23,8 @@ $SCRIBE -v >/dev/null 2>&1
 # help
 echo "$SCRIBE --help"
 $SCRIBE --help >/dev/null 2>&1
+
+# all examples
+for x in examples/*; do echo "$SCRIBE $x"; $SCRIBE $x -s >/dev/null; rm $(basename ${x%.*}); done
 
 cd $CWD
