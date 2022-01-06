@@ -481,6 +481,10 @@ public:
 	{
 		args[idx] = arg;
 	}
+	inline void setRet(Type *retty)
+	{
+		ret = retty;
+	}
 	inline void insertArg(Type *arg)
 	{
 		args.push_back(arg);

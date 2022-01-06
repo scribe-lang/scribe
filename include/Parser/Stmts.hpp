@@ -153,7 +153,11 @@ public:
 		return valueid;
 	}
 	// changes the value at the valueid (valueid is unchanged)
-	// changeValue() cannot exist because the inner (dot) members will be invalidated
+	inline void changeValue(Value *v)
+	{
+		values[valueid] = v;
+	}
+	// updates data in this->value using v
 	bool updateValue(Context &c, Value *v);
 	// if exact = true, cast and deref will be skipped
 	Value *getValue(const bool &exact = false);

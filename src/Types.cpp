@@ -807,6 +807,9 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 		unmergeTemplates();
 		res->updateUniqID();
 	}
+	for(size_t i = 0; i < res->args.size(); ++i) {
+		if(res->args[i]->isAny()) res->args[i] = callargs[i]->getValueTy();
+	}
 	return res;
 }
 FuncTy *FuncTy::create(Context &c, StmtVar *_var, const std::vector<Type *> &_args, Type *_ret,
