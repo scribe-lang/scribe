@@ -71,7 +71,6 @@ public:
 	bool visit(StmtStruct *stmt, Stmt **source);
 	bool visit(StmtVarDecl *stmt, Stmt **source);
 	bool visit(StmtCond *stmt, Stmt **source);
-	bool visit(StmtForIn *stmt, Stmt **source);
 	bool visit(StmtFor *stmt, Stmt **source);
 	bool visit(StmtWhile *stmt, Stmt **source);
 	bool visit(StmtRet *stmt, Stmt **source);

@@ -175,7 +175,6 @@ bool CDriver::visit(Stmt *stmt, Writer &writer, const bool &semicol)
 	case STRUCTDEF: res = visit(as<StmtStruct>(stmt), tmp, semicol); break;
 	case VARDECL: res = visit(as<StmtVarDecl>(stmt), tmp, semicol); break;
 	case COND: res = visit(as<StmtCond>(stmt), tmp, semicol); break;
-	case FORIN: res = visit(as<StmtForIn>(stmt), tmp, semicol); break;
 	case FOR: res = visit(as<StmtFor>(stmt), tmp, semicol); break;
 	case WHILE: res = visit(as<StmtWhile>(stmt), tmp, semicol); break;
 	case RET: res = visit(as<StmtRet>(stmt), tmp, semicol); break;
@@ -694,11 +693,6 @@ bool CDriver::visit(StmtCond *stmt, Writer &writer, const bool &semicol)
 	}
 	return true;
 }
-bool CDriver::visit(StmtForIn *stmt, Writer &writer, const bool &semicol)
-{
-	err.set(stmt, "Unimplemented for-in C code generation");
-	return false;
-}
 bool CDriver::visit(StmtFor *stmt, Writer &writer, const bool &semicol)
 {
 	if(stmt->isInline()) {
@@ -890,7 +884,6 @@ bool CDriver::acceptsSemicolon(Stmt *stmt)
 	case STRUCTDEF: return false;
 	case VARDECL: return true;
 	case COND: return false;
-	case FORIN: return false;
 	case FOR: return false;
 	case WHILE: return false;
 	case RET: return true;

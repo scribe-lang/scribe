@@ -42,7 +42,6 @@ enum Stmts
 	STRUCTDEF,
 	VARDECL,
 	COND,
-	FORIN,
 	FOR,
 	WHILE,
 	RET,
@@ -94,7 +93,6 @@ public:
 	isStmtX(StructDef, STRUCTDEF);
 	isStmtX(VarDecl, VARDECL);
 	isStmtX(Cond, COND);
-	isStmtX(ForIn, FORIN);
 	isStmtX(For, FOR);
 	isStmtX(While, WHILE);
 	isStmtX(Return, RET);
@@ -878,38 +876,6 @@ public:
 	inline bool isInline() const
 	{
 		return is_inline;
-	}
-};
-
-class StmtForIn : public Stmt
-{
-	lex::Lexeme iter;
-	Stmt *in; // L01
-	StmtBlock *blk;
-
-public:
-	StmtForIn(const ModuleLoc &loc, const lex::Lexeme &iter, Stmt *in, StmtBlock *blk);
-	~StmtForIn();
-	static StmtForIn *create(Context &c, const ModuleLoc &loc, const lex::Lexeme &iter,
-				 Stmt *in, StmtBlock *blk);
-
-	void disp(const bool &has_next);
-	Stmt *clone(Context &ctx);
-	void clearValue();
-	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
-
-	inline const lex::Lexeme &getIter() const
-	{
-		return iter;
-	}
-	inline Stmt *&getIn()
-	{
-		return in;
-	}
-	inline StmtBlock *&getBlk()
-	{
-		return blk;
 	}
 };
 

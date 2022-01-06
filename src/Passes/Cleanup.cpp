@@ -40,7 +40,6 @@ bool CleanupPass::visit(Stmt *stmt, Stmt **source)
 	case STRUCTDEF: return visit(as<StmtStruct>(stmt), source);
 	case VARDECL: return visit(as<StmtVarDecl>(stmt), source);
 	case COND: return visit(as<StmtCond>(stmt), source);
-	case FORIN: return visit(as<StmtForIn>(stmt), source);
 	case FOR: return visit(as<StmtFor>(stmt), source);
 	case WHILE: return visit(as<StmtWhile>(stmt), source);
 	case RET: return visit(as<StmtRet>(stmt), source);
@@ -169,10 +168,6 @@ bool CleanupPass::visit(StmtVarDecl *stmt, Stmt **source)
 	return true;
 }
 bool CleanupPass::visit(StmtCond *stmt, Stmt **source)
-{
-	return true;
-}
-bool CleanupPass::visit(StmtForIn *stmt, Stmt **source)
 {
 	return true;
 }
