@@ -63,7 +63,6 @@ const char *Stmt::getStmtTypeCString() const
 	case STRUCTDEF: return "structure definition";
 	case VARDECL: return "variable declaration";
 	case COND: return "conditional";
-	case FORIN: return "for-in loop";
 	case FOR: return "for loop";
 	case WHILE: return "while loop";
 	case RET: return "return";
@@ -757,41 +756,6 @@ bool StmtCond::requiresTemplateInit()
 		if(c.getCond() && c.getCond()->requiresTemplateInit()) return true;
 		if(c.getBlk() && c.getBlk()->requiresTemplateInit()) return true;
 	}
-	return false;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////// StmtForIn //////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-StmtForIn::StmtForIn(const ModuleLoc &loc, const lex::Lexeme &iter, Stmt *in, StmtBlock *blk)
-	: Stmt(FORIN, loc), iter(iter), in(in), blk(blk)
-{}
-StmtForIn::~StmtForIn() {}
-StmtForIn *StmtForIn::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &iter, Stmt *in,
-			     StmtBlock *blk)
-{
-	return c.allocStmt<StmtForIn>(loc, iter, in, blk);
-}
-
-void StmtForIn::disp(const bool &has_next)
-{
-	tio::taba(has_next);
-	tio::print(has_next, "For-in loop with iterator: %s:\n", iter.getDataStr().c_str());
-	tio::taba(true);
-	tio::print(true, "In:\n");
-	in->disp(false);
-	tio::tabr();
-	tio::taba(false);
-	tio::print(false, "Block:\n");
-	blk->disp(false);
-	tio::tabr(2);
-}
-
-bool StmtForIn::requiresTemplateInit()
-{
-	if(in->requiresTemplateInit()) return true;
-	if(blk && blk->requiresTemplateInit()) return true;
 	return false;
 }
 

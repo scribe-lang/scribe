@@ -85,7 +85,6 @@ public:
 	bool visit(StmtStruct *stmt, Writer &writer, const bool &semicol);
 	bool visit(StmtVarDecl *stmt, Writer &writer, const bool &semicol);
 	bool visit(StmtCond *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtForIn *stmt, Writer &writer, const bool &semicol);
 	bool visit(StmtFor *stmt, Writer &writer, const bool &semicol);
 	bool visit(StmtWhile *stmt, Writer &writer, const bool &semicol);
 	bool visit(StmtRet *stmt, Writer &writer, const bool &semicol);

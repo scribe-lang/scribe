@@ -45,7 +45,6 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 	case STRUCTDEF: res = visit(as<StmtStruct>(stmt), source); break;
 	case VARDECL: res = visit(as<StmtVarDecl>(stmt), source); break;
 	case COND: res = visit(as<StmtCond>(stmt), source); break;
-	case FORIN: res = visit(as<StmtForIn>(stmt), source); break;
 	case FOR: res = visit(as<StmtFor>(stmt), source); break;
 	case WHILE: res = visit(as<StmtWhile>(stmt), source); break;
 	case RET: res = visit(as<StmtRet>(stmt), source); break;
@@ -1018,10 +1017,6 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 	if(stmt->isInline()) {
 		*source = nullptr;
 	}
-	return true;
-}
-bool TypeAssignPass::visit(StmtForIn *stmt, Stmt **source)
-{
 	return true;
 }
 bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)

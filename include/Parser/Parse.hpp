@@ -76,6 +76,7 @@ public:
 	bool parse_vardecl(ParseHelper &p, Stmt *&vd); // combines VAR_DECL_BASE and VAR_DECL
 
 	bool parse_conds(ParseHelper &p, Stmt *&conds);
+	// this is just a transformation that generates a for loop
 	bool parse_forin(ParseHelper &p, Stmt *&fin);
 	bool parse_for(ParseHelper &p, Stmt *&f);
 	bool parse_while(ParseHelper &p, Stmt *&w);
