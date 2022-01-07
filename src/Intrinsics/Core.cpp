@@ -117,7 +117,7 @@ INTRINSIC(szof)
 		err.set(args[0], "invalid type info, received size 0");
 		return false;
 	}
-	stmt->createAndSetValue(IntVal::create(c, mkU64Ty(c), CDTRUE, sz));
+	stmt->createAndSetValue(IntVal::create(c, mkU64Ty(c), CDPERMA, sz));
 	return true;
 }
 INTRINSIC(as)
