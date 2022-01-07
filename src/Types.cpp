@@ -163,6 +163,10 @@ bool Type::requiresCast(Type *other)
 	}
 	return false;
 }
+uint64_t Type::getUniqID()
+{
+	return getID();
+}
 uint64_t Type::getID()
 {
 	return getBaseID();
@@ -321,6 +325,11 @@ TypeTy::TypeTy(const size_t &info, const uint64_t &id, const uint64_t &contained
 {}
 TypeTy::~TypeTy() {}
 
+uint64_t TypeTy::getUniqID()
+{
+	if(getContainedTy()) getContainedTy()->getUniqID();
+	return getID();
+}
 bool TypeTy::isTemplate(const size_t &weak_depth)
 {
 	return !getContainedTy();
@@ -402,6 +411,11 @@ PtrTy::PtrTy(const size_t &info, const uint64_t &id, Type *to, const size_t &cou
 	: Type(TPTR, info, id), to(to), count(count), is_weak(is_weak)
 {}
 PtrTy::~PtrTy() {}
+uint64_t PtrTy::getUniqID()
+{
+	if(to && !is_weak) return to->getUniqID();
+	return getID();
+}
 bool PtrTy::isTemplate(const size_t &weak_depth)
 {
 	return weak_depth >= MAX_WEAKPTR_DEPTH ? false : to->isTemplate(weak_depth + is_weak);
@@ -488,6 +502,14 @@ StructTy::StructTy(const size_t &info, const uint64_t &id,
 	  has_template(has_template), externed(externed)
 {}
 StructTy::~StructTy() {}
+uint64_t StructTy::getUniqID()
+{
+	uint64_t res = getID();
+	for(auto &f : fields) {
+		res += f->getUniqID();
+	}
+	return res;
+}
 bool StructTy::isTemplate(const size_t &weak_depth)
 {
 	for(auto &f : fields) {

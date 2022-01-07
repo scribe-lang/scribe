@@ -82,6 +82,7 @@ public:
 	std::string baseToStr();
 	bool requiresCast(Type *other);
 
+	virtual uint64_t getUniqID(); // used by codegen
 	virtual uint64_t getID();
 	virtual bool isTemplate(const size_t &weak_depth = 0);
 	virtual std::string toStr(const size_t &weak_depth = 0);
@@ -278,6 +279,7 @@ public:
 	TypeTy(const size_t &info, const uint64_t &id, const uint64_t &containedtyid);
 	~TypeTy();
 
+	uint64_t getUniqID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
@@ -306,6 +308,7 @@ public:
 	      const bool &is_weak);
 	~PtrTy();
 
+	uint64_t getUniqID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
@@ -366,6 +369,7 @@ public:
 		 const bool &externed);
 	~StructTy();
 
+	uint64_t getUniqID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);

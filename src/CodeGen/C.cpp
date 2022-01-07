@@ -306,14 +306,14 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 	case lex::FNCALL: {
 		std::string fname	  = as<StmtSimple>(lhs)->getLexValue().getDataStr();
 		std::vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
-		writer.write("%s%" PRIu64 "(", fname.c_str(), lhs->getValueTy()->getID());
+		writer.write("%s%" PRIu64 "(", fname.c_str(), lhs->getValueTy()->getUniqID());
 		if(!writeCallArgs(stmt->getLoc(), args, lhs->getValueTy(), writer)) return false;
 		writer.write(")");
 		break;
 	}
 	case lex::STCALL: {
 		std::vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
-		writer.write("(struct_%" PRIu64 "){", lhs->getValueTy()->getID());
+		writer.write("(struct_%" PRIu64 "){", lhs->getValueTy()->getUniqID());
 		if(!writeCallArgs(stmt->getLoc(), args, lhs->getValueTy(), writer)) return false;
 		writer.write("}");
 		break;
@@ -449,7 +449,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 			macros.push_back(macro);
 		} else if(ent->isStructDef()) {
 			std::string decl = "typedef " + ext->getName().getDataStr();
-			decl += " struct_" + std::to_string(ent->getValueTy()->getID());
+			decl += " struct_" + std::to_string(ent->getValueTy()->getUniqID());
 			decl += ";";
 			typedefs.push_back(decl);
 		} else if(ent->isFnSig()) {
@@ -906,7 +906,7 @@ bool CDriver::getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool for_decl
 
 	if(is_weak) {
 		if(for_decl) res = pre + "struct ";
-		res += "struct_" + std::to_string(ty->getID()) + post;
+		res += "struct_" + std::to_string(ty->getUniqID()) + post;
 		return true;
 	}
 
@@ -957,7 +957,7 @@ bool CDriver::getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool for_decl
 				s->toStr().c_str());
 			return false;
 		}
-		res = pre + "struct_" + std::to_string(s->getID()) + post;
+		res = pre + "struct_" + std::to_string(s->getUniqID()) + post;
 		return true;
 	}
 	err.set(stmt, "invalid scribe type encountered: %s", ty->toStr().c_str());
@@ -1039,13 +1039,13 @@ bool CDriver::getCValue(std::string &res, Stmt *stmt, Value *value, Type *type, 
 bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 {
 	static std::unordered_set<uint64_t> declaredstructs;
-	if(declaredstructs.find(sty->getID()) != declaredstructs.end()) return true;
+	if(declaredstructs.find(sty->getUniqID()) != declaredstructs.end()) return true;
 	if(sty->isExtern()) { // externed structs are declared in StmtVar
-		declaredstructs.insert(sty->getID());
+		declaredstructs.insert(sty->getUniqID());
 		return true;
 	}
 	Writer st;
-	st.write("struct struct_%" PRIu64 " {", sty->getID());
+	st.write("struct struct_%" PRIu64 " {", sty->getUniqID());
 	if(!sty->getFields().empty()) {
 		st.addIndent();
 		st.newLine();
@@ -1070,10 +1070,10 @@ bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 	st.write("};");
 	structdecls.push_back(st.getData());
 	Writer tydef;
-	tydef.write("typedef struct struct_%" PRIu64 " struct_%" PRIu64 ";", sty->getID(),
-		    sty->getID());
+	tydef.write("typedef struct struct_%" PRIu64 " struct_%" PRIu64 ";", sty->getUniqID(),
+		    sty->getUniqID());
 	structdecls.push_back(tydef.getData());
-	declaredstructs.insert(sty->getID());
+	declaredstructs.insert(sty->getUniqID());
 	return true;
 }
 bool CDriver::applyCast(Stmt *stmt, Writer &writer, Writer &tmp)
@@ -1134,8 +1134,8 @@ bool CDriver::getFuncPointer(std::string &res, FuncTy *f, Stmt *stmt, bool for_d
 	static std::unordered_set<uint64_t> funcids;
 	std::string decl = "typedef ";
 	std::string cty;
-	res = "func_" + std::to_string(f->getID());
-	if(funcids.find(f->getID()) != funcids.end()) return true;
+	res = "func_" + std::to_string(f->getUniqID());
+	if(funcids.find(f->getUniqID()) != funcids.end()) return true;
 	if(!getCTypeName(cty, stmt, f->getRet(), for_decl, is_weak)) {
 		err.set(stmt, "failed to determine C type for scribe type: %s",
 			f->getRet()->toStr().c_str());
@@ -1160,7 +1160,7 @@ bool CDriver::getFuncPointer(std::string &res, FuncTy *f, Stmt *stmt, bool for_d
 	}
 	decl += ");";
 	typedefs.push_back(decl);
-	funcids.insert(f->getID());
+	funcids.insert(f->getUniqID());
 	return true;
 }
 std::string CDriver::getArrCount(Type *t)
