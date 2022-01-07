@@ -6,6 +6,7 @@
 let c = @import("std/c");
 let vec = @import("std/vec"); // required for vec.str() and str.delim()
 let utils = @import("std/utils");
+let hashing = @import("std/hashing");
 
 let float_precision = 3;
 
@@ -62,6 +63,12 @@ let fromSlice = fn(data: *const i8, count: u64): String {
 	return res;
 };
 
+let init in String = fn() {
+	self.data = nil;
+	self.length = 0;
+	self.capacity = 0;
+};
+
 let deinit in String = fn() {
 	if @as(u64, self.data) == nil { return; }
 	c.free(i8, self.data);
@@ -103,6 +110,10 @@ let clear in String = fn() {
 
 let copy in const String = fn(): String {
 	return from(self.data);
+};
+
+let hash in const String = fn(): u64 {
+	return hashing.cStr(self.data, self.length);
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

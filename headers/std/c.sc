@@ -21,10 +21,12 @@ let snprintf = extern[snprintf, "<stdio.h>"] fn(buf: *i8, bufsz: u64, fmt: *cons
 let strlen = extern[strlen, "<string.h>"] fn(data: *const i8): u64;
 let strcmp = extern[strcmp, "<string.h>"] fn(lhs: *const i8, rhs: *const i8): i32;
 let _malloc = extern[malloc, "<stdlib.h>"] fn(size: u64): *void;
+let _calloc = extern[calloc, "<stdlib.h>"] fn(count: u64, sz: u64): *void;
 let _realloc = extern[realloc, "<stdlib.h>"] fn(data: *void, newsz: u64): *void;
 let _free = extern[free, "<stdlib.h>"] fn(data: *void);
 let memcpy = extern[memcpy, "<string.h>"] fn(dest: *void, src: *const void, count: u64): *void;
 let memset = extern[memset, "<string.h>"] fn(dest: *void, ch: i32, count: u64): *void;
+let memcmp = extern[memcmp, "<string.h>"] fn(lhs: *const void, rhs: *const void, count: u64): i32;
 let getenv = extern[getenv, "<stdlib.h>"] fn(name: *const i8): *const i8; // in C, actually returns *i8
 let setenv = extern[setenv, "<stdlib.h>"] fn(name: *const i8, val: *const i8, overwrite: i1): i32;
 let system = extern[system, "<stdlib.h>"] fn(command: *const i8): i32;
@@ -35,6 +37,10 @@ let isspace = extern[isspace, "<ctype.h>"] fn(ch: i32): i32;
 let malloc = fn(comptime T: type, count: u64): *T {
         let comptime sz = @sizeOf(T);
         return @as(@ptr(T), _malloc(sz * count));
+};
+let calloc = fn(comptime T: type, count: u64): *T {
+	let comptime sz = @sizeOf(T);
+	return @as(@ptr(T), _calloc(count, sz));
 };
 let realloc = fn(comptime T: type, data: *T, count: u64): *T {
 	let comptime sz = @sizeOf(T);
