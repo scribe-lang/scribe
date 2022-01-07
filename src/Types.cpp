@@ -199,7 +199,7 @@ Value *Type::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData 
 VoidTy::VoidTy() : Type(TVOID, 0, TVOID) {}
 VoidTy::VoidTy(const size_t &info) : Type(TVOID, info, TVOID) {}
 VoidTy::~VoidTy() {}
-Type *VoidTy::clone(Context &c, const bool &as_is)
+Type *VoidTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	return c.allocType<VoidTy>(getInfo());
 }
@@ -224,7 +224,7 @@ Value *VoidTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsDat
 AnyTy::AnyTy() : Type(TANY, 0, TANY) {}
 AnyTy::AnyTy(const size_t &info) : Type(TANY, info, TANY) {}
 AnyTy::~AnyTy() {}
-Type *AnyTy::clone(Context &c, const bool &as_is)
+Type *AnyTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	return c.allocType<AnyTy>(getInfo());
 }
@@ -257,7 +257,7 @@ uint64_t IntTy::getID()
 {
 	return getBaseID() + bits + (sign * 2);
 }
-Type *IntTy::clone(Context &c, const bool &as_is)
+Type *IntTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	return c.allocType<IntTy>(getInfo(), getBaseID(), bits, sign);
 }
@@ -291,7 +291,7 @@ uint64_t FltTy::getID()
 {
 	return getBaseID() + (bits * 3); // * 3 to prevent clash between int and flt
 }
-Type *FltTy::clone(Context &c, const bool &as_is)
+Type *FltTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	return c.allocType<FltTy>(getInfo(), getBaseID(), bits);
 }
@@ -331,10 +331,10 @@ std::string TypeTy::toStr(const size_t &weak_depth)
 	return infoToStr() + "typety<" +
 	       (ct ? ct->toStr(weak_depth) : "(none:" + std::to_string(containedtyid) + ")") + ">";
 }
-Type *TypeTy::clone(Context &c, const bool &as_is)
+Type *TypeTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	if(!as_is && getContainedTy()) {
-		Type *res = getContainedTy()->clone(c, as_is);
+		Type *res = getContainedTy()->clone(c, as_is, weak_depth);
 		res->appendInfo(getInfo());
 		return res;
 	}
@@ -418,10 +418,11 @@ std::string PtrTy::toStr(const size_t &weak_depth)
 	}
 	return res;
 }
-Type *PtrTy::clone(Context &c, const bool &as_is)
+Type *PtrTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
-	return c.allocType<PtrTy>(getInfo(), getBaseID(), !is_weak ? to->clone(c, as_is) : to,
-				  count, is_weak);
+	bool valid_depth = weak_depth < MAX_WEAKPTR_DEPTH;
+	Type *clone	 = valid_depth ? to->clone(c, as_is, weak_depth + is_weak) : to;
+	return c.allocType<PtrTy>(getInfo(), getBaseID(), clone, count, is_weak);
 }
 bool PtrTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 {
@@ -507,12 +508,12 @@ std::string StructTy::toStr(const size_t &weak_depth)
 	res += "}";
 	return res;
 }
-Type *StructTy::clone(Context &c, const bool &as_is)
+Type *StructTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	std::vector<Type *> newfields;
 	std::vector<TypeTy *> newtemplates;
-	for(auto &field : fields) newfields.push_back(field->clone(c, as_is));
-	for(auto &t : templates) newtemplates.push_back(as<TypeTy>(t->clone(c, as_is)));
+	for(auto &field : fields) newfields.push_back(field->clone(c, as_is, weak_depth));
+	for(auto &t : templates) newtemplates.push_back(as<TypeTy>(t->clone(c, as_is, weak_depth)));
 	return c.allocType<StructTy>(getInfo(), getBaseID(), fieldnames, fieldpos, newfields,
 				     templatenames, templatepos, newtemplates, has_template,
 				     externed);
@@ -705,12 +706,13 @@ std::string FuncTy::toStr(const size_t &weak_depth)
 	res += "): " + ret->toStr(weak_depth);
 	return res;
 }
-Type *FuncTy::clone(Context &c, const bool &as_is)
+Type *FuncTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	std::vector<Type *> newargs;
-	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is));
-	return c.allocType<FuncTy>(getInfo(), getBaseID(), var, newargs, ret->clone(c, as_is),
-				   intrin, inty, uniqid, externed);
+	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is, weak_depth));
+	return c.allocType<FuncTy>(getInfo(), getBaseID(), var, newargs,
+				   ret->clone(c, as_is, weak_depth), intrin, inty, uniqid,
+				   externed);
 }
 bool FuncTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 {
@@ -862,10 +864,10 @@ std::string VariadicTy::toStr(const size_t &weak_depth)
 	res += ">";
 	return res;
 }
-Type *VariadicTy::clone(Context &c, const bool &as_is)
+Type *VariadicTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	std::vector<Type *> newargs;
-	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is));
+	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is, weak_depth));
 	return c.allocType<VariadicTy>(getInfo(), getBaseID(), newargs);
 }
 bool VariadicTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)

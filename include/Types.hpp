@@ -85,7 +85,8 @@ public:
 	virtual uint64_t getID();
 	virtual bool isTemplate(const size_t &weak_depth = 0);
 	virtual std::string toStr(const size_t &weak_depth = 0);
-	virtual Type *clone(Context &c, const bool &as_is = false) = 0;
+	virtual Type *clone(Context &c, const bool &as_is = false,
+			    const size_t &weak_depth = 0) = 0;
 	virtual bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	virtual void unmergeTemplates(const size_t &weak_depth = 0);
 	virtual bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
@@ -191,7 +192,7 @@ public:
 	VoidTy(const size_t &info);
 	~VoidTy();
 
-	Type *clone(Context &c, const bool &as_is = false);
+	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 
 	static VoidTy *create(Context &c);
@@ -206,7 +207,7 @@ public:
 	AnyTy(const size_t &info);
 	~AnyTy();
 
-	Type *clone(Context &c, const bool &as_is = false);
+	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 
 	static AnyTy *create(Context &c);
@@ -226,7 +227,7 @@ public:
 	~IntTy();
 
 	uint64_t getID();
-	Type *clone(Context &c, const bool &as_is = false);
+	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 
 	static IntTy *create(Context &c, const size_t &_bits, const bool &_sign);
@@ -254,7 +255,7 @@ public:
 	~FltTy();
 
 	uint64_t getID();
-	Type *clone(Context &c, const bool &as_is = false);
+	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
 
 	static FltTy *create(Context &c, const size_t &_bits);
@@ -279,7 +280,7 @@ public:
 
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
-	Type *clone(Context &c, const bool &as_is = false);
+	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 
@@ -307,7 +308,7 @@ public:
 
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
-	Type *clone(Context &c, const bool &as_is = false);
+	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 
@@ -367,7 +368,7 @@ public:
 
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
-	Type *clone(Context &c, const bool &as_is = false);
+	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
@@ -461,7 +462,7 @@ public:
 	uint64_t getID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
-	Type *clone(Context &c, const bool &as_is = false);
+	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
@@ -552,7 +553,7 @@ public:
 
 	bool isTemplate(const size_t &weak_depth = 0);
 	std::string toStr(const size_t &weak_depth = 0);
-	Type *clone(Context &c, const bool &as_is = false);
+	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
