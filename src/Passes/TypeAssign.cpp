@@ -492,7 +492,13 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 					t->toStr().c_str());
 				return false;
 			}
-			stmt->createAndSetValue(as<VecVal>(lhs->getValue())->getValAt(0));
+			if(lhs->getValue()->isVec()) {
+				stmt->createAndSetValue(as<VecVal>(lhs->getValue())->getValAt(0));
+			} else {
+				Type *to = as<PtrTy>(t)->getTo();
+				Value *v = to->toDefaultValue(ctx, err, stmt->getLoc(), CDFALSE);
+				stmt->createAndSetValue(v);
+			}
 			break;
 		}
 		Type *t = as<TypeVal>(lhs->getValue())->getVal();

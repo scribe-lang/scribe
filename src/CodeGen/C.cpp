@@ -243,7 +243,8 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 	case lex::INT:	 // fallthrough
 	case lex::FLT:	 // fallthrough
 	case lex::CHAR:	 // fallthrough
-	case lex::STR: writer.write(getConstantDataVar(stmt->getLexValue(), stmt->getValueTy()));
+	case lex::STR:
+		writer.write(getConstantDataVar(stmt->getLexValue(), stmt->getValueTy(true)));
 	default: return true;
 	}
 	// No perma data here as all variables lose permadata attribute

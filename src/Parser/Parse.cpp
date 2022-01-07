@@ -450,7 +450,7 @@ bool Parsing::parse_expr_10(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 		return false;
 	}
 
-	while(p.accept(lex::BAND)) {
+	while(p.accept(lex::BXOR)) {
 		oper = p.peek();
 		p.next();
 		if(!parse_expr_09(p, rhs, disable_brace_after_iden)) {
