@@ -116,7 +116,11 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 
 	g  = mkTypeTy(c);
 	g2 = mkTypeTy(c);
-	ADDFN("ref", createFnVal(c, {g}, g2, intrinsic_ptr, IPARSE));
+	ADDFN("ref", createFnVal(c, {g}, g2, intrinsic_ref, IPARSE));
+
+	g  = mkTypeTy(c);
+	g2 = mkTypeTy(c);
+	ADDFN("cons", createFnVal(c, {g}, g2, intrinsic_cons, IPARSE));
 
 	g   = mkTypeTy(c);
 	u64 = mkU64Ty(c);

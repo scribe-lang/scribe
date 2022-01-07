@@ -148,6 +148,14 @@ INTRINSIC(ref)
 	stmt->createAndSetValue(TypeVal::create(c, res));
 	return true;
 }
+INTRINSIC(cons)
+{
+	// args[0] should be a TypeVal
+	Type *res = as<TypeVal>(args[0]->getValue())->getVal()->clone(c);
+	res->setConst();
+	stmt->createAndSetValue(TypeVal::create(c, res));
+	return true;
+}
 INTRINSIC(valen)
 {
 	if(stmt->getValue()->hasData()) return true;
