@@ -54,14 +54,14 @@ class Stmt
 {
 protected:
 	Stmts stype;
-	ModuleLoc loc;
+	const ModuleLoc *loc;
 
 	uint64_t valueid;
 	Type *cast_to;
 	size_t derefcount; // number of dereferences to be done while generating code
 
 public:
-	Stmt(const Stmts &stmt_type, const ModuleLoc &loc);
+	Stmt(const Stmts &stmt_type, const ModuleLoc *loc);
 	virtual ~Stmt();
 
 	virtual void disp(const bool &has_next)					     = 0;
@@ -109,13 +109,13 @@ public:
 		return getStmtTypeCString();
 	}
 
-	inline ModuleLoc &getLoc()
+	inline const ModuleLoc *getLoc()
 	{
 		return loc;
 	}
 	inline Module *getMod() const
 	{
-		return loc.getMod();
+		return loc->getMod();
 	}
 
 	inline void castTo(Type *t)
@@ -187,9 +187,9 @@ class StmtBlock : public Stmt
 	bool is_top;
 
 public:
-	StmtBlock(const ModuleLoc &loc, const std::vector<Stmt *> &stmts, const bool &is_top);
+	StmtBlock(const ModuleLoc *loc, const std::vector<Stmt *> &stmts, const bool &is_top);
 	~StmtBlock();
-	static StmtBlock *create(Context &c, const ModuleLoc &loc, const std::vector<Stmt *> &stmts,
+	static StmtBlock *create(Context &c, const ModuleLoc *loc, const std::vector<Stmt *> &stmts,
 				 const bool &is_top);
 
 	void disp(const bool &has_next);
@@ -216,9 +216,9 @@ class StmtType : public Stmt
 	Stmt *expr; // can be func, func call, name, name.x, ... (expr1)
 
 public:
-	StmtType(const ModuleLoc &loc, const size_t &ptr, const size_t &info, Stmt *expr);
+	StmtType(const ModuleLoc *loc, const size_t &ptr, const size_t &info, Stmt *expr);
 	~StmtType();
-	static StmtType *create(Context &c, const ModuleLoc &loc, const size_t &ptr,
+	static StmtType *create(Context &c, const ModuleLoc *loc, const size_t &ptr,
 				const size_t &info, Stmt *expr);
 
 	void disp(const bool &has_next);
@@ -271,9 +271,9 @@ class StmtSimple : public Stmt
 	bool applied_module_id;
 
 public:
-	StmtSimple(const ModuleLoc &loc, const lex::Lexeme &val);
+	StmtSimple(const ModuleLoc *loc, const lex::Lexeme &val);
 	~StmtSimple();
-	static StmtSimple *create(Context &c, const ModuleLoc &loc, const lex::Lexeme &val);
+	static StmtSimple *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &val);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
@@ -320,9 +320,9 @@ class StmtFnCallInfo : public Stmt
 	std::vector<Stmt *> args;
 
 public:
-	StmtFnCallInfo(const ModuleLoc &loc, const std::vector<Stmt *> &args);
+	StmtFnCallInfo(const ModuleLoc *loc, const std::vector<Stmt *> &args);
 	~StmtFnCallInfo();
-	static StmtFnCallInfo *create(Context &c, const ModuleLoc &loc,
+	static StmtFnCallInfo *create(Context &c, const ModuleLoc *loc,
 				      const std::vector<Stmt *> &args);
 
 	void disp(const bool &has_next);
@@ -357,11 +357,11 @@ class StmtExpr : public Stmt
 	FuncTy *calledfn;
 
 public:
-	StmtExpr(const ModuleLoc &loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
+	StmtExpr(const ModuleLoc *loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
 		 Stmt *rhs, const bool &is_intrinsic_call);
 	~StmtExpr();
 	// or_blk and or_blk_var can be set separately - nullptr/INVALID by default
-	static StmtExpr *create(Context &c, const ModuleLoc &loc, const size_t &commas, Stmt *lhs,
+	static StmtExpr *create(Context &c, const ModuleLoc *loc, const size_t &commas, Stmt *lhs,
 				const lex::Lexeme &oper, Stmt *rhs, const bool &is_intrinsic_call);
 
 	void disp(const bool &has_next);
@@ -431,11 +431,11 @@ class StmtVar : public Stmt
 	bool applied_codegen_mangle;
 
 public:
-	StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
+	StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
 		const bool &is_in, const bool &is_comptime, const bool &is_global);
 	~StmtVar();
 	// at least one of type or val must be present
-	static StmtVar *create(Context &c, const ModuleLoc &loc, const lex::Lexeme &name,
+	static StmtVar *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &name,
 			       StmtType *vtype, Stmt *vval, const bool &is_in,
 			       const bool &is_comptime, const bool &is_global);
 
@@ -509,10 +509,10 @@ class StmtFnSig : public Stmt
 	bool has_variadic;
 
 public:
-	StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtType *rettype,
+	StmtFnSig(const ModuleLoc *loc, std::vector<StmtVar *> &args, StmtType *rettype,
 		  const bool &has_variadic);
 	~StmtFnSig();
-	static StmtFnSig *create(Context &c, const ModuleLoc &loc, std::vector<StmtVar *> &args,
+	static StmtFnSig *create(Context &c, const ModuleLoc *loc, std::vector<StmtVar *> &args,
 				 StmtType *rettype, const bool &has_variadic);
 
 	void disp(const bool &has_next);
@@ -568,9 +568,9 @@ class StmtFnDef : public Stmt
 	int64_t used; // if unused (false), will be deleted in SimplifyPass
 
 public:
-	StmtFnDef(const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk);
+	StmtFnDef(const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk);
 	~StmtFnDef();
-	static StmtFnDef *create(Context &c, const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk);
+	static StmtFnDef *create(Context &c, const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
@@ -638,8 +638,8 @@ class StmtHeader : public Stmt
 	lex::Lexeme names, flags;
 
 public:
-	StmtHeader(const ModuleLoc &loc, const lex::Lexeme &names, const lex::Lexeme &flags);
-	static StmtHeader *create(Context &c, const ModuleLoc &loc, const lex::Lexeme &names,
+	StmtHeader(const ModuleLoc *loc, const lex::Lexeme &names, const lex::Lexeme &flags);
+	static StmtHeader *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &names,
 				  const lex::Lexeme &flags);
 
 	void disp(const bool &has_next);
@@ -664,8 +664,8 @@ class StmtLib : public Stmt
 	lex::Lexeme flags;
 
 public:
-	StmtLib(const ModuleLoc &loc, const lex::Lexeme &flags);
-	static StmtLib *create(Context &c, const ModuleLoc &loc, const lex::Lexeme &flags);
+	StmtLib(const ModuleLoc *loc, const lex::Lexeme &flags);
+	static StmtLib *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &flags);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
@@ -688,11 +688,11 @@ class StmtExtern : public Stmt
 	StmtVar *parentvar;
 
 public:
-	StmtExtern(const ModuleLoc &loc, const lex::Lexeme &fname, StmtHeader *headers,
+	StmtExtern(const ModuleLoc *loc, const lex::Lexeme &fname, StmtHeader *headers,
 		   StmtLib *libs, Stmt *entity);
 	~StmtExtern();
 	// headers and libs can be set separately - by default nullptr
-	static StmtExtern *create(Context &c, const ModuleLoc &loc, const lex::Lexeme &fname,
+	static StmtExtern *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &fname,
 				  StmtHeader *headers, StmtLib *libs, Stmt *entity);
 
 	void disp(const bool &has_next);
@@ -736,9 +736,9 @@ class StmtEnum : public Stmt
 	std::vector<lex::Lexeme> items;
 
 public:
-	StmtEnum(const ModuleLoc &loc, const std::vector<lex::Lexeme> &items);
+	StmtEnum(const ModuleLoc *loc, const std::vector<lex::Lexeme> &items);
 	~StmtEnum();
-	static StmtEnum *create(Context &c, const ModuleLoc &loc,
+	static StmtEnum *create(Context &c, const ModuleLoc *loc,
 				const std::vector<lex::Lexeme> &items);
 
 	void disp(const bool &has_next);
@@ -761,11 +761,11 @@ class StmtStruct : public Stmt
 	bool is_externed; // required for setting up partial types correctly
 
 public:
-	StmtStruct(const ModuleLoc &loc, const std::vector<StmtVar *> &fields,
+	StmtStruct(const ModuleLoc *loc, const std::vector<StmtVar *> &fields,
 		   const std::vector<lex::Lexeme> &templates);
 	~StmtStruct();
 	// StmtVar contains only type here, no val
-	static StmtStruct *create(Context &c, const ModuleLoc &loc,
+	static StmtStruct *create(Context &c, const ModuleLoc *loc,
 				  const std::vector<StmtVar *> &fields,
 				  const std::vector<lex::Lexeme> &templates);
 
@@ -800,10 +800,10 @@ class StmtVarDecl : public Stmt
 	std::vector<StmtVar *> decls;
 
 public:
-	StmtVarDecl(const ModuleLoc &loc, const std::vector<StmtVar *> &decls);
+	StmtVarDecl(const ModuleLoc *loc, const std::vector<StmtVar *> &decls);
 	~StmtVarDecl();
 	// StmtVar can contain any combination of type, in, val(any), or all three
-	static StmtVarDecl *create(Context &c, const ModuleLoc &loc,
+	static StmtVarDecl *create(Context &c, const ModuleLoc *loc,
 				   const std::vector<StmtVar *> &decls);
 
 	void disp(const bool &has_next);
@@ -857,10 +857,10 @@ class StmtCond : public Stmt
 	bool is_inline;
 
 public:
-	StmtCond(const ModuleLoc &loc, const std::vector<Conditional> &conds,
+	StmtCond(const ModuleLoc *loc, const std::vector<Conditional> &conds,
 		 const bool &is_inline);
 	~StmtCond();
-	static StmtCond *create(Context &c, const ModuleLoc &loc,
+	static StmtCond *create(Context &c, const ModuleLoc *loc,
 				const std::vector<Conditional> &conds, const bool &is_inline);
 
 	void disp(const bool &has_next);
@@ -888,11 +888,11 @@ class StmtFor : public Stmt
 	bool is_inline;
 
 public:
-	StmtFor(const ModuleLoc &loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *blk,
+	StmtFor(const ModuleLoc *loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *blk,
 		const bool &is_inline);
 	~StmtFor();
 	// init, cond, incr can be nullptr
-	static StmtFor *create(Context &c, const ModuleLoc &loc, Stmt *init, Stmt *cond, Stmt *incr,
+	static StmtFor *create(Context &c, const ModuleLoc *loc, Stmt *init, Stmt *cond, Stmt *incr,
 			       StmtBlock *blk, const bool &is_inline);
 
 	void disp(const bool &has_next);
@@ -929,9 +929,9 @@ class StmtWhile : public Stmt
 	StmtBlock *blk;
 
 public:
-	StmtWhile(const ModuleLoc &loc, Stmt *cond, StmtBlock *blk);
+	StmtWhile(const ModuleLoc *loc, Stmt *cond, StmtBlock *blk);
 	~StmtWhile();
-	static StmtWhile *create(Context &c, const ModuleLoc &loc, Stmt *cond, StmtBlock *blk);
+	static StmtWhile *create(Context &c, const ModuleLoc *loc, Stmt *cond, StmtBlock *blk);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
@@ -955,9 +955,9 @@ class StmtRet : public Stmt
 	StmtBlock *fnblk;
 
 public:
-	StmtRet(const ModuleLoc &loc, Stmt *val);
+	StmtRet(const ModuleLoc *loc, Stmt *val);
 	~StmtRet();
-	static StmtRet *create(Context &c, const ModuleLoc &loc, Stmt *val);
+	static StmtRet *create(Context &c, const ModuleLoc *loc, Stmt *val);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
@@ -983,8 +983,8 @@ public:
 class StmtContinue : public Stmt
 {
 public:
-	StmtContinue(const ModuleLoc &loc);
-	static StmtContinue *create(Context &c, const ModuleLoc &loc);
+	StmtContinue(const ModuleLoc *loc);
+	static StmtContinue *create(Context &c, const ModuleLoc *loc);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
@@ -996,8 +996,8 @@ public:
 class StmtBreak : public Stmt
 {
 public:
-	StmtBreak(const ModuleLoc &loc);
-	static StmtBreak *create(Context &c, const ModuleLoc &loc);
+	StmtBreak(const ModuleLoc *loc);
+	static StmtBreak *create(Context &c, const ModuleLoc *loc);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
@@ -1011,9 +1011,9 @@ class StmtDefer : public Stmt
 	Stmt *val;
 
 public:
-	StmtDefer(const ModuleLoc &loc, Stmt *val);
+	StmtDefer(const ModuleLoc *loc, Stmt *val);
 	~StmtDefer();
-	static StmtDefer *create(Context &c, const ModuleLoc &loc, Stmt *val);
+	static StmtDefer *create(Context &c, const ModuleLoc *loc, Stmt *val);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);

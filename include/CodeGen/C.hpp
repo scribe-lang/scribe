@@ -47,7 +47,7 @@ class CDriver : public CodeGenDriver
 	bool getCValue(std::string &res, Stmt *stmt, Value *value, Type *type,
 		       bool i8_to_char = true);
 	bool addStructDef(Stmt *stmt, StructTy *sty);
-	bool writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &args, Type *ty,
+	bool writeCallArgs(const ModuleLoc *loc, const std::vector<Stmt *> &args, Type *ty,
 			   Writer &writer);
 	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
 	bool getFuncPointer(std::string &res, FuncTy *f, Stmt *stmt, bool for_cast, bool for_decl,

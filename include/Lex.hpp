@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "Context.hpp"
 #include "Error.hpp"
 
 namespace sc
@@ -251,16 +252,16 @@ struct Data
 
 class Lexeme
 {
-	ModuleLoc loc;
+	const ModuleLoc *loc;
 	Tok tok;
 	Data data;
 
 public:
-	Lexeme(const ModuleLoc &loc = ModuleLoc(nullptr, 0, 0));
-	explicit Lexeme(const ModuleLoc &loc, const TokType &type);
-	explicit Lexeme(const ModuleLoc &loc, const TokType &type, const std::string &_data);
-	explicit Lexeme(const ModuleLoc &loc, const int64_t &_data);
-	explicit Lexeme(const ModuleLoc &loc, const long double &_data);
+	Lexeme(const ModuleLoc *loc = nullptr);
+	explicit Lexeme(const ModuleLoc *loc, const TokType &type);
+	explicit Lexeme(const ModuleLoc *loc, const TokType &type, const std::string &_data);
+	explicit Lexeme(const ModuleLoc *loc, const int64_t &_data);
+	explicit Lexeme(const ModuleLoc *loc, const long double &_data);
 
 	std::string str(const int64_t &pad = 10) const;
 
@@ -311,7 +312,7 @@ public:
 	{
 		return tok.getVal();
 	}
-	inline const ModuleLoc &getLoc() const
+	inline const ModuleLoc *getLoc() const
 	{
 		return loc;
 	}
@@ -319,9 +320,11 @@ public:
 
 class Tokenizer
 {
+	Context &ctx;
 	Module *mod;
 	ErrMgr &err;
 
+	ModuleLoc *locAlloc(const size_t &line, const size_t &col);
 	ModuleLoc loc(const size_t &line, const size_t &col);
 
 	std::string get_name(const std::string &data, size_t &i);
@@ -335,7 +338,7 @@ class Tokenizer
 	void remove_back_slash(std::string &s);
 
 public:
-	Tokenizer(Module *m, ErrMgr &e);
+	Tokenizer(Context &ctx, Module *m, ErrMgr &e);
 	bool tokenize(const std::string &data, std::vector<Lexeme> &toks);
 };
 } // namespace lex

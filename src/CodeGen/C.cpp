@@ -1100,7 +1100,7 @@ bool CDriver::applyCast(Stmt *stmt, Writer &writer, Writer &tmp)
 	}
 	return true;
 }
-bool CDriver::writeCallArgs(const ModuleLoc &loc, const std::vector<Stmt *> &args, Type *ty,
+bool CDriver::writeCallArgs(const ModuleLoc *loc, const std::vector<Stmt *> &args, Type *ty,
 			    Writer &writer)
 {
 	FuncTy *fn   = nullptr;

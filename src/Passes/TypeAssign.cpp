@@ -911,7 +911,7 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 {
-	ModuleLoc &loc		= stmt->getLoc();
+	const ModuleLoc *loc	= stmt->getLoc();
 	static size_t enum_id	= 0;
 	std::string enum_mangle = "enum_" + std::to_string(enum_id++);
 	NamespaceVal *ns	= NamespaceVal::create(ctx, enum_mangle);
@@ -1309,9 +1309,9 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stm
 			vmgr.addVar(cfa->getName().getDataStr(), cfa->getValueID(), cfa);
 			continue;
 		}
-		ModuleLoc &mloc	     = cfa->getLoc();
-		lex::Lexeme &va_name = cfa->getName();
-		Type *vaty	     = cft;
+		const ModuleLoc *mloc = cfa->getLoc();
+		lex::Lexeme &va_name  = cfa->getName();
+		Type *vaty	      = cft;
 		cfsig->getArgs().pop_back();
 		cf->getArgs().pop_back();
 		VecVal *vtmp   = VecVal::create(ctx, vaty, CDFALSE, {});

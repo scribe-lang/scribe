@@ -40,7 +40,7 @@ Value *getValueWithID(const uint64_t &id)
 /////////////////////////////////////////////// Stmt //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc &loc)
+Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc *loc)
 	: stype(stmt_type), loc(loc), valueid(0), cast_to(nullptr), derefcount(0)
 {}
 Stmt::~Stmt() {}
@@ -126,11 +126,11 @@ Type *Stmt::getValueTy(const bool &exact)
 //////////////////////////////////////////// StmtBlock ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtBlock::StmtBlock(const ModuleLoc &loc, const std::vector<Stmt *> &stmts, const bool &is_top)
+StmtBlock::StmtBlock(const ModuleLoc *loc, const std::vector<Stmt *> &stmts, const bool &is_top)
 	: Stmt(BLOCK, loc), stmts(stmts), is_top(is_top)
 {}
 StmtBlock::~StmtBlock() {}
-StmtBlock *StmtBlock::create(Context &c, const ModuleLoc &loc, const std::vector<Stmt *> &stmts,
+StmtBlock *StmtBlock::create(Context &c, const ModuleLoc *loc, const std::vector<Stmt *> &stmts,
 			     const bool &is_top)
 {
 	return c.allocStmt<StmtBlock>(loc, stmts, is_top);
@@ -165,11 +165,11 @@ bool StmtBlock::requiresTemplateInit()
 //////////////////////////////////////////// StmtType /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtType::StmtType(const ModuleLoc &loc, const size_t &ptr, const size_t &info, Stmt *expr)
+StmtType::StmtType(const ModuleLoc *loc, const size_t &ptr, const size_t &info, Stmt *expr)
 	: Stmt(TYPE, loc), ptr(ptr), info(info), expr(expr)
 {}
 StmtType::~StmtType() {}
-StmtType *StmtType::create(Context &c, const ModuleLoc &loc, const size_t &ptr, const size_t &info,
+StmtType *StmtType::create(Context &c, const ModuleLoc *loc, const size_t &ptr, const size_t &info,
 			   Stmt *expr)
 {
 	return c.allocStmt<StmtType>(loc, ptr, info, expr);
@@ -228,12 +228,12 @@ bool StmtType::isMetaType() const
 ////////////////////////////////////////// StmtSimple /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtSimple::StmtSimple(const ModuleLoc &loc, const lex::Lexeme &val)
+StmtSimple::StmtSimple(const ModuleLoc *loc, const lex::Lexeme &val)
 	: Stmt(SIMPLE, loc), decl(nullptr), val(val), self(nullptr), applied_module_id(false)
 {}
 
 StmtSimple::~StmtSimple() {}
-StmtSimple *StmtSimple::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &val)
+StmtSimple *StmtSimple::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &val)
 {
 	return c.allocStmt<StmtSimple>(loc, val);
 }
@@ -256,11 +256,11 @@ bool StmtSimple::requiresTemplateInit()
 //////////////////////////////////////// StmtFnCallInfo ///////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtFnCallInfo::StmtFnCallInfo(const ModuleLoc &loc, const std::vector<Stmt *> &args)
+StmtFnCallInfo::StmtFnCallInfo(const ModuleLoc *loc, const std::vector<Stmt *> &args)
 	: Stmt(FNCALLINFO, loc), args(args)
 {}
 StmtFnCallInfo::~StmtFnCallInfo() {}
-StmtFnCallInfo *StmtFnCallInfo::create(Context &c, const ModuleLoc &loc,
+StmtFnCallInfo *StmtFnCallInfo::create(Context &c, const ModuleLoc *loc,
 				       const std::vector<Stmt *> &args)
 {
 	return c.allocStmt<StmtFnCallInfo>(loc, args);
@@ -293,13 +293,13 @@ bool StmtFnCallInfo::requiresTemplateInit()
 //////////////////////////////////////////// StmtExpr /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtExpr::StmtExpr(const ModuleLoc &loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
+StmtExpr::StmtExpr(const ModuleLoc *loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
 		   Stmt *rhs, const bool &is_intrinsic_call)
 	: Stmt(EXPR, loc), commas(commas), lhs(lhs), oper(oper), rhs(rhs), or_blk(nullptr),
 	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call), calledfn(nullptr)
 {}
 StmtExpr::~StmtExpr() {}
-StmtExpr *StmtExpr::create(Context &c, const ModuleLoc &loc, const size_t &commas, Stmt *lhs,
+StmtExpr *StmtExpr::create(Context &c, const ModuleLoc *loc, const size_t &commas, Stmt *lhs,
 			   const lex::Lexeme &oper, Stmt *rhs, const bool &is_intrinsic_call)
 {
 	return c.allocStmt<StmtExpr>(loc, commas, lhs, oper, rhs, is_intrinsic_call);
@@ -350,14 +350,14 @@ bool StmtExpr::requiresTemplateInit()
 //////////////////////////////////////////// StmtVar //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtVar::StmtVar(const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
+StmtVar::StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
 		 const bool &is_in, const bool &is_comptime, const bool &is_global)
 	: Stmt(VAR, loc), name(name), is_in(is_in), vtype(vtype), vval(vval), info(0),
 	  is_comptime(is_comptime), is_global(is_global), applied_module_id(false),
 	  applied_codegen_mangle(false)
 {}
 StmtVar::~StmtVar() {}
-StmtVar *StmtVar::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &name, StmtType *vtype,
+StmtVar *StmtVar::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype,
 			 Stmt *vval, const bool &is_in, const bool &is_comptime,
 			 const bool &is_global)
 {
@@ -396,13 +396,13 @@ bool StmtVar::requiresTemplateInit()
 //////////////////////////////////////////// StmtFnSig ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtFnSig::StmtFnSig(const ModuleLoc &loc, std::vector<StmtVar *> &args, StmtType *rettype,
+StmtFnSig::StmtFnSig(const ModuleLoc *loc, std::vector<StmtVar *> &args, StmtType *rettype,
 		     const bool &has_variadic)
 	: Stmt(FNSIG, loc), args(args), rettype(rettype), disable_template(false),
 	  has_variadic(has_variadic)
 {}
 StmtFnSig::~StmtFnSig() {}
-StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc &loc, std::vector<StmtVar *> &args,
+StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc *loc, std::vector<StmtVar *> &args,
 			     StmtType *rettype, const bool &has_variadic)
 {
 	return c.allocStmt<StmtFnSig>(loc, args, rettype, has_variadic);
@@ -449,11 +449,11 @@ bool StmtFnSig::requiresTemplateInit()
 //////////////////////////////////////////// StmtFnDef ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtFnDef::StmtFnDef(const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk)
+StmtFnDef::StmtFnDef(const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk)
 	: Stmt(FNDEF, loc), sig(sig), blk(blk), parentvar(nullptr), used(0)
 {}
 StmtFnDef::~StmtFnDef() {}
-StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc &loc, StmtFnSig *sig, StmtBlock *blk)
+StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk)
 {
 	return c.allocStmt<StmtFnDef>(loc, sig, blk);
 }
@@ -485,10 +485,10 @@ bool StmtFnDef::requiresTemplateInit()
 ////////////////////////////////////////// StmtHeader /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtHeader::StmtHeader(const ModuleLoc &loc, const lex::Lexeme &names, const lex::Lexeme &flags)
+StmtHeader::StmtHeader(const ModuleLoc *loc, const lex::Lexeme &names, const lex::Lexeme &flags)
 	: Stmt(HEADER, loc), names(names), flags(flags)
 {}
-StmtHeader *StmtHeader::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &names,
+StmtHeader *StmtHeader::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &names,
 			       const lex::Lexeme &flags)
 {
 	return c.allocStmt<StmtHeader>(loc, names, flags);
@@ -519,8 +519,8 @@ bool StmtHeader::requiresTemplateInit()
 //////////////////////////////////////////// StmtLib //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtLib::StmtLib(const ModuleLoc &loc, const lex::Lexeme &flags) : Stmt(LIB, loc), flags(flags) {}
-StmtLib *StmtLib::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &flags)
+StmtLib::StmtLib(const ModuleLoc *loc, const lex::Lexeme &flags) : Stmt(LIB, loc), flags(flags) {}
+StmtLib *StmtLib::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &flags)
 {
 	return c.allocStmt<StmtLib>(loc, flags);
 }
@@ -543,13 +543,13 @@ bool StmtLib::requiresTemplateInit()
 ////////////////////////////////////////// StmtExtern /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtExtern::StmtExtern(const ModuleLoc &loc, const lex::Lexeme &fname, StmtHeader *headers,
+StmtExtern::StmtExtern(const ModuleLoc *loc, const lex::Lexeme &fname, StmtHeader *headers,
 		       StmtLib *libs, Stmt *entity)
 	: Stmt(EXTERN, loc), fname(fname), headers(headers), libs(libs), entity(entity),
 	  parentvar(nullptr)
 {}
 StmtExtern::~StmtExtern() {}
-StmtExtern *StmtExtern::create(Context &c, const ModuleLoc &loc, const lex::Lexeme &fname,
+StmtExtern *StmtExtern::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &fname,
 			       StmtHeader *headers, StmtLib *libs, Stmt *entity)
 {
 	return c.allocStmt<StmtExtern>(loc, fname, headers, libs, entity);
@@ -591,11 +591,11 @@ bool StmtExtern::requiresTemplateInit()
 /////////////////////////////////////////// StmtEnum //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtEnum::StmtEnum(const ModuleLoc &loc, const std::vector<lex::Lexeme> &items)
+StmtEnum::StmtEnum(const ModuleLoc *loc, const std::vector<lex::Lexeme> &items)
 	: Stmt(ENUMDEF, loc), items(items)
 {}
 StmtEnum::~StmtEnum() {}
-StmtEnum *StmtEnum::create(Context &c, const ModuleLoc &loc, const std::vector<lex::Lexeme> &items)
+StmtEnum *StmtEnum::create(Context &c, const ModuleLoc *loc, const std::vector<lex::Lexeme> &items)
 {
 	return c.allocStmt<StmtEnum>(loc, items);
 }
@@ -621,12 +621,12 @@ bool StmtEnum::requiresTemplateInit()
 ///////////////////////////////////////// StmtStruct //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtStruct::StmtStruct(const ModuleLoc &loc, const std::vector<StmtVar *> &fields,
+StmtStruct::StmtStruct(const ModuleLoc *loc, const std::vector<StmtVar *> &fields,
 		       const std::vector<lex::Lexeme> &templates)
 	: Stmt(STRUCTDEF, loc), fields(fields), templates(templates), is_externed(false)
 {}
 StmtStruct::~StmtStruct() {}
-StmtStruct *StmtStruct::create(Context &c, const ModuleLoc &loc,
+StmtStruct *StmtStruct::create(Context &c, const ModuleLoc *loc,
 			       const std::vector<StmtVar *> &fields,
 			       const std::vector<lex::Lexeme> &templates)
 {
@@ -682,11 +682,11 @@ std::vector<std::string> StmtStruct::getTemplateNames()
 ///////////////////////////////////////// StmtVarDecl /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtVarDecl::StmtVarDecl(const ModuleLoc &loc, const std::vector<StmtVar *> &decls)
+StmtVarDecl::StmtVarDecl(const ModuleLoc *loc, const std::vector<StmtVar *> &decls)
 	: Stmt(VARDECL, loc), decls(decls)
 {}
 StmtVarDecl::~StmtVarDecl() {}
-StmtVarDecl *StmtVarDecl::create(Context &c, const ModuleLoc &loc,
+StmtVarDecl *StmtVarDecl::create(Context &c, const ModuleLoc *loc,
 				 const std::vector<StmtVar *> &decls)
 {
 	return c.allocStmt<StmtVarDecl>(loc, decls);
@@ -717,12 +717,12 @@ bool StmtVarDecl::requiresTemplateInit()
 Conditional::Conditional(Stmt *cond, StmtBlock *blk) : cond(cond), blk(blk) {}
 Conditional::~Conditional() {}
 
-StmtCond::StmtCond(const ModuleLoc &loc, const std::vector<Conditional> &conds,
+StmtCond::StmtCond(const ModuleLoc *loc, const std::vector<Conditional> &conds,
 		   const bool &is_inline)
 	: Stmt(COND, loc), conds(conds), is_inline(is_inline)
 {}
 StmtCond::~StmtCond() {}
-StmtCond *StmtCond::create(Context &c, const ModuleLoc &loc, const std::vector<Conditional> &conds,
+StmtCond *StmtCond::create(Context &c, const ModuleLoc *loc, const std::vector<Conditional> &conds,
 			   const bool &is_inline)
 {
 	return c.allocStmt<StmtCond>(loc, conds, is_inline);
@@ -763,12 +763,12 @@ bool StmtCond::requiresTemplateInit()
 //////////////////////////////////////////// StmtFor //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtFor::StmtFor(const ModuleLoc &loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *blk,
+StmtFor::StmtFor(const ModuleLoc *loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *blk,
 		 const bool &is_inline)
 	: Stmt(FOR, loc), init(init), cond(cond), incr(incr), blk(blk), is_inline(is_inline)
 {}
 StmtFor::~StmtFor() {}
-StmtFor *StmtFor::create(Context &c, const ModuleLoc &loc, Stmt *init, Stmt *cond, Stmt *incr,
+StmtFor *StmtFor::create(Context &c, const ModuleLoc *loc, Stmt *init, Stmt *cond, Stmt *incr,
 			 StmtBlock *blk, const bool &is_inline)
 {
 	return c.allocStmt<StmtFor>(loc, init, cond, incr, blk, is_inline);
@@ -816,11 +816,11 @@ bool StmtFor::requiresTemplateInit()
 //////////////////////////////////////////// StmtWhile ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtWhile::StmtWhile(const ModuleLoc &loc, Stmt *cond, StmtBlock *blk)
+StmtWhile::StmtWhile(const ModuleLoc *loc, Stmt *cond, StmtBlock *blk)
 	: Stmt(WHILE, loc), cond(cond), blk(blk)
 {}
 StmtWhile::~StmtWhile() {}
-StmtWhile *StmtWhile::create(Context &c, const ModuleLoc &loc, Stmt *cond, StmtBlock *blk)
+StmtWhile *StmtWhile::create(Context &c, const ModuleLoc *loc, Stmt *cond, StmtBlock *blk)
 {
 	return c.allocStmt<StmtWhile>(loc, cond, blk);
 }
@@ -849,9 +849,9 @@ bool StmtWhile::requiresTemplateInit()
 //////////////////////////////////////////// StmtRet //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtRet::StmtRet(const ModuleLoc &loc, Stmt *val) : Stmt(RET, loc), val(val) {}
+StmtRet::StmtRet(const ModuleLoc *loc, Stmt *val) : Stmt(RET, loc), val(val) {}
 StmtRet::~StmtRet() {}
-StmtRet *StmtRet::create(Context &c, const ModuleLoc &loc, Stmt *val)
+StmtRet *StmtRet::create(Context &c, const ModuleLoc *loc, Stmt *val)
 {
 	return c.allocStmt<StmtRet>(loc, val);
 }
@@ -878,8 +878,8 @@ bool StmtRet::requiresTemplateInit()
 ////////////////////////////////////////// StmtContinue ///////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtContinue::StmtContinue(const ModuleLoc &loc) : Stmt(CONTINUE, loc) {}
-StmtContinue *StmtContinue::create(Context &c, const ModuleLoc &loc)
+StmtContinue::StmtContinue(const ModuleLoc *loc) : Stmt(CONTINUE, loc) {}
+StmtContinue *StmtContinue::create(Context &c, const ModuleLoc *loc)
 {
 	return c.allocStmt<StmtContinue>(loc);
 }
@@ -900,8 +900,8 @@ bool StmtContinue::requiresTemplateInit()
 //////////////////////////////////////////// StmtBreak ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtBreak::StmtBreak(const ModuleLoc &loc) : Stmt(BREAK, loc) {}
-StmtBreak *StmtBreak::create(Context &c, const ModuleLoc &loc)
+StmtBreak::StmtBreak(const ModuleLoc *loc) : Stmt(BREAK, loc) {}
+StmtBreak *StmtBreak::create(Context &c, const ModuleLoc *loc)
 {
 	return c.allocStmt<StmtBreak>(loc);
 }
@@ -922,9 +922,9 @@ bool StmtBreak::requiresTemplateInit()
 //////////////////////////////////////////// StmtDefer ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtDefer::StmtDefer(const ModuleLoc &loc, Stmt *val) : Stmt(DEFER, loc), val(val) {}
+StmtDefer::StmtDefer(const ModuleLoc *loc, Stmt *val) : Stmt(DEFER, loc), val(val) {}
 StmtDefer::~StmtDefer() {}
-StmtDefer *StmtDefer::create(Context &c, const ModuleLoc &loc, Stmt *val)
+StmtDefer *StmtDefer::create(Context &c, const ModuleLoc *loc, Stmt *val)
 {
 	return c.allocStmt<StmtDefer>(loc, val);
 }

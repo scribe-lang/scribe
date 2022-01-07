@@ -21,14 +21,17 @@ namespace sc
 {
 class ParseHelper
 {
+	Context &ctx;
 	Module *mod;
 	// requires modification at parsing stage, hence not set by module pointer
 	std::vector<lex::Lexeme> &toks;
+	ModuleLoc *emptyloc; // used by invalid and eof
 	lex::Lexeme invalid, eof;
 	size_t idx;
 
 public:
-	ParseHelper(Module *mod, std::vector<lex::Lexeme> &toks, const size_t &begin = 0);
+	ParseHelper(Context &ctx, Module *mod, std::vector<lex::Lexeme> &toks,
+		    const size_t &begin = 0);
 
 	lex::Lexeme &peek(const int offset = 0);
 	lex::TokType peekt(const int offset = 0) const;

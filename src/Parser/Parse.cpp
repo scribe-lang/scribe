@@ -1401,7 +1401,7 @@ bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 		return false;
 	}
 
-	const ModuleLoc &loc	= iter.getLoc();
+	const ModuleLoc *loc	= iter.getLoc();
 	lex::Lexeme in_interm	= iter; // e_interm
 	lex::Lexeme iter_interm = iter; // _e
 	lex::Lexeme lexbegin	= lex::Lexeme(loc, lex::IDEN, "begin");

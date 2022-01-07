@@ -55,11 +55,13 @@ class ErrMgr
 public:
 	void set(Stmt *stmt, const char *e, ...);
 	void set(const lex::Lexeme &tok, const char *e, ...);
+	void set(const ModuleLoc &loc, const char *e, ...);
 	void set(const ModuleLoc &loc, const char *e, va_list args);
 
 	// equivalent to set(), but for warnings
 	void setw(Stmt *stmt, const char *e, ...);
 	void setw(const lex::Lexeme &tok, const char *e, ...);
+	void setw(const ModuleLoc &loc, const char *e, ...);
 	void setw(const ModuleLoc &loc, const char *e, va_list args);
 	bool present();
 	void show(FILE *f);

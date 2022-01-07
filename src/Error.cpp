@@ -42,6 +42,13 @@ void ErrMgr::set(const lex::Lexeme &tok, const char *e, ...)
 	set(tok.getLoc(), e, args);
 	va_end(args);
 }
+void ErrMgr::set(const ModuleLoc &loc, const char *e, ...)
+{
+	va_list args;
+	va_start(args, e);
+	set(loc, e, args);
+	va_end(args);
+}
 void ErrMgr::set(const ModuleLoc &loc, const char *e, va_list args)
 {
 	locs.insert(locs.begin(), loc);
@@ -66,6 +73,13 @@ void ErrMgr::setw(const lex::Lexeme &tok, const char *e, ...)
 	va_list args;
 	va_start(args, e);
 	setw(tok.getLoc(), e, args);
+	va_end(args);
+}
+void ErrMgr::setw(const ModuleLoc &loc, const char *e, ...)
+{
+	va_list args;
+	va_start(args, e);
+	setw(loc, e, args);
 	va_end(args);
 }
 void ErrMgr::setw(const ModuleLoc &loc, const char *e, va_list args)

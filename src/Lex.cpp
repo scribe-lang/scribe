@@ -236,18 +236,18 @@ bool Data::cmp(const Data &other, const TokType type) const
 	return false;
 }
 
-Lexeme::Lexeme(const ModuleLoc &loc) : loc(loc), tok(INVALID), data({.s = "", .i = 0lu, .f = 0.0})
+Lexeme::Lexeme(const ModuleLoc *loc) : loc(loc), tok(INVALID), data({.s = "", .i = 0lu, .f = 0.0})
 {}
-Lexeme::Lexeme(const ModuleLoc &loc, const TokType &type)
+Lexeme::Lexeme(const ModuleLoc *loc, const TokType &type)
 	: loc(loc), tok(type), data({.s = "", .i = 0lu, .f = 0.0})
 {}
-Lexeme::Lexeme(const ModuleLoc &loc, const TokType &type, const std::string &_data)
+Lexeme::Lexeme(const ModuleLoc *loc, const TokType &type, const std::string &_data)
 	: loc(loc), tok(type), data({.s = _data, .i = 0lu, .f = 0.0})
 {}
-Lexeme::Lexeme(const ModuleLoc &loc, const int64_t &_data)
+Lexeme::Lexeme(const ModuleLoc *loc, const int64_t &_data)
 	: loc(loc), tok(INT), data({.s = "", .i = _data, .f = 0.0})
 {}
-Lexeme::Lexeme(const ModuleLoc &loc, const long double &_data)
+Lexeme::Lexeme(const ModuleLoc *loc, const long double &_data)
 	: loc(loc), tok(FLT), data({.s = "", .i = 0lu, .f = _data})
 {}
 std::string Lexeme::str(const int64_t &pad) const
@@ -259,7 +259,7 @@ std::string Lexeme::str(const int64_t &pad) const
 	for(int64_t i = 0; i < pad - len; ++i) res += " ";
 	if(pad == 0) res += " ";
 	len = res.size();
-	res += "[" + loc.getLocStr() + "]";
+	res += "[" + loc->getLocStr() + "]";
 	if(!tok.isData()) return res;
 	len = res.size() - len;
 	for(int64_t i = 0; i < pad - len; ++i) res += " ";
@@ -281,8 +281,12 @@ std::string Lexeme::str(const int64_t &pad) const
 	op_type = type;       \
 	break
 
-Tokenizer::Tokenizer(Module *m, ErrMgr &e) : mod(m), err(e) {}
+Tokenizer::Tokenizer(Context &ctx, Module *m, ErrMgr &e) : ctx(ctx), mod(m), err(e) {}
 
+ModuleLoc *Tokenizer::locAlloc(const size_t &line, const size_t &col)
+{
+	return ctx.allocModuleLoc<ModuleLoc>(mod, line, col);
+}
 ModuleLoc Tokenizer::loc(const size_t &line, const size_t &col)
 {
 	return ModuleLoc(mod, line, col);
@@ -348,10 +352,10 @@ bool Tokenizer::tokenize(const std::string &data, std::vector<Lexeme> &toks)
 			if(str[0] == '.') str.erase(str.begin());
 			if(str_class == STR || str_class == IDEN)
 			{ // place either the data itself (type = STR, IDEN)
-				toks.emplace_back(loc(line, i - line_start - str.size()), str_class,
-						  str);
+				toks.emplace_back(locAlloc(line, i - line_start - str.size()),
+						  str_class, str);
 			} else { // or the type
-				toks.emplace_back(loc(line, i - line_start - str.size()),
+				toks.emplace_back(locAlloc(line, i - line_start - str.size()),
 						  str_class);
 			}
 			continue;
@@ -364,11 +368,11 @@ bool Tokenizer::tokenize(const std::string &data, std::vector<Lexeme> &toks)
 			std::string num	 = get_num(data, i, line, line_start, num_type, base);
 			if(num.empty()) return false;
 			if(num_type == FLT) {
-				toks.emplace_back(loc(line, i - line_start - num.size()),
+				toks.emplace_back(locAlloc(line, i - line_start - num.size()),
 						  (long double)std::stod(num));
 				continue;
 			}
-			toks.emplace_back(loc(line, i - line_start - num.size()),
+			toks.emplace_back(locAlloc(line, i - line_start - num.size()),
 					  (int64_t)std::stoull(num, 0, base));
 			continue;
 		}
@@ -378,7 +382,7 @@ bool Tokenizer::tokenize(const std::string &data, std::vector<Lexeme> &toks)
 			std::string str;
 			char quote_type = 0;
 			if(!get_const_str(data, quote_type, i, line, line_start, str)) return false;
-			toks.emplace_back(loc(line, i - line_start - str.size()),
+			toks.emplace_back(locAlloc(line, i - line_start - str.size()),
 					  quote_type == '\'' ? CHAR : STR, str);
 			continue;
 		}
@@ -387,7 +391,7 @@ bool Tokenizer::tokenize(const std::string &data, std::vector<Lexeme> &toks)
 		size_t begin	= i;
 		TokType op_type = get_operator(data, i, line, line_start);
 		if(op_type == INVALID) return false;
-		toks.emplace_back(loc(line, begin - line_start), op_type);
+		toks.emplace_back(locAlloc(line, begin - line_start), op_type);
 	}
 	return true;
 }
