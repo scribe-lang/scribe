@@ -1149,7 +1149,7 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 		was_any = true;
 	}
 	Type *fnretty = fn->getRet();
-	valtype->appendInfo(fnretty->getInfo());
+	valtype->setInfo(fnretty->getInfo());
 	if(!was_any && !fnretty->isCompatible(ctx, valtype, err, stmt->getLoc())) {
 		err.set(stmt,
 			"function return type and deduced return type are"
