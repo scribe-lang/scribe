@@ -810,7 +810,11 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
 		res->updateUniqID();
 	}
 	for(size_t i = 0; i < res->args.size(); ++i) {
-		if(res->args[i]->isAny()) res->args[i] = callargs[i]->getValueTy();
+		if(res->args[i]->isAny()) {
+			size_t info  = res->args[i]->getInfo();
+			res->args[i] = callargs[i]->getValueTy()->clone(c);
+			res->args[i]->appendInfo(info);
+		}
 	}
 	return res;
 }
