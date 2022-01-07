@@ -25,8 +25,10 @@ class Type;
 class Value;
 class Pass;
 class RAIIParser;
+class ModuleLoc;
 class Context
 {
+	std::vector<ModuleLoc *> modlocmem;
 	std::vector<Stmt *> stmtmem;
 	std::vector<Type *> typemem;
 	std::vector<Value *> valmem;
@@ -37,6 +39,12 @@ public:
 	Context(RAIIParser *parser);
 	~Context();
 
+	template<typename T, typename... Args> T *allocModuleLoc(Args... args)
+	{
+		T *res = new T(args...);
+		modlocmem.push_back(res);
+		return res;
+	}
 	template<typename T, typename... Args> T *allocStmt(Args... args)
 	{
 		T *res = new T(args...);

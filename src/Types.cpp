@@ -53,7 +53,7 @@ Type::Type(const Types &type, const size_t &info, const uint64_t &id)
 	: type(type), info(info), id(id)
 {}
 Type::~Type() {}
-bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
+bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc)
 {
 	if(!rhs) return false;
 	if(isAny()) return true;
@@ -179,7 +179,7 @@ std::string Type::toStr(const size_t &weak_depth)
 {
 	return baseToStr();
 }
-bool Type::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
+bool Type::isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc)
 {
 	return isBaseCompatible(c, rhs, e, loc);
 }
@@ -189,7 +189,7 @@ bool Type::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 }
 void Type::unmergeTemplates(const size_t &weak_depth) {}
 
-Value *Type::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+Value *Type::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			    const size_t &weak_depth)
 {
 	e.set(loc, "invalid type for toDefaultValue(): %s", toStr().c_str());
@@ -215,7 +215,7 @@ VoidTy *VoidTy::create(Context &c)
 {
 	return c.allocType<VoidTy>();
 }
-Value *VoidTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+Value *VoidTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth)
 {
 	return VoidVal::create(c);
@@ -241,7 +241,7 @@ AnyTy *AnyTy::create(Context &c)
 	return c.allocType<AnyTy>();
 }
 
-Value *AnyTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+Value *AnyTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
 	return TypeVal::create(c, this);
@@ -275,7 +275,7 @@ IntTy *IntTy::create(Context &c, const size_t &_bits, const bool &_sign)
 	return c.allocType<IntTy>(_bits, _sign);
 }
 
-Value *IntTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+Value *IntTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
 	return IntVal::create(c, this, cd, 0);
@@ -309,7 +309,7 @@ FltTy *FltTy::create(Context &c, const size_t &_bits)
 	return c.allocType<FltTy>(_bits);
 }
 
-Value *FltTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+Value *FltTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
 	return FltVal::create(c, this, cd, 0.0);
@@ -390,7 +390,7 @@ Type *TypeTy::getContainedTy()
 	return loc->second;
 }
 
-Value *TypeTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+Value *TypeTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth)
 {
 	if(!getContainedTy()) {
@@ -454,7 +454,7 @@ PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count, const bool &
 	return c.allocType<PtrTy>(ptr_to, count, is_weak);
 }
 
-Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
 	std::vector<Value *> vec;
@@ -555,7 +555,7 @@ void StructTy::unmergeTemplates(const size_t &weak_depth)
 {
 	for(auto &f : fields) f->unmergeTemplates(weak_depth);
 }
-bool StructTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
+bool StructTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc)
 {
 	if(!isBaseCompatible(c, rhs, e, loc)) return false;
 	StructTy *r = as<StructTy>(rhs);
@@ -572,7 +572,7 @@ bool StructTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	}
 	return true;
 }
-StructTy *StructTy::applyTemplates(Context &c, ErrMgr &e, ModuleLoc &loc,
+StructTy *StructTy::applyTemplates(Context &c, ErrMgr &e, const ModuleLoc *loc,
 				   const std::vector<Type *> &actuals)
 {
 	if(templates.size() != actuals.size()) {
@@ -590,7 +590,7 @@ StructTy *StructTy::applyTemplates(Context &c, ErrMgr &e, ModuleLoc &loc,
 	res->setTemplate(false);
 	return res;
 }
-StructTy *StructTy::instantiate(Context &c, ErrMgr &e, ModuleLoc &loc,
+StructTy *StructTy::instantiate(Context &c, ErrMgr &e, const ModuleLoc *loc,
 				const std::vector<Stmt *> &callargs)
 {
 	if(fields.size() != callargs.size()) return nullptr;
@@ -639,7 +639,7 @@ bool StructTy::hasTemplate()
 	return false;
 }
 
-Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 				const size_t &weak_depth)
 {
 	std::unordered_map<std::string, Value *> st;
@@ -753,7 +753,7 @@ void FuncTy::unmergeTemplates(const size_t &weak_depth)
 	for(auto &a : args) a->unmergeTemplates(weak_depth);
 	ret->unmergeTemplates(weak_depth);
 }
-bool FuncTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
+bool FuncTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc)
 {
 	if(!isBaseCompatible(c, rhs, e, loc)) return false;
 	FuncTy *r = as<FuncTy>(rhs);
@@ -780,7 +780,7 @@ bool FuncTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
 	return true;
 }
 // specializes a function type using StmtFnCallInfo
-FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
+FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, const ModuleLoc *loc,
 			   const std::vector<Stmt *> &callargs)
 {
 	bool has_va = false;
@@ -854,7 +854,7 @@ bool FuncTy::callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **sourc
 {
 	return intrin(c, err, stmt, source, callargs);
 }
-Value *FuncTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+Value *FuncTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth)
 {
 	return FuncVal::create(c, this);
@@ -911,7 +911,7 @@ void VariadicTy::unmergeTemplates(const size_t &weak_depth)
 {
 	for(auto &a : args) a->unmergeTemplates(weak_depth);
 }
-bool VariadicTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc)
+bool VariadicTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc)
 {
 	if(!isBaseCompatible(c, rhs, e, loc)) return false;
 	VariadicTy *r = as<VariadicTy>(rhs);
@@ -925,7 +925,7 @@ VariadicTy *VariadicTy::create(Context &c, const std::vector<Type *> &_args)
 {
 	return c.allocType<VariadicTy>(_args);
 }
-Value *VariadicTy::toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+Value *VariadicTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 				  const size_t &weak_depth)
 {
 	std::vector<Value *> vec;

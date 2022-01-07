@@ -76,7 +76,7 @@ public:
 	Type(const Types &type, const size_t &info, const uint64_t &id);
 	virtual ~Type();
 
-	bool isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
+	bool isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc);
 
 	std::string infoToStr();
 	std::string baseToStr();
@@ -90,7 +90,7 @@ public:
 			    const size_t &weak_depth = 0) = 0;
 	virtual bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	virtual void unmergeTemplates(const size_t &weak_depth = 0);
-	virtual bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
+	virtual bool isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc);
 
 	inline void setInfo(const size_t &inf)
 	{
@@ -121,7 +121,7 @@ public:
 		return isFlt();
 	}
 
-	virtual Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+	virtual Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 				      const size_t &weak_depth = 0);
 
 #define SetModifierX(Fn, Mod) \
@@ -198,7 +198,7 @@ public:
 
 	static VoidTy *create(Context &c);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 class AnyTy : public Type
@@ -213,7 +213,7 @@ public:
 
 	static AnyTy *create(Context &c);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -242,7 +242,7 @@ public:
 		return sign;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -266,7 +266,7 @@ public:
 		return bits;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -292,7 +292,7 @@ public:
 	void setContainedTy(Type *ty);
 	Type *getContainedTy();
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -342,7 +342,7 @@ public:
 		return count > 0;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -375,12 +375,12 @@ public:
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
-	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
+	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc);
 	// specializes a structure type
-	StructTy *applyTemplates(Context &c, ErrMgr &e, ModuleLoc &loc,
+	StructTy *applyTemplates(Context &c, ErrMgr &e, const ModuleLoc *loc,
 				 const std::vector<Type *> &actuals);
 	// returns a NON-def struct type
-	StructTy *instantiate(Context &c, ErrMgr &e, ModuleLoc &loc,
+	StructTy *instantiate(Context &c, ErrMgr &e, const ModuleLoc *loc,
 			      const std::vector<Stmt *> &callargs);
 
 	static StructTy *create(Context &c, const std::vector<std::string> &_fieldnames,
@@ -432,7 +432,7 @@ public:
 
 	bool hasTemplate();
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -469,9 +469,9 @@ public:
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
-	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
+	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc);
 	// specializes a function type using StmtFnCallInfo
-	FuncTy *createCall(Context &c, ErrMgr &e, ModuleLoc &loc,
+	FuncTy *createCall(Context &c, ErrMgr &e, const ModuleLoc *loc,
 			   const std::vector<Stmt *> &callargs);
 
 	static FuncTy *create(Context &c, StmtVar *_var, const std::vector<Type *> &_args,
@@ -542,7 +542,7 @@ public:
 	bool callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
 			   std::vector<Stmt *> &callargs);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -560,7 +560,7 @@ public:
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
-	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, ModuleLoc &loc);
+	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc);
 
 	static VariadicTy *create(Context &c, const std::vector<Type *> &_args);
 
@@ -577,7 +577,7 @@ public:
 		return args.size() > idx ? args[idx] : nullptr;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, ModuleLoc &loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 

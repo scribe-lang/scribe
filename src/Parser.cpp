@@ -38,12 +38,12 @@ Module::Module(ErrMgr &err, Context &ctx, const std::string &id, const std::stri
 Module::~Module() {}
 bool Module::tokenize()
 {
-	lex::Tokenizer tokenizer(this, err);
+	lex::Tokenizer tokenizer(ctx, this, err);
 	return tokenizer.tokenize(code, tokens);
 }
 bool Module::parseTokens()
 {
-	ParseHelper p(this, tokens);
+	ParseHelper p(ctx, this, tokens);
 	Parsing parsing(err, ctx);
 	return parsing.parse_block(p, (StmtBlock *&)ptree, false);
 }
