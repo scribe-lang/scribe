@@ -85,6 +85,7 @@ if(ANDROID)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX AND DEFINED WITH_COVERAGE)
+    set(WITH_COVERAGE "-D_WITH_COVERAGE")
     include(CodeCoverage)
     APPEND_COVERAGE_COMPILER_FLAGS()
     setup_target_for_coverage_gcovr_html(NAME scribe_cov EXECUTABLE ${PROJECT_SOURCE_DIR}/codecov.sh ${PROJECT_SOURCE_DIR})
