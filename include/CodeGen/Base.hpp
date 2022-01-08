@@ -21,7 +21,6 @@ namespace sc
 class CodeGenDriver
 {
 protected:
-	ErrMgr &err;
 	Context &ctx;
 	RAIIParser &parser;
 
@@ -29,7 +28,7 @@ public:
 	CodeGenDriver(RAIIParser &parser);
 	virtual ~CodeGenDriver();
 
-	virtual bool compile(const std::string &outfile) = 0;
+	virtual bool compile(StringRef outfile) = 0;
 };
 } // namespace sc
 

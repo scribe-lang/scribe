@@ -13,8 +13,7 @@
 
 #include "Lex.hpp"
 
-#include <string.h>
-#include <string>
+#include <charconv>
 
 namespace sc
 {
@@ -148,7 +147,7 @@ const char *TokStrs[_LAST] = {
 "<INVALID>",
 };
 
-std::string view_backslash(const std::string &data);
+String view_backslash(StringRef data);
 
 Tok::Tok(const int &tok) : val((TokType)tok) {}
 
@@ -241,7 +240,7 @@ Lexeme::Lexeme(const ModuleLoc *loc) : loc(loc), tok(INVALID), data({.s = "", .i
 Lexeme::Lexeme(const ModuleLoc *loc, const TokType &type)
 	: loc(loc), tok(type), data({.s = "", .i = 0lu, .f = 0.0})
 {}
-Lexeme::Lexeme(const ModuleLoc *loc, const TokType &type, const std::string &_data)
+Lexeme::Lexeme(const ModuleLoc *loc, const TokType &type, StringRef _data)
 	: loc(loc), tok(type), data({.s = _data, .i = 0lu, .f = 0.0})
 {}
 Lexeme::Lexeme(const ModuleLoc *loc, const int64_t &_data)
@@ -250,9 +249,9 @@ Lexeme::Lexeme(const ModuleLoc *loc, const int64_t &_data)
 Lexeme::Lexeme(const ModuleLoc *loc, const long double &_data)
 	: loc(loc), tok(FLT), data({.s = "", .i = 0lu, .f = _data})
 {}
-std::string Lexeme::str(const int64_t &pad) const
+String Lexeme::str(const int64_t &pad) const
 {
-	std::string res;
+	String res;
 	int64_t len;
 	res += tok.cStr();
 	len = res.size();
@@ -281,18 +280,18 @@ std::string Lexeme::str(const int64_t &pad) const
 	op_type = type;       \
 	break
 
-Tokenizer::Tokenizer(Context &ctx, Module *m, ErrMgr &e) : ctx(ctx), mod(m), err(e) {}
+Tokenizer::Tokenizer(Context &ctx, Module *m) : ctx(ctx), mod(m) {}
 
 ModuleLoc *Tokenizer::locAlloc(const size_t &line, const size_t &col)
 {
-	return ctx.allocModuleLoc<ModuleLoc>(mod, line, col);
+	return ctx.allocModuleLoc(mod, line, col);
 }
 ModuleLoc Tokenizer::loc(const size_t &line, const size_t &col)
 {
 	return ModuleLoc(mod, line, col);
 }
 
-bool Tokenizer::tokenize(const std::string &data, std::vector<Lexeme> &toks)
+bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 {
 	int comment_block = 0; // int to handle nested comment blocks
 	bool comment_line = false;
@@ -317,9 +316,9 @@ bool Tokenizer::tokenize(const std::string &data, std::vector<Lexeme> &toks)
 		}
 		if(CURR == '*' && NEXT == '/') {
 			if(!comment_block) {
-				err.set(loc(line, i - line_start),
-					"encountered multi line comment terminator '*/' in"
-					"non comment block");
+				err::out(loc(line, i - line_start),
+					 {"encountered multi line comment "
+					  "terminator '*/' in non comment block"});
 				return false;
 			}
 			i += 2;
@@ -346,10 +345,10 @@ bool Tokenizer::tokenize(const std::string &data, std::vector<Lexeme> &toks)
 		    PREV != '_' && PREV != ')' && PREV != ']' && PREV != '\'' && PREV != '"') ||
 		   isalpha(CURR) || CURR == '_')
 		{
-			std::string str = get_name(data, i);
+			StringRef str = get_name(data, i);
 			// check if string is a keyword
 			TokType str_class = classify_str(str);
-			if(str[0] == '.') str.erase(str.begin());
+			if(str[0] == '.') str = str.substr(0, 1);
 			if(str_class == STR || str_class == IDEN)
 			{ // place either the data itself (type = STR, IDEN)
 				toks.emplace_back(locAlloc(line, i - line_start - str.size()),
@@ -365,25 +364,29 @@ bool Tokenizer::tokenize(const std::string &data, std::vector<Lexeme> &toks)
 		if(isdigit(CURR)) {
 			TokType num_type = INT;
 			int base	 = 10;
-			std::string num	 = get_num(data, i, line, line_start, num_type, base);
+			StringRef num	 = get_num(data, i, line, line_start, num_type, base);
 			if(num.empty()) return false;
 			if(num_type == FLT) {
+				long double fltval;
+				std::from_chars(num.data(), num.data() + num.size(), fltval);
 				toks.emplace_back(locAlloc(line, i - line_start - num.size()),
-						  (long double)std::stod(num));
+						  fltval);
 				continue;
 			}
-			toks.emplace_back(locAlloc(line, i - line_start - num.size()),
-					  (int64_t)std::stoull(num, 0, base));
+			int64_t intval;
+			std::from_chars(num.data(), num.data() + num.size(), intval, base);
+			toks.emplace_back(locAlloc(line, i - line_start - num.size()), intval);
 			continue;
 		}
 
 		// const strings
 		if(CURR == '\"' || CURR == '\'' || CURR == '`') {
-			std::string str;
+			String str;
 			char quote_type = 0;
 			if(!get_const_str(data, quote_type, i, line, line_start, str)) return false;
+			StringRef strref = ctx.moveStr(std::move(str));
 			toks.emplace_back(locAlloc(line, i - line_start - str.size()),
-					  quote_type == '\'' ? CHAR : STR, str);
+					  quote_type == '\'' ? CHAR : STR, strref);
 			continue;
 		}
 
@@ -396,21 +399,20 @@ bool Tokenizer::tokenize(const std::string &data, std::vector<Lexeme> &toks)
 	return true;
 }
 
-std::string Tokenizer::get_name(const std::string &data, size_t &i)
+StringRef Tokenizer::get_name(StringRef data, size_t &i)
 {
-	size_t len = data.size();
-	std::string buf;
-	buf.push_back(data[i++]);
+	size_t len   = data.size();
+	size_t start = i;
 	while(i < len) {
 		if(!isalnum(CURR) && CURR != '_') break;
-		buf.push_back(data[i++]);
+		++i;
 	}
-	if(i < len && CURR == '?') buf.push_back(data[i++]);
+	if(i < len && CURR == '?') ++i;
 
-	return buf;
+	return StringRef(data).substr(start, i - start);
 }
 
-TokType Tokenizer::classify_str(const std::string &str)
+TokType Tokenizer::classify_str(StringRef str)
 {
 	if(str == TokStrs[GLOBAL]) return GLOBAL;
 	if(str == TokStrs[LET]) return LET;
@@ -456,11 +458,11 @@ TokType Tokenizer::classify_str(const std::string &str)
 	return str[0] == '.' ? STR : IDEN;
 }
 
-std::string Tokenizer::get_num(const std::string &data, size_t &i, size_t &line, size_t &line_start,
-			       TokType &num_type, int &base)
+StringRef Tokenizer::get_num(StringRef data, size_t &i, size_t &line, size_t &line_start,
+			     TokType &num_type, int &base)
 {
 	size_t len = data.size();
-	std::string buf;
+	String buf;
 	size_t first_digit_at = i;
 
 	int dot_loc = -1;
@@ -521,23 +523,22 @@ std::string Tokenizer::get_num(const std::string &data, size_t &i, size_t &line,
 		}
 		case '.':
 			if(!read_base && base != 10) {
-				err.set(loc(line, first_digit_at - line_start),
-					"encountered dot (.) character when base is not 10 (%d) ",
-					base);
+				err::out(loc(line, first_digit_at - line_start),
+					 {"encountered dot (.) character when base is not 10 (",
+					  ctx.strFrom((int64_t)base), ") "});
 				return "";
 			} else if(dot_loc == -1) {
 				if(next >= '0' && next <= '9') {
 					dot_loc	 = i;
 					num_type = FLT;
 				} else {
-					return buf;
+					goto end;
 				}
 			} else {
-				err.set(
-				loc(line, first_digit_at - line_start),
-				"encountered dot (.) character "
-				"when the number being retrieved (from column %zu) already had one",
-				first_digit_at + 1);
+				err::out(loc(line, first_digit_at - line_start),
+					 {"encountered dot (.) character when the number being "
+					  "retrieved (from column ",
+					  ctx.strFrom(first_digit_at + 1), ") already had one"});
 				return "";
 			}
 			read_base = false;
@@ -546,22 +547,23 @@ std::string Tokenizer::get_num(const std::string &data, size_t &i, size_t &line,
 		default:
 		fail:
 			if(isalnum(c)) {
-				err.set(loc(line, first_digit_at - line_start),
-					"encountered invalid character '%c' while retrieving a "
-					"number of base %d",
-					c, base);
+				err::out(loc(line, first_digit_at - line_start),
+					 {"encountered invalid character '", String(1, c),
+					  "' while retrieving a number of base ",
+					  ctx.strFrom((int64_t)base)});
 			} else {
-				return buf;
+				goto end;
 			}
 		}
 		buf.push_back(c);
 		++i;
 	}
-	return buf;
+end:
+	return ctx.moveStr(std::move(buf));
 }
 
-bool Tokenizer::get_const_str(const std::string &data, char &quote_type, size_t &i, size_t &line,
-			      size_t &line_start, std::string &buf)
+bool Tokenizer::get_const_str(StringRef data, char &quote_type, size_t &i, size_t &line,
+			      size_t &line_start, String &buf)
 {
 	size_t len = data.size();
 	buf.clear();
@@ -584,9 +586,9 @@ bool Tokenizer::get_const_str(const std::string &data, char &quote_type, size_t 
 		buf.push_back(data[i++]);
 		if(quote_type == '\'') {
 			if(CURR != quote_type) {
-				err.set(loc(line, starting_at - line_start),
-					"expected single quote for end of const char, found: %c",
-					CURR);
+				err::out(loc(line, starting_at - line_start),
+					 {"expected single quote for end of const char, found: ",
+					  String(1, CURR)});
 				return false;
 			}
 			break;
@@ -594,8 +596,8 @@ bool Tokenizer::get_const_str(const std::string &data, char &quote_type, size_t 
 		continuous_backslash = 0;
 	}
 	if(CURR != quote_type) {
-		err.set(loc(line, starting_at - line_start), "no matching quote for '%c' found",
-			quote_type);
+		err::out(loc(line, starting_at - line_start),
+			 {"no matching quote for '", String(1, quote_type), "' found"});
 		return false;
 	}
 	// omit ending quote
@@ -604,7 +606,7 @@ bool Tokenizer::get_const_str(const std::string &data, char &quote_type, size_t 
 	return true;
 }
 
-TokType Tokenizer::get_operator(const std::string &data, size_t &i, const size_t &line,
+TokType Tokenizer::get_operator(StringRef data, size_t &i, const size_t &line,
 				const size_t &line_start)
 {
 	size_t len	   = data.size();
@@ -779,7 +781,8 @@ TokType Tokenizer::get_operator(const std::string &data, size_t &i, const size_t
 	case ']': SET_OP_TYPE_BRK(RBRACK);
 	case '}': SET_OP_TYPE_BRK(RBRACE);
 	default:
-		err.set(loc(line, starting_at - line_start), "unknown operator '%c' found", CURR);
+		err::out(loc(line, starting_at - line_start),
+			 {"unknown operator '", String(1, CURR), "' found"});
 		op_type = INVALID;
 	}
 
@@ -787,7 +790,7 @@ TokType Tokenizer::get_operator(const std::string &data, size_t &i, const size_t
 	return op_type;
 }
 
-void Tokenizer::remove_back_slash(std::string &s)
+void Tokenizer::remove_back_slash(String &s)
 {
 	for(auto it = s.begin(); it != s.end(); ++it) {
 		if(*it == '\\') {
@@ -812,9 +815,9 @@ void Tokenizer::remove_back_slash(std::string &s)
 	}
 }
 
-std::string view_backslash(const std::string &data)
+String view_backslash(StringRef data)
 {
-	std::string res = data;
+	String res(data);
 	for(auto it = res.begin(); it != res.end(); ++it) {
 		if(*it == '\0') {
 			it = res.erase(it);

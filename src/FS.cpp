@@ -24,12 +24,12 @@ namespace sc
 {
 namespace fs
 {
-bool exists(const std::string &loc)
+bool exists(const String &loc)
 {
 	return access(loc.c_str(), F_OK) != -1;
 }
 
-bool read(const std::string &file, std::string &data)
+bool read(const String &file, String &data)
 {
 	FILE *fp;
 	char *line = NULL;
@@ -57,7 +57,7 @@ bool read(const std::string &file, std::string &data)
 	return true;
 }
 
-std::string absPath(const std::string &loc)
+String absPath(const String &loc)
 {
 	static char abs[MAX_PATH_CHARS];
 	static char abs_tmp[MAX_PATH_CHARS];
@@ -65,7 +65,7 @@ std::string absPath(const std::string &loc)
 	return abs;
 }
 
-std::string getCWD()
+String getCWD()
 {
 	static char cwd[MAX_PATH_CHARS];
 	if(getcwd(cwd, sizeof(cwd)) != NULL) {
@@ -74,19 +74,19 @@ std::string getCWD()
 	return "";
 }
 
-bool setCWD(const std::string &path)
+bool setCWD(const String &path)
 {
 	return chdir(path.c_str()) != 0;
 }
 
-std::string parentDir(const std::string &path)
+String parentDir(const String &path)
 {
 	return path.substr(0, path.find_last_of("/\\"));
 }
 
-std::string home()
+String home()
 {
-	static std::string _home = env::get("HOME");
+	static String _home = env::get("HOME");
 	return _home;
 }
 } // namespace fs

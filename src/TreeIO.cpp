@@ -13,17 +13,15 @@
 
 #include "TreeIO.hpp"
 
-#include <cstdarg>
-#include <string>
-#include <vector>
+#include <iostream>
 
 namespace sc
 {
 namespace tio
 {
-static std::vector<bool> &_tab()
+static Vector<bool> &_tab()
 {
-	static std::vector<bool> tabs;
+	static Vector<bool> tabs;
 	return tabs;
 }
 
@@ -31,9 +29,9 @@ static void _tab_apply(const bool has_next)
 {
 	for(size_t i = 0; i < _tab().size(); ++i) {
 		if(i == _tab().size() - 1) {
-			fprintf(stdout, has_next ? " ├─" : " └─");
+			std::cout << (has_next ? " ├─" : " └─");
 		} else {
-			fprintf(stdout, _tab()[i] ? " │" : "  ");
+			std::cout << (_tab()[i] ? " │" : "  ");
 		}
 	}
 }
@@ -49,20 +47,14 @@ void tabr(const size_t num)
 	for(size_t i = 0; i < num; ++i) _tab().pop_back();
 }
 
-void print(const bool has_next, const char *fmt, ...)
+void print(const bool has_next, InitList<StringRef> data)
 {
 	_tab_apply(has_next);
-	va_list args;
-	va_start(args, fmt);
-	vfprintf(stdout, fmt, args);
-	va_end(args);
+	for(auto &d : data) std::cout << d;
 }
-void printf(const char *fmt, ...)
+void printf(InitList<StringRef> data)
 {
-	va_list args;
-	va_start(args, fmt);
-	vfprintf(stdout, fmt, args);
-	va_end(args);
+	for(auto &d : data) std::cout << d;
 }
 } // namespace tio
 } // namespace sc

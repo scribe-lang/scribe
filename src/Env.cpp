@@ -32,13 +32,13 @@ namespace sc
 {
 namespace env
 {
-std::string get(const std::string &key)
+String get(const String &key)
 {
 	const char *env = getenv(key.c_str());
 	return env == NULL ? "" : env;
 }
 
-std::string getProcPath()
+String getProcPath()
 {
 	char path[MAX_PATH_CHARS];
 	memset(path, 0, MAX_PATH_CHARS);
@@ -63,15 +63,15 @@ std::string getProcPath()
 	return path;
 }
 
-std::string getExeFromPath(const std::string &exe)
+String getExeFromPath(const String &exe)
 {
-	std::string path = get("PATH");
+	String path = get("PATH");
 	if(path.empty()) return "";
 
-	std::vector<std::string> paths = stringDelim(path, ":");
+	Vector<StringRef> paths = stringDelim(path, ":");
 
 	for(auto &p : paths) {
-		if(fs::exists(p + "/" + exe)) return p + "/" + exe;
+		if(fs::exists(String(p) + "/" + exe)) return String(p) + "/" + exe;
 	}
 	return "";
 }

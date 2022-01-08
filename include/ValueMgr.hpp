@@ -27,35 +27,35 @@ struct ValDecl
 };
 class Layer
 {
-	std::unordered_map<std::string, ValDecl> items;
+	Map<StringRef, ValDecl> items;
 
 public:
-	inline bool add(const std::string &name, const uint64_t &vid, StmtVar *decl)
+	inline bool add(StringRef name, const uint64_t &vid, StmtVar *decl)
 	{
 		if(exists(name)) return false;
 		items[name] = {vid, decl};
 		return true;
 	}
-	inline bool exists(const std::string &name)
+	inline bool exists(StringRef name)
 	{
 		return items.find(name) != items.end();
 	}
-	inline uint64_t getVal(const std::string &name)
+	inline uint64_t getVal(StringRef name)
 	{
 		return items.find(name) == items.end() ? 0 : items[name].valueid;
 	}
-	inline StmtVar *getDecl(const std::string &name)
+	inline StmtVar *getDecl(StringRef name)
 	{
 		return items.find(name) == items.end() ? nullptr : items[name].decl;
 	}
-	inline std::unordered_map<std::string, ValDecl> &getItems()
+	inline Map<StringRef, ValDecl> &getItems()
 	{
 		return items;
 	}
 };
 class LayerStack
 {
-	std::vector<Layer> layers;
+	Vector<Layer> layers;
 
 public:
 	inline void pushLayer()
@@ -70,13 +70,13 @@ public:
 	{
 		return layers.size();
 	}
-	inline bool add(const std::string &name, const uint64_t &vid, StmtVar *decl)
+	inline bool add(StringRef name, const uint64_t &vid, StmtVar *decl)
 	{
 		return layers.back().add(name, vid, decl);
 	}
-	bool exists(const std::string &name, const bool &top_only);
-	uint64_t getVal(const std::string &name, const bool &top_only);
-	StmtVar *getDecl(const std::string &name, const bool &top_only);
+	bool exists(StringRef name, const bool &top_only);
+	uint64_t getVal(StringRef name, const bool &top_only);
+	StmtVar *getDecl(StringRef name, const bool &top_only);
 };
 class Function : public LayerStack
 {
@@ -96,10 +96,10 @@ public:
 };
 class ValueManager
 {
-	std::unordered_map<uint64_t, std::unordered_map<std::string, uint64_t>> typefuncs;
-	std::unordered_map<std::string, ValDecl> globals;
+	Map<uint64_t, Map<StringRef, uint64_t>> typefuncs;
+	Map<StringRef, ValDecl> globals;
 	LayerStack layers; // outside function
-	std::vector<Function> funcstack;
+	Vector<Function> funcstack;
 
 public:
 	ValueManager(Context &c);
@@ -135,15 +135,14 @@ public:
 	{
 		return !funcstack.empty();
 	}
-	bool addVar(const std::string &var, const uint64_t &vid, StmtVar *decl,
-		    bool global = false);
-	bool addTypeFn(Type *ty, const std::string &name, const uint64_t &fn);
-	bool addTypeFn(const uint64_t &id, const std::string &name, const uint64_t &fn);
-	bool exists(const std::string &var, bool top_only, bool include_globals);
-	bool existsTypeFn(Type *ty, const std::string &name);
-	uint64_t getVar(const std::string &var, bool top_only, bool include_globals);
-	StmtVar *getDecl(const std::string &var, bool top_only, bool include_globals);
-	uint64_t getTypeFn(Type *ty, const std::string &name);
+	bool addVar(StringRef var, const uint64_t &vid, StmtVar *decl, bool global = false);
+	bool addTypeFn(Type *ty, StringRef name, const uint64_t &fn);
+	bool addTypeFn(const uint64_t &id, StringRef name, const uint64_t &fn);
+	bool exists(StringRef var, bool top_only, bool include_globals);
+	bool existsTypeFn(Type *ty, StringRef name);
+	uint64_t getVar(StringRef var, bool top_only, bool include_globals);
+	StmtVar *getDecl(StringRef var, bool top_only, bool include_globals);
+	uint64_t getTypeFn(Type *ty, StringRef name);
 };
 } // namespace sc
 

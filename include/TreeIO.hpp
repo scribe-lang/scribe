@@ -14,7 +14,7 @@
 #ifndef TREE_IO_HPP
 #define TREE_IO_HPP
 
-#include <cstddef>
+#include "Core.hpp"
 
 namespace sc
 {
@@ -22,8 +22,8 @@ namespace tio
 {
 void taba(const bool show);
 void tabr(const size_t num = 1);
-void print(const bool has_next, const char *fmt, ...);
-void printf(const char *fmt, ...);
+void print(const bool has_next, InitList<StringRef> data);
+void printf(InitList<StringRef> data);
 } // namespace tio
 } // namespace sc
 

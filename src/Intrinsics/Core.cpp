@@ -27,23 +27,23 @@
 
 namespace sc
 {
-static bool IsValidSource(std::string &modname);
+static bool IsValidSource(String &modname);
 static size_t SizeOf(Type *ty);
 
 INTRINSIC(import)
 {
 	if(!args[0]->getValue()->hasData() || !args[0]->getValue()->isStrLiteral()) {
-		err.set(stmt, "import must be a compile time computable string");
+		err::out(stmt, {"import must be a compile time computable string"});
 		return false;
 	}
-	std::string modname = as<VecVal>(args[0]->getValue())->getAsString();
+	String modname = as<VecVal>(args[0]->getValue())->getAsString();
 	if(modname.empty()) {
-		err.set(stmt, "invalid comptime value for module string");
+		err::out(stmt, {"invalid comptime value for module string"});
 		return false;
 	}
 
 	if(!IsValidSource(modname)) {
-		err.set(stmt, "Error: import file '%s' does not exist", modname.c_str());
+		err::out(stmt, {"Error: import file '", modname, "' does not exist"});
 		return false;
 	}
 
@@ -57,7 +57,7 @@ INTRINSIC(import)
 		goto gen_import;
 	}
 	if(!parser->parse(modname)) {
-		err.set(stmt, "failed to parse source: %s", modname.c_str());
+		err::out(stmt, {"failed to parse source: ", modname});
 		return false;
 	}
 	mod    = parser->getModule(modname);
@@ -114,7 +114,7 @@ INTRINSIC(szof)
 {
 	int64_t sz = SizeOf(args[0]->getValueTy());
 	if(!sz) {
-		err.set(args[0], "invalid type info, received size 0");
+		err::out(args[0], {"invalid type info, received size 0"});
 		return false;
 	}
 	stmt->createAndSetValue(IntVal::create(c, mkU64Ty(c), CDPERMA, sz));
@@ -161,7 +161,7 @@ INTRINSIC(valen)
 	if(stmt->getValue()->hasData()) return true;
 	TypeAssignPass *ta = c.getPass<TypeAssignPass>();
 	if(!ta->isFnVALen()) {
-		err.set(stmt, "this is not a variadic function");
+		err::out(stmt, {"this is not a variadic function"});
 		return false;
 	}
 	size_t vasz = ta->getFnVALen();
@@ -170,7 +170,7 @@ INTRINSIC(valen)
 }
 INTRINSIC(array)
 {
-	std::vector<int64_t> counts;
+	Vector<int64_t> counts;
 	Type *resty = as<TypeVal>(args[0]->getValue())->getVal();
 
 	for(size_t i = 1; i < args.size(); ++i) {
@@ -179,9 +179,9 @@ INTRINSIC(array)
 	for(auto &count : counts) {
 		resty = PtrTy::create(c, resty, count, false);
 	}
-	Value *res = resty->toDefaultValue(c, err, stmt->getLoc(), CDPERMA);
+	Value *res = resty->toDefaultValue(c, stmt->getLoc(), CDPERMA);
 	if(!res) {
-		err.set(stmt, "failed to get default value from array's type");
+		err::out(stmt, {"failed to get default value from array's type"});
 		return false;
 	}
 	stmt->createAndSetValue(res);
@@ -233,21 +233,21 @@ INTRINSIC(syspathmax)
 }
 INTRINSIC(compileerror)
 {
-	std::string e;
+	String e;
 	for(auto &a : args) {
 		if(a->getValue()->hasData() && a->getValue()->isStrLiteral()) {
 			e += as<VecVal>(a->getValue())->getAsString();
 		} else {
-			e += a->getValue()->toStr().c_str();
+			e += a->getValue()->toStr();
 		}
 	}
-	err.set(stmt, e.c_str());
+	err::out(stmt, {e});
 	return false;
 }
 
-static bool IsValidSource(std::string &modname)
+static bool IsValidSource(String &modname)
 {
-	static std::string import_dir = INSTALL_DIR "/include/scribe";
+	static String import_dir = INSTALL_DIR "/include/scribe";
 	if(modname.front() != '~' && modname.front() != '/' && modname.front() != '.') {
 		if(fs::exists(import_dir + "/" + modname + ".sc")) {
 			modname = fs::absPath(import_dir + "/" + modname + ".sc");
@@ -256,7 +256,7 @@ static bool IsValidSource(std::string &modname)
 	} else {
 		if(modname.front() == '~') {
 			modname.erase(modname.begin());
-			std::string home = fs::home();
+			String home = fs::home();
 			modname.insert(modname.begin(), home.begin(), home.end());
 		}
 		if(fs::exists(modname + ".sc")) {

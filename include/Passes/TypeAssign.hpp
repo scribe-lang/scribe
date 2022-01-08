@@ -32,51 +32,50 @@ class TypeAssignPass : public Pass
 	ValueAssignPass vpass;
 	DeferStack deferstack;
 	// vars created during type assign - enums, specialized funcs
-	std::vector<StmtVar *> additionalvars;
+	Vector<StmtVar *> additionalvars;
 	// variadic length of current function
-	std::vector<size_t> valen;
-	std::vector<bool> is_fn_va;
-	std::vector<PartialType> partialtypes;
+	Vector<size_t> valen;
+	Vector<bool> is_fn_va;
+	Vector<PartialType> partialtypes;
 	bool disabled_varname_mangling;
 
-	std::string getMangledName(Stmt *stmt, const std::string &name,
-				   NamespaceVal *ns = nullptr) const;
+	StringRef getMangledName(Stmt *stmt, StringRef name, NamespaceVal *ns = nullptr) const;
 	void applyPrimitiveTypeCoercion(Type *to, Stmt *from);
 	void applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex::Lexeme &oper);
 	bool chooseSuperiorPrimitiveType(Type *l, Type *r);
-	bool initTemplateFunc(Stmt *caller, FuncTy *&cf, std::vector<Stmt *> &args);
+	bool initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> &args);
 
 	void pushFunc(FuncVal *fn, const bool &is_va, const size_t &va_len);
 	void updateLastFunc(FuncVal *fn, const bool &is_va, const size_t &va_len);
 	void popFunc();
 
 public:
-	TypeAssignPass(ErrMgr &err, Context &ctx);
-	~TypeAssignPass();
+	TypeAssignPass(Context &ctx);
+	~TypeAssignPass() override;
 
-	bool visit(Stmt *stmt, Stmt **source);
+	bool visit(Stmt *stmt, Stmt **source) override;
 
-	bool visit(StmtBlock *stmt, Stmt **source);
-	bool visit(StmtType *stmt, Stmt **source);
-	bool visit(StmtSimple *stmt, Stmt **source);
-	bool visit(StmtFnCallInfo *stmt, Stmt **source);
-	bool visit(StmtExpr *stmt, Stmt **source);
-	bool visit(StmtVar *stmt, Stmt **source);
-	bool visit(StmtFnSig *stmt, Stmt **source);
-	bool visit(StmtFnDef *stmt, Stmt **source);
-	bool visit(StmtHeader *stmt, Stmt **source);
-	bool visit(StmtLib *stmt, Stmt **source);
-	bool visit(StmtExtern *stmt, Stmt **source);
-	bool visit(StmtEnum *stmt, Stmt **source);
-	bool visit(StmtStruct *stmt, Stmt **source);
-	bool visit(StmtVarDecl *stmt, Stmt **source);
-	bool visit(StmtCond *stmt, Stmt **source);
-	bool visit(StmtFor *stmt, Stmt **source);
-	bool visit(StmtWhile *stmt, Stmt **source);
-	bool visit(StmtRet *stmt, Stmt **source);
-	bool visit(StmtContinue *stmt, Stmt **source);
-	bool visit(StmtBreak *stmt, Stmt **source);
-	bool visit(StmtDefer *stmt, Stmt **source);
+	bool visit(StmtBlock *stmt, Stmt **source) override;
+	bool visit(StmtType *stmt, Stmt **source) override;
+	bool visit(StmtSimple *stmt, Stmt **source) override;
+	bool visit(StmtFnCallInfo *stmt, Stmt **source) override;
+	bool visit(StmtExpr *stmt, Stmt **source) override;
+	bool visit(StmtVar *stmt, Stmt **source) override;
+	bool visit(StmtFnSig *stmt, Stmt **source) override;
+	bool visit(StmtFnDef *stmt, Stmt **source) override;
+	bool visit(StmtHeader *stmt, Stmt **source) override;
+	bool visit(StmtLib *stmt, Stmt **source) override;
+	bool visit(StmtExtern *stmt, Stmt **source) override;
+	bool visit(StmtEnum *stmt, Stmt **source) override;
+	bool visit(StmtStruct *stmt, Stmt **source) override;
+	bool visit(StmtVarDecl *stmt, Stmt **source) override;
+	bool visit(StmtCond *stmt, Stmt **source) override;
+	bool visit(StmtFor *stmt, Stmt **source) override;
+	bool visit(StmtWhile *stmt, Stmt **source) override;
+	bool visit(StmtRet *stmt, Stmt **source) override;
+	bool visit(StmtContinue *stmt, Stmt **source) override;
+	bool visit(StmtBreak *stmt, Stmt **source) override;
+	bool visit(StmtDefer *stmt, Stmt **source) override;
 
 	inline size_t getFnVALen() const
 	{

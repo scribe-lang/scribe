@@ -17,7 +17,7 @@
 
 namespace sc
 {
-bool LayerStack::exists(const std::string &name, const bool &top_only)
+bool LayerStack::exists(StringRef name, const bool &top_only)
 {
 	size_t i     = layers.size() - 1;
 	bool is_done = false;
@@ -29,7 +29,7 @@ bool LayerStack::exists(const std::string &name, const bool &top_only)
 	}
 	return false;
 }
-uint64_t LayerStack::getVal(const std::string &name, const bool &top_only)
+uint64_t LayerStack::getVal(StringRef name, const bool &top_only)
 {
 	size_t i     = layers.size() - 1;
 	bool is_done = false;
@@ -42,7 +42,7 @@ uint64_t LayerStack::getVal(const std::string &name, const bool &top_only)
 	}
 	return 0;
 }
-StmtVar *LayerStack::getDecl(const std::string &name, const bool &top_only)
+StmtVar *LayerStack::getDecl(StringRef name, const bool &top_only)
 {
 	size_t i     = layers.size() - 1;
 	bool is_done = false;
@@ -62,7 +62,7 @@ ValueManager::ValueManager(Context &c)
 {
 	AddPrimitiveFuncs(c, *this);
 }
-bool ValueManager::addVar(const std::string &var, const uint64_t &vid, StmtVar *decl, bool global)
+bool ValueManager::addVar(StringRef var, const uint64_t &vid, StmtVar *decl, bool global)
 {
 	if(global) {
 		if(globals.find(var) != globals.end()) return false;
@@ -72,11 +72,11 @@ bool ValueManager::addVar(const std::string &var, const uint64_t &vid, StmtVar *
 	if(!funcstack.empty()) return funcstack.back().add(var, vid, decl);
 	return layers.add(var, vid, decl);
 }
-bool ValueManager::addTypeFn(Type *ty, const std::string &name, const uint64_t &fn)
+bool ValueManager::addTypeFn(Type *ty, StringRef name, const uint64_t &fn)
 {
 	return addTypeFn(ty->getID(), name, fn);
 }
-bool ValueManager::addTypeFn(const uint64_t &id, const std::string &name, const uint64_t &fn)
+bool ValueManager::addTypeFn(const uint64_t &id, StringRef name, const uint64_t &fn)
 {
 	if(typefuncs.find(id) == typefuncs.end()) {
 		typefuncs[id] = {};
@@ -86,7 +86,7 @@ bool ValueManager::addTypeFn(const uint64_t &id, const std::string &name, const 
 	funcmap[name] = fn;
 	return true;
 }
-bool ValueManager::exists(const std::string &var, bool top_only, bool include_globals)
+bool ValueManager::exists(StringRef var, bool top_only, bool include_globals)
 {
 	if(!funcstack.empty()) {
 		bool res = funcstack.back().exists(var, top_only);
@@ -96,7 +96,7 @@ bool ValueManager::exists(const std::string &var, bool top_only, bool include_gl
 	if(res || top_only || !include_globals) return res;
 	return globals.find(var) != globals.end();
 }
-bool ValueManager::existsTypeFn(Type *ty, const std::string &name)
+bool ValueManager::existsTypeFn(Type *ty, StringRef name)
 {
 	const uint64_t &id = ty->getID();
 	if(typefuncs.find(id) == typefuncs.end()) {
@@ -105,7 +105,7 @@ bool ValueManager::existsTypeFn(Type *ty, const std::string &name)
 	auto &funcmap = typefuncs[id];
 	return funcmap.find(name) != funcmap.end();
 }
-uint64_t ValueManager::getVar(const std::string &var, bool top_only, bool include_globals)
+uint64_t ValueManager::getVar(StringRef var, bool top_only, bool include_globals)
 {
 	if(!funcstack.empty()) {
 		uint64_t res = funcstack.back().getVal(var, top_only);
@@ -117,7 +117,7 @@ uint64_t ValueManager::getVar(const std::string &var, bool top_only, bool includ
 	if(gres != globals.end()) return gres->second.valueid;
 	return 0;
 }
-StmtVar *ValueManager::getDecl(const std::string &var, bool top_only, bool include_globals)
+StmtVar *ValueManager::getDecl(StringRef var, bool top_only, bool include_globals)
 {
 	if(!funcstack.empty()) {
 		StmtVar *res = funcstack.back().getDecl(var, top_only);
@@ -129,7 +129,7 @@ StmtVar *ValueManager::getDecl(const std::string &var, bool top_only, bool inclu
 	if(gres != globals.end()) return gres->second.decl;
 	return nullptr;
 }
-uint64_t ValueManager::getTypeFn(Type *ty, const std::string &name)
+uint64_t ValueManager::getTypeFn(Type *ty, StringRef name)
 {
 	const uint64_t &id = ty->getID();
 	if(typefuncs.find(id) == typefuncs.end()) {

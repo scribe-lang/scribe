@@ -14,17 +14,17 @@
 #ifndef ENV_HPP
 #define ENV_HPP
 
-#include <string>
+#include "Core.hpp"
 
 namespace sc
 {
 namespace env
 {
-std::string get(const std::string &key);
+String get(const String &key);
 
-std::string getProcPath();
+String getProcPath();
 
-std::string getExeFromPath(const std::string &exe);
+String getExeFromPath(const String &exe);
 } // namespace env
 } // namespace sc
 

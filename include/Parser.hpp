@@ -14,8 +14,6 @@
 #ifndef PARSER_HPP
 #define PARSER_HPP
 
-#include <cstddef>
-
 #include "Args.hpp"
 #include "Lex.hpp"
 #include "Parser/Stmts.hpp"
@@ -26,29 +24,28 @@ namespace sc
 
 class Module
 {
-	ErrMgr &err;
 	Context &ctx;
 
-	std::string id;
-	std::string path;
-	std::string code;
-	std::vector<lex::Lexeme> tokens;
+	StringRef id;
+	StringRef path;
+	StringRef code;
+	Vector<lex::Lexeme> tokens;
 	Stmt *ptree;
 	bool is_main_module;
 
 public:
-	Module(ErrMgr &err, Context &ctx, const std::string &id, const std::string &path,
-	       const std::string &code, const bool &is_main_module);
+	Module(Context &ctx, StringRef id, StringRef path, StringRef code,
+	       const bool &is_main_module);
 	~Module();
 
 	bool tokenize();
 	bool parseTokens();
 	bool executePasses(PassManager &pm);
 
-	const std::string &getID() const;
-	const std::string &getPath() const;
-	const std::string &getCode() const;
-	const std::vector<lex::Lexeme> &getTokens() const;
+	StringRef getID() const;
+	StringRef getPath() const;
+	StringRef getCode() const;
+	const Vector<lex::Lexeme> &getTokens() const;
 	Stmt *&getParseTree();
 	bool isMainModule() const;
 
@@ -60,7 +57,6 @@ class RAIIParser
 {
 	args::ArgParser &args;
 
-	ErrMgr err;
 	Context ctx;
 
 	// default pms that run:
@@ -69,28 +65,27 @@ class RAIIParser
 	PassManager defaultpmpermodule, defaultpmcombined;
 
 	// as new sources are imported, they'll be pushed back
-	std::vector<std::string> modulestack;
+	Vector<StringRef> modulestack;
 
 	// the iteration of this list will give the order of imports
 	// this list does NOT contain the main module
-	std::vector<std::string> moduleorder;
+	Vector<StringRef> moduleorder;
 
-	std::unordered_map<std::string, Module *> modules;
+	Map<StringRef, Module *> modules;
 
-	Module *addModule(const std::string &path, const bool &main_module);
+	Module *addModule(StringRef path, const bool &main_module);
 
 public:
 	RAIIParser(args::ArgParser &args);
 	~RAIIParser();
 
-	bool parse(const std::string &path, const bool &main_module = false);
+	bool parse(const String &_path, const bool &main_module = false);
 	void combineAllModules();
 
-	bool hasModule(const std::string &path);
-	Module *getModule(const std::string &path);
-	const std::vector<std::string> &getModuleStack();
+	bool hasModule(StringRef path);
+	Module *getModule(StringRef path);
+	const Vector<StringRef> &getModuleStack();
 	args::ArgParser &getCommandArgs();
-	ErrMgr &getErrMgr();
 	Context &getContext();
 
 	// force ignores arg parser

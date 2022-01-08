@@ -13,7 +13,7 @@
 
 #include "../include/Args.hpp"
 
-#include <cstdio>
+#include <iostream>
 #include <stdexcept>
 
 #include "../include/Config.hpp"
@@ -32,7 +32,7 @@ ArgParser::ArgParser(const int &argc, const char **argv)
 	"prints help information for program");
 }
 
-ArgInfo &ArgParser::add(const std::string &argname)
+ArgInfo &ArgParser::add(StringRef argname)
 {
 	arg_defs[argname].lng = argname;
 	return arg_defs[argname];
@@ -40,17 +40,17 @@ ArgInfo &ArgParser::add(const std::string &argname)
 
 void ArgParser::parse()
 {
-	std::string expect_key;
+	String expect_key;
 	bool expect_val = false;
 	for(size_t i = 0; i < argv.size(); ++i) {
-		std::string arg = argv[i];
+		StringRef arg = argv[i];
 		if(expect_val) {
 			opts[expect_key] = arg;
 			expect_val	 = false;
 			continue;
 		}
 		if(arg.rfind("--", 0) == 0) {
-			arg.erase(0, 2);
+			arg = arg.substr(2);
 			for(auto &a : arg_defs) {
 				if(a.second.lng == arg) {
 					opts.insert({a.first, ""});
@@ -64,7 +64,7 @@ void ArgParser::parse()
 			continue;
 		}
 		if(arg.rfind("-", 0) == 0) {
-			arg.erase(0, 1);
+			arg = arg.substr(1);
 			for(auto &a : arg_defs) {
 				if(a.second.shrt == arg) {
 					opts.insert({a.first, ""});
@@ -85,7 +85,7 @@ void ArgParser::parse()
 	}
 	for(auto &a : arg_defs) {
 		if(a.second.reqd && opts.find(a.first) == opts.end()) {
-			throw std::runtime_error("Required argument: " + a.first +
+			throw std::runtime_error("Required argument: " + String(a.first) +
 						 " was not provided");
 		}
 	}
@@ -94,23 +94,23 @@ void ArgParser::parse()
 
 void ArgParser::print_help(FILE *file)
 {
-	fprintf(file, "%s compiler %d.%d.%d (language %d.%d.%d)\n", PROJECT_NAME, SCRIBE_MAJOR,
-		SCRIBE_MINOR, SCRIBE_PATCH, COMPILER_MAJOR, COMPILER_MINOR, COMPILER_PATCH);
+	std::cout << PROJECT_NAME << " compiler " << SCRIBE_MAJOR << "." << SCRIBE_MINOR << "."
+		  << SCRIBE_PATCH << " (language " << COMPILER_MAJOR << COMPILER_MINOR
+		  << COMPILER_PATCH << ")\n";
 
-	std::string reqd_args;
+	std::cout << "usage: " << argv[0];
 	for(auto &arg : arg_defs) {
 		if(arg.second.reqd) {
-			reqd_args += "[" + arg.first + "] ";
+			std::cout << " [" << arg.first << "]";
 		}
 	}
-	fprintf(file, "usage: %s%s <args>\n\n", argv[0].c_str(), reqd_args.c_str());
+	std::cout << " <args>\n\n";
 	for(auto &arg : arg_defs) {
 		if(!arg.second.shrt.empty()) {
-			fprintf(file, "-%s, --%s\t\t%s\n", arg.second.shrt.c_str(),
-				arg.second.lng.c_str(), arg.second.help.c_str());
+			std::cout << "-" << arg.second.shrt << ", --" << arg.second.lng << "\t\t"
+				  << arg.second.help << "\n";
 		} else {
-			fprintf(file, "--%s\t\t%s\n", arg.second.lng.c_str(),
-				arg.second.help.c_str());
+			std::cout << "--" << arg.second.lng << "\t\t" << arg.second.help << "\n";
 		}
 	}
 }

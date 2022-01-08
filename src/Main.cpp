@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 			COMPILER_PATCH, SCRIBE_PATCH, BUILD_CXX_COMPILER, BUILD_DATE);
 		return 0;
 	}
-	std::string file = args.get(1);
+	String file = String(args.get(1));
 	if(file.empty()) {
 		fprintf(stderr, "Error: no source provided to read from\n");
 		return 1;
@@ -69,14 +69,14 @@ int main(int argc, char **argv)
 	if(args.has("nofile")) return 0;
 
 	CDriver cdriver(parser);
-	std::string outfile = args.get(2);
+	String outfile = String(args.get(2));
 	if(outfile.empty()) {
 		char f[2048] = {0};
 		strcpy(f, file.c_str());
 		outfile = basename(f);
 	}
 	auto ext = outfile.find_last_of('.');
-	if(ext != std::string::npos) outfile = outfile.substr(0, ext);
+	if(ext != String::npos) outfile = outfile.substr(0, ext);
 	if(!cdriver.compile(outfile)) return 1;
 	return 0;
 }

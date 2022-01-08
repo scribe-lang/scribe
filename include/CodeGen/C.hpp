@@ -21,54 +21,57 @@ namespace sc
 {
 class CDriver : public CodeGenDriver
 {
-	std::vector<std::string> headerflags;
-	std::vector<std::string> libflags;
-	std::vector<std::string> preheadermacros;
-	std::vector<std::string> headers;
-	std::vector<std::string> macros;
-	std::vector<std::string> typedefs;
-	std::vector<std::string> structdecls;
-	std::vector<std::string> funcdecls;
+	Vector<StringRef> headerflags;
+	Vector<StringRef> libflags;
+	Vector<StringRef> preheadermacros;
+	Vector<StringRef> headers;
+	Vector<StringRef> macros;
+	Vector<StringRef> typedefs;
+	Vector<StringRef> structdecls;
+	Vector<StringRef> funcdecls;
 	struct ConstantInfo
 	{
 		// var: names of const declarations
 		// decl: C code equivalent
-		std::string var;
-		std::string decl;
+		StringRef var;
+		StringRef decl;
 	};
 	// constants: key is the constant data
-	std::unordered_map<std::string, ConstantInfo> constants;
+	Map<StringRef, ConstantInfo> constants;
 
-	const std::string &getConstantDataVar(const lex::Lexeme &val, Type *ty);
-	std::string getNewConstantVar();
+	StringRef getConstantDataVar(const lex::Lexeme &val, Type *ty);
+	StringRef getNewConstantVar();
 	static bool acceptsSemicolon(Stmt *stmt);
-	bool getCTypeName(std::string &res, Stmt *stmt, Type *ty, bool for_cast, bool for_decl,
+	bool getCTypeName(String &res, Stmt *stmt, Type *ty, bool for_cast, bool for_decl,
 			  bool is_weak);
-	bool getCValue(std::string &res, Stmt *stmt, Value *value, Type *type,
-		       bool i8_to_char = true);
+	bool getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool i8_to_char = true);
 	bool addStructDef(Stmt *stmt, StructTy *sty);
-	bool writeCallArgs(const ModuleLoc *loc, const std::vector<Stmt *> &args, Type *ty,
+	bool writeCallArgs(const ModuleLoc *loc, const Vector<Stmt *> &args, Type *ty,
 			   Writer &writer);
 	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
-	bool getFuncPointer(std::string &res, FuncTy *f, Stmt *stmt, bool for_cast, bool for_decl,
+	bool getFuncPointer(String &res, FuncTy *f, Stmt *stmt, bool for_cast, bool for_decl,
 			    bool is_weak);
-	std::string getArrCount(Type *t);
-	std::string getSystemCompiler();
+	StringRef getArrCount(Type *t);
+	StringRef getSystemCompiler();
 
-	inline std::string getMangledName(const std::string &name, Stmt *stmt)
+	inline StringRef getMangledName(StringRef name, Stmt *stmt)
 	{
-		return name + std::to_string(stmt->getValueTy(true)->getID());
+		String res = std::to_string(stmt->getValueTy(true)->getUniqID());
+		res.insert(res.begin(), name.begin(), name.end());
+		return ctx.moveStr(std::move(res));
 	}
-	inline std::string getMangledName(const std::string &name, Type *ty)
+	inline StringRef getMangledName(StringRef name, Type *ty)
 	{
-		return name + std::to_string(ty->getID());
+		String res = std::to_string(ty->getUniqID());
+		res.insert(res.begin(), name.begin(), name.end());
+		return ctx.moveStr(std::move(res));
 	}
 
 public:
 	CDriver(RAIIParser &parser);
-	~CDriver();
+	~CDriver() override;
 
-	bool compile(const std::string &outfile);
+	bool compile(StringRef outfile) override;
 
 	bool visit(Stmt *stmt, Writer &writer, const bool &semicol);
 

@@ -25,9 +25,7 @@ static uint64_t genIntermediateID()
 	return id++;
 }
 
-SimplifyPass::SimplifyPass(ErrMgr &err, Context &ctx)
-	: Pass(Pass::genPassID<SimplifyPass>(), err, ctx)
-{}
+SimplifyPass::SimplifyPass(Context &ctx) : Pass(Pass::genPassID<SimplifyPass>(), ctx) {}
 SimplifyPass::~SimplifyPass() {}
 
 bool SimplifyPass::visit(Stmt *stmt, Stmt **source)
@@ -55,7 +53,7 @@ bool SimplifyPass::visit(Stmt *stmt, Stmt **source)
 	case BREAK: return visit(as<StmtBreak>(stmt), source);
 	case DEFER: return visit(as<StmtDefer>(stmt), source);
 	}
-	err.set(stmt, "invalid statement found for simplify pass: %s", stmt->getStmtTypeCString());
+	err::out(stmt, {"invalid statement found for simplify pass: ", stmt->getStmtTypeCString()});
 	return false;
 }
 
@@ -64,7 +62,7 @@ bool SimplifyPass::visit(StmtBlock *stmt, Stmt **source)
 	auto &stmts = stmt->getStmts();
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(!visit(stmts[i], &stmts[i])) {
-			err.set(stmt, "failed to perform simplify pass on stmt in block");
+			err::out(stmt, {"failed to perform simplify pass on stmt in block"});
 			return false;
 		}
 		if(!intermediates.empty()) {
@@ -106,7 +104,7 @@ bool SimplifyPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 			continue;
 		}
 		if(!visit(args[i], &args[i])) {
-			err.set(stmt, "failed to apply simplify pass on call argument");
+			err::out(stmt, {"failed to apply simplify pass on call argument"});
 			return false;
 		}
 	}
@@ -118,11 +116,11 @@ bool SimplifyPass::visit(StmtExpr *stmt, Stmt **source)
 	Stmt *&rhs	  = stmt->getRHS();
 	lex::TokType oper = stmt->getOper().getTokVal();
 	if(lhs && !visit(lhs, &lhs)) {
-		err.set(stmt, "failed to apply simplify pass on LHS in expression");
+		err::out(stmt, {"failed to apply simplify pass on LHS in expression"});
 		return false;
 	}
 	if(rhs && !visit(rhs, &rhs)) {
-		err.set(stmt, "failed to apply simplify pass on LHS in expression");
+		err::out(stmt, {"failed to apply simplify pass on LHS in expression"});
 		return false;
 	}
 	if(!stmt->getCalledFn() || stmt->getValue()->hasPermaData()) return true;
@@ -152,8 +150,7 @@ bool SimplifyPass::visit(StmtExpr *stmt, Stmt **source)
 bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 {
 	if(!stmt->getValueID()) {
-		err.set(stmt, "variable: '%s' has no value id",
-			stmt->getName().getDataStr().c_str());
+		err::out(stmt, {"variable: '", stmt->getName().getDataStr(), "' has no value id"});
 		return false;
 	}
 	if(stmt->getValue()->isNamespace()) {
@@ -165,7 +162,7 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 		static bool maindone = false;
 		if(trySetMainFunction(stmt, stmt->getName().getDataStr())) {
 			if(maindone) {
-				err.set(stmt, "multiple main functions found");
+				err::out(stmt, {"multiple main functions found"});
 				return false;
 			}
 			as<StmtFnDef>(stmt->getVVal())->incUsed();
@@ -176,7 +173,7 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 	}
 	bool had_val = stmt->getVVal();
 	if(stmt->getVVal() && !visit(stmt->getVVal(), &stmt->getVVal())) {
-		err.set(stmt, "failed to apply simplify pass on variable value expression");
+		err::out(stmt, {"failed to apply simplify pass on variable value expression"});
 		return false;
 	}
 	if(had_val && !stmt->getVVal()) {
@@ -184,7 +181,7 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 		return true;
 	}
 	if(stmt->getVType() && !visit(stmt->getVType(), asStmt(&stmt->getVType()))) {
-		err.set(stmt, "failed to apply simplify pass on variable type expression");
+		err::out(stmt, {"failed to apply simplify pass on variable type expression"});
 		return false;
 	}
 	return true;
@@ -198,7 +195,8 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 	auto &args = stmt->getArgs();
 	for(size_t i = 0; i < args.size(); ++i) {
 		if(args[i]->getValueTy()->isVariadic()) {
-			err.set(stmt, "variadic argument in function cannot reach simplify stage");
+			err::out(stmt,
+				 {"variadic argument in function cannot reach simplify stage"});
 			return false;
 		}
 		Stmt *argtyexpr = args[i]->getVType()->getExpr();
@@ -209,7 +207,7 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 			continue;
 		}
 		if(!visit(args[i], asStmt(&args[i]))) {
-			err.set(stmt, "failed to apply simplify pass on function signature arg");
+			err::out(stmt, {"failed to apply simplify pass on function signature arg"});
 			return false;
 		}
 		if(!args[i]) {
@@ -219,7 +217,7 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 		}
 	}
 	if(!visit(stmt->getRetType(), asStmt(&stmt->getRetType()))) {
-		err.set(stmt, "failed to apply simplify pass on func signature ret type");
+		err::out(stmt, {"failed to apply simplify pass on func signature ret type"});
 		return false;
 	}
 	return true;
@@ -227,7 +225,7 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
 {
 	if(!visit(stmt->getSig(), asStmt(&stmt->getSig()))) {
-		err.set(stmt, "failed to apply simplify pass on func signature in definition");
+		err::out(stmt, {"failed to apply simplify pass on func signature in definition"});
 		return false;
 	}
 	if(!stmt->getSig()) {
@@ -240,7 +238,7 @@ bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
 		return true;
 	}
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
-		err.set(stmt, "failed to apply simplify pass on func def block");
+		err::out(stmt, {"failed to apply simplify pass on func def block"});
 		return false;
 	}
 	if(stmt->getBlk() && stmt->getBlk()->requiresTemplateInit()) {
@@ -261,7 +259,7 @@ bool SimplifyPass::visit(StmtExtern *stmt, Stmt **source)
 {
 	if(!stmt->getEntity()) return true;
 	if(!visit(stmt->getEntity(), &stmt->getEntity())) {
-		err.set(stmt, "failed to apply simplify pass on func signature in definition");
+		err::out(stmt, {"failed to apply simplify pass on func signature in definition"});
 		return false;
 	}
 	if(!stmt->getEntity()) {
@@ -269,11 +267,11 @@ bool SimplifyPass::visit(StmtExtern *stmt, Stmt **source)
 		return true;
 	}
 	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
-		err.set(stmt, "failed to apply simplify pass on header in extern");
+		err::out(stmt, {"failed to apply simplify pass on header in extern"});
 		return false;
 	}
 	if(stmt->getLibs() && !visit(stmt->getLibs(), asStmt(&stmt->getLibs()))) {
-		err.set(stmt, "failed to apply simplify pass on libs in extern");
+		err::out(stmt, {"failed to apply simplify pass on libs in extern"});
 		return false;
 	}
 	return true;
@@ -293,7 +291,7 @@ bool SimplifyPass::visit(StmtVarDecl *stmt, Stmt **source)
 	for(size_t i = 0; i < stmt->getDecls().size(); ++i) {
 		auto &d = stmt->getDecls()[i];
 		if(!visit(d, asStmt(&d))) {
-			err.set(stmt, "failed to apply simplify pass on variable declaration");
+			err::out(stmt, {"failed to apply simplify pass on variable declaration"});
 			return false;
 		}
 		if(!d) {
@@ -311,11 +309,11 @@ bool SimplifyPass::visit(StmtCond *stmt, Stmt **source)
 {
 	for(auto &c : stmt->getConditionals()) {
 		if(c.getCond() && !visit(c.getCond(), &c.getCond())) {
-			err.set(stmt, "failed to apply simplify pass on conditional condition");
+			err::out(stmt, {"failed to apply simplify pass on conditional condition"});
 			return false;
 		}
 		if(c.getBlk() && !visit(c.getBlk(), asStmt(&c.getBlk()))) {
-			err.set(stmt, "failed to apply simplify pass on conditional block");
+			err::out(stmt, {"failed to apply simplify pass on conditional block"});
 			return false;
 		}
 	}
@@ -324,19 +322,19 @@ bool SimplifyPass::visit(StmtCond *stmt, Stmt **source)
 bool SimplifyPass::visit(StmtFor *stmt, Stmt **source)
 {
 	if(stmt->getInit() && !visit(stmt->getInit(), &stmt->getInit())) {
-		err.set(stmt, "failed to apply simplify pass on for-loop init");
+		err::out(stmt, {"failed to apply simplify pass on for-loop init"});
 		return false;
 	}
 	if(stmt->getCond() && !visit(stmt->getCond(), &stmt->getCond())) {
-		err.set(stmt, "failed to apply simplify pass on for-loop cond");
+		err::out(stmt, {"failed to apply simplify pass on for-loop cond"});
 		return false;
 	}
 	if(stmt->getIncr() && !visit(stmt->getIncr(), &stmt->getIncr())) {
-		err.set(stmt, "failed to apply simplify pass on for-loop incr");
+		err::out(stmt, {"failed to apply simplify pass on for-loop incr"});
 		return false;
 	}
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
-		err.set(stmt, "failed to apply simplify pass on func def block");
+		err::out(stmt, {"failed to apply simplify pass on func def block"});
 		return false;
 	}
 	return true;
@@ -344,11 +342,11 @@ bool SimplifyPass::visit(StmtFor *stmt, Stmt **source)
 bool SimplifyPass::visit(StmtWhile *stmt, Stmt **source)
 {
 	if(stmt->getCond() && !visit(stmt->getCond(), &stmt->getCond())) {
-		err.set(stmt, "failed to apply simplify pass on while condition");
+		err::out(stmt, {"failed to apply simplify pass on while condition"});
 		return false;
 	}
 	if(stmt->getBlk() && !visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
-		err.set(stmt, "failed to apply simplify pass on while block");
+		err::out(stmt, {"failed to apply simplify pass on while block"});
 		return false;
 	}
 	return true;
@@ -356,7 +354,7 @@ bool SimplifyPass::visit(StmtWhile *stmt, Stmt **source)
 bool SimplifyPass::visit(StmtRet *stmt, Stmt **source)
 {
 	if(stmt->getVal() && !visit(stmt->getVal(), &stmt->getVal())) {
-		err.set(stmt, "failed to apply simplify pass on return value");
+		err::out(stmt, {"failed to apply simplify pass on return value"});
 		return false;
 	}
 	return true;
@@ -374,7 +372,7 @@ bool SimplifyPass::visit(StmtDefer *stmt, Stmt **source)
 	return true;
 }
 
-bool SimplifyPass::trySetMainFunction(StmtVar *var, const std::string &varname)
+bool SimplifyPass::trySetMainFunction(StmtVar *var, StringRef varname)
 {
 	StmtFnDef *fn = as<StmtFnDef>(var->getVVal());
 	if(!startsWith(var->getName().getDataStr(), "main_0")) return false;
@@ -406,13 +404,13 @@ Stmt *SimplifyPass::createIntermediate(FuncTy *cf, Stmt *a, const size_t &i)
 	}
 	StmtExpr *ax = as<StmtExpr>(a);
 	if(!ax->getCalledFn()) return nullptr;
-	std::string n;
+	StringRef n;
 	if(ax->getOper().getTokVal() == lex::FNCALL) {
 		n = as<StmtSimple>(ax->getLHS())->getLexValue().getDataStr();
 	} else {
 		n = ax->getOper().getTok().getOperCStr();
 	}
-	n += "__interm" + std::to_string(genIntermediateID());
+	n = ctx.strFrom({n, "__interm", ctx.strFrom(genIntermediateID())});
 	lex::Lexeme name(a->getLoc(), lex::IDEN, n);
 	StmtVar *v = StmtVar::create(ctx, a->getLoc(), name, nullptr, a, false, false, false);
 	v->createAndSetValue(a->getValue()->clone(ctx));

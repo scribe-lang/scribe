@@ -21,7 +21,7 @@ namespace sc
 
 Stmt *StmtBlock::clone(Context &ctx)
 {
-	std::vector<Stmt *> newstmts;
+	Vector<Stmt *> newstmts;
 	for(auto &stmt : stmts) {
 		newstmts.push_back(stmt->clone(ctx));
 	}
@@ -60,7 +60,7 @@ Stmt *StmtSimple::clone(Context &ctx)
 
 Stmt *StmtFnCallInfo::clone(Context &ctx)
 {
-	std::vector<Stmt *> newargs;
+	Vector<Stmt *> newargs;
 	for(auto &a : args) {
 		newargs.push_back(a->clone(ctx));
 	}
@@ -107,7 +107,7 @@ Stmt *StmtVar::clone(Context &ctx)
 
 Stmt *StmtFnSig::clone(Context &ctx)
 {
-	std::vector<StmtVar *> newargs;
+	Vector<StmtVar *> newargs;
 	for(auto &a : args) {
 		newargs.push_back(as<StmtVar>(a->clone(ctx)));
 	}
@@ -183,7 +183,7 @@ Stmt *StmtEnum::clone(Context &ctx)
 
 Stmt *StmtStruct::clone(Context &ctx)
 {
-	std::vector<StmtVar *> newfields;
+	Vector<StmtVar *> newfields;
 	for(auto &f : fields) {
 		newfields.push_back(as<StmtVar>(f->clone(ctx)));
 	}
@@ -198,7 +198,7 @@ Stmt *StmtStruct::clone(Context &ctx)
 
 Stmt *StmtVarDecl::clone(Context &ctx)
 {
-	std::vector<StmtVar *> newdecls;
+	Vector<StmtVar *> newdecls;
 	for(auto &d : decls) {
 		newdecls.push_back(as<StmtVar>(d->clone(ctx)));
 	}
@@ -213,7 +213,7 @@ Stmt *StmtVarDecl::clone(Context &ctx)
 
 Stmt *StmtCond::clone(Context &ctx)
 {
-	std::vector<Conditional> newconds;
+	Vector<Conditional> newconds;
 	for(auto &c : conds) {
 		Stmt *newcond	  = c.getCond() ? c.getCond()->clone(ctx) : nullptr;
 		StmtBlock *newblk = as<StmtBlock>(c.getBlk()->clone(ctx));

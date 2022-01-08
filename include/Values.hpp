@@ -14,11 +14,7 @@
 #ifndef VALUES_HPP
 #define VALUES_HPP
 
-#include <cinttypes>
-#include <cstddef>
-#include <string>
-#include <unordered_map>
-#include <vector>
+#include "Core.hpp"
 
 namespace sc
 {
@@ -56,7 +52,7 @@ public:
 	Value(const Values &vty, Type *ty, ContainsData has_data);
 	virtual ~Value();
 
-	virtual std::string toStr()		       = 0;
+	virtual String toStr()			       = 0;
 	virtual Value *clone(Context &c)	       = 0;
 	virtual bool updateValue(Context &c, Value *v) = 0;
 
@@ -109,7 +105,7 @@ class VoidVal : public Value
 public:
 	VoidVal(Context &c);
 
-	std::string toStr();
+	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
@@ -123,7 +119,7 @@ class IntVal : public Value
 public:
 	IntVal(Context &c, Type *ty, ContainsData has_data, const int64_t &data);
 
-	std::string toStr();
+	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
@@ -142,7 +138,7 @@ class FltVal : public Value
 public:
 	FltVal(Context &c, Type *ty, ContainsData has_data, const long double &data);
 
-	std::string toStr();
+	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
@@ -156,24 +152,24 @@ public:
 
 class VecVal : public Value
 {
-	std::vector<Value *> data;
+	Vector<Value *> data;
 
 public:
-	VecVal(Context &c, Type *ty, ContainsData has_data, const std::vector<Value *> &data);
+	VecVal(Context &c, Type *ty, ContainsData has_data, const Vector<Value *> &data);
 
-	std::string toStr();
+	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
 	static VecVal *create(Context &c, Type *ty, ContainsData has_data,
-			      const std::vector<Value *> &val);
-	static VecVal *createStr(Context &c, const std::string &val, ContainsData has_data);
+			      const Vector<Value *> &val);
+	static VecVal *createStr(Context &c, StringRef val, ContainsData has_data);
 
 	inline void insertVal(Value *v)
 	{
 		data.push_back(v);
 	}
-	inline std::vector<Value *> &getVal()
+	inline Vector<Value *> &getVal()
 	{
 		return data;
 	}
@@ -181,30 +177,29 @@ public:
 	{
 		return data[idx];
 	}
-	std::string getAsString();
+	String getAsString();
 };
 
 class StructVal : public Value
 {
-	std::unordered_map<std::string, Value *> data;
+	Map<StringRef, Value *> data;
 
 public:
-	StructVal(Context &c, Type *ty, ContainsData has_data,
-		  const std::unordered_map<std::string, Value *> &data);
+	StructVal(Context &c, Type *ty, ContainsData has_data, const Map<StringRef, Value *> &data);
 
-	std::string toStr();
+	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
 	static StructVal *create(Context &c, Type *ty, ContainsData has_data,
-				 const std::unordered_map<std::string, Value *> &val);
+				 const Map<StringRef, Value *> &val);
 
-	inline std::unordered_map<std::string, Value *> &getVal()
+	inline Map<StringRef, Value *> &getVal()
 	{
 		return data;
 	}
 
-	inline Value *getField(const std::string &key)
+	inline Value *getField(StringRef key)
 	{
 		if(data.find(key) == data.end()) return nullptr;
 		return data[key];
@@ -216,7 +211,7 @@ class FuncVal : public Value
 public:
 	FuncVal(Context &c, FuncTy *val);
 
-	std::string toStr();
+	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
@@ -233,7 +228,7 @@ class TypeVal : public Value
 public:
 	TypeVal(Context &c, Type *val);
 
-	std::string toStr();
+	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
@@ -251,18 +246,18 @@ public:
 
 class NamespaceVal : public Value
 {
-	std::string val;
+	StringRef val;
 
 public:
-	NamespaceVal(Context &c, const std::string &val);
+	NamespaceVal(Context &c, StringRef val);
 
-	std::string toStr();
+	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
-	static NamespaceVal *create(Context &c, const std::string &val);
+	static NamespaceVal *create(Context &c, StringRef val);
 
-	inline const std::string &getVal()
+	inline StringRef getVal()
 	{
 		return val;
 	}
@@ -277,7 +272,7 @@ class RefVal : public Value
 public:
 	RefVal(Context &c, Type *ty, Value *to);
 
-	std::string toStr();
+	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 

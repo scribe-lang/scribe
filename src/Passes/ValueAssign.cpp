@@ -22,9 +22,7 @@ static bool break_stmt	  = false;
 static bool continue_stmt = false;
 static bool return_stmt	  = false;
 
-ValueAssignPass::ValueAssignPass(ErrMgr &err, Context &ctx)
-	: Pass(Pass::genPassID<ValueAssignPass>(), err, ctx)
-{}
+ValueAssignPass::ValueAssignPass(Context &ctx) : Pass(Pass::genPassID<ValueAssignPass>(), ctx) {}
 ValueAssignPass::~ValueAssignPass() {}
 
 bool ValueAssignPass::visit(Stmt *stmt, Stmt **source)
@@ -52,8 +50,8 @@ bool ValueAssignPass::visit(Stmt *stmt, Stmt **source)
 	case BREAK: return visit(as<StmtBreak>(stmt), source);
 	case DEFER: return visit(as<StmtDefer>(stmt), source);
 	}
-	err.set(stmt, "invalid statement found for type assignment: %s",
-		stmt->getStmtTypeCString());
+	err::out(stmt,
+		 {"invalid statement found for type assignment: ", stmt->getStmtTypeCString()});
 	return false;
 }
 
@@ -62,7 +60,7 @@ bool ValueAssignPass::visit(StmtBlock *stmt, Stmt **source)
 	auto &stmts = stmt->getStmts();
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(!visit(stmts[i], &stmts[i])) {
-			err.set(stmt, "failed to assign type to stmt in block");
+			err::out(stmt, {"failed to assign type to stmt in block"});
 			return false;
 		}
 		if(break_stmt || continue_stmt || return_stmt) break;
@@ -99,12 +97,12 @@ bool ValueAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		if(!stmt->getValue()->hasData() && stmt->getDecl() &&
 		   !visit(stmt->getDecl(), asStmt(&stmt->getDecl())))
 		{
-			err.set(stmt, "failed to determine value from declaration");
+			err::out(stmt, {"failed to determine value from declaration"});
 			return false;
 		}
 		break;
 	default: {
-		err.set(stmt, "cannot assign value - unknown simple type");
+		err::out(stmt, {"cannot assign value - unknown simple type"});
 		return false;
 	}
 	}
@@ -114,7 +112,7 @@ bool ValueAssignPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 {
 	for(auto &a : stmt->getArgs()) {
 		if(!visit(a, asStmt(&a))) {
-			err.set(stmt, "failed to determine type of argument");
+			err::out(stmt, {"failed to determine type of argument"});
 			return false;
 		}
 	}
@@ -127,15 +125,15 @@ bool ValueAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	lex::TokType oper = stmt->getOper().getTokVal();
 
 	if(oper != lex::FNCALL && oper != lex::STCALL && lhs && !visit(lhs, &lhs)) {
-		err.set(stmt, "failed to determine value of LHS in expression with operation: %s",
-			stmt->getOper().getTok().getOperCStr());
+		err::out(stmt, {"failed to determine value of LHS in expression with operation: ",
+				stmt->getOper().getTok().getOperCStr()});
 		return false;
 	}
 
 	if((oper == lex::DOT || oper == lex::ARROW)) goto skip_rhs_val;
 	if(rhs && !rhs->isFnCallInfo() && !visit(rhs, &rhs)) {
-		err.set(stmt, "failed to determine value of RHS in expression with operation: %s",
-			stmt->getOper().getTok().getOperCStr());
+		err::out(stmt, {"failed to determine value of RHS in expression with operation: ",
+				stmt->getOper().getTok().getOperCStr()});
 		return false;
 	}
 
@@ -145,49 +143,49 @@ skip_rhs_val:
 	case lex::DOT: {
 		// nothing to be done for dot operation since all that is required
 		// is already done in type assign pass
-		StructVal *sv		     = as<StructVal>(lhs->getValue());
-		StmtSimple *rsim	     = as<StmtSimple>(rhs);
-		const std::string &fieldname = rsim->getLexValue().getDataStr();
+		StructVal *sv	    = as<StructVal>(lhs->getValue());
+		StmtSimple *rsim    = as<StmtSimple>(rhs);
+		StringRef fieldname = rsim->getLexValue().getDataStr();
 		// struct field names are not mangled with the module ids
 		Value *res = sv->getField(fieldname);
 		if(res && stmt->getValue() != res) stmt->changeValue(res);
 		break;
 	}
 	case lex::FNCALL: {
-		StmtFnCallInfo *callinfo      = as<StmtFnCallInfo>(rhs);
-		bool has_va		      = false;
-		std::vector<Stmt *> &callargs = callinfo->getArgs();
+		StmtFnCallInfo *callinfo = as<StmtFnCallInfo>(rhs);
+		bool has_va		 = false;
+		Vector<Stmt *> &callargs = callinfo->getArgs();
 		for(auto &a : callargs) {
 			if(!visit(a, &a)) {
-				err.set(stmt, "failed to determine value of arg in struct call");
+				err::out(stmt, {"failed to determine value of arg in struct call"});
 				return false;
 			}
 		}
 		FuncTy *fn = as<FuncTy>(lhs->getValueTy());
 		if(fn->isIntrinsic()) {
 			if(!fn->isParseIntrinsic() &&
-			   !fn->callIntrinsic(ctx, err, stmt, source, callargs)) {
-				err.set(stmt, "failed to call value intrinsic");
+			   !fn->callIntrinsic(ctx, stmt, source, callargs)) {
+				err::out(stmt, {"failed to call value intrinsic"});
 				return false;
 			}
 			return true;
 		}
 		if(!fn->getVar()) {
-			err.set(stmt, "function type contains no definition");
+			err::out(stmt, {"function type contains no definition"});
 			return false;
 		}
-		Stmt *&fndef			      = fn->getVar()->getVVal();
-		StmtFnDef *def			      = as<StmtFnDef>(fndef);
-		const std::vector<StmtVar *> &defargs = def->getSigArgs();
+		Stmt *&fndef			 = fn->getVar()->getVVal();
+		StmtFnDef *def			 = as<StmtFnDef>(fndef);
+		const Vector<StmtVar *> &defargs = def->getSigArgs();
 		if(!fndef) {
-			err.set(stmt, "function has no definition to execute");
+			err::out(stmt, {"function has no definition to execute"});
 			return false;
 		}
 		if(defargs.size() != callargs.size()) {
-			err.set(stmt,
-				"function definition and call must "
-				"have same argument len (def: %zu, call: %zu)\n",
-				defargs.size(), callargs.size());
+			err::out(stmt,
+				 {"function definition and call must have same argument len (def: ",
+				  ctx.strFrom(defargs.size()),
+				  ", call: ", ctx.strFrom(callargs.size()), ")"});
 			return false;
 		}
 		for(size_t i = 0; i < defargs.size(); ++i) {
@@ -195,7 +193,7 @@ skip_rhs_val:
 			def->getSigArg(i)->updateValue(ctx, aval);
 		}
 		if(!visit(fndef, &fndef)) {
-			err.set(stmt, "failed to determine value from function definition");
+			err::out(stmt, {"failed to determine value from function definition"});
 			return false;
 		}
 		// update the callee's arguments if they are references
@@ -212,11 +210,11 @@ skip_rhs_val:
 		break;
 	}
 	case lex::STCALL: {
-		StmtFnCallInfo *callinfo      = as<StmtFnCallInfo>(rhs);
-		std::vector<Stmt *> &callargs = callinfo->getArgs();
+		StmtFnCallInfo *callinfo = as<StmtFnCallInfo>(rhs);
+		Vector<Stmt *> &callargs = callinfo->getArgs();
 		for(auto &a : callargs) {
 			if(!visit(a, &a)) {
-				err.set(stmt, "failed to determine value of arg in struct call");
+				err::out(stmt, {"failed to determine value of arg in struct call"});
 				return false;
 			}
 		}
@@ -235,7 +233,7 @@ skip_rhs_val:
 		VecVal *vaval = as<VecVal>(lhs->getValue());
 		IntVal *iv    = as<IntVal>(rhs->getValue());
 		if(vaval->getVal().size() <= iv->getVal()) {
-			err.set(stmt, "index out of bounds of pointer/array");
+			err::out(stmt, {"index out of bounds of pointer/array"});
 			return false;
 		}
 		stmt->changeValue(vaval->getValAt(iv->getVal()));
@@ -287,32 +285,31 @@ skip_rhs_val:
 	case lex::LSHIFT_ASSN:
 	case lex::RSHIFT_ASSN: {
 	applyoperfn:
-		std::vector<Stmt *> args = {lhs};
+		Vector<Stmt *> args = {lhs};
 		if(rhs) args.push_back(rhs);
 		for(auto &a : args) {
 			if(!visit(a, &a)) {
-				err.set(stmt, "failed to determine value of arg in struct call");
+				err::out(stmt, {"failed to determine value of arg in struct call"});
 				return false;
 			}
 		}
 		FuncTy *fn = stmt->getCalledFn();
 		if(fn->isIntrinsic()) {
-			if(!fn->isParseIntrinsic() &&
-			   !fn->callIntrinsic(ctx, err, stmt, source, args)) {
-				err.set(stmt, "failed to call value intrinsic");
+			if(!fn->isParseIntrinsic() && !fn->callIntrinsic(ctx, stmt, source, args)) {
+				err::out(stmt, {"failed to call value intrinsic"});
 				return false;
 			}
 			return true;
 		}
-		Stmt *&fndef			      = fn->getVar()->getVVal();
-		StmtFnDef *def			      = as<StmtFnDef>(fndef);
-		const std::vector<StmtVar *> &defargs = def->getSigArgs();
+		Stmt *&fndef			 = fn->getVar()->getVVal();
+		StmtFnDef *def			 = as<StmtFnDef>(fndef);
+		const Vector<StmtVar *> &defargs = def->getSigArgs();
 		if(!fndef) {
-			err.set(stmt, "function has no definition to execute");
+			err::out(stmt, {"function has no definition to execute"});
 			return false;
 		}
 		if(def->getSigArgs().size() != args.size()) {
-			err.set(stmt, "function def and call must have same argument count");
+			err::out(stmt, {"function def and call must have same argument count"});
 			return false;
 		}
 		for(size_t i = 0; i < defargs.size(); ++i) {
@@ -320,7 +317,7 @@ skip_rhs_val:
 			def->getSigArg(i)->updateValue(ctx, aval);
 		}
 		if(!visit(fndef, &fndef)) {
-			err.set(stmt, "failed to determine value from function definition");
+			err::out(stmt, {"failed to determine value from function definition"});
 			return false;
 		}
 		// update the callee's arguments if they are references
@@ -335,7 +332,7 @@ skip_rhs_val:
 		return_stmt = false;
 		break;
 	}
-	default: err.set(stmt->getOper(), "nonexistent operator"); return false;
+	default: err::out(stmt->getOper(), {"nonexistent operator"}); return false;
 	}
 	return true;
 }
@@ -346,7 +343,7 @@ bool ValueAssignPass::visit(StmtVar *stmt, Stmt **source)
 	if(val->getStmtType() == FNDEF) return true;
 
 	if(!visit(val, &val)) {
-		err.set(stmt, "failed to determine value for variable");
+		err::out(stmt, {"failed to determine value for variable"});
 		return false;
 	}
 	stmt->updateValue(ctx, val->getValue());
@@ -361,11 +358,11 @@ bool ValueAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 {
 	StmtBlock *&blk = stmt->getBlk();
 	if(!blk) {
-		err.set(stmt, "failed to get value from a function definition without body");
+		err::out(stmt, {"failed to get value from a function definition without body"});
 		return false;
 	}
 	if(!visit(blk, asStmt(&blk))) {
-		err.set(stmt, "failed to determine value from function definition block");
+		err::out(stmt, {"failed to determine value from function definition block"});
 		return false;
 	}
 	stmt->updateValue(ctx, blk->getValue());
@@ -395,7 +392,7 @@ bool ValueAssignPass::visit(StmtVarDecl *stmt, Stmt **source)
 {
 	for(auto &d : stmt->getDecls()) {
 		if(!visit(d, asStmt(&d))) {
-			err.set(stmt, "failed to determine value of this variable declaration");
+			err::out(stmt, {"failed to determine value of this variable declaration"});
 			return false;
 		}
 	}
@@ -407,7 +404,7 @@ bool ValueAssignPass::visit(StmtCond *stmt, Stmt **source)
 		if(stmt->getConditionals().empty()) return true;
 		StmtBlock *&blk = stmt->getConditionals()[0].getBlk();
 		if(!visit(blk, asStmt(&blk))) {
-			err.set(stmt, "failed to determine value for inline conditional block");
+			err::out(stmt, {"failed to determine value for inline conditional block"});
 			return false;
 		}
 		return true;
@@ -417,13 +414,13 @@ bool ValueAssignPass::visit(StmtCond *stmt, Stmt **source)
 		StmtBlock *&blk = c.getBlk();
 		if(!cond) {
 			if(!visit(blk, asStmt(&blk))) {
-				err.set(stmt, "failed to determine else-block value");
+				err::out(stmt, {"failed to determine else-block value"});
 				return false;
 			}
 			break;
 		}
 		if(!visit(cond, &cond)) {
-			err.set(stmt, "failed to determine conditional value");
+			err::out(stmt, {"failed to determine conditional value"});
 			return false;
 		}
 		if(!(cond->getValue()->isInt() && as<IntVal>(cond->getValue())->getVal()) &&
@@ -432,7 +429,7 @@ bool ValueAssignPass::visit(StmtCond *stmt, Stmt **source)
 			continue;
 		}
 		if(!visit(blk, asStmt(&blk))) {
-			err.set(stmt, "failed to determine conditional-block value");
+			err::out(stmt, {"failed to determine conditional-block value"});
 			return false;
 		}
 		break;
@@ -447,45 +444,45 @@ bool ValueAssignPass::visit(StmtFor *stmt, Stmt **source)
 	StmtBlock *&blk = stmt->getBlk();
 	if(stmt->isInline()) {
 		if(init && !visit(init, &init)) {
-			err.set(stmt, "failed to determine init value for inline for loop");
+			err::out(stmt, {"failed to determine init value for inline for loop"});
 			return false;
 		}
 		if(!visit(blk, asStmt(&blk))) {
-			err.set(stmt, "failed to determine block value for inline for loop");
+			err::out(stmt, {"failed to determine block value for inline for loop"});
 			return false;
 		}
 		stmt->clearValue();
 		return true;
 	}
 	if(init && !visit(init, &init)) {
-		err.set(stmt, "failed to determine value for for-init statement");
+		err::out(stmt, {"failed to determine value for for-init statement"});
 		return false;
 	}
 	if(!cond) {
-		err.set(stmt, "condition must be present in for loop for value assignment pass");
+		err::out(stmt, {"condition must be present in for loop for value assignment pass"});
 		return false;
 	}
 	if(!visit(cond, &cond)) {
-		err.set(stmt, "failed to determine value for for-condition expression");
+		err::out(stmt, {"failed to determine value for for-condition expression"});
 		return false;
 	}
 	while((cond->getValue()->isInt() && as<IntVal>(cond->getValue())->getVal()) ||
 	      (cond->getValue()->isFlt() && as<FltVal>(cond->getValue())->getVal()))
 	{
 		if(!visit(blk, asStmt(&blk))) {
-			err.set(stmt, "failed to determine value for for-loop block");
+			err::out(stmt, {"failed to determine value for for-loop block"});
 			return false;
 		}
 		continue_stmt = false;
 		if(break_stmt) break;
 		if(incr) incr->clearValue();
 		if(incr && !visit(incr, &incr)) {
-			err.set(stmt, "failed to determine incr value for for-loop");
+			err::out(stmt, {"failed to determine incr value for for-loop"});
 			return false;
 		}
 		cond->clearValue();
 		if(!visit(cond, &cond)) {
-			err.set(stmt, "failed to determine value for for-condition expression");
+			err::out(stmt, {"failed to determine value for for-condition expression"});
 			return false;
 		}
 	}
@@ -497,21 +494,21 @@ bool ValueAssignPass::visit(StmtWhile *stmt, Stmt **source)
 	Stmt *&cond	= stmt->getCond();
 	StmtBlock *&blk = stmt->getBlk();
 	if(!visit(cond, &cond)) {
-		err.set(stmt, "failed to determine value for for-condition expression");
+		err::out(stmt, {"failed to determine value for for-condition expression"});
 		return false;
 	}
 	while((cond->getValue()->isInt() && as<IntVal>(cond->getValue())->getVal()) ||
 	      (cond->getValue()->isFlt() && as<FltVal>(cond->getValue())->getVal()))
 	{
 		if(!visit(blk, asStmt(&blk))) {
-			err.set(stmt, "failed to determine value for for-loop block");
+			err::out(stmt, {"failed to determine value for for-loop block"});
 			return false;
 		}
 		continue_stmt = false;
 		if(break_stmt) break;
 		cond->clearValue();
 		if(!visit(cond, &cond)) {
-			err.set(stmt, "failed to determine value for for-condition expression");
+			err::out(stmt, {"failed to determine value for for-condition expression"});
 			return false;
 		}
 	}
@@ -522,7 +519,7 @@ bool ValueAssignPass::visit(StmtRet *stmt, Stmt **source)
 {
 	Stmt *val = stmt->getVal();
 	if(val && !visit(val, &val)) {
-		err.set(stmt, "failed to determine value of return argument");
+		err::out(stmt, {"failed to determine value of return argument"});
 		return false;
 	}
 	// nothing to do for VoidVal

@@ -13,18 +13,18 @@
 
 namespace sc
 {
-uint64_t createFnVal(Context &c, const std::vector<Type *> &args, Type *ret, IntrinsicFn fn,
+uint64_t createFnVal(Context &c, const Vector<Type *> &args, Type *ret, IntrinsicFn fn,
 		     const IntrinType &inty)
 {
 	FuncTy *t = FuncTy::create(c, nullptr, args, ret, fn, inty, false);
 	return createValueIDWith(FuncVal::create(c, t));
 }
 
-void addIntFn(Context &c, ValueManager &vmgr, const std::string &name, const uint64_t &fid)
+void addIntFn(Context &c, ValueManager &vmgr, StringRef name, const uint64_t &fid)
 {
-	static std::vector<int> bits  = {1, 8, 16, 32, 64};
-	static std::vector<bool> sign = {true, false};
-	static std::unordered_map<int, IntTy *> tys;
+	static Vector<int> bits	 = {1, 8, 16, 32, 64};
+	static Vector<bool> sign = {true, false};
+	static Map<int, IntTy *> tys;
 
 	for(auto s : sign) {
 		for(auto &b : bits) {
@@ -38,10 +38,10 @@ void addIntFn(Context &c, ValueManager &vmgr, const std::string &name, const uin
 	}
 }
 
-void addFltFn(Context &c, ValueManager &vmgr, const std::string &name, const uint64_t &fid)
+void addFltFn(Context &c, ValueManager &vmgr, StringRef name, const uint64_t &fid)
 {
-	static std::vector<int> bits = {32, 64};
-	static std::unordered_map<int, FltTy *> tys;
+	static Vector<int> bits = {32, 64};
+	static Map<int, FltTy *> tys;
 
 	for(auto &b : bits) {
 		FltTy *ty = nullptr;

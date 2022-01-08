@@ -13,7 +13,7 @@
 
 #include "Error.hpp"
 
-#include <cstring>
+#include <iostream>
 
 #include "Parser.hpp"
 
@@ -23,137 +23,107 @@ ModuleLoc::ModuleLoc(Module *mod, const size_t &line, const size_t &col)
 	: mod(mod), line(line), col(col)
 {}
 
-std::string ModuleLoc::getLocStr() const
+String ModuleLoc::getLocStr() const
 {
 	return std::to_string(line) + ":" + std::to_string(col);
 }
 
-void ErrMgr::set(Stmt *stmt, const char *e, ...)
+namespace err
 {
-	va_list args;
-	va_start(args, e);
-	set(stmt->getLoc(), e, args);
-	va_end(args);
-}
-void ErrMgr::set(const lex::Lexeme &tok, const char *e, ...)
-{
-	va_list args;
-	va_start(args, e);
-	set(tok.getLoc(), e, args);
-	va_end(args);
-}
-void ErrMgr::set(const ModuleLoc &loc, const char *e, ...)
-{
-	va_list args;
-	va_start(args, e);
-	set(loc, e, args);
-	va_end(args);
-}
-void ErrMgr::set(const ModuleLoc &loc, const char *e, va_list args)
-{
-	locs.insert(locs.begin(), loc);
-	warns.insert(warns.begin(), false);
 
-	static char msg[4096];
-	std::memset(msg, 0, 4096);
-	vsprintf(msg, e, args);
-	errs.insert(errs.begin(), msg);
+static size_t max_errs = 10;
+
+void setMaxErrs(size_t max_err)
+{
+	max_errs = max_err;
 }
 
-// equivalent to set(), but for warnings
-void ErrMgr::setw(Stmt *stmt, const char *e, ...)
-{
-	va_list args;
-	va_start(args, e);
-	setw(stmt->getLoc(), e, args);
-	va_end(args);
-}
-void ErrMgr::setw(const lex::Lexeme &tok, const char *e, ...)
-{
-	va_list args;
-	va_start(args, e);
-	setw(tok.getLoc(), e, args);
-	va_end(args);
-}
-void ErrMgr::setw(const ModuleLoc &loc, const char *e, ...)
-{
-	va_list args;
-	va_start(args, e);
-	setw(loc, e, args);
-	va_end(args);
-}
-void ErrMgr::setw(const ModuleLoc &loc, const char *e, va_list args)
-{
-	locs.insert(locs.begin(), loc);
-	warns.insert(warns.begin(), true);
+void outCommon(const ModuleLoc &loc, InitList<StringRef> err, bool is_warn);
 
-	static char msg[4096];
-	std::memset(msg, 0, 4096);
-	vsprintf(msg, e, args);
-	errs.insert(errs.begin(), msg);
+void out(Stmt *stmt, InitList<StringRef> err)
+{
+	out(stmt->getLoc(), err);
+}
+void out(const lex::Lexeme &tok, InitList<StringRef> err)
+{
+	out(*tok.getLoc(), err);
+}
+void out(const ModuleLoc &loc, InitList<StringRef> err)
+{
+	outCommon(loc, err, false);
 }
 
-bool ErrMgr::present()
+// equivalent to out(), but for warnings
+void outw(Stmt *stmt, InitList<StringRef> err)
 {
-	return !errs.empty();
+	outw(stmt->getLoc(), err);
 }
-void ErrMgr::show(FILE *out)
+void outw(const lex::Lexeme &tok, InitList<StringRef> err)
 {
-	while(!errs.empty()) {
-		Module *mod	     = locs.back().mod;
-		const size_t &line   = locs.back().line;
-		const size_t &col    = locs.back().col;
-		const bool &warn     = warns.back();
-		const std::string &e = errs.back();
+	outw(*tok.getLoc(), err);
+}
+void outw(const ModuleLoc &loc, InitList<StringRef> err)
+{
+	outCommon(loc, err, true);
+}
 
-		size_t linectr = 0;
-		size_t idx     = 0;
-		bool found     = false;
+void outCommon(const ModuleLoc &loc, InitList<StringRef> err, bool is_warn)
+{
+	static size_t errcount = 0;
 
-		const std::string &data	    = mod->getCode();
-		const std::string &filename = mod->getPath();
+	if(errcount >= max_errs) return;
 
-		for(size_t i = 0; i < data.size(); ++i) {
-			if(linectr == line) {
-				found = true;
-				idx   = i;
-				break;
-			}
-			if(data[i] == '\n') {
-				++linectr;
-				continue;
-			}
+	Module *mod	   = loc.getMod();
+	const size_t &line = loc.getLine();
+	const size_t &col  = loc.getCol();
+
+	size_t linectr = 0;
+	size_t idx     = 0;
+	bool found     = false;
+
+	StringRef data	   = mod->getCode();
+	StringRef filename = mod->getPath();
+
+	for(size_t i = 0; i < data.size(); ++i) {
+		if(linectr == line) {
+			found = true;
+			idx   = i;
+			break;
 		}
-		std::string err_line = "<not found>";
-		if(found) {
-			size_t count = data.find('\n', idx);
-			if(count != std::string::npos) count -= idx;
-			err_line = data.substr(idx, count);
+		if(data[i] == '\n') {
+			++linectr;
+			continue;
 		}
+	}
+	StringRef err_line = "<not found>";
+	if(found) {
+		size_t count = data.find('\n', idx);
+		if(count != String::npos) count -= idx;
+		err_line = data.substr(idx, count);
+	}
 
-		size_t tab_count = 0;
-		for(auto &c : err_line) {
-			if(c == '\t') ++tab_count;
-		}
-		std::string spacing_caret(col /* + 1 for single character '^' */, ' ');
-		while(tab_count--) {
-			spacing_caret.pop_back();
-			spacing_caret.insert(spacing_caret.begin(), '\t');
-		}
+	size_t tab_count = 0;
+	for(auto &c : err_line) {
+		if(c == '\t') ++tab_count;
+	}
+	String spacing_caret(col /* + 1 for single character '^' */, ' ');
+	while(tab_count--) {
+		spacing_caret.pop_back();
+		spacing_caret.insert(spacing_caret.begin(), '\t');
+	}
 
-		fprintf(out, "%s (%zu:%zu): %s: %s\n%s\n%s%c\n", filename.c_str(), line + 1,
-			col + 1, warn ? "Warning" : "Failure", e.c_str(), err_line.c_str(),
-			spacing_caret.c_str(), '^');
+	std::cout << filename << " (" << line + 1 << ":" << col + 1
+		  << "): " << (is_warn ? "Warning" : "Failure") << ": ";
+	for(auto &e : err) std::cout << e;
+	std::cout << "\n";
+	std::cout << err_line << "\n";
+	std::cout << spacing_caret << "^\n";
 
-		locs.pop_back();
-		errs.pop_back();
-		warns.pop_back();
+	if(!is_warn) ++errcount;
+	if(errcount >= max_errs) {
+		std::cout << "Failure: Too many errors encountered\n";
 	}
 }
-void ErrMgr::reset()
-{
-	locs.clear();
-	errs.clear();
-	warns.clear();
-}
+
+} // namespace err
 } // namespace sc

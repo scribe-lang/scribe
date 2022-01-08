@@ -33,7 +33,7 @@ void Writer::remIndent(const size_t &count)
 void Writer::newLine()
 {
 	dest += "\n";
-	dest += std::string(indent, '\t');
+	dest += String(indent, '\t');
 }
 
 void Writer::append(Writer &other)
@@ -52,11 +52,10 @@ void Writer::write(const char *data, ...)
 	dest += dat;
 }
 
-void Writer::write(const std::string &data)
+void Writer::write(StringRef data)
 {
 	dest += data;
 }
-
 void Writer::write(const int64_t &data)
 {
 	dest += std::to_string(data);
@@ -67,9 +66,9 @@ void Writer::write(const double &data)
 }
 void Writer::writeConstChar(const int64_t data)
 {
-	dest += "'" + getRawString(std::string(1, data)) + "'";
+	dest += "'" + getRawString(String(1, data)) + "'";
 }
-void Writer::writeConstString(const std::string &data)
+void Writer::writeConstString(StringRef data)
 {
 	dest += "\"" + getRawString(data) + "\"";
 }
@@ -84,11 +83,11 @@ void Writer::writeBefore(const char *data, ...)
 	va_end(args);
 	dest = dat + dest;
 }
-void Writer::writeBefore(const std::string &data)
+void Writer::writeBefore(StringRef data)
 {
-	dest = data + dest;
+	dest.insert(dest.begin(), data.begin(), data.end());
 }
-void Writer::insertAfter(const size_t &pos, const std::string &data)
+void Writer::insertAfter(const size_t &pos, StringRef data)
 {
 	dest.insert(pos, data);
 }
@@ -107,7 +106,7 @@ bool Writer::empty()
 	return dest.empty();
 }
 
-const std::string &Writer::getData()
+String &Writer::getData()
 {
 	return dest;
 }
