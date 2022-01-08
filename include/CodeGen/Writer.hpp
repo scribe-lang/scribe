@@ -12,14 +12,13 @@
 #ifndef CODEGEN_WRITER_HPP
 #define CODEGEN_WRITER_HPP
 
-#include <cstdarg>
-#include <string>
+#include "Core.hpp"
 
 namespace sc
 {
 class Writer
 {
-	std::string dest;
+	String dest;
 	size_t indent;
 
 public:
@@ -34,20 +33,30 @@ public:
 	void append(Writer &other);
 
 	void write(const char *data, ...);
-	void write(const std::string &data);
+	void write(StringRef data);
 	void write(const int64_t &data);
 	void write(const double &data);
 	void writeConstChar(const int64_t data);
-	void writeConstString(const std::string &data);
+	void writeConstString(StringRef data);
 	void writeBefore(const char *data, ...);
-	void writeBefore(const std::string &data);
-	void insertAfter(const size_t &pos, const std::string &data);
+	void writeBefore(StringRef data);
+	void insertAfter(const size_t &pos, StringRef data);
+
+	inline void write(InitList<StringRef> data)
+	{
+		for(auto &d : data) write(d);
+	}
+
+	inline void writeBefore(InitList<StringRef> data)
+	{
+		for(auto &d : data) writeBefore(d);
+	}
 
 	void reset(Writer &other);
 	void clear();
 	bool empty();
 
-	const std::string &getData();
+	String &getData();
 	const size_t &getIndent();
 };
 } // namespace sc

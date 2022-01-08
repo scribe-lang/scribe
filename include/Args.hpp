@@ -14,9 +14,7 @@
 #ifndef ARGS_HPP
 #define ARGS_HPP
 
-#include <string>
-#include <unordered_map>
-#include <vector>
+#include "Core.hpp"
 
 namespace sc
 {
@@ -24,26 +22,26 @@ namespace args
 {
 class ArgInfo
 {
-	std::string shrt, lng; // short and long names
-	std::string val;       // value for argument
-	std::string help;      // help string for argument
-	bool reqd;	       // required argument(?)
-	bool val_reqd;	       // value required for argument(?)
+	StringRef shrt, lng; // short and long names
+	StringRef val;	     // value for argument
+	StringRef help;	     // help string for argument
+	bool reqd;	     // required argument(?)
+	bool val_reqd;	     // value required for argument(?)
 
 public:
 	ArgInfo();
 
-	inline ArgInfo &set_short(const std::string &name)
+	inline ArgInfo &set_short(StringRef name)
 	{
 		shrt = name;
 		return *this;
 	}
-	inline ArgInfo &set_long(const std::string &name)
+	inline ArgInfo &set_long(StringRef name)
 	{
 		lng = name;
 		return *this;
 	}
-	inline ArgInfo &set_help(const std::string &val)
+	inline ArgInfo &set_help(StringRef val)
 	{
 		help = val;
 		return *this;
@@ -64,15 +62,15 @@ public:
 
 class ArgParser
 {
-	std::vector<std::string> argv;
-	std::unordered_map<std::string, ArgInfo> arg_defs; // before parsing
-	std::unordered_map<std::string, std::string> opts; // after parsing
-	std::vector<std::string> args;			   // non option arguments, after parsing
+	Vector<StringRef> argv;
+	Map<StringRef, ArgInfo> arg_defs; // before parsing
+	Map<StringRef, StringRef> opts;	  // after parsing
+	Vector<StringRef> args;		  // non option arguments, after parsing
 
 public:
 	ArgParser(const int &argc, const char **argv);
 
-	ArgInfo &add(const std::string &argname);
+	ArgInfo &add(StringRef argname);
 	void parse();
 	void print_help(FILE *file);
 	inline void clear()
@@ -83,15 +81,16 @@ public:
 	}
 
 	// retrieve info
-	inline bool has(const std::string &argname)
+	inline bool has(StringRef argname)
 	{
 		return opts.find(argname) != opts.end();
 	}
-	std::string val(const std::string &argname)
+	StringRef val(StringRef argname)
 	{
-		return has(argname) ? opts[argname] : "";
+		if(has(argname)) return opts[argname];
+		return "";
 	}
-	inline std::string get(const size_t &idx)
+	inline StringRef get(const size_t &idx)
 	{
 		return idx >= args.size() ? "" : args[idx];
 	}

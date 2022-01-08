@@ -14,8 +14,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include <string>
-#include <vector>
+#include "Core.hpp"
 
 namespace sc
 {
@@ -40,23 +39,16 @@ public:
 	}
 };
 
-inline bool startsWith(const std::string &src, const std::string &term)
+inline bool startsWith(StringRef src, StringRef term)
 {
 	return src.rfind(term, 0) == 0;
 }
-template<typename T> inline bool isOneOf(const std::vector<T> &vec, const T &elem)
-{
-	for(auto &v : vec) {
-		if(v == elem) return true;
-	}
-	return false;
-}
 
 // Also trims the spaces for each split
-std::vector<std::string> stringDelim(const std::string &str, const std::string &delim);
+Vector<StringRef> stringDelim(StringRef str, StringRef delim);
 
 // Convert special characters in string (\n, \t, ...) to raw (\\n, \\t, ...)
-std::string getRawString(const std::string &data);
+String getRawString(StringRef data);
 } // namespace sc
 
 #endif // UTILS_HPP

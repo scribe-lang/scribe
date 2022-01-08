@@ -14,8 +14,7 @@
 #ifndef FS_HPP
 #define FS_HPP
 
-#include <string>
-#include <vector>
+#include "Core.hpp"
 
 #define MAX_PATH_CHARS 4096
 
@@ -23,19 +22,19 @@ namespace sc
 {
 namespace fs
 {
-bool exists(const std::string &loc);
+bool exists(const String &loc);
 
-bool read(const std::string &file, std::string &data);
+bool read(const String &file, String &data);
 
-std::string absPath(const std::string &loc);
+String absPath(const String &loc);
 
-std::string getCWD();
+String getCWD();
 
-bool setCWD(const std::string &path);
+bool setCWD(const String &path);
 
-std::string parentDir(const std::string &path);
+String parentDir(const String &path);
 
-std::string home();
+String home();
 } // namespace fs
 } // namespace sc
 

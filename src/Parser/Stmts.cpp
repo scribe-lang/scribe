@@ -17,7 +17,7 @@
 
 namespace sc
 {
-std::unordered_map<uint64_t, Value *> values = {{0, nullptr}};
+Map<uint64_t, Value *> values = {{0, nullptr}};
 uint64_t genValueID()
 {
 	static uint64_t vid = 1;
@@ -73,11 +73,11 @@ const char *Stmt::getStmtTypeCString() const
 	return "";
 }
 
-std::string Stmt::getTypeString()
+String Stmt::getTypeString()
 {
 	if(!getValueID()) return "";
-	Value *v	= getValue(true);
-	std::string res = " :<" + std::to_string(valueid) + ">: ";
+	Value *v   = getValue(true);
+	String res = " :<" + std::to_string(valueid) + ">: ";
 	res += v->getType()->toStr();
 	if(cast_to) res += " -> " + cast_to->toStr();
 	if(v->hasData()) res += " ==> " + v->toStr();
@@ -126,11 +126,11 @@ Type *Stmt::getValueTy(const bool &exact)
 //////////////////////////////////////////// StmtBlock ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtBlock::StmtBlock(const ModuleLoc *loc, const std::vector<Stmt *> &stmts, const bool &is_top)
+StmtBlock::StmtBlock(const ModuleLoc *loc, const Vector<Stmt *> &stmts, const bool &is_top)
 	: Stmt(BLOCK, loc), stmts(stmts), is_top(is_top)
 {}
 StmtBlock::~StmtBlock() {}
-StmtBlock *StmtBlock::create(Context &c, const ModuleLoc *loc, const std::vector<Stmt *> &stmts,
+StmtBlock *StmtBlock::create(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &stmts,
 			     const bool &is_top)
 {
 	return c.allocStmt<StmtBlock>(loc, stmts, is_top);
@@ -139,12 +139,11 @@ StmtBlock *StmtBlock::create(Context &c, const ModuleLoc *loc, const std::vector
 void StmtBlock::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Block [top = %s]:%s\n", is_top ? "yes" : "no",
-		   getTypeString().c_str());
+	tio::print(has_next, {"Block [top = ", is_top ? "yes" : "no", "]:", getTypeString(), "\n"});
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(!stmts[i]) {
 			tio::taba(has_next);
-			tio::print(i != stmts.size() - 1, "<Source End>\n");
+			tio::print(i != stmts.size() - 1, {"<Source End>\n"});
 			tio::tabr();
 			continue;
 		}
@@ -177,7 +176,7 @@ StmtType *StmtType::create(Context &c, const ModuleLoc *loc, const size_t &ptr, 
 
 void StmtType::disp(const bool &has_next)
 {
-	std::string tname(ptr, '*');
+	String tname(ptr, '*');
 	if(info & REF) tname += "&";
 	if(info & STATIC) tname += "static ";
 	if(info & CONST) tname += "const ";
@@ -185,12 +184,11 @@ void StmtType::disp(const bool &has_next)
 	if(info & VARIADIC) tname = "..." + tname;
 	if(!tname.empty()) {
 		tio::taba(has_next);
-		tio::print(has_next || expr, "Type info: %s%s\n", tname.c_str(),
-			   getTypeString().c_str());
+		tio::print(has_next || expr, {"Type info: ", tname, getTypeString(), "\n"});
 		tio::tabr();
 	}
 	tio::taba(has_next);
-	tio::print(has_next, "Type Expr:\n");
+	tio::print(has_next, {"Type Expr:\n"});
 	expr->disp(false);
 	tio::tabr();
 }
@@ -206,9 +204,9 @@ bool StmtType::hasModifier(const size_t &tim) const
 	return info & tim;
 }
 
-std::string StmtType::getStringName()
+String StmtType::getStringName()
 {
-	std::string tname(ptr, '*');
+	String tname(ptr, '*');
 	if(info & REF) tname += "&";
 	if(info & STATIC) tname += "static ";
 	if(info & CONST) tname += "const ";
@@ -241,8 +239,8 @@ StmtSimple *StmtSimple::create(Context &c, const ModuleLoc *loc, const lex::Lexe
 void StmtSimple::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Simple [decl = %s] [self = %s]: %s%s\n", decl ? "yes" : "no",
-		   self ? "yes" : "no", val.str(0).c_str(), getTypeString().c_str());
+	tio::print(has_next, {"Simple [decl = ", decl ? "yes" : "no", "] [self = ",
+			      self ? "yes" : "no", "]: ", val.str(0), getTypeString(), "\n"});
 	tio::tabr();
 }
 
@@ -256,12 +254,11 @@ bool StmtSimple::requiresTemplateInit()
 //////////////////////////////////////// StmtFnCallInfo ///////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtFnCallInfo::StmtFnCallInfo(const ModuleLoc *loc, const std::vector<Stmt *> &args)
+StmtFnCallInfo::StmtFnCallInfo(const ModuleLoc *loc, const Vector<Stmt *> &args)
 	: Stmt(FNCALLINFO, loc), args(args)
 {}
 StmtFnCallInfo::~StmtFnCallInfo() {}
-StmtFnCallInfo *StmtFnCallInfo::create(Context &c, const ModuleLoc *loc,
-				       const std::vector<Stmt *> &args)
+StmtFnCallInfo *StmtFnCallInfo::create(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &args)
 {
 	return c.allocStmt<StmtFnCallInfo>(loc, args);
 }
@@ -269,10 +266,10 @@ StmtFnCallInfo *StmtFnCallInfo::create(Context &c, const ModuleLoc *loc,
 void StmtFnCallInfo::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Function Call Info: %s\n", args.empty() ? "(empty)" : "");
+	tio::print(has_next, {"Function Call Info: ", args.empty() ? "(empty)" : "", "\n"});
 	if(!args.empty()) {
 		tio::taba(false);
-		tio::print(false, "Args:\n");
+		tio::print(false, {"Args:\n"});
 		for(size_t i = 0; i < args.size(); ++i) {
 			args[i]->disp(i != args.size() - 1);
 		}
@@ -308,30 +305,30 @@ StmtExpr *StmtExpr::create(Context &c, const ModuleLoc *loc, const size_t &comma
 void StmtExpr::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Expression [parsing intinsic: %s]:%s\n",
-		   is_intrinsic_call ? "yes" : "no", getTypeString().c_str());
+	tio::print(has_next, {"Expression [parsing intinsic: ", is_intrinsic_call ? "yes" : "no",
+			      "]:", getTypeString(), "\n"});
 	if(lhs) {
 		tio::taba(oper.getTok().isValid() || rhs || or_blk);
-		tio::print(oper.getTok().isValid() || rhs || or_blk, "LHS:\n");
+		tio::print(oper.getTok().isValid() || rhs || or_blk, {"LHS:\n"});
 		lhs->disp(false);
 		tio::tabr();
 	}
 	if(oper.getTok().isValid()) {
 		tio::taba(rhs || or_blk);
-		tio::print(rhs || or_blk, "Oper: %s\n", oper.getTok().cStr());
+		tio::print(rhs || or_blk, {"Oper: ", oper.getTok().cStr(), "\n"});
 		tio::tabr();
 	}
 	if(rhs) {
 		tio::taba(or_blk);
-		tio::print(or_blk, "RHS:\n");
+		tio::print(or_blk, {"RHS:\n"});
 		rhs->disp(false);
 		tio::tabr();
 	}
 	if(or_blk) {
 		tio::taba(false);
-		tio::print(false, "Or: %s\n",
-			   or_blk_var.getTok().isData() ? or_blk_var.getDataStr().c_str()
-							: "<none>");
+		StringRef orblkvardata =
+		or_blk_var.getTok().isData() ? or_blk_var.getDataStr() : "<none>";
+		tio::print(false, {"Or: ", orblkvardata, "\n"});
 		or_blk->disp(false);
 		tio::tabr();
 	}
@@ -367,18 +364,18 @@ StmtVar *StmtVar::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &na
 void StmtVar::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Variable [in = %s] [comptime = %s] [global = %s]: %s%s\n",
-		   is_in ? "yes" : "no", is_comptime ? "yes" : "no", is_global ? "yes" : "no",
-		   name.getDataStr().c_str(), getTypeString().c_str());
+	tio::print(has_next, {"Variable [in = ", is_in ? "yes" : "no", "] [comptime = ",
+			      is_comptime ? "yes" : "no", "] [global = ", is_global ? "yes" : "no",
+			      "]: ", name.getDataStr(), getTypeString(), "\n"});
 	if(vtype) {
 		tio::taba(vval);
-		tio::print(vval, "Type:\n");
+		tio::print(vval, {"Type:\n"});
 		vtype->disp(false);
 		tio::tabr();
 	}
 	if(vval) {
 		tio::taba(false);
-		tio::print(false, "Value:\n");
+		tio::print(false, {"Value:\n"});
 		vval->disp(false);
 		tio::tabr();
 	}
@@ -396,13 +393,13 @@ bool StmtVar::requiresTemplateInit()
 //////////////////////////////////////////// StmtFnSig ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtFnSig::StmtFnSig(const ModuleLoc *loc, std::vector<StmtVar *> &args, StmtType *rettype,
+StmtFnSig::StmtFnSig(const ModuleLoc *loc, Vector<StmtVar *> &args, StmtType *rettype,
 		     const bool &has_variadic)
 	: Stmt(FNSIG, loc), args(args), rettype(rettype), disable_template(false),
 	  has_variadic(has_variadic)
 {}
 StmtFnSig::~StmtFnSig() {}
-StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc *loc, std::vector<StmtVar *> &args,
+StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc *loc, Vector<StmtVar *> &args,
 			     StmtType *rettype, const bool &has_variadic)
 {
 	return c.allocStmt<StmtFnSig>(loc, args, rettype, has_variadic);
@@ -411,11 +408,11 @@ StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc *loc, std::vector<StmtV
 void StmtFnSig::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Function signature [variadic = %s]%s\n", has_variadic ? "yes" : "no",
-		   getTypeString().c_str());
+	tio::print(has_next, {"Function signature [variadic = ", has_variadic ? "yes" : "no", "]",
+			      getTypeString(), "\n"});
 	if(args.size() > 0) {
 		tio::taba(rettype);
-		tio::print(rettype, "Parameters:\n");
+		tio::print(rettype, {"Parameters:\n"});
 		for(size_t i = 0; i < args.size(); ++i) {
 			args[i]->disp(i != args.size() - 1);
 		}
@@ -423,7 +420,7 @@ void StmtFnSig::disp(const bool &has_next)
 	}
 	if(rettype) {
 		tio::taba(false);
-		tio::print(false, "Return Type%s\n", rettype->getTypeString().c_str());
+		tio::print(false, {"Return Type", rettype->getTypeString(), "\n"});
 		rettype->disp(false);
 		tio::tabr();
 	}
@@ -461,15 +458,15 @@ StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc *loc, StmtFnSig *sig, S
 void StmtFnDef::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Function definition [has parent: %s]%s\n", parentvar ? "yes" : "no",
-		   getTypeString().c_str());
+	tio::print(has_next, {"Function definition [has parent: ", parentvar ? "yes" : "no", "]",
+			      getTypeString(), "\n"});
 	tio::taba(true);
-	tio::print(true, "Function Signature:\n");
+	tio::print(true, {"Function Signature:\n"});
 	sig->disp(false);
 	tio::tabr();
 
 	tio::taba(false);
-	tio::print(false, "Function Block:\n");
+	tio::print(false, {"Function Block:\n"});
 	blk->disp(false);
 	tio::tabr(2);
 }
@@ -497,14 +494,14 @@ StmtHeader *StmtHeader::create(Context &c, const ModuleLoc *loc, const lex::Lexe
 void StmtHeader::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Header\n");
+	tio::print(has_next, {"Header\n"});
 	tio::taba(!flags.getDataStr().empty());
-	tio::print(!flags.getDataStr().empty(), "Names: %s\n", names.getDataStr().c_str());
+	tio::print(!flags.getDataStr().empty(), {"Names: ", names.getDataStr(), "\n"});
 	tio::tabr();
 
 	if(!flags.getDataStr().empty()) {
 		tio::taba(false);
-		tio::print(false, "Flags: %s\n", flags.getDataStr().c_str());
+		tio::print(false, {"Flags: ", flags.getDataStr(), "\n"});
 		tio::tabr();
 	}
 	tio::tabr();
@@ -528,9 +525,9 @@ StmtLib *StmtLib::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &fl
 void StmtLib::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Libs\n");
+	tio::print(has_next, {"Libs\n"});
 	tio::taba(false);
-	tio::print(false, "Flags: %s\n", flags.getDataStr().c_str());
+	tio::print(false, {"Flags: ", flags.getDataStr(), "\n"});
 	tio::tabr(2);
 }
 
@@ -558,24 +555,24 @@ StmtExtern *StmtExtern::create(Context &c, const ModuleLoc *loc, const lex::Lexe
 void StmtExtern::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Extern for %s [has parent: %s]%s\n", fname.getDataStr().c_str(),
-		   parentvar ? "yes" : "no", getTypeString().c_str());
+	tio::print(has_next, {"Extern for ", fname.getDataStr(), " [has parent: ",
+			      parentvar ? "yes" : "no", "]", getTypeString(), "\n"});
 	if(headers) {
 		tio::taba(libs || entity);
-		tio::print(libs || entity, "Headers:\n");
+		tio::print(libs || entity, {"Headers:\n"});
 		headers->disp(false);
 		tio::tabr();
 	}
 	if(libs) {
 		tio::taba(entity);
-		tio::print(entity, "Libs:\n");
+		tio::print(entity, {"Libs:\n"});
 		libs->disp(false);
 		tio::tabr();
 	}
 
 	if(entity) {
 		tio::taba(false);
-		tio::print(false, "Entity:\n");
+		tio::print(false, {"Entity:\n"});
 		entity->disp(false);
 		tio::tabr();
 	}
@@ -591,11 +588,11 @@ bool StmtExtern::requiresTemplateInit()
 /////////////////////////////////////////// StmtEnum //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtEnum::StmtEnum(const ModuleLoc *loc, const std::vector<lex::Lexeme> &items)
+StmtEnum::StmtEnum(const ModuleLoc *loc, const Vector<lex::Lexeme> &items)
 	: Stmt(ENUMDEF, loc), items(items)
 {}
 StmtEnum::~StmtEnum() {}
-StmtEnum *StmtEnum::create(Context &c, const ModuleLoc *loc, const std::vector<lex::Lexeme> &items)
+StmtEnum *StmtEnum::create(Context &c, const ModuleLoc *loc, const Vector<lex::Lexeme> &items)
 {
 	return c.allocStmt<StmtEnum>(loc, items);
 }
@@ -603,10 +600,10 @@ StmtEnum *StmtEnum::create(Context &c, const ModuleLoc *loc, const std::vector<l
 void StmtEnum::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Enumerations:%s\n", getTypeString().c_str());
+	tio::print(has_next, {"Enumerations:", getTypeString(), "\n"});
 	for(size_t i = 0; i < items.size(); ++i) {
 		tio::taba(i != items.size() - 1);
-		tio::print(i != items.size() - 1, "%s\n", items[i].str(0).c_str());
+		tio::print(i != items.size() - 1, {items[i].str(0), "\n"});
 		tio::tabr();
 	}
 	tio::tabr();
@@ -621,25 +618,25 @@ bool StmtEnum::requiresTemplateInit()
 ///////////////////////////////////////// StmtStruct //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtStruct::StmtStruct(const ModuleLoc *loc, const std::vector<StmtVar *> &fields,
-		       const std::vector<lex::Lexeme> &templates)
+StmtStruct::StmtStruct(const ModuleLoc *loc, const Vector<StmtVar *> &fields,
+		       const Vector<lex::Lexeme> &templates)
 	: Stmt(STRUCTDEF, loc), fields(fields), templates(templates), is_externed(false)
 {}
 StmtStruct::~StmtStruct() {}
-StmtStruct *StmtStruct::create(Context &c, const ModuleLoc *loc,
-			       const std::vector<StmtVar *> &fields,
-			       const std::vector<lex::Lexeme> &templates)
+StmtStruct *StmtStruct::create(Context &c, const ModuleLoc *loc, const Vector<StmtVar *> &fields,
+			       const Vector<lex::Lexeme> &templates)
 {
 	return c.allocStmt<StmtStruct>(loc, fields, templates);
 }
 
 void StmtStruct::disp(const bool &has_next)
 {
-	std::string templatestr;
+	String templatestr;
 	if(!templates.empty()) {
 		templatestr += "<";
 		for(auto &t : templates) {
-			templatestr += t.getDataStr() + ", ";
+			templatestr += t.getDataStr();
+			templatestr += ", ";
 		}
 		templatestr.pop_back();
 		templatestr.pop_back();
@@ -647,11 +644,11 @@ void StmtStruct::disp(const bool &has_next)
 	}
 
 	tio::taba(has_next);
-	tio::print(has_next, "Struct%s %s\n", templatestr.c_str(), getTypeString().c_str());
+	tio::print(has_next, {"Struct", templatestr, " ", getTypeString(), "\n"});
 
 	if(!fields.empty()) {
 		tio::taba(false);
-		tio::print(false, "Fields:\n");
+		tio::print(false, {"Fields:\n"});
 		for(size_t i = 0; i < fields.size(); ++i) {
 			fields[i]->disp(i != fields.size() - 1);
 		}
@@ -670,9 +667,9 @@ bool StmtStruct::requiresTemplateInit()
 	return false;
 }
 
-std::vector<std::string> StmtStruct::getTemplateNames()
+Vector<StringRef> StmtStruct::getTemplateNames()
 {
-	std::vector<std::string> templatenames;
+	Vector<StringRef> templatenames;
 	for(auto &t : templates) {
 		templatenames.push_back(t.getDataStr());
 	}
@@ -682,12 +679,11 @@ std::vector<std::string> StmtStruct::getTemplateNames()
 ///////////////////////////////////////// StmtVarDecl /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtVarDecl::StmtVarDecl(const ModuleLoc *loc, const std::vector<StmtVar *> &decls)
+StmtVarDecl::StmtVarDecl(const ModuleLoc *loc, const Vector<StmtVar *> &decls)
 	: Stmt(VARDECL, loc), decls(decls)
 {}
 StmtVarDecl::~StmtVarDecl() {}
-StmtVarDecl *StmtVarDecl::create(Context &c, const ModuleLoc *loc,
-				 const std::vector<StmtVar *> &decls)
+StmtVarDecl *StmtVarDecl::create(Context &c, const ModuleLoc *loc, const Vector<StmtVar *> &decls)
 {
 	return c.allocStmt<StmtVarDecl>(loc, decls);
 }
@@ -695,7 +691,7 @@ StmtVarDecl *StmtVarDecl::create(Context &c, const ModuleLoc *loc,
 void StmtVarDecl::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Variable declarations\n");
+	tio::print(has_next, {"Variable declarations\n"});
 	for(size_t i = 0; i < decls.size(); ++i) {
 		decls[i]->disp(i != decls.size() - 1);
 	}
@@ -717,12 +713,11 @@ bool StmtVarDecl::requiresTemplateInit()
 Conditional::Conditional(Stmt *cond, StmtBlock *blk) : cond(cond), blk(blk) {}
 Conditional::~Conditional() {}
 
-StmtCond::StmtCond(const ModuleLoc *loc, const std::vector<Conditional> &conds,
-		   const bool &is_inline)
+StmtCond::StmtCond(const ModuleLoc *loc, const Vector<Conditional> &conds, const bool &is_inline)
 	: Stmt(COND, loc), conds(conds), is_inline(is_inline)
 {}
 StmtCond::~StmtCond() {}
-StmtCond *StmtCond::create(Context &c, const ModuleLoc *loc, const std::vector<Conditional> &conds,
+StmtCond *StmtCond::create(Context &c, const ModuleLoc *loc, const Vector<Conditional> &conds,
 			   const bool &is_inline)
 {
 	return c.allocStmt<StmtCond>(loc, conds, is_inline);
@@ -731,18 +726,18 @@ StmtCond *StmtCond::create(Context &c, const ModuleLoc *loc, const std::vector<C
 void StmtCond::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Conditional [is inline = %s]\n", is_inline ? "yes" : "no");
+	tio::print(has_next, {"Conditional [is inline = ", is_inline ? "yes" : "no", "]\n"});
 	for(size_t i = 0; i < conds.size(); ++i) {
 		tio::taba(i != conds.size() - 1);
-		tio::print(i != conds.size() - 1, "Branch:\n");
+		tio::print(i != conds.size() - 1, {"Branch:\n"});
 		if(conds[i].getCond()) {
 			tio::taba(true);
-			tio::print(true, "Condition:\n");
+			tio::print(true, {"Condition:\n"});
 			conds[i].getCond()->disp(false);
 			tio::tabr();
 		}
 		tio::taba(false);
-		tio::print(false, "Block:\n");
+		tio::print(false, {"Block:\n"});
 		conds[i].getBlk()->disp(false);
 		tio::tabr(2);
 	}
@@ -777,28 +772,28 @@ StmtFor *StmtFor::create(Context &c, const ModuleLoc *loc, Stmt *init, Stmt *con
 void StmtFor::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "For [is inline = %s]\n", is_inline ? "yes" : "no");
+	tio::print(has_next, {"For [is inline = ", is_inline ? "yes" : "no", "]\n"});
 	if(init) {
 		tio::taba(cond || incr || blk);
-		tio::print(cond || incr || blk, "Init:\n");
+		tio::print(cond || incr || blk, {"Init:\n"});
 		init->disp(false);
 		tio::tabr();
 	}
 	if(cond) {
 		tio::taba(incr || blk);
-		tio::print(incr || blk, "Condition:\n");
+		tio::print(incr || blk, {"Condition:\n"});
 		cond->disp(false);
 		tio::tabr();
 	}
 	if(incr) {
 		tio::taba(blk);
-		tio::print(blk, "Increment:\n");
+		tio::print(blk, {"Increment:\n"});
 		incr->disp(false);
 		tio::tabr();
 	}
 	if(blk) {
 		tio::taba(false);
-		tio::print(false, "Block:\n");
+		tio::print(false, {"Block:\n"});
 		blk->disp(false);
 		tio::tabr();
 	}
@@ -828,13 +823,13 @@ StmtWhile *StmtWhile::create(Context &c, const ModuleLoc *loc, Stmt *cond, StmtB
 void StmtWhile::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "While\n");
+	tio::print(has_next, {"While\n"});
 	tio::taba(true);
-	tio::print(true, "Condition:\n");
+	tio::print(true, {"Condition:\n"});
 	cond->disp(true);
 	tio::tabr();
 	tio::taba(false);
-	tio::print(false, "Block:\n");
+	tio::print(false, {"Block:\n"});
 	blk->disp(false);
 	tio::tabr(2);
 }
@@ -859,10 +854,10 @@ StmtRet *StmtRet::create(Context &c, const ModuleLoc *loc, Stmt *val)
 void StmtRet::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Return%s\n", getTypeString().c_str());
+	tio::print(has_next, {"Return", getTypeString(), "\n"});
 	if(val) {
 		tio::taba(false);
-		tio::print(false, "Value:\n");
+		tio::print(false, {"Value:\n"});
 		val->disp(false);
 		tio::tabr();
 	}
@@ -887,7 +882,7 @@ StmtContinue *StmtContinue::create(Context &c, const ModuleLoc *loc)
 void StmtContinue::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Continue\n");
+	tio::print(has_next, {"Continue\n"});
 	tio::tabr();
 }
 
@@ -909,7 +904,7 @@ StmtBreak *StmtBreak::create(Context &c, const ModuleLoc *loc)
 void StmtBreak::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Break\n");
+	tio::print(has_next, {"Break\n"});
 	tio::tabr();
 }
 
@@ -932,10 +927,10 @@ StmtDefer *StmtDefer::create(Context &c, const ModuleLoc *loc, Stmt *val)
 void StmtDefer::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, "Defer%s\n", getTypeString().c_str());
+	tio::print(has_next, {"Defer", getTypeString(), "\n"});
 	if(val) {
 		tio::taba(false);
-		tio::print(false, "Value:\n");
+		tio::print(false, {"Value:\n"});
 		val->disp(false);
 		tio::tabr();
 	}

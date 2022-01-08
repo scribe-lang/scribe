@@ -17,8 +17,6 @@
 
 namespace sc
 {
-CodeGenDriver::CodeGenDriver(RAIIParser &parser)
-	: err(parser.getErrMgr()), ctx(parser.getContext()), parser(parser)
-{}
+CodeGenDriver::CodeGenDriver(RAIIParser &parser) : ctx(parser.getContext()), parser(parser) {}
 CodeGenDriver::~CodeGenDriver() {}
 } // namespace sc

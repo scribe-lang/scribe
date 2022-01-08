@@ -15,9 +15,8 @@
 
 namespace sc
 {
-ParseHelper::ParseHelper(Context &ctx, Module *mod, std::vector<lex::Lexeme> &toks,
-			 const size_t &begin)
-	: ctx(ctx), mod(mod), toks(toks), emptyloc(ctx.allocModuleLoc<ModuleLoc>(mod, 0, 0)),
+ParseHelper::ParseHelper(Context &ctx, Module *mod, Vector<lex::Lexeme> &toks, const size_t &begin)
+	: ctx(ctx), mod(mod), toks(toks), emptyloc(ctx.allocModuleLoc(mod, 0, 0)),
 	  invalid(emptyloc, lex::INVALID), eof(emptyloc, lex::FEOF), idx(begin)
 {}
 

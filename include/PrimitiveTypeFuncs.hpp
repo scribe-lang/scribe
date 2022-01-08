@@ -12,9 +12,6 @@
 #ifndef PRIMITIVE_TYPE_FUNCS_HPP
 #define PRIMITIVE_TYPE_FUNCS_HPP
 
-#include <string>
-#include <unordered_map>
-
 #include "Intrinsics.hpp"
 #include "ValueMgr.hpp"
 

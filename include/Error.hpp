@@ -14,17 +14,14 @@
 #ifndef ERROR_HPP
 #define ERROR_HPP
 
-#include <cassert>
-#include <cstdarg>
-#include <string>
-#include <vector>
+#include "Core.hpp"
 
 namespace sc
 {
 namespace lex
 {
 class Lexeme;
-}
+} // namespace lex
 class Module;
 class Stmt;
 
@@ -37,36 +34,36 @@ class ModuleLoc
 public:
 	ModuleLoc(Module *mod, const size_t &line, const size_t &col);
 
-	std::string getLocStr() const;
+	String getLocStr() const;
 	inline Module *getMod() const
 	{
 		return mod;
 	}
-
-	friend class ErrMgr;
+	inline size_t getLine() const
+	{
+		return line;
+	}
+	inline size_t getCol() const
+	{
+		return col;
+	}
 };
 
-class ErrMgr
+namespace err
 {
-	std::vector<ModuleLoc> locs;
-	std::vector<std::string> errs;
-	std::vector<bool> warns;
 
-public:
-	void set(Stmt *stmt, const char *e, ...);
-	void set(const lex::Lexeme &tok, const char *e, ...);
-	void set(const ModuleLoc &loc, const char *e, ...);
-	void set(const ModuleLoc &loc, const char *e, va_list args);
+void setMaxErrs(size_t max_err);
 
-	// equivalent to set(), but for warnings
-	void setw(Stmt *stmt, const char *e, ...);
-	void setw(const lex::Lexeme &tok, const char *e, ...);
-	void setw(const ModuleLoc &loc, const char *e, ...);
-	void setw(const ModuleLoc &loc, const char *e, va_list args);
-	bool present();
-	void show(FILE *f);
-	void reset();
-};
+void out(Stmt *stmt, InitList<StringRef> err);
+void out(const lex::Lexeme &tok, InitList<StringRef> err);
+void out(const ModuleLoc &loc, InitList<StringRef> err);
+
+// equivalent to out(), but for warnings
+void outw(Stmt *stmt, InitList<StringRef> err);
+void outw(const lex::Lexeme &tok, InitList<StringRef> err);
+void outw(const ModuleLoc &loc, InitList<StringRef> err);
+
+} // namespace err
 } // namespace sc
 
 #endif // ERROR_HPP

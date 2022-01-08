@@ -15,30 +15,30 @@
 
 namespace sc
 {
-std::vector<std::string> stringDelim(const std::string &str, const std::string &delim)
+Vector<StringRef> stringDelim(StringRef str, StringRef delim)
 {
-	std::vector<std::string> res;
+	Vector<StringRef> res;
 
 	size_t start = 0;
 	size_t end   = str.find(delim);
-	while(end != std::string::npos) {
-		res.push_back(str.substr(start, end - start));
+	while(end != String::npos) {
+		res.emplace_back(str.substr(start, end - start));
 		start = end + delim.length();
 		end   = str.find(delim, start);
 	}
-	res.push_back(str.substr(start, end));
+	res.emplace_back(str.substr(start, end));
 
 	for(auto &s : res) {
-		while(!s.empty() && s.front() == ' ') s.erase(s.begin());
-		while(!s.empty() && s.back() == ' ') s.pop_back();
+		while(!s.empty() && s.front() == ' ') s = s.substr(0, 1);
+		while(!s.empty() && s.back() == ' ') s = s.substr(s.size() - 1);
 	}
 
 	return res;
 }
 
-std::string getRawString(const std::string &data)
+String getRawString(StringRef data)
 {
-	std::string res;
+	String res;
 	for(auto &e : data) {
 		if(e == '\t') {
 			res.push_back('\\');

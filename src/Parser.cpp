@@ -13,6 +13,7 @@
 
 #include "Parser.hpp"
 
+#include <iostream>
 #include <unistd.h>
 
 #include "Error.hpp"
@@ -30,40 +31,40 @@ namespace sc
 //////////////////////////////////////////// Module ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Module::Module(ErrMgr &err, Context &ctx, const std::string &id, const std::string &path,
-	       const std::string &code, const bool &is_main_module)
-	: err(err), ctx(ctx), id(id), path(path), code(code), tokens(), ptree(nullptr),
+Module::Module(Context &ctx, StringRef id, StringRef path, StringRef code,
+	       const bool &is_main_module)
+	: ctx(ctx), id(id), path(path), code(code), tokens(), ptree(nullptr),
 	  is_main_module(is_main_module)
 {}
 Module::~Module() {}
 bool Module::tokenize()
 {
-	lex::Tokenizer tokenizer(ctx, this, err);
+	lex::Tokenizer tokenizer(ctx, this);
 	return tokenizer.tokenize(code, tokens);
 }
 bool Module::parseTokens()
 {
 	ParseHelper p(ctx, this, tokens);
-	Parsing parsing(err, ctx);
+	Parsing parsing(ctx);
 	return parsing.parse_block(p, (StmtBlock *&)ptree, false);
 }
 bool Module::executePasses(PassManager &pm)
 {
 	return pm.visit(ptree);
 }
-const std::string &Module::getID() const
+StringRef Module::getID() const
 {
 	return id;
 }
-const std::string &Module::getPath() const
+StringRef Module::getPath() const
 {
 	return path;
 }
-const std::string &Module::getCode() const
+StringRef Module::getCode() const
 {
 	return code;
 }
-const std::vector<lex::Lexeme> &Module::getTokens() const
+const Vector<lex::Lexeme> &Module::getTokens() const
 {
 	return tokens;
 }
@@ -77,14 +78,14 @@ bool Module::isMainModule() const
 }
 void Module::dumpTokens() const
 {
-	printf("Source: %s\n", path.c_str());
+	std::cout << "Source: " << path << "\n";
 	for(auto &t : tokens) {
-		printf("%s\n", t.str().c_str());
+		std::cout << t.str() << "\n";
 	}
 }
 void Module::dumpParseTree() const
 {
-	printf("Source: %s\n", path.c_str());
+	std::cout << "Source: " << path << "\n";
 	ptree->disp(false);
 }
 
@@ -93,7 +94,7 @@ void Module::dumpParseTree() const
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 RAIIParser::RAIIParser(args::ArgParser &args)
-	: args(args), ctx(this), defaultpmpermodule(err, ctx), defaultpmcombined(err, ctx)
+	: args(args), ctx(this), defaultpmpermodule(ctx), defaultpmcombined(ctx)
 {
 	defaultpmpermodule.add<TypeAssignPass>();
 	defaultpmcombined.add<SimplifyPass>();
@@ -107,18 +108,18 @@ RAIIParser::~RAIIParser()
 void RAIIParser::combineAllModules()
 {
 	if(modulestack.size() <= 1) return;
-	std::vector<Stmt *> allmodstmts;
+	Vector<Stmt *> allmodstmts;
 	for(auto &mpath : moduleorder) {
-		Module *mod		      = modules[mpath];
-		StmtBlock *modptree	      = as<StmtBlock>(mod->getParseTree());
-		std::vector<Stmt *> &modstmts = modptree->getStmts();
+		Module *mod		 = modules[mpath];
+		StmtBlock *modptree	 = as<StmtBlock>(mod->getParseTree());
+		Vector<Stmt *> &modstmts = modptree->getStmts();
 		allmodstmts.insert(allmodstmts.end(), modstmts.begin(), modstmts.end());
 		modstmts.clear();
 	}
 
-	Module *mainmod		       = modules[modulestack.front()];
-	StmtBlock *mainptree	       = as<StmtBlock>(mainmod->getParseTree());
-	std::vector<Stmt *> &mainstmts = mainptree->getStmts();
+	Module *mainmod		  = modules[modulestack.front()];
+	StmtBlock *mainptree	  = as<StmtBlock>(mainmod->getParseTree());
+	Vector<Stmt *> &mainstmts = mainptree->getStmts();
 	mainstmts.insert(mainstmts.begin(), allmodstmts.begin(), allmodstmts.end());
 
 	size_t count = modulestack.size() - 1;
@@ -126,24 +127,24 @@ void RAIIParser::combineAllModules()
 		modulestack.pop_back();
 	}
 }
-Module *RAIIParser::addModule(const std::string &path, const bool &main_module)
+Module *RAIIParser::addModule(StringRef path, const bool &main_module)
 {
 	auto res = modules.find(path);
 	if(res != modules.end()) return res->second;
 
-	std::string code;
-	if(!fs::read(path, code)) {
+	String _code;
+	if(!fs::read(String(path), _code)) {
 		return nullptr;
 	}
+	StringRef id   = ctx.strFrom(modulestack.size());
+	StringRef code = ctx.moveStr(std::move(_code));
 
-	Module *mod =
-	new Module(err, ctx, std::to_string(modulestack.size()), path, code, main_module);
+	Module *mod = new Module(ctx, id, path, code, main_module);
 	Pointer<Module> mptr(mod);
 
 	modulestack.push_back(path);
 
 	if(!mod->tokenize() || !mod->parseTokens() /* || !mod->assignType(types)*/) {
-		err.show(stderr);
 		modulestack.pop_back();
 		return nullptr;
 	}
@@ -152,16 +153,17 @@ Module *RAIIParser::addModule(const std::string &path, const bool &main_module)
 	modules[path] = mod;
 	return mod;
 }
-bool RAIIParser::parse(const std::string &path, const bool &main_module)
+bool RAIIParser::parse(const String &_path, const bool &main_module)
 {
-	if(hasModule(path)) {
-		fprintf(stderr, "cannot parse an existing source: %s\n", path.c_str());
+	if(hasModule(_path)) {
+		std::cerr << "cannot parse an existing source: " << _path << "\n";
 		return false;
 	}
 
-	std::string wd = fs::getCWD();
-	fs::setCWD(fs::parentDir(path));
-	size_t src_id = 0;
+	String wd = fs::getCWD();
+	fs::setCWD(fs::parentDir(_path));
+	size_t src_id  = 0;
+	StringRef path = ctx.strFrom(_path);
 	if(!addModule(path, main_module)) return false;
 	bool res = modules[path]->executePasses(defaultpmpermodule);
 	fs::setCWD(wd);
@@ -173,30 +175,25 @@ bool RAIIParser::parse(const std::string &path, const bool &main_module)
 		moduleorder.push_back(path);
 	}
 end:
-	if(!res) err.show(stderr);
 	return res;
 }
-bool RAIIParser::hasModule(const std::string &path)
+bool RAIIParser::hasModule(StringRef path)
 {
 	return modules.find(path) != modules.end();
 }
-Module *RAIIParser::getModule(const std::string &path)
+Module *RAIIParser::getModule(StringRef path)
 {
 	auto res = modules.find(path);
 	if(res != modules.end()) return res->second;
 	return nullptr;
 }
-const std::vector<std::string> &RAIIParser::getModuleStack()
+const Vector<StringRef> &RAIIParser::getModuleStack()
 {
 	return modulestack;
 }
 args::ArgParser &RAIIParser::getCommandArgs()
 {
 	return args;
-}
-ErrMgr &RAIIParser::getErrMgr()
-{
-	return err;
 }
 Context &RAIIParser::getContext()
 {

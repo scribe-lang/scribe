@@ -26,7 +26,7 @@ class DeferStack
 {
 	// hierarchy:
 	// global/func -> blocks -> statements
-	std::vector<std::vector<std::vector<Stmt *>>> stack;
+	Vector<Vector<Vector<Stmt *>>> stack;
 
 public:
 	DeferStack();
@@ -50,8 +50,8 @@ public:
 	{
 		stack.back().back().push_back(s);
 	}
-	std::vector<Stmt *> getTopStmts(Context &c);
-	std::vector<Stmt *> getAllStmts(Context &c);
+	Vector<Stmt *> getTopStmts(Context &c);
+	Vector<Stmt *> getAllStmts(Context &c);
 };
 } // namespace sc
 

@@ -14,13 +14,15 @@
 #ifndef PARSER_STMTS_HPP
 #define PARSER_STMTS_HPP
 
+#include <cassert>
+
 #include "Lex.hpp"
 #include "Types.hpp"
 #include "Values.hpp"
 
 namespace sc
 {
-extern std::unordered_map<uint64_t, Value *> values;
+extern Map<uint64_t, Value *> values;
 uint64_t genValueID();
 uint64_t createValueIDWith(Value *v);
 Value *getValueWithID(const uint64_t &id);
@@ -64,14 +66,14 @@ public:
 	Stmt(const Stmts &stmt_type, const ModuleLoc *loc);
 	virtual ~Stmt();
 
-	virtual void disp(const bool &has_next)					     = 0;
-	virtual Stmt *clone(Context &ctx)					     = 0;
-	virtual void clearValue()						     = 0;
-	virtual bool requiresTemplateInit()					     = 0;
-	virtual void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done) = 0;
+	virtual void disp(const bool &has_next)			      = 0;
+	virtual Stmt *clone(Context &ctx)			      = 0;
+	virtual void clearValue()				      = 0;
+	virtual bool requiresTemplateInit()			      = 0;
+	virtual void _setFuncUsed(const bool &inc, Set<Stmt *> &done) = 0;
 
 	const char *getStmtTypeCString() const;
-	std::string getTypeString();
+	String getTypeString();
 
 #define isStmtX(X, ENUMVAL)              \
 	inline bool is##X()              \
@@ -104,7 +106,7 @@ public:
 	{
 		return stype;
 	}
-	inline std::string getStmtTypeString() const
+	inline StringRef getStmtTypeString() const
 	{
 		return getStmtTypeCString();
 	}
@@ -183,22 +185,22 @@ template<typename T> Stmt **asStmt(T **data)
 
 class StmtBlock : public Stmt
 {
-	std::vector<Stmt *> stmts;
+	Vector<Stmt *> stmts;
 	bool is_top;
 
 public:
-	StmtBlock(const ModuleLoc *loc, const std::vector<Stmt *> &stmts, const bool &is_top);
+	StmtBlock(const ModuleLoc *loc, const Vector<Stmt *> &stmts, const bool &is_top);
 	~StmtBlock();
-	static StmtBlock *create(Context &c, const ModuleLoc *loc, const std::vector<Stmt *> &stmts,
+	static StmtBlock *create(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &stmts,
 				 const bool &is_top);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
-	inline std::vector<Stmt *> &getStmts()
+	inline Vector<Stmt *> &getStmts()
 	{
 		return stmts;
 	}
@@ -225,7 +227,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline void addTypeInfoMask(const size_t &mask)
 	{
@@ -251,7 +253,7 @@ public:
 		return expr;
 	}
 
-	std::string getStringName();
+	String getStringName();
 
 	inline bool isFunc() const
 	{
@@ -279,13 +281,13 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline void setDecl(StmtVar *d)
 	{
 		decl = d;
 	}
-	inline void updateLexDataStr(const std::string &newdata)
+	inline void updateLexDataStr(StringRef newdata)
 	{
 		val.setDataStr(newdata);
 	}
@@ -317,25 +319,24 @@ public:
 
 class StmtFnCallInfo : public Stmt
 {
-	std::vector<Stmt *> args;
+	Vector<Stmt *> args;
 
 public:
-	StmtFnCallInfo(const ModuleLoc *loc, const std::vector<Stmt *> &args);
+	StmtFnCallInfo(const ModuleLoc *loc, const Vector<Stmt *> &args);
 	~StmtFnCallInfo();
-	static StmtFnCallInfo *create(Context &c, const ModuleLoc *loc,
-				      const std::vector<Stmt *> &args);
+	static StmtFnCallInfo *create(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &args);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline void setArg(const size_t &idx, Stmt *a)
 	{
 		args[idx] = a;
 	}
-	inline std::vector<Stmt *> &getArgs()
+	inline Vector<Stmt *> &getArgs()
 	{
 		return args;
 	}
@@ -368,7 +369,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline void setCommas(const size_t &c)
 	{
@@ -443,7 +444,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline void setVVal(Stmt *val)
 	{
@@ -503,23 +504,23 @@ public:
 class StmtFnSig : public Stmt
 {
 	// StmtVar contains only type here, no val
-	std::vector<StmtVar *> args;
+	Vector<StmtVar *> args;
 	StmtType *rettype;
 	bool disable_template; // this function is in use, contains no template
 	bool has_variadic;
 
 public:
-	StmtFnSig(const ModuleLoc *loc, std::vector<StmtVar *> &args, StmtType *rettype,
+	StmtFnSig(const ModuleLoc *loc, Vector<StmtVar *> &args, StmtType *rettype,
 		  const bool &has_variadic);
 	~StmtFnSig();
-	static StmtFnSig *create(Context &c, const ModuleLoc *loc, std::vector<StmtVar *> &args,
+	static StmtFnSig *create(Context &c, const ModuleLoc *loc, Vector<StmtVar *> &args,
 				 StmtType *rettype, const bool &has_variadic);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline void insertArg(StmtVar *arg)
 	{
@@ -542,7 +543,7 @@ public:
 	{
 		return args[idx];
 	}
-	inline std::vector<StmtVar *> &getArgs()
+	inline Vector<StmtVar *> &getArgs()
 	{
 		return args;
 	}
@@ -576,7 +577,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline void setParentVar(StmtVar *pvar)
 	{
@@ -584,12 +585,12 @@ public:
 	}
 	inline void incUsed()
 	{
-		std::unordered_set<Stmt *> done;
+		Set<Stmt *> done;
 		_setFuncUsed(true, done);
 	}
 	inline void decUsed()
 	{
-		std::unordered_set<Stmt *> done;
+		Set<Stmt *> done;
 		_setFuncUsed(false, done);
 	}
 	inline StmtFnSig *&getSig()
@@ -609,7 +610,7 @@ public:
 	{
 		return sig->getArg(idx);
 	}
-	inline const std::vector<StmtVar *> &getSigArgs() const
+	inline const Vector<StmtVar *> &getSigArgs() const
 	{
 		return sig->getArgs();
 	}
@@ -646,7 +647,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline const lex::Lexeme &getNames() const
 	{
@@ -671,7 +672,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline const lex::Lexeme &getFlags() const
 	{
@@ -699,7 +700,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline void setParentVar(StmtVar *var)
 	{
@@ -733,21 +734,20 @@ public:
 
 class StmtEnum : public Stmt
 {
-	std::vector<lex::Lexeme> items;
+	Vector<lex::Lexeme> items;
 
 public:
-	StmtEnum(const ModuleLoc *loc, const std::vector<lex::Lexeme> &items);
+	StmtEnum(const ModuleLoc *loc, const Vector<lex::Lexeme> &items);
 	~StmtEnum();
-	static StmtEnum *create(Context &c, const ModuleLoc *loc,
-				const std::vector<lex::Lexeme> &items);
+	static StmtEnum *create(Context &c, const ModuleLoc *loc, const Vector<lex::Lexeme> &items);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
-	inline std::vector<lex::Lexeme> &getItems()
+	inline Vector<lex::Lexeme> &getItems()
 	{
 		return items;
 	}
@@ -756,34 +756,33 @@ public:
 // both declaration and definition
 class StmtStruct : public Stmt
 {
-	std::vector<StmtVar *> fields;
-	std::vector<lex::Lexeme> templates;
+	Vector<StmtVar *> fields;
+	Vector<lex::Lexeme> templates;
 	bool is_externed; // required for setting up partial types correctly
 
 public:
-	StmtStruct(const ModuleLoc *loc, const std::vector<StmtVar *> &fields,
-		   const std::vector<lex::Lexeme> &templates);
+	StmtStruct(const ModuleLoc *loc, const Vector<StmtVar *> &fields,
+		   const Vector<lex::Lexeme> &templates);
 	~StmtStruct();
 	// StmtVar contains only type here, no val
-	static StmtStruct *create(Context &c, const ModuleLoc *loc,
-				  const std::vector<StmtVar *> &fields,
-				  const std::vector<lex::Lexeme> &templates);
+	static StmtStruct *create(Context &c, const ModuleLoc *loc, const Vector<StmtVar *> &fields,
+				  const Vector<lex::Lexeme> &templates);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline void setExterned(const bool &externed)
 	{
 		is_externed = externed;
 	}
-	inline std::vector<StmtVar *> &getFields()
+	inline Vector<StmtVar *> &getFields()
 	{
 		return fields;
 	}
-	inline const std::vector<lex::Lexeme> &getTemplates()
+	inline const Vector<lex::Lexeme> &getTemplates()
 	{
 		return templates;
 	}
@@ -792,27 +791,27 @@ public:
 		return is_externed;
 	}
 
-	std::vector<std::string> getTemplateNames();
+	Vector<StringRef> getTemplateNames();
 };
 
 class StmtVarDecl : public Stmt
 {
-	std::vector<StmtVar *> decls;
+	Vector<StmtVar *> decls;
 
 public:
-	StmtVarDecl(const ModuleLoc *loc, const std::vector<StmtVar *> &decls);
+	StmtVarDecl(const ModuleLoc *loc, const Vector<StmtVar *> &decls);
 	~StmtVarDecl();
 	// StmtVar can contain any combination of type, in, val(any), or all three
 	static StmtVarDecl *create(Context &c, const ModuleLoc *loc,
-				   const std::vector<StmtVar *> &decls);
+				   const Vector<StmtVar *> &decls);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
-	inline std::vector<StmtVar *> &getDecls()
+	inline Vector<StmtVar *> &getDecls()
 	{
 		return decls;
 	}
@@ -853,23 +852,22 @@ public:
 
 class StmtCond : public Stmt
 {
-	std::vector<Conditional> conds;
+	Vector<Conditional> conds;
 	bool is_inline;
 
 public:
-	StmtCond(const ModuleLoc *loc, const std::vector<Conditional> &conds,
-		 const bool &is_inline);
+	StmtCond(const ModuleLoc *loc, const Vector<Conditional> &conds, const bool &is_inline);
 	~StmtCond();
-	static StmtCond *create(Context &c, const ModuleLoc *loc,
-				const std::vector<Conditional> &conds, const bool &is_inline);
+	static StmtCond *create(Context &c, const ModuleLoc *loc, const Vector<Conditional> &conds,
+				const bool &is_inline);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
-	inline std::vector<Conditional> &getConditionals()
+	inline Vector<Conditional> &getConditionals()
 	{
 		return conds;
 	}
@@ -899,7 +897,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline Stmt *&getInit()
 	{
@@ -937,7 +935,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline Stmt *&getCond()
 	{
@@ -963,7 +961,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline void setFnBlk(StmtBlock *blk)
 	{
@@ -990,7 +988,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 };
 
 class StmtBreak : public Stmt
@@ -1003,7 +1001,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 };
 
 class StmtDefer : public Stmt
@@ -1019,7 +1017,7 @@ public:
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, std::unordered_set<Stmt *> &done);
+	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
 	inline Stmt *&getVal()
 	{

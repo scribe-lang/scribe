@@ -14,12 +14,6 @@
 #ifndef TYPES_HPP
 #define TYPES_HPP
 
-#include <cinttypes>
-#include <cstddef>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-
 #include "Context.hpp"
 #include "Error.hpp"
 #include "Values.hpp"
@@ -60,11 +54,9 @@ class StmtExpr;
 class StmtVar;
 class StmtFnDef;
 class StmtFnCallInfo;
-typedef bool (*IntrinsicFn)(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
-			    std::vector<Stmt *> &args);
-#define INTRINSIC(name)                                                               \
-	bool intrinsic_##name(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source, \
-			      std::vector<Stmt *> &args)
+typedef bool (*IntrinsicFn)(Context &c, StmtExpr *stmt, Stmt **source, Vector<Stmt *> &args);
+#define INTRINSIC(name) \
+	bool intrinsic_##name(Context &c, StmtExpr *stmt, Stmt **source, Vector<Stmt *> &args)
 
 class Type
 {
@@ -76,21 +68,21 @@ public:
 	Type(const Types &type, const size_t &info, const uint64_t &id);
 	virtual ~Type();
 
-	bool isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc);
+	bool isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
 
-	std::string infoToStr();
-	std::string baseToStr();
+	String infoToStr();
+	String baseToStr();
 	bool requiresCast(Type *other);
 
 	virtual uint64_t getUniqID(); // used by codegen
 	virtual uint64_t getID();
 	virtual bool isTemplate(const size_t &weak_depth = 0);
-	virtual std::string toStr(const size_t &weak_depth = 0);
+	virtual String toStr(const size_t &weak_depth = 0);
 	virtual Type *clone(Context &c, const bool &as_is = false,
 			    const size_t &weak_depth = 0) = 0;
 	virtual bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	virtual void unmergeTemplates(const size_t &weak_depth = 0);
-	virtual bool isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc);
+	virtual bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
 
 	inline void setInfo(const size_t &inf)
 	{
@@ -121,7 +113,7 @@ public:
 		return isFlt();
 	}
 
-	virtual Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+	virtual Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 				      const size_t &weak_depth = 0);
 
 #define SetModifierX(Fn, Mod) \
@@ -194,11 +186,11 @@ public:
 	~VoidTy();
 
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
-	std::string toStr(const size_t &weak_depth = 0);
+	String toStr(const size_t &weak_depth = 0);
 
 	static VoidTy *create(Context &c);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 class AnyTy : public Type
@@ -209,11 +201,11 @@ public:
 	~AnyTy();
 
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
-	std::string toStr(const size_t &weak_depth = 0);
+	String toStr(const size_t &weak_depth = 0);
 
 	static AnyTy *create(Context &c);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -229,7 +221,7 @@ public:
 
 	uint64_t getID();
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
-	std::string toStr(const size_t &weak_depth = 0);
+	String toStr(const size_t &weak_depth = 0);
 
 	static IntTy *create(Context &c, const size_t &_bits, const bool &_sign);
 
@@ -242,7 +234,7 @@ public:
 		return sign;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -257,7 +249,7 @@ public:
 
 	uint64_t getID();
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
-	std::string toStr(const size_t &weak_depth = 0);
+	String toStr(const size_t &weak_depth = 0);
 
 	static FltTy *create(Context &c, const size_t &_bits);
 
@@ -266,7 +258,7 @@ public:
 		return bits;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -281,7 +273,7 @@ public:
 
 	uint64_t getUniqID();
 	bool isTemplate(const size_t &weak_depth = 0);
-	std::string toStr(const size_t &weak_depth = 0);
+	String toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
@@ -292,7 +284,7 @@ public:
 	void setContainedTy(Type *ty);
 	Type *getContainedTy();
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -310,7 +302,7 @@ public:
 
 	uint64_t getUniqID();
 	bool isTemplate(const size_t &weak_depth = 0);
-	std::string toStr(const size_t &weak_depth = 0);
+	String toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
@@ -342,53 +334,49 @@ public:
 		return count > 0;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
 class StructTy : public Type
 {
-	std::unordered_map<std::string, size_t> fieldpos;
-	std::vector<std::string> fieldnames;
-	std::vector<Type *> fields;
-	std::unordered_map<std::string, size_t> templatepos;
-	std::vector<std::string> templatenames;
-	std::vector<TypeTy *> templates;
+	Map<StringRef, size_t> fieldpos;
+	Vector<StringRef> fieldnames;
+	Vector<Type *> fields;
+	Map<StringRef, size_t> templatepos;
+	Vector<StringRef> templatenames;
+	Vector<TypeTy *> templates;
 	bool has_template;
 	bool externed;
 
 public:
-	StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields,
-		 const std::vector<std::string> &templatenames,
-		 const std::vector<TypeTy *> &templates, const bool &externed);
-	StructTy(const size_t &info, const uint64_t &id, const std::vector<std::string> &fieldnames,
-		 const std::unordered_map<std::string, size_t> &fieldpos,
-		 const std::vector<Type *> &fields, const std::vector<std::string> &templatenames,
-		 const std::unordered_map<std::string, size_t> &templatepos,
-		 const std::vector<TypeTy *> &templates, const bool &has_template,
+	StructTy(const Vector<StringRef> &fieldnames, const Vector<Type *> &fields,
+		 const Vector<StringRef> &templatenames, const Vector<TypeTy *> &templates,
 		 const bool &externed);
+	StructTy(const size_t &info, const uint64_t &id, const Vector<StringRef> &fieldnames,
+		 const Map<StringRef, size_t> &fieldpos, const Vector<Type *> &fields,
+		 const Vector<StringRef> &templatenames, const Map<StringRef, size_t> &templatepos,
+		 const Vector<TypeTy *> &templates, const bool &has_template, const bool &externed);
 	~StructTy();
 
 	uint64_t getUniqID();
 	bool isTemplate(const size_t &weak_depth = 0);
-	std::string toStr(const size_t &weak_depth = 0);
+	String toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
-	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc);
+	bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
 	// specializes a structure type
-	StructTy *applyTemplates(Context &c, ErrMgr &e, const ModuleLoc *loc,
-				 const std::vector<Type *> &actuals);
+	StructTy *applyTemplates(Context &c, const ModuleLoc *loc, const Vector<Type *> &actuals);
 	// returns a NON-def struct type
-	StructTy *instantiate(Context &c, ErrMgr &e, const ModuleLoc *loc,
-			      const std::vector<Stmt *> &callargs);
+	StructTy *instantiate(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &callargs);
 
-	static StructTy *create(Context &c, const std::vector<std::string> &_fieldnames,
-				const std::vector<Type *> &_fields,
-				const std::vector<std::string> &_templatenames,
-				const std::vector<TypeTy *> &_templates, const bool &_externed);
+	static StructTy *create(Context &c, const Vector<StringRef> &_fieldnames,
+				const Vector<Type *> &_fields,
+				const Vector<StringRef> &_templatenames,
+				const Vector<TypeTy *> &_templates, const bool &_externed);
 
-	inline void insertField(const std::string &name, Type *ty)
+	inline void insertField(StringRef name, Type *ty)
 	{
 		fieldpos[name] = fields.size();
 		fieldnames.push_back(name);
@@ -398,19 +386,19 @@ public:
 	{
 		externed = ext;
 	}
-	inline const std::string &getFieldName(const size_t &idx)
+	inline StringRef getFieldName(const size_t &idx)
 	{
 		return fieldnames[idx];
 	}
-	inline std::vector<Type *> &getFields()
+	inline Vector<Type *> &getFields()
 	{
 		return fields;
 	}
-	inline const std::vector<TypeTy *> &getTemplates()
+	inline const Vector<TypeTy *> &getTemplates()
 	{
 		return templates;
 	}
-	inline const std::vector<std::string> &getTemplateNames()
+	inline const Vector<StringRef> &getTemplateNames()
 	{
 		return templatenames;
 	}
@@ -427,12 +415,12 @@ public:
 		return externed;
 	}
 
-	Type *getField(const std::string &name);
+	Type *getField(StringRef name);
 	Type *getField(const size_t &pos);
 
 	bool hasTemplate();
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
@@ -445,7 +433,7 @@ enum IntrinType
 class FuncTy : public Type
 {
 	StmtVar *var;
-	std::vector<Type *> args;
+	Vector<Type *> args;
 	Type *ret;
 	IntrinsicFn intrin;
 	IntrinType inty;
@@ -453,11 +441,11 @@ class FuncTy : public Type
 	bool externed;
 
 public:
-	FuncTy(StmtVar *var, const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
+	FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret, IntrinsicFn intrin,
 	       const IntrinType &inty, const bool &externed);
-	FuncTy(const size_t &info, const uint64_t &id, StmtVar *var,
-	       const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &inty, const uint64_t &uniqid, const bool &externed);
+	FuncTy(const size_t &info, const uint64_t &id, StmtVar *var, const Vector<Type *> &args,
+	       Type *ret, IntrinsicFn intrin, const IntrinType &inty, const uint64_t &uniqid,
+	       const bool &externed);
 	~FuncTy();
 
 	// returns ID of parameters + ret type
@@ -465,18 +453,16 @@ public:
 	uint64_t getNonUniqID();
 	uint64_t getID();
 	bool isTemplate(const size_t &weak_depth = 0);
-	std::string toStr(const size_t &weak_depth = 0);
+	String toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
-	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc);
+	bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
 	// specializes a function type using StmtFnCallInfo
-	FuncTy *createCall(Context &c, ErrMgr &e, const ModuleLoc *loc,
-			   const std::vector<Stmt *> &callargs);
+	FuncTy *createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &callargs);
 
-	static FuncTy *create(Context &c, StmtVar *_var, const std::vector<Type *> &_args,
-			      Type *_ret, IntrinsicFn _intrin, const IntrinType &_inty,
-			      const bool &_externed);
+	static FuncTy *create(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
+			      IntrinsicFn _intrin, const IntrinType &_inty, const bool &_externed);
 
 	inline void setVar(StmtVar *v)
 	{
@@ -510,7 +496,7 @@ public:
 	{
 		return var;
 	}
-	inline std::vector<Type *> &getArgs()
+	inline Vector<Type *> &getArgs()
 	{
 		return args;
 	}
@@ -539,36 +525,35 @@ public:
 		return intrin;
 	}
 	void updateUniqID();
-	bool callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
-			   std::vector<Stmt *> &callargs);
+	bool callIntrinsic(Context &c, StmtExpr *stmt, Stmt **source, Vector<Stmt *> &callargs);
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 
 class VariadicTy : public Type
 {
-	std::vector<Type *> args;
+	Vector<Type *> args;
 
 public:
-	VariadicTy(const std::vector<Type *> &args);
-	VariadicTy(const size_t &info, const uint64_t &id, const std::vector<Type *> &args);
+	VariadicTy(const Vector<Type *> &args);
+	VariadicTy(const size_t &info, const uint64_t &id, const Vector<Type *> &args);
 	~VariadicTy();
 
 	bool isTemplate(const size_t &weak_depth = 0);
-	std::string toStr(const size_t &weak_depth = 0);
+	String toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
-	bool isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc);
+	bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
 
-	static VariadicTy *create(Context &c, const std::vector<Type *> &_args);
+	static VariadicTy *create(Context &c, const Vector<Type *> &_args);
 
 	inline void addArg(Type *ty)
 	{
 		args.push_back(ty);
 	}
-	inline std::vector<Type *> &getArgs()
+	inline Vector<Type *> &getArgs()
 	{
 		return args;
 	}
@@ -577,7 +562,7 @@ public:
 		return args.size() > idx ? args[idx] : nullptr;
 	}
 
-	Value *toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
 

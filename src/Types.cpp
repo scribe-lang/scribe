@@ -24,7 +24,7 @@ static const char *TypeStrs[] = {
 "void",	      "<any>",	  "int",    "flt",	  "<template>", "<ptr>",     "<array>",
 "<function>", "<struct>", "<enum>", "<variadic>", "<import>",	"<funcmap>",
 };
-static std::unordered_map<uint64_t, Type *> containedtypes;
+static Map<uint64_t, Type *> containedtypes;
 
 uint64_t genTypeID()
 {
@@ -53,7 +53,7 @@ Type::Type(const Types &type, const size_t &info, const uint64_t &id)
 	: type(type), info(info), id(id)
 {}
 Type::~Type() {}
-bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc)
+bool Type::isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 {
 	if(!rhs) return false;
 	if(isAny()) return true;
@@ -67,23 +67,23 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *l
 			while(lto->isTypeTy()) lto = as<TypeTy>(lto)->getContainedTy();
 			return lto->getID() == rto->getID();
 		}
-		return as<PtrTy>(this)->getTo()->isCompatible(c, as<PtrTy>(rhs)->getTo(), e, loc);
+		return as<PtrTy>(this)->getTo()->isCompatible(c, as<PtrTy>(rhs)->getTo(), loc);
 	}
 	// useful for passing functions with templates as arguments (callbacks)
 	if(isTypeTy() && rhs->isTypeTy()) {
 		if(!as<TypeTy>(this)->getContainedTy() && !as<TypeTy>(rhs)->getContainedTy()) {
 			// return true;
-			e.set(loc, "both typetys contain no type - currently unsupported");
+			err::out(loc, {"both typetys contain no type - currently unsupported"});
 			return false;
 		}
 	}
 	if(rhs->isTypeTy()) {
-		return this->isCompatible(c, as<TypeTy>(rhs)->getContainedTy(), e, loc);
+		return this->isCompatible(c, as<TypeTy>(rhs)->getContainedTy(), loc);
 	}
 	if(isTypeTy()) {
 		Type *ct = as<TypeTy>(this)->getContainedTy();
 		if(!ct) return true;
-		return ct->isCompatible(c, rhs, e, loc);
+		return ct->isCompatible(c, rhs, loc);
 	}
 	bool is_lhs_prim = isPrimitive();
 	bool is_rhs_prim = rhs->isPrimitive();
@@ -94,41 +94,40 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *l
 		num_to_num = is_lhs_prim && is_rhs_prim;
 	}
 	if(!num_to_num && !(lhs_ptr && is_rhs_prim) && getID() != rhs->getID()) {
-		e.set(loc, "different type ids (LHS: %s, RHS: %s) not compatible", toStr().c_str(),
-		      rhs->toStr().c_str());
+		err::out(loc, {"different type ids (LHS: ", toStr(), ", RHS: ", rhs->toStr(),
+			       ") not compatible"});
 		return false;
 	}
 	if(!lhs_ptr && rhs_ptr) {
-		e.set(loc, "cannot use a pointer type (RHS: %s) against non pointer (LHS: %s)",
-		      rhs->toStr().c_str(), toStr().c_str());
+		err::out(loc, {"cannot use a pointer type (RHS: ", rhs->toStr(),
+			       ") against non pointer (LHS: ", toStr(), ")"});
 		return false;
 	}
 	if(!rhs_ptr && rhs_ptr && !is_rhs_prim) {
-		e.set(loc,
-		      "non pointer type (RHS: %s) cannot be assigned to pointer type (LHS: %s)",
-		      rhs->toStr().c_str(), toStr().c_str());
+		err::out(loc, {"non pointer type (RHS: ", rhs->toStr(),
+			       ") cannot be assigned to pointer type (LHS: ", toStr(), ")"});
 		return false;
 	}
 	if(rhs_ptr != lhs_ptr && !is_rhs_prim) {
-		e.set(loc, "inequal pointer assignment here (LHS: %s, RHS: %s)", toStr().c_str(),
-		      rhs->toStr().c_str());
+		err::out(loc, {"inequal pointer assignment here (LHS: ", toStr(),
+			       ", RHS: ", rhs->toStr(), ")"});
 		return false;
 	}
 	if(rhs->hasConst() && !hasConst() && (isPtr() || hasRef())) {
-		e.set(loc, "losing constness here, cannot continue (LHS: %s, RHS: %s)",
-		      toStr().c_str(), rhs->toStr().c_str());
+		err::out(loc, {"losing constness here, cannot continue (LHS: ", toStr(),
+			       ", RHS: ", rhs->toStr(), ")"});
 		return false;
 	}
 	if(rhs->hasVariadic() && !hasVariadic()) {
-		e.set(loc, "cannot assign variadic type to non variadic (LHS: %s, RHS: %s)",
-		      toStr().c_str(), rhs->toStr().c_str());
+		err::out(loc, {"cannot assign variadic type to non variadic (LHS: ", toStr(),
+			       ", RHS: ", rhs->toStr(), ")"});
 		return false;
 	}
 	return true;
 }
-std::string Type::infoToStr()
+String Type::infoToStr()
 {
-	std::string res;
+	String res;
 	if(info & REF) res += "&";
 	if(info & STATIC) res += "static ";
 	if(info & CONST) res += "const ";
@@ -137,7 +136,7 @@ std::string Type::infoToStr()
 	if(info & VARIADIC) res += "...";
 	return res;
 }
-std::string Type::baseToStr()
+String Type::baseToStr()
 {
 	return infoToStr() + TypeStrs[type];
 }
@@ -175,13 +174,13 @@ bool Type::isTemplate(const size_t &weak_depth)
 {
 	return false;
 }
-std::string Type::toStr(const size_t &weak_depth)
+String Type::toStr(const size_t &weak_depth)
 {
 	return baseToStr();
 }
-bool Type::isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc)
+bool Type::isCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 {
-	return isBaseCompatible(c, rhs, e, loc);
+	return isBaseCompatible(c, rhs, loc);
 }
 bool Type::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 {
@@ -189,10 +188,10 @@ bool Type::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 }
 void Type::unmergeTemplates(const size_t &weak_depth) {}
 
-Value *Type::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+Value *Type::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			    const size_t &weak_depth)
 {
-	e.set(loc, "invalid type for toDefaultValue(): %s", toStr().c_str());
+	err::out(loc, {"invalid type for toDefaultValue(): ", toStr()});
 	return nullptr;
 }
 
@@ -207,7 +206,7 @@ Type *VoidTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	return c.allocType<VoidTy>(getInfo());
 }
-std::string VoidTy::toStr(const size_t &weak_depth)
+String VoidTy::toStr(const size_t &weak_depth)
 {
 	return "void";
 }
@@ -215,7 +214,7 @@ VoidTy *VoidTy::create(Context &c)
 {
 	return c.allocType<VoidTy>();
 }
-Value *VoidTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+Value *VoidTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth)
 {
 	return VoidVal::create(c);
@@ -232,7 +231,7 @@ Type *AnyTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	return c.allocType<AnyTy>(getInfo());
 }
-std::string AnyTy::toStr(const size_t &weak_depth)
+String AnyTy::toStr(const size_t &weak_depth)
 {
 	return "any";
 }
@@ -241,7 +240,7 @@ AnyTy *AnyTy::create(Context &c)
 	return c.allocType<AnyTy>();
 }
 
-Value *AnyTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+Value *AnyTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
 	return TypeVal::create(c, this);
@@ -265,7 +264,7 @@ Type *IntTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	return c.allocType<IntTy>(getInfo(), getBaseID(), bits, sign);
 }
-std::string IntTy::toStr(const size_t &weak_depth)
+String IntTy::toStr(const size_t &weak_depth)
 {
 	return infoToStr() + (sign ? "i" : "u") + std::to_string(bits);
 }
@@ -275,7 +274,7 @@ IntTy *IntTy::create(Context &c, const size_t &_bits, const bool &_sign)
 	return c.allocType<IntTy>(_bits, _sign);
 }
 
-Value *IntTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+Value *IntTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
 	return IntVal::create(c, this, cd, 0);
@@ -299,7 +298,7 @@ Type *FltTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	return c.allocType<FltTy>(getInfo(), getBaseID(), bits);
 }
-std::string FltTy::toStr(const size_t &weak_depth)
+String FltTy::toStr(const size_t &weak_depth)
 {
 	return infoToStr() + "f" + std::to_string(bits);
 }
@@ -309,7 +308,7 @@ FltTy *FltTy::create(Context &c, const size_t &_bits)
 	return c.allocType<FltTy>(_bits);
 }
 
-Value *FltTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+Value *FltTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
 	return FltVal::create(c, this, cd, 0.0);
@@ -334,7 +333,7 @@ bool TypeTy::isTemplate(const size_t &weak_depth)
 {
 	return !getContainedTy();
 }
-std::string TypeTy::toStr(const size_t &weak_depth)
+String TypeTy::toStr(const size_t &weak_depth)
 {
 	Type *ct = getContainedTy();
 	return infoToStr() + "typety<" +
@@ -390,13 +389,13 @@ Type *TypeTy::getContainedTy()
 	return loc->second;
 }
 
-Value *TypeTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+Value *TypeTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth)
 {
 	if(!getContainedTy()) {
 		return TypeVal::create(c, this);
 	}
-	return getContainedTy()->toDefaultValue(c, e, loc, cd, weak_depth);
+	return getContainedTy()->toDefaultValue(c, loc, cd, weak_depth);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -420,11 +419,11 @@ bool PtrTy::isTemplate(const size_t &weak_depth)
 {
 	return weak_depth >= MAX_WEAKPTR_DEPTH ? false : to->isTemplate(weak_depth + is_weak);
 }
-std::string PtrTy::toStr(const size_t &weak_depth)
+String PtrTy::toStr(const size_t &weak_depth)
 {
-	std::string extradata;
+	String extradata;
 	if(count) extradata = "[" + std::to_string(count) + "] ";
-	std::string res = "*" + extradata + infoToStr();
+	String res = "*" + extradata + infoToStr();
 	if(weak_depth >= MAX_WEAKPTR_DEPTH) {
 		res += to->infoToStr() + " weak<" + std::to_string(to->getID()) + ">";
 	} else {
@@ -454,15 +453,15 @@ PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count, const bool &
 	return c.allocType<PtrTy>(ptr_to, count, is_weak);
 }
 
-Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+Value *PtrTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
-	std::vector<Value *> vec;
+	Vector<Value *> vec;
 	Value *res = weak_depth >= MAX_WEAKPTR_DEPTH
 		     ? IntVal::create(c, IntTy::create(c, sizeof(void *) * 8, 0), cd, 0)
-		     : to->toDefaultValue(c, e, loc, cd, weak_depth + is_weak);
+		     : to->toDefaultValue(c, loc, cd, weak_depth + is_weak);
 	if(!res) {
-		e.set(loc, "failed to get default value from array's type");
+		err::out(loc, {"failed to get default value from array's type"});
 		return nullptr;
 	}
 	vec.push_back(res);
@@ -476,9 +475,9 @@ Value *PtrTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, Contai
 // Struct Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StructTy::StructTy(const std::vector<std::string> &fieldnames, const std::vector<Type *> &fields,
-		   const std::vector<std::string> &templatenames,
-		   const std::vector<TypeTy *> &templates, const bool &externed)
+StructTy::StructTy(const Vector<StringRef> &fieldnames, const Vector<Type *> &fields,
+		   const Vector<StringRef> &templatenames, const Vector<TypeTy *> &templates,
+		   const bool &externed)
 	: Type(TSTRUCT, 0, genTypeID()), fieldnames(fieldnames), fields(fields),
 	  templatenames(templatenames), templates(templates), has_template(templates.size()),
 	  externed(externed)
@@ -490,13 +489,11 @@ StructTy::StructTy(const std::vector<std::string> &fieldnames, const std::vector
 		templatepos[templatenames[i]] = i;
 	}
 }
-StructTy::StructTy(const size_t &info, const uint64_t &id,
-		   const std::vector<std::string> &fieldnames,
-		   const std::unordered_map<std::string, size_t> &fieldpos,
-		   const std::vector<Type *> &fields, const std::vector<std::string> &templatenames,
-		   const std::unordered_map<std::string, size_t> &templatepos,
-		   const std::vector<TypeTy *> &templates, const bool &has_template,
-		   const bool &externed)
+StructTy::StructTy(const size_t &info, const uint64_t &id, const Vector<StringRef> &fieldnames,
+		   const Map<StringRef, size_t> &fieldpos, const Vector<Type *> &fields,
+		   const Vector<StringRef> &templatenames,
+		   const Map<StringRef, size_t> &templatepos, const Vector<TypeTy *> &templates,
+		   const bool &has_template, const bool &externed)
 	: Type(TSTRUCT, info, id), fieldpos(fieldpos), fieldnames(fieldnames), fields(fields),
 	  templatepos(templatepos), templatenames(templatenames), templates(templates),
 	  has_template(has_template), externed(externed)
@@ -517,9 +514,9 @@ bool StructTy::isTemplate(const size_t &weak_depth)
 	}
 	return false;
 }
-std::string StructTy::toStr(const size_t &weak_depth)
+String StructTy::toStr(const size_t &weak_depth)
 {
-	std::string res = infoToStr() + "struct<" + std::to_string(getID()) + ">{";
+	String res = infoToStr() + "struct<" + std::to_string(getID()) + ">{";
 	for(auto &f : fields) {
 		res += f->toStr(weak_depth) + ", ";
 	}
@@ -532,8 +529,8 @@ std::string StructTy::toStr(const size_t &weak_depth)
 }
 Type *StructTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
-	std::vector<Type *> newfields;
-	std::vector<TypeTy *> newtemplates;
+	Vector<Type *> newfields;
+	Vector<TypeTy *> newtemplates;
 	for(auto &field : fields) newfields.push_back(field->clone(c, as_is, weak_depth));
 	for(auto &t : templates) newtemplates.push_back(as<TypeTy>(t->clone(c, as_is, weak_depth)));
 	return c.allocType<StructTy>(getInfo(), getBaseID(), fieldnames, fieldpos, newfields,
@@ -555,29 +552,29 @@ void StructTy::unmergeTemplates(const size_t &weak_depth)
 {
 	for(auto &f : fields) f->unmergeTemplates(weak_depth);
 }
-bool StructTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc)
+bool StructTy::isCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 {
-	if(!isBaseCompatible(c, rhs, e, loc)) return false;
+	if(!isBaseCompatible(c, rhs, loc)) return false;
 	StructTy *r = as<StructTy>(rhs);
 	if(fields.size() != r->fields.size()) {
-		e.set(loc, "struct type mismatch (LHS fields: %zu, RHS fields: %zu)", fields.size(),
-		      r->fields.size());
+		err::out(loc, {"struct type mismatch (LHS fields: ", c.strFrom(fields.size()),
+			       ", RHS fields: ", c.strFrom(r->fields.size()), ")"});
 		return false;
 	}
 	for(size_t i = 0; i < fields.size(); ++i) {
-		if(fields[i]->isCompatible(c, r->fields[i], e, loc)) continue;
-		e.set(loc, "LHS struct field %s with index %zu, incompatible with RHS field %s",
-		      fields[i]->toStr().c_str(), i, r->fields[i]->toStr().c_str());
+		if(fields[i]->isCompatible(c, r->fields[i], loc)) continue;
+		err::out(loc,
+			 {"LHS struct field ", fields[i]->toStr(), " with index ", c.strFrom(i),
+			  ", incompatible with RHS field ", r->fields[i]->toStr()});
 		return false;
 	}
 	return true;
 }
-StructTy *StructTy::applyTemplates(Context &c, ErrMgr &e, const ModuleLoc *loc,
-				   const std::vector<Type *> &actuals)
+StructTy *StructTy::applyTemplates(Context &c, const ModuleLoc *loc, const Vector<Type *> &actuals)
 {
 	if(templates.size() != actuals.size()) {
-		e.set(loc, "expected templates for struct: %zu, found: %zu", templates.size(),
-		      actuals.size());
+		err::out(loc, {"expected templates for struct: ", c.strFrom(templates.size()),
+			       ", found: ", c.strFrom(actuals.size())});
 		return nullptr;
 	}
 	for(size_t i = 0; i < templates.size(); ++i) {
@@ -590,19 +587,18 @@ StructTy *StructTy::applyTemplates(Context &c, ErrMgr &e, const ModuleLoc *loc,
 	res->setTemplate(false);
 	return res;
 }
-StructTy *StructTy::instantiate(Context &c, ErrMgr &e, const ModuleLoc *loc,
-				const std::vector<Stmt *> &callargs)
+StructTy *StructTy::instantiate(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &callargs)
 {
 	if(fields.size() != callargs.size()) return nullptr;
 	if(isTemplate()) {
-		e.set(loc, "a struct with templates cannot be instantiated");
+		err::out(loc, {"a struct with templates cannot be instantiated"});
 		return nullptr;
 	}
 	bool is_field_compatible = true;
 	for(size_t i = 0; i < this->fields.size(); ++i) {
 		Type *sf    = this->fields[i];
 		Stmt *ciarg = callargs[i];
-		if(sf->isCompatible(c, ciarg->getValueTy(), e, loc)) continue;
+		if(sf->isCompatible(c, ciarg->getValueTy(), loc)) continue;
 		is_field_compatible = false;
 		break;
 	}
@@ -610,14 +606,13 @@ StructTy *StructTy::instantiate(Context &c, ErrMgr &e, const ModuleLoc *loc,
 	StructTy *newst = as<StructTy>(this->clone(c));
 	return newst;
 }
-StructTy *StructTy::create(Context &c, const std::vector<std::string> &_fieldnames,
-			   const std::vector<Type *> &_fields,
-			   const std::vector<std::string> &_templatenames,
-			   const std::vector<TypeTy *> &_templates, const bool &_externed)
+StructTy *StructTy::create(Context &c, const Vector<StringRef> &_fieldnames,
+			   const Vector<Type *> &_fields, const Vector<StringRef> &_templatenames,
+			   const Vector<TypeTy *> &_templates, const bool &_externed)
 {
 	return c.allocType<StructTy>(_fieldnames, _fields, _templatenames, _templates, _externed);
 }
-Type *StructTy::getField(const std::string &name)
+Type *StructTy::getField(StringRef name)
 {
 	auto templfound = templatepos.find(name);
 	if(templfound != templatepos.end()) return templates[templfound->second];
@@ -639,14 +634,14 @@ bool StructTy::hasTemplate()
 	return false;
 }
 
-Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+Value *StructTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 				const size_t &weak_depth)
 {
-	std::unordered_map<std::string, Value *> st;
+	Map<StringRef, Value *> st;
 	for(auto &f : fieldpos) {
-		Value *res = fields[f.second]->toDefaultValue(c, e, loc, cd, weak_depth);
+		Value *res = fields[f.second]->toDefaultValue(c, loc, cd, weak_depth);
 		if(!res) {
-			e.set(loc, "failed to get default value from array's type");
+			err::out(loc, {"failed to get default value from array's type"});
 			return nullptr;
 		}
 		st[f.first] = res;
@@ -661,14 +656,14 @@ Value *StructTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, Con
 // Function Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-FuncTy::FuncTy(StmtVar *var, const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
+FuncTy::FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret, IntrinsicFn intrin,
 	       const IntrinType &inty, const bool &externed)
 	: Type(TFUNC, 0, genTypeID()), var(var), args(args), ret(ret), intrin(intrin), inty(inty),
 	  uniqid(!externed ? genFuncUniqID() : 0), externed(externed)
 {}
-FuncTy::FuncTy(const size_t &info, const uint64_t &id, StmtVar *var,
-	       const std::vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &inty, const uint64_t &uniqid, const bool &externed)
+FuncTy::FuncTy(const size_t &info, const uint64_t &id, StmtVar *var, const Vector<Type *> &args,
+	       Type *ret, IntrinsicFn intrin, const IntrinType &inty, const uint64_t &uniqid,
+	       const bool &externed)
 	: Type(TFUNC, info, id), var(var), args(args), ret(ret), intrin(intrin), inty(inty),
 	  uniqid(uniqid), externed(externed)
 {}
@@ -707,9 +702,9 @@ bool FuncTy::isTemplate(const size_t &weak_depth)
 	}
 	return ret->isTemplate(weak_depth);
 }
-std::string FuncTy::toStr(const size_t &weak_depth)
+String FuncTy::toStr(const size_t &weak_depth)
 {
-	std::string res = infoToStr() + "function<" + std::to_string(getID());
+	String res = infoToStr() + "function<" + std::to_string(getID());
 	if(intrin || externed) res += ", ";
 	if(intrin) res += "intrinsic, ";
 	if(externed) res += "extern, ";
@@ -730,7 +725,7 @@ std::string FuncTy::toStr(const size_t &weak_depth)
 }
 Type *FuncTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
-	std::vector<Type *> newargs;
+	Vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is, weak_depth));
 	return c.allocType<FuncTy>(getInfo(), getBaseID(), var, newargs,
 				   ret->clone(c, as_is, weak_depth), intrin, inty, uniqid,
@@ -753,42 +748,41 @@ void FuncTy::unmergeTemplates(const size_t &weak_depth)
 	for(auto &a : args) a->unmergeTemplates(weak_depth);
 	ret->unmergeTemplates(weak_depth);
 }
-bool FuncTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc)
+bool FuncTy::isCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 {
-	if(!isBaseCompatible(c, rhs, e, loc)) return false;
+	if(!isBaseCompatible(c, rhs, loc)) return false;
 	FuncTy *r = as<FuncTy>(rhs);
 	if(externed != r->externed) {
-		e.set(loc, "func type mismatch (LHS externed: %s, RHS externed: %s)",
-		      externed ? "yes" : "no", r->externed ? "yes" : "no");
+		err::out(loc, {"func type mismatch (LHS externed: ", externed ? "yes" : "no",
+			       ", RHS externed: ", r->externed ? "yes" : "no", ")"});
 	}
 	if(args.size() != r->args.size()) {
-		e.set(loc, "type mismatch (LHS args: %zu, RHS args: %zu", args.size(),
-		      r->args.size());
+		err::out(loc, {"type mismatch (LHS args: ", c.strFrom(args.size()),
+			       ", RHS args: ", c.strFrom(r->args.size())});
 		return false;
 	}
 	for(size_t i = 0; i < args.size(); ++i) {
-		if(args[i]->isCompatible(c, r->args[i], e, loc)) continue;
-		e.set(loc, "LHS function arg %s with index %zu, incompatible with RHS arg %s",
-		      args[i]->toStr().c_str(), i, r->args[i]->toStr().c_str());
+		if(args[i]->isCompatible(c, r->args[i], loc)) continue;
+		err::out(loc, {"LHS function arg ", args[i]->toStr(), " with index ", c.strFrom(i),
+			       ", incompatible with RHS arg ", r->args[i]->toStr()});
 		return false;
 	}
-	if(!ret->isCompatible(c, r->ret, e, loc)) {
-		e.set(loc, "incompatible return types (LHS: %s, RHS: %s)", ret->toStr().c_str(),
-		      r->ret->toStr().c_str());
+	if(!ret->isCompatible(c, r->ret, loc)) {
+		err::out(loc, {"incompatible return types (LHS: ", ret->toStr(),
+			       ", RHS: ", r->ret->toStr(), ")"});
 		return false;
 	}
 	return true;
 }
 // specializes a function type using StmtFnCallInfo
-FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, const ModuleLoc *loc,
-			   const std::vector<Stmt *> &callargs)
+FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &callargs)
 {
 	bool has_va = false;
 	if(!args.empty() && args.back()->hasVariadic()) has_va = true;
 	if(args.size() - has_va > callargs.size()) return nullptr;
 	if(args.size() != callargs.size() && !has_va) return nullptr;
 	bool is_arg_compatible = true;
-	std::vector<Type *> variadics;
+	Vector<Type *> variadics;
 	bool has_templ = false;
 	for(size_t i = 0; i < args.size() && i < callargs.size(); ++i) {
 		has_templ |= args[i]->mergeTemplatesFrom(callargs[i]->getValueTy());
@@ -801,7 +795,7 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, const ModuleLoc *loc,
 			variadic = true;
 			--i;
 		}
-		if(!sa->isCompatible(c, ciarg->getValueTy(), e, loc)) {
+		if(!sa->isCompatible(c, ciarg->getValueTy(), loc)) {
 			is_arg_compatible = false;
 			break;
 		}
@@ -840,7 +834,7 @@ FuncTy *FuncTy::createCall(Context &c, ErrMgr &e, const ModuleLoc *loc,
 	}
 	return res;
 }
-FuncTy *FuncTy::create(Context &c, StmtVar *_var, const std::vector<Type *> &_args, Type *_ret,
+FuncTy *FuncTy::create(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
 		       IntrinsicFn _intrin, const IntrinType &_inty, const bool &_externed)
 {
 	return c.allocType<FuncTy>(_var, _args, _ret, _intrin, _inty, _externed);
@@ -849,12 +843,11 @@ void FuncTy::updateUniqID()
 {
 	uniqid = genFuncUniqID();
 }
-bool FuncTy::callIntrinsic(Context &c, ErrMgr &err, StmtExpr *stmt, Stmt **source,
-			   std::vector<Stmt *> &callargs)
+bool FuncTy::callIntrinsic(Context &c, StmtExpr *stmt, Stmt **source, Vector<Stmt *> &callargs)
 {
-	return intrin(c, err, stmt, source, callargs);
+	return intrin(c, stmt, source, callargs);
 }
-Value *FuncTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+Value *FuncTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth)
 {
 	return FuncVal::create(c, this);
@@ -864,9 +857,8 @@ Value *FuncTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, Conta
 // Variadic Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-VariadicTy::VariadicTy(const std::vector<Type *> &args) : Type(TVARIADIC, 0, TVARIADIC), args(args)
-{}
-VariadicTy::VariadicTy(const size_t &info, const uint64_t &id, const std::vector<Type *> &args)
+VariadicTy::VariadicTy(const Vector<Type *> &args) : Type(TVARIADIC, 0, TVARIADIC), args(args) {}
+VariadicTy::VariadicTy(const size_t &info, const uint64_t &id, const Vector<Type *> &args)
 	: Type(TVARIADIC, info, id), args(args)
 {}
 VariadicTy::~VariadicTy() {}
@@ -877,9 +869,9 @@ bool VariadicTy::isTemplate(const size_t &weak_depth)
 	}
 	return false;
 }
-std::string VariadicTy::toStr(const size_t &weak_depth)
+String VariadicTy::toStr(const size_t &weak_depth)
 {
-	std::string res = infoToStr() + "variadic<";
+	String res = infoToStr() + "variadic<";
 	for(auto &a : args) {
 		res += a->toStr(weak_depth) + ", ";
 	}
@@ -892,7 +884,7 @@ std::string VariadicTy::toStr(const size_t &weak_depth)
 }
 Type *VariadicTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
-	std::vector<Type *> newargs;
+	Vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is, weak_depth));
 	return c.allocType<VariadicTy>(getInfo(), getBaseID(), newargs);
 }
@@ -911,29 +903,28 @@ void VariadicTy::unmergeTemplates(const size_t &weak_depth)
 {
 	for(auto &a : args) a->unmergeTemplates(weak_depth);
 }
-bool VariadicTy::isCompatible(Context &c, Type *rhs, ErrMgr &e, const ModuleLoc *loc)
+bool VariadicTy::isCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 {
-	if(!isBaseCompatible(c, rhs, e, loc)) return false;
+	if(!isBaseCompatible(c, rhs, loc)) return false;
 	VariadicTy *r = as<VariadicTy>(rhs);
 	if(args.size() != r->args.size()) return false;
 	for(size_t i = 0; i < args.size(); ++i) {
-		if(!args[i]->isCompatible(c, r->args[i], e, loc)) return false;
+		if(!args[i]->isCompatible(c, r->args[i], loc)) return false;
 	}
 	return true;
 }
-VariadicTy *VariadicTy::create(Context &c, const std::vector<Type *> &_args)
+VariadicTy *VariadicTy::create(Context &c, const Vector<Type *> &_args)
 {
 	return c.allocType<VariadicTy>(_args);
 }
-Value *VariadicTy::toDefaultValue(Context &c, ErrMgr &e, const ModuleLoc *loc, ContainsData cd,
+Value *VariadicTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 				  const size_t &weak_depth)
 {
-	std::vector<Value *> vec;
+	Vector<Value *> vec;
 	for(auto &a : args) {
-		Value *v = a->toDefaultValue(c, e, loc, cd, weak_depth);
+		Value *v = a->toDefaultValue(c, loc, cd, weak_depth);
 		if(!v) {
-			e.set(loc, "failed to generate default value for type: %s",
-			      a->toStr().c_str());
+			err::out(loc, {"failed to generate default value for type: ", a->toStr()});
 			return nullptr;
 		}
 		vec.push_back(v);

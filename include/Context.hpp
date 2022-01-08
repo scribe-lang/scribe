@@ -14,9 +14,7 @@
 #ifndef CONTEXT_HPP
 #define CONTEXT_HPP
 
-#include <string> // for size_t
-#include <unordered_map>
-#include <vector>
+#include "Core.hpp"
 
 namespace sc
 {
@@ -25,26 +23,29 @@ class Type;
 class Value;
 class Pass;
 class RAIIParser;
+class Module;
 class ModuleLoc;
 class Context
 {
-	std::vector<ModuleLoc *> modlocmem;
-	std::vector<Stmt *> stmtmem;
-	std::vector<Type *> typemem;
-	std::vector<Value *> valmem;
-	std::unordered_map<size_t, Pass *> passes;
+	List<String> stringmem;
+	List<ModuleLoc> modlocmem;
+	Vector<Stmt *> stmtmem;
+	Vector<Type *> typemem;
+	Vector<Value *> valmem;
+	Map<size_t, Pass *> passes;
 	RAIIParser *parser;
 
 public:
 	Context(RAIIParser *parser);
 	~Context();
 
-	template<typename T, typename... Args> T *allocModuleLoc(Args... args)
-	{
-		T *res = new T(args...);
-		modlocmem.push_back(res);
-		return res;
-	}
+	StringRef strFrom(InitList<StringRef> strs);
+	StringRef strFrom(const String &s);
+	StringRef moveStr(String &&str);
+	StringRef strFrom(int64_t i);
+	StringRef strFrom(size_t i); // also uint64_t
+	ModuleLoc *allocModuleLoc(Module *mod, size_t line, size_t col);
+
 	template<typename T, typename... Args> T *allocStmt(Args... args)
 	{
 		T *res = new T(args...);

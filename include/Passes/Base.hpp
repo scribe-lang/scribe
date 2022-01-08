@@ -14,11 +14,6 @@
 #ifndef PASSES_BASE_HPP
 #define PASSES_BASE_HPP
 
-#include <string>
-#include <type_traits>
-#include <unordered_map>
-#include <vector>
-
 #include "Context.hpp"
 #include "Parser/Stmts.hpp"
 
@@ -28,7 +23,6 @@ class Pass
 {
 protected:
 	size_t passid;
-	ErrMgr &err;
 	Context &ctx;
 
 	// https://stackoverflow.com/questions/51332851/alternative-id-generators-for-types
@@ -39,7 +33,7 @@ protected:
 	}
 
 public:
-	Pass(const size_t &passid, ErrMgr &err, Context &ctx);
+	Pass(const size_t &passid, Context &ctx);
 	virtual ~Pass();
 
 	template<typename T>
@@ -91,18 +85,17 @@ template<typename T> T *as(Pass *t)
 
 class PassManager
 {
-	ErrMgr &err;
 	Context &ctx;
-	std::vector<Pass *> passes;
+	Vector<Pass *> passes;
 
 public:
-	PassManager(ErrMgr &err, Context &ctx);
+	PassManager(Context &ctx);
 	PassManager(const PassManager &pm) = delete;
 	~PassManager();
 	template<class T, typename... Args>
 	typename std::enable_if<std::is_base_of<Pass, T>::value, void>::type add(Args... args)
 	{
-		passes.push_back(new T(err, ctx, args...));
+		passes.push_back(new T(ctx, args...));
 	}
 	bool visit(Stmt *&ptree);
 };
