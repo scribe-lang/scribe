@@ -314,7 +314,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 	}
 	case lex::STCALL: {
 		Vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
-		writer.write("(struct_%" PRIu64 "){", lhs->getValueTy()->getUniqID());
+		writer.write({"(struct_", ctx.strFrom(lhs->getValueTy()->getUniqID()), "){"});
 		if(!writeCallArgs(stmt->getLoc(), args, lhs->getValueTy(), writer)) return false;
 		writer.write("}");
 		break;
@@ -417,7 +417,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 				return false;
 			}
 			writer.append(l);
-			writer.write(" %s ", lex::TokStrs[oper]);
+			writer.write({" ", lex::TokStrs[oper], " "});
 			writer.append(r);
 			break;
 		}
@@ -1056,7 +1056,7 @@ bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 		return true;
 	}
 	Writer st;
-	st.write("struct struct_%" PRIu64 " {", sty->getUniqID());
+	st.write({"struct struct_", ctx.strFrom(sty->getUniqID()), " {"});
 	if(!sty->getFields().empty()) {
 		st.addIndent();
 		st.newLine();

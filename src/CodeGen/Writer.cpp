@@ -41,17 +41,6 @@ void Writer::append(Writer &other)
 	dest += other.getData();
 }
 
-void Writer::write(const char *data, ...)
-{
-	static char dat[4096];
-	std::memset(dat, 0, 4096);
-	va_list args;
-	va_start(args, data);
-	vsprintf(dat, data, args);
-	va_end(args);
-	dest += dat;
-}
-
 void Writer::write(StringRef data)
 {
 	dest += data;
@@ -73,16 +62,6 @@ void Writer::writeConstString(StringRef data)
 	dest += "\"" + getRawString(data) + "\"";
 }
 
-void Writer::writeBefore(const char *data, ...)
-{
-	static char dat[4096];
-	std::memset(dat, 0, 4096);
-	va_list args;
-	va_start(args, data);
-	vsprintf(dat, data, args);
-	va_end(args);
-	dest = dat + dest;
-}
 void Writer::writeBefore(StringRef data)
 {
 	dest.insert(dest.begin(), data.begin(), data.end());
