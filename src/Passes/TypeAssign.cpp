@@ -138,7 +138,7 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 		res = PtrTy::create(ctx, res, 0, false);
 		if(is_self && i == stmt->getPtrCount() - 1) {
 			as<PtrTy>(res)->setWeak(true);
-			partialtypes.push_back({as<PtrTy>(res), stmt->getInfoMask()});
+			res->setInfo(stmt->getInfoMask());
 		}
 	}
 	if(!is_self) res->appendInfo(stmt->getInfoMask());
@@ -951,12 +951,6 @@ bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 	disabled_varname_mangling = false;
 
 	vmgr.popLayer();
-	for(auto &pt : partialtypes) {
-		StructTy *cl = as<StructTy>(st->clone(ctx));
-		cl->setInfo(pt.infomask);
-		pt.ty->setTo(cl);
-	}
-	partialtypes.clear();
 	return true;
 }
 bool TypeAssignPass::visit(StmtVarDecl *stmt, Stmt **source)

@@ -23,11 +23,6 @@ namespace sc
 {
 class TypeAssignPass : public Pass
 {
-	struct PartialType
-	{
-		PtrTy *ty;
-		size_t infomask;
-	};
 	ValueManager vmgr;
 	ValueAssignPass vpass;
 	DeferStack deferstack;
@@ -36,7 +31,6 @@ class TypeAssignPass : public Pass
 	// variadic length of current function
 	Vector<size_t> valen;
 	Vector<bool> is_fn_va;
-	Vector<PartialType> partialtypes;
 	bool disabled_varname_mangling;
 
 	StringRef getMangledName(Stmt *stmt, StringRef name, NamespaceVal *ns = nullptr) const;
