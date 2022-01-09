@@ -374,6 +374,11 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 				continue;
 			}
 			int64_t intval;
+			if(num.size() > 2 && base != 10) {
+				// base of 2: starts with 0 => 01111
+				// everything else: starts with 0 and letter
+				num = num.substr(base == 2 ? 1 : 2);
+			}
 			std::from_chars(num.data(), num.data() + num.size(), intval, base);
 			toks.emplace_back(locAlloc(line, i - line_start - num.size()), intval);
 			continue;
