@@ -670,6 +670,8 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				err::out(stmt, {"call to parse intrinsic failed"});
 				return false;
 			}
+			stmt->setCalledFnTy(fn);
+			break;
 		}
 		if(!initTemplateFunc(stmt, fn, args)) {
 			err::out(stmt, {"failed to intialize template function"});
