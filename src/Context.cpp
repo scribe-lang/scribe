@@ -63,7 +63,17 @@ StringRef Context::moveStr(String &&str)
 	stringmem.push_front(std::move(str));
 	return stringmem.front();
 }
+StringRef Context::strFrom(int32_t i)
+{
+	stringmem.push_front(std::to_string(i));
+	return stringmem.front();
+}
 StringRef Context::strFrom(int64_t i)
+{
+	stringmem.push_front(std::to_string(i));
+	return stringmem.front();
+}
+StringRef Context::strFrom(uint32_t i)
 {
 	stringmem.push_front(std::to_string(i));
 	return stringmem.front();

@@ -42,7 +42,9 @@ public:
 	StringRef strFrom(InitList<StringRef> strs);
 	StringRef strFrom(const String &s);
 	StringRef moveStr(String &&str);
+	StringRef strFrom(int32_t i);
 	StringRef strFrom(int64_t i);
+	StringRef strFrom(uint32_t i);
 	StringRef strFrom(size_t i); // also uint64_t
 	ModuleLoc *allocModuleLoc(Module *mod, size_t line, size_t col);
 

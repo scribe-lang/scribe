@@ -24,32 +24,32 @@ static const char *TypeStrs[] = {
 "void",	      "<any>",	  "int",    "flt",	  "<template>", "<ptr>",     "<array>",
 "<function>", "<struct>", "<enum>", "<variadic>", "<import>",	"<funcmap>",
 };
-static Map<uint64_t, Type *> containedtypes;
+static Map<uint32_t, Type *> containedtypes;
 
-uint64_t genTypeID()
+uint32_t genTypeID()
 {
-	static uint64_t id = _LAST;
+	static uint32_t id = _LAST;
 	return id++;
 }
-uint64_t genFuncUniqID()
+uint32_t genFuncUniqID()
 {
-	static uint64_t id = 1; // 0 is for externs = no uniq id
+	static uint32_t id = 1; // 0 is for externs = no uniq id
 	return id++;
 }
-uint64_t genContainedTypeID()
+uint32_t genContainedTypeID()
 {
-	static uint64_t id = 0;
+	static uint32_t id = 0;
 	return id++;
 }
 
 size_t getPointerCount(Type *t);
-Type *applyPointerCount(Context &c, Type *t, const size_t &count);
+Type *applyPointerCount(Context &c, Type *t, const uint16_t &count);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Base Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Type::Type(const Types &type, const size_t &info, const uint64_t &id)
+Type::Type(const Types &type, const uint16_t &info, const uint32_t &id)
 	: type(type), info(info), id(id)
 {}
 Type::~Type() {}
@@ -162,11 +162,11 @@ bool Type::requiresCast(Type *other)
 	}
 	return false;
 }
-uint64_t Type::getUniqID()
+uint32_t Type::getUniqID()
 {
 	return getID();
 }
-uint64_t Type::getID()
+uint32_t Type::getID()
 {
 	return getBaseID();
 }
@@ -200,7 +200,7 @@ Value *Type::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 VoidTy::VoidTy() : Type(TVOID, 0, TVOID) {}
-VoidTy::VoidTy(const size_t &info) : Type(TVOID, info, TVOID) {}
+VoidTy::VoidTy(const uint16_t &info) : Type(TVOID, info, TVOID) {}
 VoidTy::~VoidTy() {}
 Type *VoidTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
@@ -225,7 +225,7 @@ Value *VoidTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 AnyTy::AnyTy() : Type(TANY, 0, TANY) {}
-AnyTy::AnyTy(const size_t &info) : Type(TANY, info, TANY) {}
+AnyTy::AnyTy(const uint16_t &info) : Type(TANY, info, TANY) {}
 AnyTy::~AnyTy() {}
 Type *AnyTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
@@ -250,13 +250,14 @@ Value *AnyTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Int Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-IntTy::IntTy(const size_t &bits, const bool &sign) : Type(TINT, 0, TINT), bits(bits), sign(sign) {}
-IntTy::IntTy(const size_t &info, const uint64_t &id, const size_t &bits, const bool &sign)
+IntTy::IntTy(const uint16_t &bits, const bool &sign) : Type(TINT, 0, TINT), bits(bits), sign(sign)
+{}
+IntTy::IntTy(const uint16_t &info, const uint32_t &id, const uint16_t &bits, const bool &sign)
 	: Type(TINT, info, id), bits(bits), sign(sign)
 {}
 IntTy::~IntTy() {}
 
-uint64_t IntTy::getID()
+uint32_t IntTy::getID()
 {
 	return getBaseID() + bits + (sign * 2);
 }
@@ -269,7 +270,7 @@ String IntTy::toStr(const size_t &weak_depth)
 	return infoToStr() + (sign ? "i" : "u") + std::to_string(bits);
 }
 
-IntTy *IntTy::create(Context &c, const size_t &_bits, const bool &_sign)
+IntTy *IntTy::create(Context &c, const uint16_t &_bits, const bool &_sign)
 {
 	return c.allocType<IntTy>(_bits, _sign);
 }
@@ -284,13 +285,13 @@ Value *IntTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Float Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-FltTy::FltTy(const size_t &bits) : Type(TFLT, 0, TFLT), bits(bits) {}
-FltTy::FltTy(const size_t &info, const uint64_t &id, const size_t &bits)
+FltTy::FltTy(const uint16_t &bits) : Type(TFLT, 0, TFLT), bits(bits) {}
+FltTy::FltTy(const uint16_t &info, const uint32_t &id, const uint16_t &bits)
 	: Type(TFLT, info, id), bits(bits)
 {}
 FltTy::~FltTy() {}
 
-uint64_t FltTy::getID()
+uint32_t FltTy::getID()
 {
 	return getBaseID() + (bits * 3); // * 3 to prevent clash between int and flt
 }
@@ -303,7 +304,7 @@ String FltTy::toStr(const size_t &weak_depth)
 	return infoToStr() + "f" + std::to_string(bits);
 }
 
-FltTy *FltTy::create(Context &c, const size_t &_bits)
+FltTy *FltTy::create(Context &c, const uint16_t &_bits)
 {
 	return c.allocType<FltTy>(_bits);
 }
@@ -319,12 +320,12 @@ Value *FltTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 TypeTy::TypeTy() : Type(TTYPE, 0, TTYPE), containedtyid(genContainedTypeID()) {}
-TypeTy::TypeTy(const size_t &info, const uint64_t &id, const uint64_t &containedtyid)
+TypeTy::TypeTy(const uint16_t &info, const uint32_t &id, const uint32_t &containedtyid)
 	: Type(TTYPE, info, id), containedtyid(containedtyid)
 {}
 TypeTy::~TypeTy() {}
 
-uint64_t TypeTy::getUniqID()
+uint32_t TypeTy::getUniqID()
 {
 	if(getContainedTy()) getContainedTy()->getUniqID();
 	return getID();
@@ -402,15 +403,15 @@ Value *TypeTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Pointer Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-PtrTy::PtrTy(Type *to, const size_t &count, const bool &is_weak)
+PtrTy::PtrTy(Type *to, const uint16_t &count, const bool &is_weak)
 	: Type(TPTR, 0, TPTR), to(to), count(count), is_weak(is_weak)
 {}
-PtrTy::PtrTy(const size_t &info, const uint64_t &id, Type *to, const size_t &count,
+PtrTy::PtrTy(const uint16_t &info, const uint32_t &id, Type *to, const uint16_t &count,
 	     const bool &is_weak)
 	: Type(TPTR, info, id), to(to), count(count), is_weak(is_weak)
 {}
 PtrTy::~PtrTy() {}
-uint64_t PtrTy::getUniqID()
+uint32_t PtrTy::getUniqID()
 {
 	if(to && !is_weak) return to->getUniqID();
 	return getID();
@@ -448,7 +449,7 @@ void PtrTy::unmergeTemplates(const size_t &weak_depth)
 	if(weak_depth >= MAX_WEAKPTR_DEPTH) return;
 	to->unmergeTemplates(weak_depth + is_weak);
 }
-PtrTy *PtrTy::create(Context &c, Type *ptr_to, const size_t &count, const bool &is_weak)
+PtrTy *PtrTy::create(Context &c, Type *ptr_to, const uint16_t &count, const bool &is_weak)
 {
 	return c.allocType<PtrTy>(ptr_to, count, is_weak);
 }
@@ -489,7 +490,7 @@ StructTy::StructTy(const Vector<StringRef> &fieldnames, const Vector<Type *> &fi
 		templatepos[templatenames[i]] = i;
 	}
 }
-StructTy::StructTy(const size_t &info, const uint64_t &id, const Vector<StringRef> &fieldnames,
+StructTy::StructTy(const uint16_t &info, const uint32_t &id, const Vector<StringRef> &fieldnames,
 		   const Map<StringRef, size_t> &fieldpos, const Vector<Type *> &fields,
 		   const Vector<StringRef> &templatenames,
 		   const Map<StringRef, size_t> &templatepos, const Vector<TypeTy *> &templates,
@@ -499,9 +500,9 @@ StructTy::StructTy(const size_t &info, const uint64_t &id, const Vector<StringRe
 	  has_template(has_template), externed(externed)
 {}
 StructTy::~StructTy() {}
-uint64_t StructTy::getUniqID()
+uint32_t StructTy::getUniqID()
 {
-	uint64_t res = getID();
+	uint32_t res = getID();
 	for(auto &f : fields) {
 		res += f->getUniqID();
 	}
@@ -661,34 +662,34 @@ FuncTy::FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret, IntrinsicFn 
 	: Type(TFUNC, 0, genTypeID()), var(var), args(args), ret(ret), intrin(intrin), inty(inty),
 	  uniqid(!externed ? genFuncUniqID() : 0), externed(externed)
 {}
-FuncTy::FuncTy(const size_t &info, const uint64_t &id, StmtVar *var, const Vector<Type *> &args,
-	       Type *ret, IntrinsicFn intrin, const IntrinType &inty, const uint64_t &uniqid,
+FuncTy::FuncTy(const uint16_t &info, const uint32_t &id, StmtVar *var, const Vector<Type *> &args,
+	       Type *ret, IntrinsicFn intrin, const IntrinType &inty, const uint32_t &uniqid,
 	       const bool &externed)
 	: Type(TFUNC, info, id), var(var), args(args), ret(ret), intrin(intrin), inty(inty),
 	  uniqid(uniqid), externed(externed)
 {}
 FuncTy::~FuncTy() {}
-uint64_t FuncTy::getSignatureID()
+uint32_t FuncTy::getSignatureID()
 {
-	uint64_t res = TFUNC;
+	uint32_t res = TFUNC;
 	for(auto &a : args) {
 		res += a->getID();
 	}
 	res += ret->getID();
 	return res * 7;
 }
-uint64_t FuncTy::getNonUniqID()
+uint32_t FuncTy::getNonUniqID()
 {
-	uint64_t res = getBaseID();
+	uint32_t res = getBaseID();
 	for(auto &a : args) {
 		res += a->getID();
 	}
 	res += ret->getID();
 	return res * 7;
 }
-uint64_t FuncTy::getID()
+uint32_t FuncTy::getID()
 {
-	uint64_t res = getBaseID() + uniqid;
+	uint32_t res = getBaseID() + uniqid;
 	for(auto &a : args) {
 		res += a->getID();
 	}
@@ -858,7 +859,7 @@ Value *FuncTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 VariadicTy::VariadicTy(const Vector<Type *> &args) : Type(TVARIADIC, 0, TVARIADIC), args(args) {}
-VariadicTy::VariadicTy(const size_t &info, const uint64_t &id, const Vector<Type *> &args)
+VariadicTy::VariadicTy(const uint16_t &info, const uint32_t &id, const Vector<Type *> &args)
 	: Type(TVARIADIC, info, id), args(args)
 {}
 VariadicTy::~VariadicTy() {}
@@ -941,7 +942,7 @@ size_t getPointerCount(Type *t)
 	}
 	return i;
 }
-Type *applyPointerCount(Context &c, Type *t, const size_t &count)
+Type *applyPointerCount(Context &c, Type *t, const uint16_t &count)
 {
 	for(size_t i = 0; i < count; ++i) {
 		t = PtrTy::create(c, t, 0, false);

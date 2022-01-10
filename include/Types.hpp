@@ -20,7 +20,7 @@
 
 namespace sc
 {
-enum Types
+enum Types : uint16_t
 {
 	TVOID,
 	// TNIL,  // = i1 (0)
@@ -60,12 +60,12 @@ typedef bool (*IntrinsicFn)(Context &c, StmtExpr *stmt, Stmt **source, Vector<St
 
 class Type
 {
-	uint64_t id;
+	uint32_t id;
 	Types type;
-	size_t info;
+	uint16_t info;
 
 public:
-	Type(const Types &type, const size_t &info, const uint64_t &id);
+	Type(const Types &type, const uint16_t &info, const uint32_t &id);
 	virtual ~Type();
 
 	bool isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
@@ -74,8 +74,8 @@ public:
 	String baseToStr();
 	bool requiresCast(Type *other);
 
-	virtual uint64_t getUniqID(); // used by codegen
-	virtual uint64_t getID();
+	virtual uint32_t getUniqID(); // used by codegen
+	virtual uint32_t getID();
 	virtual bool isTemplate(const size_t &weak_depth = 0);
 	virtual String toStr(const size_t &weak_depth = 0);
 	virtual Type *clone(Context &c, const bool &as_is = false,
@@ -92,7 +92,7 @@ public:
 	{
 		info |= inf;
 	}
-	inline const size_t &getInfo() const
+	inline uint16_t getInfo() const
 	{
 		return info;
 	}
@@ -167,7 +167,7 @@ public:
 	IsModifierX(Comptime, COMPTIME);
 	IsModifierX(Variadic, VARIADIC);
 
-	inline const uint64_t &getBaseID() const
+	inline const uint32_t &getBaseID() const
 	{
 		return id;
 	}
@@ -182,7 +182,7 @@ class VoidTy : public Type
 {
 public:
 	VoidTy();
-	VoidTy(const size_t &info);
+	VoidTy(const uint16_t &info);
 	~VoidTy();
 
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
@@ -197,7 +197,7 @@ class AnyTy : public Type
 {
 public:
 	AnyTy();
-	AnyTy(const size_t &info);
+	AnyTy(const uint16_t &info);
 	~AnyTy();
 
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
@@ -211,21 +211,21 @@ public:
 
 class IntTy : public Type
 {
-	size_t bits;
+	uint16_t bits;
 	bool sign; // signed
 
 public:
-	IntTy(const size_t &bits, const bool &sign);
-	IntTy(const size_t &info, const uint64_t &id, const size_t &bits, const bool &sign);
+	IntTy(const uint16_t &bits, const bool &sign);
+	IntTy(const uint16_t &info, const uint32_t &id, const uint16_t &bits, const bool &sign);
 	~IntTy();
 
-	uint64_t getID();
+	uint32_t getID();
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
 
-	static IntTy *create(Context &c, const size_t &_bits, const bool &_sign);
+	static IntTy *create(Context &c, const uint16_t &_bits, const bool &_sign);
 
-	inline const size_t &getBits() const
+	inline const uint16_t &getBits() const
 	{
 		return bits;
 	}
@@ -240,20 +240,20 @@ public:
 
 class FltTy : public Type
 {
-	size_t bits;
+	uint16_t bits;
 
 public:
-	FltTy(const size_t &bits);
-	FltTy(const size_t &info, const uint64_t &id, const size_t &bits);
+	FltTy(const uint16_t &bits);
+	FltTy(const uint16_t &info, const uint32_t &id, const uint16_t &bits);
 	~FltTy();
 
-	uint64_t getID();
+	uint32_t getID();
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
 
-	static FltTy *create(Context &c, const size_t &_bits);
+	static FltTy *create(Context &c, const uint16_t &_bits);
 
-	inline const size_t &getBits() const
+	inline const uint16_t &getBits() const
 	{
 		return bits;
 	}
@@ -264,14 +264,14 @@ public:
 
 class TypeTy : public Type
 {
-	uint64_t containedtyid;
+	uint32_t containedtyid;
 
 public:
 	TypeTy();
-	TypeTy(const size_t &info, const uint64_t &id, const uint64_t &containedtyid);
+	TypeTy(const uint16_t &info, const uint32_t &id, const uint32_t &containedtyid);
 	~TypeTy();
 
-	uint64_t getUniqID();
+	uint32_t getUniqID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
@@ -291,23 +291,23 @@ public:
 class PtrTy : public Type
 {
 	Type *to;
-	size_t count; // 0 = normal pointer, > 0 = array pointer with count = size
-	bool is_weak; // required for self referencing members in struct
+	uint16_t count; // 0 = normal pointer, > 0 = array pointer with count = size
+	bool is_weak;	// required for self referencing members in struct
 
 public:
-	PtrTy(Type *to, const size_t &count, const bool &is_weak);
-	PtrTy(const size_t &info, const uint64_t &id, Type *to, const size_t &count,
+	PtrTy(Type *to, const uint16_t &count, const bool &is_weak);
+	PtrTy(const uint16_t &info, const uint32_t &id, Type *to, const uint16_t &count,
 	      const bool &is_weak);
 	~PtrTy();
 
-	uint64_t getUniqID();
+	uint32_t getUniqID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 
-	static PtrTy *create(Context &c, Type *ptr_to, const size_t &count, const bool &is_weak);
+	static PtrTy *create(Context &c, Type *ptr_to, const uint16_t &count, const bool &is_weak);
 
 	inline void setTo(Type *ty)
 	{
@@ -321,7 +321,7 @@ public:
 	{
 		return to;
 	}
-	inline const size_t &getCount()
+	inline const uint16_t &getCount()
 	{
 		return count;
 	}
@@ -353,13 +353,13 @@ public:
 	StructTy(const Vector<StringRef> &fieldnames, const Vector<Type *> &fields,
 		 const Vector<StringRef> &templatenames, const Vector<TypeTy *> &templates,
 		 const bool &externed);
-	StructTy(const size_t &info, const uint64_t &id, const Vector<StringRef> &fieldnames,
+	StructTy(const uint16_t &info, const uint32_t &id, const Vector<StringRef> &fieldnames,
 		 const Map<StringRef, size_t> &fieldpos, const Vector<Type *> &fields,
 		 const Vector<StringRef> &templatenames, const Map<StringRef, size_t> &templatepos,
 		 const Vector<TypeTy *> &templates, const bool &has_template, const bool &externed);
 	~StructTy();
 
-	uint64_t getUniqID();
+	uint32_t getUniqID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
@@ -437,21 +437,21 @@ class FuncTy : public Type
 	Type *ret;
 	IntrinsicFn intrin;
 	IntrinType inty;
-	uint64_t uniqid;
+	uint32_t uniqid;
 	bool externed;
 
 public:
 	FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret, IntrinsicFn intrin,
 	       const IntrinType &inty, const bool &externed);
-	FuncTy(const size_t &info, const uint64_t &id, StmtVar *var, const Vector<Type *> &args,
-	       Type *ret, IntrinsicFn intrin, const IntrinType &inty, const uint64_t &uniqid,
+	FuncTy(const uint16_t &info, const uint32_t &id, StmtVar *var, const Vector<Type *> &args,
+	       Type *ret, IntrinsicFn intrin, const IntrinType &inty, const uint32_t &uniqid,
 	       const bool &externed);
 	~FuncTy();
 
 	// returns ID of parameters + ret type
-	uint64_t getSignatureID();
-	uint64_t getNonUniqID();
-	uint64_t getID();
+	uint32_t getSignatureID();
+	uint32_t getNonUniqID();
+	uint32_t getID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
@@ -537,7 +537,7 @@ class VariadicTy : public Type
 
 public:
 	VariadicTy(const Vector<Type *> &args);
-	VariadicTy(const size_t &info, const uint64_t &id, const Vector<Type *> &args);
+	VariadicTy(const uint16_t &info, const uint32_t &id, const Vector<Type *> &args);
 	~VariadicTy();
 
 	bool isTemplate(const size_t &weak_depth = 0);
