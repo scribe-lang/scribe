@@ -27,7 +27,7 @@ uint64_t genValueID();
 uint64_t createValueIDWith(Value *v);
 Value *getValueWithID(const uint64_t &id);
 
-enum Stmts
+enum Stmts : uint16_t
 {
 	BLOCK,
 	TYPE,
