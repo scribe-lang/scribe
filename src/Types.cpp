@@ -103,7 +103,7 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 			       ") against non pointer (LHS: ", toStr(), ")"});
 		return false;
 	}
-	if(!rhs_ptr && rhs_ptr && !is_rhs_prim) {
+	if(!rhs_ptr && lhs_ptr && !is_rhs_prim) {
 		err::out(loc, {"non pointer type (RHS: ", rhs->toStr(),
 			       ") cannot be assigned to pointer type (LHS: ", toStr(), ")"});
 		return false;

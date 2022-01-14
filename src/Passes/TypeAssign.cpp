@@ -1202,6 +1202,7 @@ void TypeAssignPass::applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex:
 	if(l->getID() == r->getID()) return;
 
 	if(oper.getTok().isAssign()) {
+		if(r->isPtr() && !l->isPtr()) return;
 		rhs->castTo(l->clone(ctx));
 		if(l->hasRef()) rhs->getCast()->unsetRef();
 		return;
