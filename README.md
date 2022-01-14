@@ -5,6 +5,8 @@ Scribe is a statically typed, compiled (currently, to C), procedural systems pro
 It attempts to find a balance between the complexities of C++ and the barebones nature of C. As such, it is mostly inspired by C, while containing the member function syntax like that in C++.
 There are also features taken from the Zig programming language.
 
+Check out the language/compiler reference manual (WIP) here: [https://scribe-lang.github.io/book](https://scribe-lang.github.io/book).
+
 # Examples
 
 1. Hello World
