@@ -346,6 +346,11 @@ bool ValueAssignPass::visit(StmtVar *stmt, Stmt **source)
 		err::out(stmt, {"failed to determine value for variable"});
 		return false;
 	}
+	if(!val->getValueID()) {
+		err::out(stmt,
+			 {"failed to evaluate value for variable: ", stmt->getName().getDataStr()});
+		return false;
+	}
 	stmt->updateValue(ctx, val->getValue());
 	return true;
 }
