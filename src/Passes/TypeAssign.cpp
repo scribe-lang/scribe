@@ -967,6 +967,8 @@ bool TypeAssignPass::visit(StmtVarDecl *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 {
+	// TODO: erase inline if nothing exists in block
+	// (for example, when condition never becomes true)
 	for(auto &cond : stmt->getConditionals()) {
 		Stmt *&c	= cond.getCond();
 		StmtBlock *&b	= cond.getBlk();
@@ -1017,6 +1019,8 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 {
+	// TODO: erase inline loop if nothing exists in block
+	// (for example, when inline if is present whose condition never becomes true)
 	if(stmt->isInline() && !stmt->getCond()) {
 		err::out(stmt, {"inline for-loop requires a condition"});
 		return false;
