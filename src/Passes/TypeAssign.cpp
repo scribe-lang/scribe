@@ -910,7 +910,7 @@ bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 {
 	const ModuleLoc *loc  = stmt->getLoc();
 	static size_t enum_id = 0;
-	StringRef enum_mangle = ctx.strFrom({"enum_", ctx.strFrom(enum_id)});
+	StringRef enum_mangle = ctx.strFrom({"enum_", ctx.strFrom(enum_id++)});
 	NamespaceVal *ns      = NamespaceVal::create(ctx, enum_mangle);
 	size_t i	      = 0;
 	for(auto &e : stmt->getItems()) {
