@@ -280,7 +280,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		// struct def will be in TypeVal(Struct)
 		StructVal *sv	= nullptr;
 		Value *res	= nullptr;
-		Value *v	= lhs->getValue();
+		Value *v	= lhs->getValue(true);
 		size_t ptrcount = 0;
 		while(v->getType()->isPtr()) {
 			v = as<VecVal>(v)->getValAt(0);
@@ -1335,7 +1335,6 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 				newv->createAndSetValue(args[i]->getValue()->clone(ctx));
 				newv->getValue()->setType(t);
 			}
-			if(args[i]->getCast()) newv->castTo(args[i]->getCast());
 			vtmp->insertVal(newv->getValue(true));
 			cfsig->insertArg(newv);
 			cf->insertArg(t);
