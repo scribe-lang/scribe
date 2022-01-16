@@ -116,6 +116,7 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 {
+	// TODO: add array type
 	if(!visit(stmt->getExpr(), &stmt->getExpr()) || !stmt->getExpr()->getValue()) {
 		err::out(stmt, {"failed to determine type of type-expr"});
 		return false;
