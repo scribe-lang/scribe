@@ -235,7 +235,8 @@ INTRINSIC(compileerror)
 {
 	String e;
 	for(auto &a : args) {
-		if(a->getValue()->hasData() && a->getValue()->isStrLiteral()) {
+		if(a->getValue()->isVec() && a->getValue()->hasData() &&
+		   a->getValue()->isStrLiteral()) {
 			e += as<VecVal>(a->getValue())->getAsString();
 		} else {
 			e += a->getValue()->toStr();
