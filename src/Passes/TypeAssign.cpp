@@ -1280,6 +1280,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 
 	pushFunc(nullptr, false, 0); // data set a bit later
 
+	bool is_va	= false;
 	size_t va_count = 0;
 	bool no_va_arg	= cf->getArgs().size() > 0 && cf->getArgs().back()->isVariadic() &&
 			 args.size() < cf->getArgs().size();
@@ -1306,6 +1307,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 		const ModuleLoc *mloc = cfa->getLoc();
 		lex::Lexeme &va_name  = cfa->getName();
 		Type *vaty	      = cft;
+		is_va		      = true;
 		cfsig->getArgs().pop_back();
 		cf->getArgs().pop_back();
 		VecVal *vtmp   = VecVal::create(ctx, vaty, CDFALSE, {});
@@ -1361,7 +1363,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 	beingtemplated[uniqname] = cfvar;
 	dv			 = cf->getRet()->toDefaultValue(ctx, caller->getLoc(), CDFALSE);
 	cfblk->createAndSetValue(dv);
-	updateLastFunc(cfn, va_count > 0, va_count);
+	updateLastFunc(cfn, is_va, va_count);
 	if(!visit(cfblk, asStmt(&cfblk))) {
 		err::out(caller, {"failed to assign type for called template function's var"});
 		return false;
