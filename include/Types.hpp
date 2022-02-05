@@ -39,6 +39,11 @@ enum Types : uint16_t
 	_LAST
 };
 
+// TODO:
+// This enum (and respective variables) will be completely removed
+// Only variadic will remain - inside FuncTy as a boolean
+// All types will be allocated once, except func and struct -
+// they must be allocated for each func/struct
 enum TypeInfoMask
 {
 	REF	 = 1 << 0, // is a reference
@@ -116,30 +121,6 @@ public:
 	virtual Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 				      const size_t &weak_depth = 0);
 
-#define SetModifierX(Fn, Mod) \
-	inline void set##Fn() \
-	{                     \
-		info |= Mod;  \
-	}
-	SetModifierX(Static, STATIC);
-	SetModifierX(Const, CONST);
-	SetModifierX(Volatile, VOLATILE);
-	SetModifierX(Ref, REF);
-	SetModifierX(Comptime, COMPTIME);
-	SetModifierX(Variadic, VARIADIC);
-
-#define UnsetModifierX(Fn, Mod) \
-	inline void unset##Fn() \
-	{                       \
-		info &= ~Mod;   \
-	}
-	UnsetModifierX(Static, STATIC);
-	UnsetModifierX(Const, CONST);
-	UnsetModifierX(Volatile, VOLATILE);
-	UnsetModifierX(Ref, REF);
-	UnsetModifierX(Comptime, COMPTIME);
-	UnsetModifierX(Variadic, VARIADIC);
-
 #define IsTyX(Fn, Ty)                 \
 	inline bool is##Fn() const    \
 	{                             \
@@ -154,6 +135,33 @@ public:
 	IsTyX(Func, FUNC);
 	IsTyX(Struct, STRUCT);
 	IsTyX(Variadic, VARIADIC);
+#undef IsTyX
+
+#define SetModifierX(Fn, Mod) \
+	inline void set##Fn() \
+	{                     \
+		info |= Mod;  \
+	}
+	SetModifierX(Static, STATIC);
+	SetModifierX(Const, CONST);
+	SetModifierX(Volatile, VOLATILE);
+	SetModifierX(Ref, REF);
+	SetModifierX(Comptime, COMPTIME);
+	SetModifierX(Variadic, VARIADIC);
+#undef SetModifierX
+
+#define UnsetModifierX(Fn, Mod) \
+	inline void unset##Fn() \
+	{                       \
+		info &= ~Mod;   \
+	}
+	UnsetModifierX(Static, STATIC);
+	UnsetModifierX(Const, CONST);
+	UnsetModifierX(Volatile, VOLATILE);
+	UnsetModifierX(Ref, REF);
+	UnsetModifierX(Comptime, COMPTIME);
+	UnsetModifierX(Variadic, VARIADIC);
+#undef UnsetModifierX
 
 #define IsModifierX(Fn, Mod)        \
 	inline bool has##Fn() const \
@@ -166,6 +174,7 @@ public:
 	IsModifierX(Ref, REF);
 	IsModifierX(Comptime, COMPTIME);
 	IsModifierX(Variadic, VARIADIC);
+#undef IsModifierX
 
 	inline const uint32_t &getBaseID() const
 	{
