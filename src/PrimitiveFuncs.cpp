@@ -14,9 +14,9 @@
 namespace sc
 {
 uint64_t createFnVal(Context &c, const Vector<Type *> &args, Type *ret, IntrinsicFn fn,
-		     const IntrinType &inty)
+		     const IntrinType &inty, bool is_va = false)
 {
-	FuncTy *t = FuncTy::create(c, nullptr, args, ret, fn, inty, false);
+	FuncTy *t = FuncTy::create(c, nullptr, args, ret, fn, inty, false, is_va);
 	return createValueIDWith(FuncVal::create(c, t));
 }
 
@@ -138,18 +138,16 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	ADDFN("sysPathMax", createFnVal(c, {}, i32, intrinsic_syspathmax, IVALUE));
 
 	a = mkAnyTy(c);
-	a->setVariadic();
 	v = mkVoidTy(c);
-	ADDFN("compileError", createFnVal(c, {a}, v, intrinsic_compileerror, IPARSE));
+	ADDFN("compileError", createFnVal(c, {a}, v, intrinsic_compileerror, IPARSE, true));
 
 	g   = mkTypeTy(c);
 	g2  = mkTypeTy(c);
 	i32 = mkI32Ty(c);
 	i32->setComptime();
 	i32va = mkI32Ty(c);
-	i32va->setVariadic();
 	i32va->setComptime();
-	ADDFN("array", createFnVal(c, {g, i32, i32va}, g2, intrinsic_array, IPARSE));
+	ADDFN("array", createFnVal(c, {g, i32, i32va}, g2, intrinsic_array, IPARSE, true));
 
 	g = mkTypeTy(c);
 	ADDPTRFN("__assn__", createFnVal(c, {g, g}, g, intrinsic_assn_ptr, IVALUE));

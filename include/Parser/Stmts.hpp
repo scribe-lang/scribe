@@ -212,22 +212,33 @@ public:
 
 class StmtType : public Stmt
 {
-	size_t ptr;  // number of ptrs
-	size_t info; // all from TypeInfoMask
+	size_t ptr;    // number of ptrs
+	size_t info;   // all from TypeInfoMask
+	bool variadic; // this is a variadic type
 
 	Stmt *expr; // can be func, func call, name, name.x, ... (expr1)
 
 public:
-	StmtType(const ModuleLoc *loc, const size_t &ptr, const size_t &info, Stmt *expr);
+	StmtType(const ModuleLoc *loc, const size_t &ptr, const size_t &info, bool variadic,
+		 Stmt *expr);
 	~StmtType();
 	static StmtType *create(Context &c, const ModuleLoc *loc, const size_t &ptr,
-				const size_t &info, Stmt *expr);
+				const size_t &info, bool variadic, Stmt *expr);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
 	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+
+	inline void setVariadic()
+	{
+		variadic = true;
+	}
+	inline void unsetVariadic()
+	{
+		variadic = false;
+	}
 
 	inline void addTypeInfoMask(const size_t &mask)
 	{
@@ -244,6 +255,11 @@ public:
 	inline const size_t &getInfoMask() const
 	{
 		return info;
+	}
+
+	inline bool isVariadic() const
+	{
+		return variadic;
 	}
 
 	bool hasModifier(const size_t &tim) const;

@@ -164,14 +164,15 @@ bool StmtBlock::requiresTemplateInit()
 //////////////////////////////////////////// StmtType /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtType::StmtType(const ModuleLoc *loc, const size_t &ptr, const size_t &info, Stmt *expr)
-	: Stmt(TYPE, loc), ptr(ptr), info(info), expr(expr)
+StmtType::StmtType(const ModuleLoc *loc, const size_t &ptr, const size_t &info, bool variadic,
+		   Stmt *expr)
+	: Stmt(TYPE, loc), ptr(ptr), info(info), variadic(variadic), expr(expr)
 {}
 StmtType::~StmtType() {}
 StmtType *StmtType::create(Context &c, const ModuleLoc *loc, const size_t &ptr, const size_t &info,
-			   Stmt *expr)
+			   bool variadic, Stmt *expr)
 {
-	return c.allocStmt<StmtType>(loc, ptr, info, expr);
+	return c.allocStmt<StmtType>(loc, ptr, info, variadic, expr);
 }
 
 void StmtType::disp(const bool &has_next)
@@ -179,7 +180,7 @@ void StmtType::disp(const bool &has_next)
 	String tname(ptr, '*');
 	if(info & REF) tname += "&";
 	if(info & CONST) tname += "const ";
-	if(info & VARIADIC) tname = "..." + tname;
+	if(variadic) tname = "..." + tname;
 
 	if(!tname.empty()) {
 		tio::taba(has_next);
@@ -194,7 +195,7 @@ void StmtType::disp(const bool &has_next)
 
 bool StmtType::requiresTemplateInit()
 {
-	if(info & VARIADIC) return true;
+	if(variadic) return true;
 	return expr->requiresTemplateInit();
 }
 
@@ -208,7 +209,7 @@ String StmtType::getStringName()
 	String tname(ptr, '*');
 	if(info & REF) tname += "&";
 	if(info & CONST) tname += "const ";
-	if(info & VARIADIC) tname = "..." + tname;
+	if(variadic) tname = "..." + tname;
 	tname += expr->getStmtTypeString();
 	return tname;
 }

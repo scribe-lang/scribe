@@ -118,11 +118,6 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 			       ", RHS: ", rhs->toStr(), ")"});
 		return false;
 	}
-	if(rhs->hasVariadic() && !hasVariadic()) {
-		err::out(loc, {"cannot assign variadic type to non variadic (LHS: ", toStr(),
-			       ", RHS: ", rhs->toStr(), ")"});
-		return false;
-	}
 	return true;
 }
 String Type::infoToStr()
@@ -131,7 +126,6 @@ String Type::infoToStr()
 	if(info & REF) res += "&";
 	if(info & CONST) res += "const ";
 	if(info & COMPTIME) res += "comptime ";
-	if(info & VARIADIC) res += "...";
 	return res;
 }
 String Type::baseToStr()
@@ -656,15 +650,15 @@ Value *StructTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData c
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 FuncTy::FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &inty, const bool &externed)
+	       const IntrinType &inty, const bool &externed, const bool &variadic)
 	: Type(TFUNC, 0, genTypeID()), var(var), args(args), ret(ret), intrin(intrin), inty(inty),
-	  uniqid(!externed ? genFuncUniqID() : 0), externed(externed)
+	  uniqid(!externed ? genFuncUniqID() : 0), externed(externed), variadic(variadic)
 {}
 FuncTy::FuncTy(const uint16_t &info, const uint32_t &id, StmtVar *var, const Vector<Type *> &args,
 	       Type *ret, IntrinsicFn intrin, const IntrinType &inty, const uint32_t &uniqid,
-	       const bool &externed)
+	       const bool &externed, const bool &variadic)
 	: Type(TFUNC, info, id), var(var), args(args), ret(ret), intrin(intrin), inty(inty),
-	  uniqid(uniqid), externed(externed)
+	  uniqid(uniqid), externed(externed), variadic(variadic)
 {}
 FuncTy::~FuncTy() {}
 uint32_t FuncTy::getSignatureID()
@@ -727,8 +721,8 @@ Type *FuncTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 	Vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is, weak_depth));
 	return c.allocType<FuncTy>(getInfo(), getBaseID(), var, newargs,
-				   ret->clone(c, as_is, weak_depth), intrin, inty, uniqid,
-				   externed);
+				   ret->clone(c, as_is, weak_depth), intrin, inty, uniqid, externed,
+				   variadic);
 }
 bool FuncTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 {
@@ -776,10 +770,8 @@ bool FuncTy::isCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 // specializes a function type using StmtFnCallInfo
 FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &callargs)
 {
-	bool has_va = false;
-	if(!args.empty() && args.back()->hasVariadic()) has_va = true;
-	if(args.size() - has_va > callargs.size()) return nullptr;
-	if(args.size() != callargs.size() && !has_va) return nullptr;
+	if(args.size() - isVariadic() > callargs.size()) return nullptr;
+	if(args.size() != callargs.size() && !isVariadic()) return nullptr;
 	bool is_arg_compatible = true;
 	Vector<Type *> variadics;
 	bool has_templ = false;
@@ -790,7 +782,7 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 		Type *sa      = this->args[i];
 		Stmt *ciarg   = callargs[j];
 		bool variadic = false;
-		if(sa->hasVariadic()) {
+		if(i == this->args.size() - 1 && isVariadic()) {
 			variadic = true;
 			--i;
 		}
@@ -803,11 +795,10 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 	if(!is_arg_compatible) return nullptr;
 
 	FuncTy *res = this;
-	if(has_va) {
+	if(isVariadic()) {
 		res	     = as<FuncTy>(clone(c));
 		Type *vabase = res->args.back();
 		res->args.pop_back();
-		vabase->unsetVariadic();
 		VariadicTy *va	= VariadicTy::create(c, {});
 		size_t ptrcount = getPointerCount(vabase);
 		for(auto &vtmp : variadics) {
@@ -834,9 +825,10 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 	return res;
 }
 FuncTy *FuncTy::create(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
-		       IntrinsicFn _intrin, const IntrinType &_inty, const bool &_externed)
+		       IntrinsicFn _intrin, const IntrinType &_inty, const bool &_externed,
+		       const bool &_variadic)
 {
-	return c.allocType<FuncTy>(_var, _args, _ret, _intrin, _inty, _externed);
+	return c.allocType<FuncTy>(_var, _args, _ret, _intrin, _inty, _externed, _variadic);
 }
 void FuncTy::updateUniqID()
 {
