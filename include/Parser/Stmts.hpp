@@ -419,32 +419,88 @@ public:
 	}
 };
 
+enum class VarMask : uint8_t
+{
+	STATIC	 = 1 << 0,
+	VOLATILE = 1 << 1,
+	IN	 = 1 << 2,
+	GLOBAL	 = 1 << 3,
+	COMPTIME = 1 << 4,
+};
+
 class StmtVar : public Stmt
 {
 	lex::Lexeme name;
 	StmtType *vtype;
-	Stmt *vval;  // either of expr, funcdef, enumdef, or structdef
-	size_t info; // from TypeInfoMask
-	bool is_in;
-	bool is_comptime;
-	bool is_global;
+	Stmt *vval; // either of expr, funcdef, enumdef, or structdef
+	// TODO: remove this
+	size_t info;	  // from TypeInfoMask
+	uint8_t infomask; // from VarMask
 	bool applied_module_id;
 	bool applied_codegen_mangle;
 
 public:
 	StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
-		const bool &is_in, const bool &is_comptime, const bool &is_global);
+		uint8_t infomask);
 	~StmtVar();
 	// at least one of type or val must be present
 	static StmtVar *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &name,
-			       StmtType *vtype, Stmt *vval, const bool &is_in,
-			       const bool &is_comptime, const bool &is_global);
+			       StmtType *vtype, Stmt *vval, uint8_t infomask);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
 	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+
+#define SetModifierX(Fn, Mod)                      \
+	inline void set##Fn()                      \
+	{                                          \
+		infomask |= (uint8_t)VarMask::Mod; \
+	}
+	SetModifierX(Static, STATIC);
+	SetModifierX(Volatile, VOLATILE);
+	SetModifierX(In, IN);
+	SetModifierX(Global, GLOBAL);
+	SetModifierX(Comptime, COMPTIME);
+#undef SetModifierX
+
+#define UnsetModifierX(Fn, Mod)                     \
+	inline void unset##Fn()                     \
+	{                                           \
+		infomask &= ~(uint8_t)VarMask::Mod; \
+	}
+	UnsetModifierX(Static, STATIC);
+	UnsetModifierX(Volatile, VOLATILE);
+	UnsetModifierX(In, IN);
+	UnsetModifierX(Global, GLOBAL);
+	UnsetModifierX(Comptime, COMPTIME);
+#undef UnsetModifierX
+
+#define IsModifierX(Fn, Mod)                             \
+	inline bool is##Fn() const                       \
+	{                                                \
+		return infomask & (uint8_t)VarMask::Mod; \
+	}
+	IsModifierX(Static, STATIC);
+	IsModifierX(Volatile, VOLATILE);
+	IsModifierX(In, IN);
+	IsModifierX(Global, GLOBAL);
+	IsModifierX(Comptime, COMPTIME);
+#undef IsModifierX
+
+	inline void setInfoMask(uint8_t mask)
+	{
+		infomask = mask;
+	}
+	inline void appendInfoMask(uint8_t mask)
+	{
+		infomask |= mask;
+	}
+	inline uint8_t getInfoMask()
+	{
+		return infomask;
+	}
 
 	inline void setVVal(Stmt *val)
 	{
@@ -478,18 +534,6 @@ public:
 	inline void setAppliedModuleID(const bool &apply)
 	{
 		applied_module_id = apply;
-	}
-	inline bool isIn()
-	{
-		return is_in;
-	}
-	inline bool isComptime() const
-	{
-		return is_comptime;
-	}
-	inline bool isGlobal() const
-	{
-		return is_global;
 	}
 	inline bool isAppliedModuleID() const
 	{

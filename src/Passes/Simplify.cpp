@@ -412,7 +412,7 @@ Stmt *SimplifyPass::createIntermediate(FuncTy *cf, Stmt *a, const size_t &i)
 	}
 	n = ctx.strFrom({n, "__interm", ctx.strFrom(genIntermediateID())});
 	lex::Lexeme name(a->getLoc(), lex::IDEN, n);
-	StmtVar *v = StmtVar::create(ctx, a->getLoc(), name, nullptr, a, false, false, false);
+	StmtVar *v = StmtVar::create(ctx, a->getLoc(), name, nullptr, a, 0);
 	v->createAndSetValue(a->getValue()->clone(ctx));
 	intermediates.push_back(v);
 	StmtSimple *newa = StmtSimple::create(ctx, a->getLoc(), name);

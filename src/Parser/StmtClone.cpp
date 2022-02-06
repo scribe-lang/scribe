@@ -93,8 +93,7 @@ Stmt *StmtVar::clone(Context &ctx)
 {
 	StmtType *newvtype = vtype ? as<StmtType>(vtype->clone(ctx)) : nullptr;
 	Stmt *newvval	   = vval ? vval->clone(ctx) : nullptr;
-	StmtVar *res =
-	StmtVar::create(ctx, getLoc(), name, newvtype, newvval, is_in, is_comptime, is_global);
+	StmtVar *res	   = StmtVar::create(ctx, getLoc(), name, newvtype, newvval, infomask);
 	res->setInfo(info);
 	res->setAppliedModuleID(applied_module_id);
 	res->castTo(getCast());

@@ -918,7 +918,8 @@ bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 		e.setDataStr(getMangledName(stmt, e.getDataStr(), ns));
 		uint64_t vid = createValueIDWith(IntVal::create(ctx, mkI32Ty(ctx), CDPERMA, i));
 		Stmt *val    = StmtSimple::create(ctx, loc, lex::Lexeme(loc, (int64_t)i++));
-		StmtVar *var = StmtVar::create(ctx, loc, e, nullptr, val, false, true, false);
+		StmtVar *var =
+		StmtVar::create(ctx, loc, e, nullptr, val, (uint8_t)VarMask::COMPTIME);
 		var->setAppliedModuleID(true);
 		var->setValueID(vid);
 		additionalvars.push_back(var);
@@ -1318,14 +1319,13 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 			StringRef argn =
 			ctx.strFrom({va_name.getDataStr(), "__", ctx.strFrom(va_count)});
 			StmtVar *newv = as<StmtVar>(cfa->clone(ctx));
+			newv->appendInfoMask(cfa->getInfoMask());
 			newv->getVType()->remTypeInfoMask(VARIADIC);
 			newv->getName().setDataStr(argn);
 			Type *t = args[i]->getValueTy()->clone(ctx);
 			// the following attributes must not be set for function parameter type
 			// by the argument
 			t->unsetRef();
-			t->unsetStatic();
-			t->unsetVolatile();
 			t->appendInfo(cft->getInfo());
 			t->appendInfo(cfa->getVType()->getInfoMask());
 			t->unsetVariadic();

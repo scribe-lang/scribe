@@ -47,11 +47,9 @@ enum Types : uint16_t
 enum TypeInfoMask
 {
 	REF	 = 1 << 0, // is a reference
-	STATIC	 = 1 << 1, // is static
-	CONST	 = 1 << 2, // is const
-	VOLATILE = 1 << 3, // is volatile
-	COMPTIME = 1 << 4, // is comptime
-	VARIADIC = 1 << 5, // is variadic
+	CONST	 = 1 << 1, // is const
+	COMPTIME = 1 << 2, // is comptime
+	VARIADIC = 1 << 3, // is variadic
 };
 
 class Stmt;
@@ -142,9 +140,7 @@ public:
 	{                     \
 		info |= Mod;  \
 	}
-	SetModifierX(Static, STATIC);
 	SetModifierX(Const, CONST);
-	SetModifierX(Volatile, VOLATILE);
 	SetModifierX(Ref, REF);
 	SetModifierX(Comptime, COMPTIME);
 	SetModifierX(Variadic, VARIADIC);
@@ -155,9 +151,7 @@ public:
 	{                       \
 		info &= ~Mod;   \
 	}
-	UnsetModifierX(Static, STATIC);
 	UnsetModifierX(Const, CONST);
-	UnsetModifierX(Volatile, VOLATILE);
 	UnsetModifierX(Ref, REF);
 	UnsetModifierX(Comptime, COMPTIME);
 	UnsetModifierX(Variadic, VARIADIC);
@@ -168,9 +162,7 @@ public:
 	{                           \
 		return info & Mod;  \
 	}
-	IsModifierX(Static, STATIC);
 	IsModifierX(Const, CONST);
-	IsModifierX(Volatile, VOLATILE);
 	IsModifierX(Ref, REF);
 	IsModifierX(Comptime, COMPTIME);
 	IsModifierX(Variadic, VARIADIC);

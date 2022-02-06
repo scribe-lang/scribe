@@ -135,9 +135,7 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 	while(p.acceptn(lex::MUL)) ++ptr;
 
 	if(p.acceptn(lex::BAND)) info |= TypeInfoMask::REF;
-	if(p.acceptn(lex::STATIC)) info |= TypeInfoMask::STATIC;
 	if(p.acceptn(lex::CONST)) info |= TypeInfoMask::CONST;
-	if(p.acceptn(lex::VOLATILE)) info |= TypeInfoMask::VOLATILE;
 
 	if(!parse_expr_01(p, expr, true)) {
 		err::out(p.peek(), {"failed to parse type expression"});
@@ -857,12 +855,18 @@ bool Parsing::parse_var(ParseHelper &p, StmtVar *&var, const Occurs &intype, con
 {
 	var = nullptr;
 
-	bool comptime = false;
-	bool global   = false;
-	while(p.accept(lex::COMPTIME, lex::GLOBAL)) {
-		if(p.acceptn(lex::COMPTIME)) comptime = true;
-		if(p.acceptn(lex::GLOBAL)) global = true;
+	uint8_t infomask = 0;
+	while(p.accept(lex::STATIC, lex::VOLATILE) || p.accept(lex::GLOBAL, lex::COMPTIME)) {
+		if(p.acceptn(lex::STATIC)) infomask |= (uint8_t)VarMask::STATIC;
+		if(p.acceptn(lex::VOLATILE)) infomask |= (uint8_t)VarMask::VOLATILE;
+		if(p.acceptn(lex::GLOBAL)) infomask |= (uint8_t)VarMask::GLOBAL;
+		if(p.acceptn(lex::COMPTIME)) infomask |= (uint8_t)VarMask::COMPTIME;
 	}
+
+	bool stati    = infomask & (uint8_t)VarMask::STATIC;
+	bool volatil  = infomask & (uint8_t)VarMask::VOLATILE;
+	bool global   = infomask & (uint8_t)VarMask::GLOBAL;
+	bool comptime = infomask & (uint8_t)VarMask::COMPTIME;
 
 	if(!p.accept(lex::IDEN)) {
 		err::out(p.peek(), {"expected identifier for variable name, found: ",
@@ -883,14 +887,16 @@ in:
 	if(!p.acceptn(lex::IN)) {
 		goto type;
 	}
-	if(comptime) {
-		err::out(p.peek(), {"comptime can be used only for data variables"});
+	if(stati || volatil || global || comptime) {
+		err::out(p.peek(), {"static, volatile, global, and comptime",
+				    " can be used only for data variables"});
 		return false;
 	}
 	if(!parse_type(p, in)) {
 		err::out(p.peek(), {"failed to parse in-type for variable: ", name.getDataStr()});
 		return false;
 	}
+	infomask |= (uint8_t)VarMask::IN;
 
 type:
 	if(otype == Occurs::NO && p.accept(lex::COL)) {
@@ -958,12 +964,11 @@ done:
 		}
 		lex::Lexeme selfeme(in->getLoc(), lex::IDEN, "self");
 		in->addTypeInfoMask(REF);
-		StmtVar *selfvar =
-		StmtVar::create(ctx, in->getLoc(), selfeme, in, nullptr, false, false, false);
+		StmtVar *selfvar  = StmtVar::create(ctx, in->getLoc(), selfeme, in, nullptr, 0);
 		StmtFnSig *valsig = as<StmtFnDef>(val)->getSig();
 		valsig->getArgs().insert(valsig->getArgs().begin(), selfvar);
 	}
-	var = StmtVar::create(ctx, name.getLoc(), name, type, val, in, comptime, global);
+	var = StmtVar::create(ctx, name.getLoc(), name, type, val, infomask);
 	return true;
 }
 
@@ -1260,7 +1265,6 @@ bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
 	Vector<StmtVar *> decls;
 	StmtVar *decl	   = nullptr;
 	lex::Lexeme &start = p.peek();
-	size_t var_info	   = 0;
 
 	if(!p.acceptn(lex::LET)) {
 		err::out(p.peek(),
@@ -1269,30 +1273,12 @@ bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
 	}
 
 	while(p.accept(lex::IDEN, lex::COMPTIME, lex::GLOBAL) ||
-	      p.accept(lex::STATIC, lex::VOLATILE, lex::CONST))
+	      p.accept(lex::CONST, lex::STATIC, lex::VOLATILE))
 	{
-		bool global   = false;
-		bool comptime = false;
-		while(p.accept(lex::COMPTIME, lex::GLOBAL) ||
-		      p.accept(lex::STATIC, lex::VOLATILE, lex::CONST)) {
-			if(p.acceptn(lex::COMPTIME)) comptime = true;
-			if(p.acceptn(lex::GLOBAL)) global = true;
-			if(p.acceptn(lex::STATIC)) var_info |= TypeInfoMask::STATIC;
-			if(p.acceptn(lex::VOLATILE)) var_info |= TypeInfoMask::VOLATILE;
-			if(p.acceptn(lex::CONST)) var_info |= TypeInfoMask::CONST;
-		}
-		if(global) p.setPos(p.getPos() - 1);
-		if(comptime) p.setPos(p.getPos() - 1);
-		Occurs in  = comptime || global ? Occurs::NO : Occurs::MAYBE;
-		Occurs val = comptime ? Occurs::YES : Occurs::MAYBE;
-		if(!parse_var(p, decl, in, Occurs::MAYBE, val)) return false;
+		if(!parse_var(p, decl, Occurs::MAYBE, Occurs::MAYBE, Occurs::MAYBE)) return false;
 		decls.push_back(decl);
 		decl = nullptr;
 		if(!p.acceptn(lex::COMMA)) break;
-	}
-
-	if(var_info) {
-		for(auto &d : decls) d->setInfo(var_info);
 	}
 
 	vd = StmtVarDecl::create(ctx, start.getLoc(), decls);
@@ -1411,7 +1397,7 @@ bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 	iter_interm.setDataStr(ctx.strFrom({"_", iter_interm.getDataStr()}));
 
 	StmtVar *in_interm_var =
-	StmtVar::create(ctx, in_interm.getLoc(), in_interm, nullptr, in, false, false, false);
+	StmtVar::create(ctx, in_interm.getLoc(), in_interm, nullptr, in, 0);
 	// block statement 1:
 	StmtVarDecl *in_interm_vardecl = StmtVarDecl::create(ctx, loc, {in_interm_var});
 
@@ -1423,8 +1409,8 @@ bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 	StmtFnCallInfo *init_call_info = StmtFnCallInfo::create(ctx, loc, {});
 	StmtExpr *init_expr =
 	StmtExpr::create(ctx, loc, 0, init_dot_expr, call_op, init_call_info, false);
-	StmtVar *init_iter_interm_var = StmtVar::create(ctx, iter_interm.getLoc(), iter_interm,
-							nullptr, init_expr, false, false, false);
+	StmtVar *init_iter_interm_var =
+	StmtVar::create(ctx, iter_interm.getLoc(), iter_interm, nullptr, init_expr, 0);
 	StmtVarDecl *init = StmtVarDecl::create(ctx, iter_interm.getLoc(), {init_iter_interm_var});
 
 	// cond:
@@ -1461,10 +1447,9 @@ bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 	StmtSimple *loop_var_val_call_arg = StmtSimple::create(ctx, loc, iter_interm);
 	StmtFnCallInfo *loop_var_val_call_info =
 	StmtFnCallInfo::create(ctx, loc, {loop_var_val_call_arg});
-	StmtExpr *loop_var_val = StmtExpr::create(ctx, loc, 0, loop_var_val_dot_expr, call_op,
-						  loop_var_val_call_info, false);
-	StmtVar *loop_var =
-	StmtVar::create(ctx, loc, iter, nullptr, loop_var_val, false, false, false);
+	StmtExpr *loop_var_val	  = StmtExpr::create(ctx, loc, 0, loop_var_val_dot_expr, call_op,
+						     loop_var_val_call_info, false);
+	StmtVar *loop_var	  = StmtVar::create(ctx, loc, iter, nullptr, loop_var_val, 0);
 	StmtVarDecl *loop_vardecl = StmtVarDecl::create(ctx, loc, {loop_var});
 	blk->getStmts().insert(blk->getStmts().begin(), loop_vardecl);
 
