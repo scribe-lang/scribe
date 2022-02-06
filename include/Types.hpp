@@ -49,7 +49,6 @@ enum TypeInfoMask
 	REF	 = 1 << 0, // is a reference
 	CONST	 = 1 << 1, // is const
 	COMPTIME = 1 << 2, // is comptime
-	VARIADIC = 1 << 3, // is variadic
 };
 
 class Stmt;
@@ -143,7 +142,6 @@ public:
 	SetModifierX(Const, CONST);
 	SetModifierX(Ref, REF);
 	SetModifierX(Comptime, COMPTIME);
-	SetModifierX(Variadic, VARIADIC);
 #undef SetModifierX
 
 #define UnsetModifierX(Fn, Mod) \
@@ -154,7 +152,6 @@ public:
 	UnsetModifierX(Const, CONST);
 	UnsetModifierX(Ref, REF);
 	UnsetModifierX(Comptime, COMPTIME);
-	UnsetModifierX(Variadic, VARIADIC);
 #undef UnsetModifierX
 
 #define IsModifierX(Fn, Mod)        \
@@ -165,7 +162,6 @@ public:
 	IsModifierX(Const, CONST);
 	IsModifierX(Ref, REF);
 	IsModifierX(Comptime, COMPTIME);
-	IsModifierX(Variadic, VARIADIC);
 #undef IsModifierX
 
 	inline const uint32_t &getBaseID() const
@@ -440,13 +436,14 @@ class FuncTy : public Type
 	IntrinType inty;
 	uint32_t uniqid;
 	bool externed;
+	bool variadic;
 
 public:
 	FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &inty, const bool &externed);
+	       const IntrinType &inty, const bool &externed, const bool &variadic);
 	FuncTy(const uint16_t &info, const uint32_t &id, StmtVar *var, const Vector<Type *> &args,
 	       Type *ret, IntrinsicFn intrin, const IntrinType &inty, const uint32_t &uniqid,
-	       const bool &externed);
+	       const bool &externed, const bool &variadic);
 	~FuncTy();
 
 	// returns ID of parameters + ret type
@@ -463,7 +460,8 @@ public:
 	FuncTy *createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &callargs);
 
 	static FuncTy *create(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
-			      IntrinsicFn _intrin, const IntrinType &_inty, const bool &_externed);
+			      IntrinsicFn _intrin, const IntrinType &_inty, const bool &_externed,
+			      const bool &_variadic);
 
 	inline void setVar(StmtVar *v)
 	{
@@ -493,6 +491,10 @@ public:
 	{
 		externed = ext;
 	}
+	inline void setVariadic(const bool &va)
+	{
+		variadic = va;
+	}
 	inline StmtVar *&getVar()
 	{
 		return var;
@@ -520,6 +522,10 @@ public:
 	inline bool isExtern()
 	{
 		return externed;
+	}
+	inline bool isVariadic()
+	{
+		return variadic;
 	}
 	inline IntrinsicFn getIntrinsicFn()
 	{

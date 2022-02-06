@@ -118,6 +118,7 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 
 	size_t ptr    = 0;
 	size_t info   = 0;
+	bool variadic = false;
 	Stmt *count   = nullptr;
 	Stmt *expr    = nullptr;
 	bool dot_turn = false; // to ensure type name is in the form <name><dot><name>...
@@ -126,11 +127,11 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 
 	if(p.accept(lex::COMPTIME, lex::FN)) {
 		if(!parse_fnsig(p, expr)) return false;
-		type = StmtType::create(ctx, start.getLoc(), 0, 0, expr);
+		type = StmtType::create(ctx, start.getLoc(), 0, 0, false, expr);
 		return true;
 	}
 
-	if(p.acceptn(lex::PreVA)) info |= TypeInfoMask::VARIADIC;
+	if(p.acceptn(lex::PreVA)) variadic = true;
 
 	while(p.acceptn(lex::MUL)) ++ptr;
 
@@ -147,7 +148,7 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 		return false;
 	}
 
-	type = StmtType::create(ctx, start.getLoc(), ptr, info, expr);
+	type = StmtType::create(ctx, start.getLoc(), ptr, info, variadic, expr);
 	return true;
 }
 
@@ -1009,7 +1010,7 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 		if(!parse_var(p, var, Occurs::NO, Occurs::YES, Occurs::NO)) {
 			return false;
 		}
-		if(var->getVType()->hasModifier(VARIADIC)) {
+		if(var->getVType()->isVariadic()) {
 			found_va = true;
 		}
 		Stmt *vtexpr = var->getVType()->getExpr();
@@ -1036,7 +1037,7 @@ post_args:
 	if(!rettype) {
 		lex::Lexeme voideme = lex::Lexeme(p.peek(-1).getLoc(), lex::VOID, "void");
 		StmtSimple *voidsim = StmtSimple::create(ctx, voideme.getLoc(), voideme);
-		rettype		    = StmtType::create(ctx, voidsim->getLoc(), 0, 0, voidsim);
+		rettype = StmtType::create(ctx, voidsim->getLoc(), 0, 0, false, voidsim);
 	}
 
 	fsig = StmtFnSig::create(ctx, start.getLoc(), args, rettype, found_va);

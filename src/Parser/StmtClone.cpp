@@ -36,7 +36,7 @@ Stmt *StmtBlock::clone(Context &ctx)
 
 Stmt *StmtType::clone(Context &ctx)
 {
-	Stmt *res = StmtType::create(ctx, getLoc(), ptr, info, expr->clone(ctx));
+	Stmt *res = StmtType::create(ctx, getLoc(), ptr, info, variadic, expr->clone(ctx));
 	res->castTo(getCast());
 	return res;
 }

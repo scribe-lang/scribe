@@ -352,7 +352,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		if(lhs->getValue()->isFunc()) {
 			TypeVal *fnval = as<TypeVal>(lhs->getValue());
 			FuncTy *fn     = as<FuncTy>(fnval->getVal());
-			bool has_va    = fn->hasVariadic();
+			bool has_va    = fn->isVariadic();
 			FuncTy *tmpfn  = fn;
 			if(!(fn = fn->createCall(ctx, stmt->getLoc(), args))) {
 				err::out(stmt, {"function '", tmpfn->toStr(),
@@ -832,7 +832,8 @@ bool TypeAssignPass::visit(StmtFnSig *stmt, Stmt **source)
 		argst.push_back(a->getValueTy());
 	}
 	Type *retty = stmt->getRetType()->getValueTy();
-	FuncTy *ft  = FuncTy::create(ctx, nullptr, argst, retty, nullptr, INONE, false);
+	FuncTy *ft =
+	FuncTy::create(ctx, nullptr, argst, retty, nullptr, INONE, false, stmt->hasVariadic());
 	stmt->createAndSetValue(FuncVal::create(ctx, ft));
 	// needs to be executed to set the correct value for disable_template variable
 	stmt->requiresTemplateInit();
@@ -1320,7 +1321,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 			ctx.strFrom({va_name.getDataStr(), "__", ctx.strFrom(va_count)});
 			StmtVar *newv = as<StmtVar>(cfa->clone(ctx));
 			newv->appendInfoMask(cfa->getInfoMask());
-			newv->getVType()->remTypeInfoMask(VARIADIC);
+			newv->getVType()->unsetVariadic();
 			newv->getName().setDataStr(argn);
 			Type *t = args[i]->getValueTy()->clone(ctx);
 			// the following attributes must not be set for function parameter type
@@ -1328,7 +1329,6 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 			t->unsetRef();
 			t->appendInfo(cft->getInfo());
 			t->appendInfo(cfa->getVType()->getInfoMask());
-			t->unsetVariadic();
 			if(t->hasRef()) {
 				RefVal *rv = RefVal::create(ctx, t, args[i]->getValue());
 				newv->createAndSetValue(rv);
@@ -1345,6 +1345,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 		}
 		break;
 	}
+	cf->setVariadic(false);
 	FuncVal *cfn = FuncVal::create(ctx, cf);
 	cfsig->getRetType()->createAndSetValue(TypeVal::create(ctx, cf->getRet()));
 	cfsig->createAndSetValue(cfn);
