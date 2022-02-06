@@ -129,9 +129,7 @@ String Type::infoToStr()
 {
 	String res;
 	if(info & REF) res += "&";
-	if(info & STATIC) res += "static ";
 	if(info & CONST) res += "const ";
-	if(info & VOLATILE) res += "volatile ";
 	if(info & COMPTIME) res += "comptime ";
 	if(info & VARIADIC) res += "...";
 	return res;

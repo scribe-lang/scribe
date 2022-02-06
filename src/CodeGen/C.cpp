@@ -527,7 +527,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 			macros.push_back(ctx.strFrom({"#define ", varname, " ", tmp.getData()}));
 			return true;
 		}
-		String cty, arrcount, cval;
+		String prefix, cty, arrcount, cval;
 		Type *t	 = stmt->getValueTy();
 		arrcount = getArrCount(t);
 		if(!getCTypeName(cty, stmt, t, false, false, false)) {
@@ -540,7 +540,9 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 					stmt->getValue()->toStr()});
 			return false;
 		}
-		writer.write({cty, " ", varname, arrcount, " = ", cval});
+		if(stmt->isStatic()) prefix += "static ";
+		if(stmt->isVolatile()) prefix += "volatile ";
+		writer.write({prefix, cty, " ", varname, arrcount, " = ", cval});
 		return true;
 	}
 
@@ -558,14 +560,16 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 			return true;
 		}
 	}
-	String cty, arrcount;
+	String prefix, cty, arrcount;
 	Type *valty = stmt->getCast() ? stmt->getCast() : stmt->getValueTy();
 	arrcount    = getArrCount(valty);
 	if(!getCTypeName(cty, stmt, valty, false, false, false)) {
 		err::out(stmt, {"unable to determine C type for scribe type: ", valty->toStr()});
 		return false;
 	}
-	writer.write({cty, " ", varname, arrcount});
+	if(stmt->isStatic()) prefix += "static ";
+	if(stmt->isVolatile()) prefix += "volatile ";
+	writer.write({prefix, cty, " ", varname, arrcount});
 	if(!tmp.empty()) {
 		writer.write(" = ");
 		if(stmt->getValueTy()->hasRef()) {
@@ -911,9 +915,7 @@ bool CDriver::getCTypeName(String &res, Stmt *stmt, Type *ty, bool for_cast, boo
 {
 	String pre;
 	String post;
-	if(ty->hasStatic() && !for_cast) pre += "static ";
 	if(ty->hasConst()) pre += "const ";
-	if(ty->hasVolatile() && !for_cast) pre += "volatile ";
 	if(ty->hasRef()) post += " *";
 
 	if(is_weak) {

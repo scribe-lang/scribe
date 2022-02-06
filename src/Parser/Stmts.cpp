@@ -178,10 +178,9 @@ void StmtType::disp(const bool &has_next)
 {
 	String tname(ptr, '*');
 	if(info & REF) tname += "&";
-	if(info & STATIC) tname += "static ";
 	if(info & CONST) tname += "const ";
-	if(info & VOLATILE) tname += "volatile ";
 	if(info & VARIADIC) tname = "..." + tname;
+
 	if(!tname.empty()) {
 		tio::taba(has_next);
 		tio::print(has_next || expr, {"Type info: ", tname, getTypeString(), "\n"});
@@ -208,9 +207,7 @@ String StmtType::getStringName()
 {
 	String tname(ptr, '*');
 	if(info & REF) tname += "&";
-	if(info & STATIC) tname += "static ";
 	if(info & CONST) tname += "const ";
-	if(info & VOLATILE) tname += "volatile ";
 	if(info & VARIADIC) tname = "..." + tname;
 	tname += expr->getStmtTypeString();
 	return tname;
@@ -348,24 +345,24 @@ bool StmtExpr::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtVar::StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
-		 const bool &is_in, const bool &is_comptime, const bool &is_global)
-	: Stmt(VAR, loc), name(name), is_in(is_in), vtype(vtype), vval(vval), info(0),
-	  is_comptime(is_comptime), is_global(is_global), applied_module_id(false),
-	  applied_codegen_mangle(false)
+		 uint8_t infomask)
+	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval), info(0), infomask(infomask),
+	  applied_module_id(false), applied_codegen_mangle(false)
 {}
 StmtVar::~StmtVar() {}
 StmtVar *StmtVar::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype,
-			 Stmt *vval, const bool &is_in, const bool &is_comptime,
-			 const bool &is_global)
+			 Stmt *vval, uint8_t infomask)
 {
-	return c.allocStmt<StmtVar>(loc, name, vtype, vval, is_in, is_comptime, is_global);
+	return c.allocStmt<StmtVar>(loc, name, vtype, vval, infomask);
 }
 
 void StmtVar::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, {"Variable [in = ", is_in ? "yes" : "no", "] [comptime = ",
-			      is_comptime ? "yes" : "no", "] [global = ", is_global ? "yes" : "no",
+	tio::print(has_next, {"Variable [in = ", isIn() ? "yes" : "no",
+			      "] [comptime = ", isComptime() ? "yes" : "no", "] [global = ",
+			      isGlobal() ? "yes" : "no", "] [static = ", isStatic() ? "yes" : "no",
+			      "] [volatile = ", isVolatile() ? "yes" : "no",
 			      "]: ", name.getDataStr(), getTypeString(), "\n"});
 	if(vtype) {
 		tio::taba(vval);

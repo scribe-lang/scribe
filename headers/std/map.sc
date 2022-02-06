@@ -6,7 +6,7 @@
 let c = @import("std/c");
 let hashing = @import("std/hashing");
 
-let INIT_CAPACITY: static u64 = 1024;
+let static INIT_CAPACITY: u64 = 1024;
 
 let setInitCapacity = fn(cap: u64) {
 	INIT_CAPACITY = cap;
