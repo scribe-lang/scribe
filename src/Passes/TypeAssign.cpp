@@ -60,9 +60,7 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 	if(!res) return false;
 	if(!source || !*source) return res;
 	stmt = *source;
-	if(stmt && stmt->getValueID() && stmt->getValueTy()->hasComptime() &&
-	   !stmt->getValueTy()->isTemplate())
-	{
+	if(stmt && stmt->getValueID() && stmt->isComptime() && !stmt->getValueTy()->isTemplate()) {
 		if(!vpass.visit(stmt, source)) {
 			err::out(stmt, {"failed to get value for a comptime type"});
 			return false;
@@ -212,6 +210,7 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		}
 		stmt->setAppliedModuleID(true);
 		stmt->setDecl(decl);
+		if(decl) stmt->setStmtMask(decl->getStmtMask());
 		break;
 	}
 	default: return false;
@@ -366,6 +365,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			for(size_t i = 0, j = 0, k = 0; i < fnarglen && j < callarglen; ++i, ++j) {
 				Type *coerced_to = fn->getArg(i);
 				Stmt *&arg	 = args[j];
+				bool argcomptime = fn->isArgComptime(i);
 				if(coerced_to->isVariadic()) {
 					coerced_to = as<VariadicTy>(coerced_to)->getArg(k++);
 					--i;
@@ -377,7 +377,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 						as<StmtFnDef>(f->getVar()->getVVal())->incUsed();
 					}
 				}
-				if(!coerced_to->hasComptime() || vpass.visit(arg, &arg)) {
+				if(!argcomptime || vpass.visit(arg, &arg)) {
 					continue;
 				}
 				err::out(stmt, {"failed to determine value for comptime arg"});
@@ -635,19 +635,19 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			return false;
 		}
 		bool both_comptime = true;
-		if(!lhs->getValueTy(true)->hasComptime()) both_comptime = false;
-		if(rhs && !rhs->getValueTy(true)->hasComptime()) both_comptime = false;
+		if(!lhs->isComptime()) both_comptime = false;
+		if(rhs && !rhs->isComptime()) both_comptime = false;
 
 		for(size_t i = 0; i < args.size(); ++i) {
-			Type *coerced_to = fn->getArg(i);
 			Stmt *&arg	 = args[i];
+			bool argcomptime = fn->isArgComptime(i);
 			if(arg->getValueTy()->isFunc()) {
 				FuncTy *f = as<FuncTy>(arg->getValueTy());
 				if(f->getVar() && f->getVar()->getVVal()->isFnDef()) {
 					as<StmtFnDef>(f->getVar()->getVVal())->incUsed();
 				}
 			}
-			if(!both_comptime || vpass.visit(args[i], &args[i])) {
+			if((!both_comptime && !argcomptime) || vpass.visit(args[i], &args[i])) {
 				continue;
 			}
 			err::out(stmt, {"failed to determine value for comptime arg"});
@@ -696,9 +696,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			return false;
 		}
 		stmt->createAndSetValue(rv);
-		if(stmt->getValueTy()->hasComptime() && !both_comptime) {
-			stmt->getValueTy()->unsetComptime();
-		}
+		if(both_comptime) stmt->setComptime();
 		break;
 	}
 	default: err::out(stmt->getOper(), {"nonexistent operator"}); return false;
@@ -767,7 +765,7 @@ post_mangling:
 			err::out(stmt, {"value of comptime variable could not be calculated"});
 			return false;
 		}
-		val->getValueTy()->setComptime();
+		val->setComptime();
 	}
 	if(val && !vtype) {
 		if(val->getCast()) { // TODO: maybe a better way to do this?
@@ -826,12 +824,14 @@ bool TypeAssignPass::visit(StmtFnSig *stmt, Stmt **source)
 	}
 	disabled_varname_mangling = false;
 	Vector<Type *> argst;
+	Vector<bool> argcomptime;
 	for(auto &a : args) {
 		argst.push_back(a->getValueTy());
+		argcomptime.push_back(a->isComptime());
 	}
 	Type *retty = stmt->getRetType()->getValueTy();
-	FuncTy *ft =
-	FuncTy::create(ctx, nullptr, argst, retty, nullptr, INONE, false, stmt->hasVariadic());
+	FuncTy *ft  = FuncTy::create(ctx, nullptr, argst, retty, argcomptime, nullptr, INONE, false,
+				     stmt->hasVariadic());
 	stmt->createAndSetValue(FuncVal::create(ctx, ft));
 	// needs to be executed to set the correct value for disable_template variable
 	stmt->requiresTemplateInit();
@@ -917,8 +917,8 @@ bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 		e.setDataStr(getMangledName(stmt, e.getDataStr(), ns));
 		uint64_t vid = createValueIDWith(IntVal::create(ctx, mkI32Ty(ctx), CDPERMA, i));
 		Stmt *val    = StmtSimple::create(ctx, loc, lex::Lexeme(loc, (int64_t)i++));
-		StmtVar *var =
-		StmtVar::create(ctx, loc, e, nullptr, val, (uint8_t)VarMask::COMPTIME);
+		StmtVar *var = StmtVar::create(ctx, loc, e, nullptr, val, 0);
+		var->setComptime();
 		var->setAppliedModuleID(true);
 		var->setValueID(vid);
 		additionalvars.push_back(var);
@@ -1318,7 +1318,6 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 			StringRef argn =
 			ctx.strFrom({va_name.getDataStr(), "__", ctx.strFrom(va_count)});
 			StmtVar *newv = as<StmtVar>(cfa->clone(ctx));
-			newv->appendInfoMask(cfa->getInfoMask());
 			newv->getVType()->unsetVariadic();
 			newv->getName().setDataStr(argn);
 			Type *t = args[i]->getValueTy()->clone(ctx);

@@ -13,11 +13,17 @@
 
 namespace sc
 {
-uint64_t createFnVal(Context &c, const Vector<Type *> &args, Type *ret, IntrinsicFn fn,
-		     const IntrinType &inty, bool is_va = false)
+uint64_t createComptimeFnVal(Context &c, const Vector<Type *> &args, Type *ret,
+			     const Vector<bool> &argcomptime, IntrinsicFn fn,
+			     const IntrinType &inty, bool is_va = false)
 {
-	FuncTy *t = FuncTy::create(c, nullptr, args, ret, fn, inty, false, is_va);
+	FuncTy *t = FuncTy::create(c, nullptr, args, ret, argcomptime, fn, inty, false, is_va);
 	return createValueIDWith(FuncVal::create(c, t));
+}
+inline uint64_t createFnVal(Context &c, const Vector<Type *> &args, Type *ret, IntrinsicFn fn,
+			    const IntrinType &inty, bool is_va = false)
+{
+	return createComptimeFnVal(c, args, ret, {}, fn, inty, is_va);
 }
 
 void addIntFn(Context &c, ValueManager &vmgr, StringRef name, const uint64_t &fid)
@@ -73,12 +79,10 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	VoidTy *v    = nullptr;
 
 	i8str = mkStrTy(c);
-	i8str->setComptime();
-	g = mkTypeTy(c);
-	ADDFN("import", createFnVal(c, {i8str}, g, intrinsic_import, IPARSE));
+	g     = mkTypeTy(c);
+	ADDFN("import", createComptimeFnVal(c, {i8str}, g, {true}, intrinsic_import, IPARSE));
 
 	i1 = mkI1Ty(c);
-	i1->setComptime();
 	ADDFN("isMainSrc", createFnVal(c, {}, i1, intrinsic_ismainsrc, IPARSE));
 
 	i1 = mkI1Ty(c);
@@ -141,13 +145,12 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	v = mkVoidTy(c);
 	ADDFN("compileError", createFnVal(c, {a}, v, intrinsic_compileerror, IPARSE, true));
 
-	g   = mkTypeTy(c);
-	g2  = mkTypeTy(c);
-	i32 = mkI32Ty(c);
-	i32->setComptime();
+	g     = mkTypeTy(c);
+	g2    = mkTypeTy(c);
+	i32   = mkI32Ty(c);
 	i32va = mkI32Ty(c);
-	i32va->setComptime();
-	ADDFN("array", createFnVal(c, {g, i32, i32va}, g2, intrinsic_array, IPARSE, true));
+	ADDFN("array", createComptimeFnVal(c, {g, i32, i32va}, g2, {false, true, true},
+					   intrinsic_array, IPARSE, true));
 
 	g = mkTypeTy(c);
 	ADDPTRFN("__assn__", createFnVal(c, {g, g}, g, intrinsic_assn_ptr, IVALUE));

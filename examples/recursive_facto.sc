@@ -6,6 +6,8 @@ let facto = fn(comptime T: type, data: T): T {
 };
 
 let main = fn(): i32 {
+	// TODO: make this work
+	// let comptime n = facto(i32, 10);
 	io.println("Factorial is: ", facto(i32, 5));
 	return 0;
 };

@@ -27,6 +27,7 @@ Stmt *StmtBlock::clone(Context &ctx)
 	}
 	Stmt *res = StmtBlock::create(ctx, getLoc(), newstmts, is_top);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -38,6 +39,7 @@ Stmt *StmtType::clone(Context &ctx)
 {
 	Stmt *res = StmtType::create(ctx, getLoc(), ptr, info, variadic, expr->clone(ctx));
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -51,6 +53,7 @@ Stmt *StmtSimple::clone(Context &ctx)
 	newsim->self		  = self ? self->clone(ctx) : nullptr;
 	newsim->applied_module_id = applied_module_id;
 	newsim->castTo(getCast());
+	newsim->setStmtMask(getStmtMask());
 	return newsim;
 }
 
@@ -66,6 +69,7 @@ Stmt *StmtFnCallInfo::clone(Context &ctx)
 	}
 	Stmt *res = StmtFnCallInfo::create(ctx, getLoc(), newargs);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -82,6 +86,7 @@ Stmt *StmtExpr::clone(Context &ctx)
 	newexpr->or_blk_var = or_blk_var;
 	newexpr->calledfn   = calledfn;
 	newexpr->castTo(getCast());
+	newexpr->setStmtMask(getStmtMask());
 	return newexpr;
 }
 
@@ -96,6 +101,7 @@ Stmt *StmtVar::clone(Context &ctx)
 	StmtVar *res	   = StmtVar::create(ctx, getLoc(), name, newvtype, newvval, varmask);
 	res->setAppliedModuleID(applied_module_id);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -112,6 +118,7 @@ Stmt *StmtFnSig::clone(Context &ctx)
 	StmtType *newrettype = rettype ? as<StmtType>(rettype->clone(ctx)) : nullptr;
 	Stmt *res	     = StmtFnSig::create(ctx, getLoc(), newargs, newrettype, has_variadic);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -125,6 +132,7 @@ Stmt *StmtFnDef::clone(Context &ctx)
 	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone(ctx)) : nullptr;
 	Stmt *res	  = StmtFnDef::create(ctx, getLoc(), newsig, newblk);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -136,6 +144,7 @@ Stmt *StmtHeader::clone(Context &ctx)
 {
 	Stmt *res = StmtHeader::create(ctx, getLoc(), names, flags);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -147,6 +156,7 @@ Stmt *StmtLib::clone(Context &ctx)
 {
 	Stmt *res = StmtLib::create(ctx, getLoc(), flags);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -161,6 +171,7 @@ Stmt *StmtExtern::clone(Context &ctx)
 	Stmt *newent	       = entity->clone(ctx);
 	Stmt *res = StmtExtern::create(ctx, getLoc(), fname, newheaders, newlibs, newent);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -172,6 +183,7 @@ Stmt *StmtEnum::clone(Context &ctx)
 {
 	Stmt *res = StmtEnum::create(ctx, getLoc(), items);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -187,6 +199,7 @@ Stmt *StmtStruct::clone(Context &ctx)
 	}
 	Stmt *res = StmtStruct::create(ctx, getLoc(), newfields, templates);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -202,6 +215,7 @@ Stmt *StmtVarDecl::clone(Context &ctx)
 	}
 	Stmt *res = StmtVarDecl::create(ctx, getLoc(), newdecls);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -219,6 +233,7 @@ Stmt *StmtCond::clone(Context &ctx)
 	}
 	Stmt *res = StmtCond::create(ctx, getLoc(), newconds, is_inline);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -234,6 +249,7 @@ Stmt *StmtFor::clone(Context &ctx)
 	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone(ctx)) : nullptr;
 	Stmt *res = StmtFor::create(ctx, getLoc(), newinit, newcond, newincr, newblk, is_inline);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -247,6 +263,7 @@ Stmt *StmtWhile::clone(Context &ctx)
 	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone(ctx)) : nullptr;
 	Stmt *res	  = StmtWhile::create(ctx, getLoc(), newcond, newblk);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -260,6 +277,7 @@ Stmt *StmtRet::clone(Context &ctx)
 	StmtRet *res = StmtRet::create(ctx, getLoc(), newval);
 	res->setFnBlk(fnblk);
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -271,6 +289,7 @@ Stmt *StmtContinue::clone(Context &ctx)
 {
 	Stmt *res = StmtContinue::create(ctx, getLoc());
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -282,6 +301,7 @@ Stmt *StmtBreak::clone(Context &ctx)
 {
 	Stmt *res = StmtBreak::create(ctx, getLoc());
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
@@ -293,6 +313,7 @@ Stmt *StmtDefer::clone(Context &ctx)
 {
 	Stmt *res = StmtDefer::create(ctx, getLoc(), val->clone(ctx));
 	res->castTo(getCast());
+	res->setStmtMask(getStmtMask());
 	return res;
 }
 
