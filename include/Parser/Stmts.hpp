@@ -52,11 +52,17 @@ enum Stmts : uint16_t
 	DEFER,
 };
 
+enum class StmtMask : uint8_t
+{
+	COMPTIME = 1 << 0,
+};
+
 class Stmt
 {
 protected:
 	Stmts stype;
 	const ModuleLoc *loc;
+	uint8_t stmtmask; // for StmtMask
 
 	uint64_t valueid;
 	Type *cast_to;
@@ -101,6 +107,43 @@ public:
 	isStmtX(Continue, CONTINUE);
 	isStmtX(Break, BREAK);
 	isStmtX(Defer, DEFER);
+
+#define SetModifierX(Fn, Mod)                       \
+	inline void set##Fn()                       \
+	{                                           \
+		stmtmask |= (uint8_t)StmtMask::Mod; \
+	}
+	SetModifierX(Comptime, COMPTIME);
+#undef SetModifierX
+
+#define UnsetModifierX(Fn, Mod)                      \
+	inline void unset##Fn()                      \
+	{                                            \
+		stmtmask &= ~(uint8_t)StmtMask::Mod; \
+	}
+	UnsetModifierX(Comptime, COMPTIME);
+#undef UnsetModifierX
+
+#define IsModifierX(Fn, Mod)                              \
+	inline bool is##Fn() const                        \
+	{                                                 \
+		return stmtmask & (uint8_t)StmtMask::Mod; \
+	}
+	IsModifierX(Comptime, COMPTIME);
+#undef IsModifierX
+
+	inline void setStmtMask(uint8_t mask)
+	{
+		stmtmask = mask;
+	}
+	inline void appendStmtMask(uint8_t mask)
+	{
+		stmtmask |= mask;
+	}
+	inline uint8_t getStmtMask()
+	{
+		return stmtmask;
+	}
 
 	inline const Stmts &getStmtType() const
 	{
@@ -441,7 +484,6 @@ enum class VarMask : uint8_t
 	VOLATILE = 1 << 1,
 	IN	 = 1 << 2,
 	GLOBAL	 = 1 << 3,
-	COMPTIME = 1 << 4,
 };
 
 class StmtVar : public Stmt
@@ -476,7 +518,6 @@ public:
 	SetModifierX(Volatile, VOLATILE);
 	SetModifierX(In, IN);
 	SetModifierX(Global, GLOBAL);
-	SetModifierX(Comptime, COMPTIME);
 #undef SetModifierX
 
 #define UnsetModifierX(Fn, Mod)                    \
@@ -488,7 +529,6 @@ public:
 	UnsetModifierX(Volatile, VOLATILE);
 	UnsetModifierX(In, IN);
 	UnsetModifierX(Global, GLOBAL);
-	UnsetModifierX(Comptime, COMPTIME);
 #undef UnsetModifierX
 
 #define IsModifierX(Fn, Mod)                            \
@@ -500,21 +540,7 @@ public:
 	IsModifierX(Volatile, VOLATILE);
 	IsModifierX(In, IN);
 	IsModifierX(Global, GLOBAL);
-	IsModifierX(Comptime, COMPTIME);
 #undef IsModifierX
-
-	inline void setInfoMask(uint8_t mask)
-	{
-		varmask = mask;
-	}
-	inline void appendInfoMask(uint8_t mask)
-	{
-		varmask |= mask;
-	}
-	inline uint8_t getInfoMask()
-	{
-		return varmask;
-	}
 
 	inline void setVVal(Stmt *val)
 	{

@@ -856,18 +856,19 @@ bool Parsing::parse_var(ParseHelper &p, StmtVar *&var, const Occurs &intype, con
 {
 	var = nullptr;
 
-	uint8_t infomask = 0;
+	uint8_t stmtmask = 0;
+	uint8_t varmask	 = 0;
 	while(p.accept(lex::STATIC, lex::VOLATILE) || p.accept(lex::GLOBAL, lex::COMPTIME)) {
-		if(p.acceptn(lex::STATIC)) infomask |= (uint8_t)VarMask::STATIC;
-		if(p.acceptn(lex::VOLATILE)) infomask |= (uint8_t)VarMask::VOLATILE;
-		if(p.acceptn(lex::GLOBAL)) infomask |= (uint8_t)VarMask::GLOBAL;
-		if(p.acceptn(lex::COMPTIME)) infomask |= (uint8_t)VarMask::COMPTIME;
+		if(p.acceptn(lex::COMPTIME)) stmtmask |= (uint8_t)StmtMask::COMPTIME;
+		if(p.acceptn(lex::STATIC)) varmask |= (uint8_t)VarMask::STATIC;
+		if(p.acceptn(lex::VOLATILE)) varmask |= (uint8_t)VarMask::VOLATILE;
+		if(p.acceptn(lex::GLOBAL)) varmask |= (uint8_t)VarMask::GLOBAL;
 	}
 
-	bool stati    = infomask & (uint8_t)VarMask::STATIC;
-	bool volatil  = infomask & (uint8_t)VarMask::VOLATILE;
-	bool global   = infomask & (uint8_t)VarMask::GLOBAL;
-	bool comptime = infomask & (uint8_t)VarMask::COMPTIME;
+	bool comptime = stmtmask & (uint8_t)StmtMask::COMPTIME;
+	bool stati    = varmask & (uint8_t)VarMask::STATIC;
+	bool volatil  = varmask & (uint8_t)VarMask::VOLATILE;
+	bool global   = varmask & (uint8_t)VarMask::GLOBAL;
 
 	if(!p.accept(lex::IDEN)) {
 		err::out(p.peek(), {"expected identifier for variable name, found: ",
@@ -897,7 +898,7 @@ in:
 		err::out(p.peek(), {"failed to parse in-type for variable: ", name.getDataStr()});
 		return false;
 	}
-	infomask |= (uint8_t)VarMask::IN;
+	varmask |= (uint8_t)VarMask::IN;
 
 type:
 	if(otype == Occurs::NO && p.accept(lex::COL)) {
@@ -969,7 +970,8 @@ done:
 		StmtFnSig *valsig = as<StmtFnDef>(val)->getSig();
 		valsig->getArgs().insert(valsig->getArgs().begin(), selfvar);
 	}
-	var = StmtVar::create(ctx, name.getLoc(), name, type, val, infomask);
+	var = StmtVar::create(ctx, name.getLoc(), name, type, val, varmask);
+	var->setStmtMask(stmtmask);
 	return true;
 }
 

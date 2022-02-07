@@ -125,7 +125,6 @@ String Type::infoToStr()
 	String res;
 	if(info & REF) res += "&";
 	if(info & CONST) res += "const ";
-	if(info & COMPTIME) res += "comptime ";
 	return res;
 }
 String Type::baseToStr()
@@ -649,17 +648,28 @@ Value *StructTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData c
 // Function Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-FuncTy::FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &inty, const bool &externed, const bool &variadic)
-	: Type(TFUNC, 0, genTypeID()), var(var), args(args), ret(ret), intrin(intrin), inty(inty),
-	  uniqid(!externed ? genFuncUniqID() : 0), externed(externed), variadic(variadic)
-{}
-FuncTy::FuncTy(const uint16_t &info, const uint32_t &id, StmtVar *var, const Vector<Type *> &args,
-	       Type *ret, IntrinsicFn intrin, const IntrinType &inty, const uint32_t &uniqid,
+FuncTy::FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
+	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
 	       const bool &externed, const bool &variadic)
-	: Type(TFUNC, info, id), var(var), args(args), ret(ret), intrin(intrin), inty(inty),
-	  uniqid(uniqid), externed(externed), variadic(variadic)
-{}
+	: Type(TFUNC, 0, genTypeID()), var(var), args(args), ret(ret), argcomptime(_argcomptime),
+	  intrin(intrin), inty(inty), uniqid(!externed ? genFuncUniqID() : 0), externed(externed),
+	  variadic(variadic)
+{
+	if(_argcomptime.empty() && !args.empty()) {
+		for(size_t i = 0; i < args.size(); ++i) argcomptime.push_back(false);
+	}
+}
+FuncTy::FuncTy(const uint16_t &info, const uint32_t &id, StmtVar *var, const Vector<Type *> &args,
+	       Type *ret, const Vector<bool> &_argcomptime, IntrinsicFn intrin,
+	       const IntrinType &inty, const uint32_t &uniqid, const bool &externed,
+	       const bool &variadic)
+	: Type(TFUNC, info, id), var(var), args(args), ret(ret), argcomptime(_argcomptime),
+	  intrin(intrin), inty(inty), uniqid(uniqid), externed(externed), variadic(variadic)
+{
+	if(_argcomptime.empty() && !args.empty()) {
+		for(size_t i = 0; i < args.size(); ++i) argcomptime.push_back(false);
+	}
+}
 FuncTy::~FuncTy() {}
 uint32_t FuncTy::getSignatureID()
 {
@@ -721,8 +731,8 @@ Type *FuncTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 	Vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is, weak_depth));
 	return c.allocType<FuncTy>(getInfo(), getBaseID(), var, newargs,
-				   ret->clone(c, as_is, weak_depth), intrin, inty, uniqid, externed,
-				   variadic);
+				   ret->clone(c, as_is, weak_depth), argcomptime, intrin, inty,
+				   uniqid, externed, variadic);
 }
 bool FuncTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 {
@@ -825,10 +835,11 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 	return res;
 }
 FuncTy *FuncTy::create(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
-		       IntrinsicFn _intrin, const IntrinType &_inty, const bool &_externed,
-		       const bool &_variadic)
+		       const Vector<bool> &_argcomptime, IntrinsicFn _intrin,
+		       const IntrinType &_inty, const bool &_externed, const bool &_variadic)
 {
-	return c.allocType<FuncTy>(_var, _args, _ret, _intrin, _inty, _externed, _variadic);
+	return c.allocType<FuncTy>(_var, _args, _ret, _argcomptime, _intrin, _inty, _externed,
+				   _variadic);
 }
 void FuncTy::updateUniqID()
 {

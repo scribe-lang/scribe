@@ -41,14 +41,11 @@ enum Types : uint16_t
 
 // TODO:
 // This enum (and respective variables) will be completely removed
-// Only variadic will remain - inside FuncTy as a boolean
-// All types will be allocated once, except func and struct -
-// they must be allocated for each func/struct
+// Const should be a type in itself
 enum TypeInfoMask
 {
-	REF	 = 1 << 0, // is a reference
-	CONST	 = 1 << 1, // is const
-	COMPTIME = 1 << 2, // is comptime
+	REF   = 1 << 0, // is a reference
+	CONST = 1 << 1, // is const
 };
 
 class Stmt;
@@ -141,7 +138,6 @@ public:
 	}
 	SetModifierX(Const, CONST);
 	SetModifierX(Ref, REF);
-	SetModifierX(Comptime, COMPTIME);
 #undef SetModifierX
 
 #define UnsetModifierX(Fn, Mod) \
@@ -151,7 +147,6 @@ public:
 	}
 	UnsetModifierX(Const, CONST);
 	UnsetModifierX(Ref, REF);
-	UnsetModifierX(Comptime, COMPTIME);
 #undef UnsetModifierX
 
 #define IsModifierX(Fn, Mod)        \
@@ -161,7 +156,6 @@ public:
 	}
 	IsModifierX(Const, CONST);
 	IsModifierX(Ref, REF);
-	IsModifierX(Comptime, COMPTIME);
 #undef IsModifierX
 
 	inline const uint32_t &getBaseID() const
@@ -432,6 +426,7 @@ class FuncTy : public Type
 	StmtVar *var;
 	Vector<Type *> args;
 	Type *ret;
+	Vector<bool> argcomptime;
 	IntrinsicFn intrin;
 	IntrinType inty;
 	uint32_t uniqid;
@@ -439,11 +434,13 @@ class FuncTy : public Type
 	bool variadic;
 
 public:
-	FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret, IntrinsicFn intrin,
-	       const IntrinType &inty, const bool &externed, const bool &variadic);
-	FuncTy(const uint16_t &info, const uint32_t &id, StmtVar *var, const Vector<Type *> &args,
-	       Type *ret, IntrinsicFn intrin, const IntrinType &inty, const uint32_t &uniqid,
+	FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
+	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
 	       const bool &externed, const bool &variadic);
+	FuncTy(const uint16_t &info, const uint32_t &id, StmtVar *var, const Vector<Type *> &args,
+	       Type *ret, const Vector<bool> &_argcomptime, IntrinsicFn intrin,
+	       const IntrinType &inty, const uint32_t &uniqid, const bool &externed,
+	       const bool &variadic);
 	~FuncTy();
 
 	// returns ID of parameters + ret type
@@ -460,7 +457,8 @@ public:
 	FuncTy *createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &callargs);
 
 	static FuncTy *create(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
-			      IntrinsicFn _intrin, const IntrinType &_inty, const bool &_externed,
+			      const Vector<bool> &_argcomptime, IntrinsicFn _intrin,
+			      const IntrinType &_inty, const bool &_externed,
 			      const bool &_variadic);
 
 	inline void setVar(StmtVar *v)
@@ -510,6 +508,10 @@ public:
 	inline Type *getRet()
 	{
 		return ret;
+	}
+	inline bool isArgComptime(size_t idx)
+	{
+		return args.size() > idx ? argcomptime[idx] : false;
 	}
 	inline bool isIntrinsic()
 	{

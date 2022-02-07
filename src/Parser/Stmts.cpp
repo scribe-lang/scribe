@@ -41,7 +41,7 @@ Value *getValueWithID(const uint64_t &id)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc *loc)
-	: stype(stmt_type), loc(loc), valueid(0), cast_to(nullptr), derefcount(0)
+	: stype(stmt_type), loc(loc), stmtmask(0), valueid(0), cast_to(nullptr), derefcount(0)
 {}
 Stmt::~Stmt() {}
 
