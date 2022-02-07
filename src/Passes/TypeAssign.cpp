@@ -807,8 +807,6 @@ post_mangling:
 		return vmgr.addTypeFn(self->getValueTy(), stmt->getName().getDataStr(),
 				      stmt->getValueID());
 	}
-	// append modifiers applied via 'let'
-	stmt->getValueTy()->appendInfo(stmt->getInfo());
 	return vmgr.addVar(stmt->getName().getDataStr(), stmt->getValueID(), stmt,
 			   stmt->isGlobal());
 }

@@ -448,9 +448,7 @@ class StmtVar : public Stmt
 {
 	lex::Lexeme name;
 	StmtType *vtype;
-	Stmt *vval; // either of expr, funcdef, enumdef, or structdef
-	// TODO: remove this
-	size_t info;	 // from TypeInfoMask
+	Stmt *vval;	 // either of expr, funcdef, enumdef, or structdef
 	uint8_t varmask; // from VarMask
 	bool applied_module_id;
 	bool applied_codegen_mangle;
@@ -538,14 +536,6 @@ public:
 	inline Stmt *&getVVal()
 	{
 		return vval;
-	}
-	inline const size_t &getInfo()
-	{
-		return info;
-	}
-	inline void setInfo(const size_t &inf)
-	{
-		info = inf;
 	}
 	inline void setAppliedModuleID(const bool &apply)
 	{

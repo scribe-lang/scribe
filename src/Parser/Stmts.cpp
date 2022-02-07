@@ -347,7 +347,7 @@ bool StmtExpr::requiresTemplateInit()
 
 StmtVar::StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
 		 uint8_t varmask)
-	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval), info(0), varmask(varmask),
+	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval), varmask(varmask),
 	  applied_module_id(false), applied_codegen_mangle(false)
 {}
 StmtVar::~StmtVar() {}
