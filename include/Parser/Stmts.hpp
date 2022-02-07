@@ -450,18 +450,18 @@ class StmtVar : public Stmt
 	StmtType *vtype;
 	Stmt *vval; // either of expr, funcdef, enumdef, or structdef
 	// TODO: remove this
-	size_t info;	  // from TypeInfoMask
-	uint8_t infomask; // from VarMask
+	size_t info;	 // from TypeInfoMask
+	uint8_t varmask; // from VarMask
 	bool applied_module_id;
 	bool applied_codegen_mangle;
 
 public:
 	StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
-		uint8_t infomask);
+		uint8_t varmask);
 	~StmtVar();
 	// at least one of type or val must be present
 	static StmtVar *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &name,
-			       StmtType *vtype, Stmt *vval, uint8_t infomask);
+			       StmtType *vtype, Stmt *vval, uint8_t varmask);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
@@ -469,10 +469,10 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
 
-#define SetModifierX(Fn, Mod)                      \
-	inline void set##Fn()                      \
-	{                                          \
-		infomask |= (uint8_t)VarMask::Mod; \
+#define SetModifierX(Fn, Mod)                     \
+	inline void set##Fn()                     \
+	{                                         \
+		varmask |= (uint8_t)VarMask::Mod; \
 	}
 	SetModifierX(Static, STATIC);
 	SetModifierX(Volatile, VOLATILE);
@@ -481,10 +481,10 @@ public:
 	SetModifierX(Comptime, COMPTIME);
 #undef SetModifierX
 
-#define UnsetModifierX(Fn, Mod)                     \
-	inline void unset##Fn()                     \
-	{                                           \
-		infomask &= ~(uint8_t)VarMask::Mod; \
+#define UnsetModifierX(Fn, Mod)                    \
+	inline void unset##Fn()                    \
+	{                                          \
+		varmask &= ~(uint8_t)VarMask::Mod; \
 	}
 	UnsetModifierX(Static, STATIC);
 	UnsetModifierX(Volatile, VOLATILE);
@@ -493,10 +493,10 @@ public:
 	UnsetModifierX(Comptime, COMPTIME);
 #undef UnsetModifierX
 
-#define IsModifierX(Fn, Mod)                             \
-	inline bool is##Fn() const                       \
-	{                                                \
-		return infomask & (uint8_t)VarMask::Mod; \
+#define IsModifierX(Fn, Mod)                            \
+	inline bool is##Fn() const                      \
+	{                                               \
+		return varmask & (uint8_t)VarMask::Mod; \
 	}
 	IsModifierX(Static, STATIC);
 	IsModifierX(Volatile, VOLATILE);
@@ -507,15 +507,15 @@ public:
 
 	inline void setInfoMask(uint8_t mask)
 	{
-		infomask = mask;
+		varmask = mask;
 	}
 	inline void appendInfoMask(uint8_t mask)
 	{
-		infomask |= mask;
+		varmask |= mask;
 	}
 	inline uint8_t getInfoMask()
 	{
-		return infomask;
+		return varmask;
 	}
 
 	inline void setVVal(Stmt *val)
