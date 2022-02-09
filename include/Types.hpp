@@ -51,11 +51,10 @@ typedef bool (*IntrinsicFn)(Context &c, StmtExpr *stmt, Stmt **source, Vector<St
 
 class Type
 {
-	uint32_t id;
 	Types type;
 
 public:
-	Type(const Types &type, const uint32_t &id);
+	Type(const Types &type);
 	virtual ~Type();
 
 	bool isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
@@ -67,11 +66,11 @@ public:
 	virtual uint32_t getID();
 	virtual bool isTemplate(const size_t &weak_depth = 0);
 	virtual String toStr(const size_t &weak_depth = 0);
-	virtual Type *clone(Context &c, const bool &as_is = false,
-			    const size_t &weak_depth = 0) = 0;
 	virtual bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	virtual void unmergeTemplates(const size_t &weak_depth = 0);
 	virtual bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
+	virtual Type *specialize(Context &c, const bool &as_is = false,
+				 const size_t &weak_depth = 0) = 0;
 
 	inline bool isPrimitive() const
 	{
@@ -109,9 +108,9 @@ public:
 	IsTyX(Variadic, VARIADIC);
 #undef IsTyX
 
-	inline const uint32_t &getBaseID() const
+	inline uint32_t getBaseID() const
 	{
-		return id;
+		return type;
 	}
 };
 
@@ -126,10 +125,10 @@ public:
 	VoidTy();
 	~VoidTy();
 
-	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
 
-	static VoidTy *create(Context &c);
+	static VoidTy *get(Context &c);
+	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
@@ -140,10 +139,10 @@ public:
 	AnyTy();
 	~AnyTy();
 
-	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
 
-	static AnyTy *create(Context &c);
+	static AnyTy *get(Context &c);
+	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
@@ -156,14 +155,13 @@ class IntTy : public Type
 
 public:
 	IntTy(const uint16_t &bits, const bool &sign);
-	IntTy(const uint32_t &id, const uint16_t &bits, const bool &sign);
 	~IntTy();
 
 	uint32_t getID();
-	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
 
-	static IntTy *create(Context &c, const uint16_t &_bits, const bool &_sign);
+	static IntTy *get(Context &c, const uint16_t &_bits, const bool &_sign);
+	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 
 	inline const uint16_t &getBits() const
 	{
@@ -184,14 +182,13 @@ class FltTy : public Type
 
 public:
 	FltTy(const uint16_t &bits);
-	FltTy(const uint32_t &id, const uint16_t &bits);
 	~FltTy();
 
 	uint32_t getID();
-	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
 
-	static FltTy *create(Context &c, const uint16_t &_bits);
+	static FltTy *get(Context &c, const uint16_t &_bits);
+	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 
 	inline const uint16_t &getBits() const
 	{
@@ -208,17 +205,18 @@ class TypeTy : public Type
 
 public:
 	TypeTy();
-	TypeTy(const uint32_t &id, const uint32_t &containedtyid);
+	TypeTy(const uint32_t &containedtyid);
 	~TypeTy();
 
 	uint32_t getUniqID();
+	uint32_t getID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
-	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 
-	static TypeTy *create(Context &c);
+	static TypeTy *get(Context &c);
+	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 
 	void clearContainedTy();
 	void setContainedTy(Type *ty);
@@ -236,27 +234,24 @@ class PtrTy : public Type
 
 public:
 	PtrTy(Type *to, const uint16_t &count, const bool &is_weak);
-	PtrTy(const uint32_t &id, Type *to, const uint16_t &count, const bool &is_weak);
 	~PtrTy();
 
 	uint32_t getUniqID();
+	uint32_t getID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
-	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 
-	static PtrTy *create(Context &c, Type *ptr_to, const uint16_t &count, const bool &is_weak);
+	static PtrTy *get(Context &c, Type *ptr_to, const uint16_t &count, const bool &is_weak);
+	static PtrTy *getStr(Context &c);
+	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 
-	inline void setTo(Type *ty)
-	{
-		to = ty;
-	}
 	inline void setWeak(const bool &weak)
 	{
 		is_weak = weak;
 	}
-	inline Type *&getTo()
+	inline Type *getTo()
 	{
 		return to;
 	}
@@ -279,6 +274,7 @@ public:
 
 class StructTy : public Type
 {
+	uint32_t id; // to differentiate between each struct ty
 	Map<StringRef, size_t> fieldpos;
 	Vector<StringRef> fieldnames;
 	Vector<Type *> fields;
@@ -292,16 +288,16 @@ public:
 	StructTy(const Vector<StringRef> &fieldnames, const Vector<Type *> &fields,
 		 const Vector<StringRef> &templatenames, const Vector<TypeTy *> &templates,
 		 const bool &externed);
-	StructTy(const uint32_t &id, const Vector<StringRef> &fieldnames,
+	StructTy(uint32_t id, const Vector<StringRef> &fieldnames,
 		 const Map<StringRef, size_t> &fieldpos, const Vector<Type *> &fields,
 		 const Vector<StringRef> &templatenames, const Map<StringRef, size_t> &templatepos,
 		 const Vector<TypeTy *> &templates, const bool &has_template, const bool &externed);
 	~StructTy();
 
 	uint32_t getUniqID();
+	uint32_t getID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
-	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 	bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
@@ -310,10 +306,10 @@ public:
 	// returns a NON-def struct type
 	StructTy *instantiate(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &callargs);
 
-	static StructTy *create(Context &c, const Vector<StringRef> &_fieldnames,
-				const Vector<Type *> &_fields,
-				const Vector<StringRef> &_templatenames,
-				const Vector<TypeTy *> &_templates, const bool &_externed);
+	static StructTy *get(Context &c, const Vector<StringRef> &_fieldnames,
+			     const Vector<Type *> &_fields, const Vector<StringRef> &_templatenames,
+			     const Vector<TypeTy *> &_templates, const bool &_externed);
+	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 
 	inline void insertField(StringRef name, Type *ty)
 	{
@@ -371,6 +367,7 @@ enum IntrinType
 };
 class FuncTy : public Type
 {
+	uint32_t id; // to differentiate between each func ty
 	StmtVar *var;
 	StmtFnSig *sig;
 	Vector<Type *> args;
@@ -386,10 +383,9 @@ public:
 	FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
 	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
 	       const bool &externed, const bool &variadic);
-	FuncTy(const uint32_t &id, StmtVar *var, StmtFnSig *sig, const Vector<Type *> &args,
-	       Type *ret, const Vector<bool> &_argcomptime, IntrinsicFn intrin,
-	       const IntrinType &inty, const uint32_t &uniqid, const bool &externed,
-	       const bool &variadic);
+	FuncTy(uint32_t id, StmtVar *var, StmtFnSig *sig, const Vector<Type *> &args, Type *ret,
+	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
+	       const uint32_t &uniqid, const bool &externed, const bool &variadic);
 	~FuncTy();
 
 	// returns ID of parameters + ret type
@@ -398,17 +394,16 @@ public:
 	uint32_t getID();
 	bool isTemplate(const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
-	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 	bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
 	// specializes a function type using StmtFnCallInfo
 	FuncTy *createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &callargs);
 
-	static FuncTy *create(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
-			      const Vector<bool> &_argcomptime, IntrinsicFn _intrin,
-			      const IntrinType &_inty, const bool &_externed,
-			      const bool &_variadic);
+	static FuncTy *get(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
+			   const Vector<bool> &_argcomptime, IntrinsicFn _intrin,
+			   const IntrinType &_inty, const bool &_externed, const bool &_variadic);
+	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 
 	inline void setVar(StmtVar *v)
 	{
@@ -501,17 +496,16 @@ class VariadicTy : public Type
 
 public:
 	VariadicTy(const Vector<Type *> &args);
-	VariadicTy(const uint32_t &id, const Vector<Type *> &args);
 	~VariadicTy();
 
 	bool isTemplate(const size_t &weak_depth = 0);
 	String toStr(const size_t &weak_depth = 0);
-	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 	bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
 
-	static VariadicTy *create(Context &c, const Vector<Type *> &_args);
+	static VariadicTy *get(Context &c, const Vector<Type *> &_args);
+	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
 
 	inline void addArg(Type *ty)
 	{
@@ -529,84 +523,6 @@ public:
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
 };
-
-// helpful functions
-
-inline IntTy *mkI0Ty(Context &c)
-{
-	return IntTy::create(c, 0, true);
-}
-inline IntTy *mkI1Ty(Context &c)
-{
-	return IntTy::create(c, 1, true);
-}
-inline IntTy *mkI8Ty(Context &c)
-{
-	return IntTy::create(c, 8, true);
-}
-inline IntTy *mkI16Ty(Context &c)
-{
-	return IntTy::create(c, 16, true);
-}
-inline IntTy *mkI32Ty(Context &c)
-{
-	return IntTy::create(c, 32, true);
-}
-inline IntTy *mkI64Ty(Context &c)
-{
-	return IntTy::create(c, 64, true);
-}
-inline IntTy *mkU8Ty(Context &c)
-{
-	return IntTy::create(c, 8, false);
-}
-inline IntTy *mkU16Ty(Context &c)
-{
-	return IntTy::create(c, 16, false);
-}
-inline IntTy *mkU32Ty(Context &c)
-{
-	return IntTy::create(c, 32, false);
-}
-inline IntTy *mkU64Ty(Context &c)
-{
-	return IntTy::create(c, 64, false);
-}
-inline FltTy *mkF0Ty(Context &c)
-{
-	return FltTy::create(c, 0);
-}
-inline FltTy *mkF32Ty(Context &c)
-{
-	return FltTy::create(c, 32);
-}
-inline FltTy *mkF64Ty(Context &c)
-{
-	return FltTy::create(c, 64);
-}
-inline PtrTy *mkPtrTy(Context &c, Type *to, const size_t &count, const bool &is_weak)
-{
-	return PtrTy::create(c, to, count, is_weak);
-}
-inline Type *mkStrTy(Context &c)
-{
-	Type *res = IntTy::create(c, 8, true);
-	res	  = PtrTy::create(c, res, 0, false);
-	return res;
-}
-inline VoidTy *mkVoidTy(Context &c)
-{
-	return VoidTy::create(c);
-}
-
-inline AnyTy *mkAnyTy(Context &c)
-{
-	return AnyTy::create(c);
-}
-inline TypeTy *mkTypeTy(Context &c)
-{
-	return TypeTy::create(c);
-}
 } // namespace sc
 
 #endif // TYPES_HPP
