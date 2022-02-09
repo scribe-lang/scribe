@@ -193,7 +193,7 @@ bool CDriver::visit(Stmt *stmt, Writer &writer, const bool &semicol)
 	if(!semicol &&
 	   (stmt->isExpr() ||
 	    (stmt->isSimple() && as<StmtSimple>(stmt)->getLexValue().getTokVal() == lex::IDEN)) &&
-	   stmt->getValueTy(true)->hasRef())
+	   stmt->isRef())
 	{
 		tmp.writeBefore("(*");
 		tmp.write(")");
@@ -491,6 +491,8 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 					sigret->getValueTy()->toStr()});
 			return false;
 		}
+		if(sigret->isConst()) retcty = "const " + retcty;
+		if(sigret->isRef()) retcty += "*";
 
 		String spacevarname = " ";
 		spacevarname += varname;
@@ -542,6 +544,8 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 		}
 		if(stmt->isStatic()) prefix += "static ";
 		if(stmt->isVolatile()) prefix += "volatile ";
+		if(stmt->isConst()) prefix += "const ";
+		if(stmt->isRef()) cty += "*";
 		writer.write({prefix, cty, " ", varname, arrcount, " = ", cval});
 		return true;
 	}
@@ -569,10 +573,12 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 	}
 	if(stmt->isStatic()) prefix += "static ";
 	if(stmt->isVolatile()) prefix += "volatile ";
+	if(stmt->isConst()) prefix += "const ";
+	if(stmt->isRef()) cty += "*";
 	writer.write({prefix, cty, " ", varname, arrcount});
 	if(!tmp.empty()) {
 		writer.write(" = ");
-		if(stmt->getValueTy()->hasRef()) {
+		if(stmt->isRef()) {
 			writer.write("&(");
 			writer.append(tmp);
 			writer.write(")");
@@ -591,7 +597,9 @@ bool CDriver::visit(StmtFnSig *stmt, Writer &writer, const bool &semicol)
 				stmt->getValueTy()->toStr()});
 		return false;
 	}
+	if(retty->isConst()) writer.write("const ");
 	writer.write(cty);
+	if(retty->isRef()) writer.write("*");
 	writer.write("(");
 	for(size_t i = 0; i < stmt->getArgs().size(); ++i) {
 		auto &a = stmt->getArgs()[i];
@@ -789,7 +797,7 @@ bool CDriver::visit(StmtRet *stmt, Writer &writer, const bool &semicol)
 		return false;
 	}
 	writer.write("return ");
-	if(stmt->getValueTy()->hasRef()) {
+	if(stmt->isRef()) {
 		writer.write("&(");
 		writer.append(tmp);
 		writer.write(")");
@@ -915,8 +923,6 @@ bool CDriver::getCTypeName(String &res, Stmt *stmt, Type *ty, bool for_cast, boo
 {
 	String pre;
 	String post;
-	if(ty->hasConst()) pre += "const ";
-	if(ty->hasRef()) post += " *";
 
 	if(is_weak) {
 		if(for_decl) res = pre + "struct ";
@@ -1102,7 +1108,9 @@ bool CDriver::applyCast(Stmt *stmt, Writer &writer, Writer &tmp)
 			return false;
 		}
 		// if(has_ref) stmt->getCast()->setRef();
+		if(stmt->isCastConst()) writer.write("const ");
 		writer.write(cty);
+		if(stmt->isCastRef()) writer.write("*");
 		writer.write(")(");
 		writer.append(tmp);
 		writer.write(")");
@@ -1122,18 +1130,19 @@ bool CDriver::writeCallArgs(const ModuleLoc *loc, const Vector<Stmt *> &args, Ty
 		Stmt *a	 = args[i];
 		Type *at = fn ? fn->getArg(i) : st->getField(i);
 		Writer tmp(writer);
-		Type *cast = a->getCast();
-		a->castTo(nullptr);
+		Type *cast	 = a->getCast();
+		uint8_t castmask = a->getCastStmtMask();
+		a->castTo(nullptr, (uint8_t)0);
 		if(!visit(a, tmp, false)) {
 			err::out(loc, {"failed to generate C code for func call argument"});
 			return false;
 		}
-		a->castTo(cast);
+		a->castTo(cast, castmask);
 		if(a->getDerefCount()) {
 			tmp.writeBefore("(" + String(a->getDerefCount(), '*'));
 			tmp.write(")");
 		}
-		if(at->hasRef()) {
+		if(fn && fn->getSig() && fn->getSig()->getArg(i)->isRef()) {
 			tmp.writeBefore("&(");
 			tmp.write(")");
 		}
@@ -1155,17 +1164,23 @@ bool CDriver::getFuncPointer(String &res, FuncTy *f, Stmt *stmt, bool for_cast, 
 			 {"failed to determine C type for scribe type: ", f->getRet()->toStr()});
 		return false;
 	}
+	if(f->getSig() && f->getSig()->getRetType()->isConst()) decl += "const ";
 	decl += cty;
+	if(f->getSig() && f->getSig()->getRetType()->isRef()) decl += "*";
 	decl += " (*" + res + ")";
 	decl += "(";
-	for(auto &t : f->getArgs()) {
+	for(size_t i = 0; i < f->getArgs().size(); ++i) {
+		Type *t	     = f->getArg(i);
+		StmtVar *arg = f->getSig() ? f->getSig()->getArg(i) : nullptr;
 		cty.clear();
 		if(!getCTypeName(cty, stmt, t, for_cast, for_decl, is_weak)) {
 			err::out(stmt,
 				 {"failed to determine C type for scribe type: ", t->toStr()});
 			return false;
 		}
+		if(arg && arg->isConst()) decl += "const ";
 		decl += cty;
+		if(arg && arg->isRef()) decl += "*";
 		decl += ", ";
 	}
 	if(f->getArgs().size() > 0) {

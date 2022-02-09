@@ -49,9 +49,7 @@ Type *applyPointerCount(Context &c, Type *t, const uint16_t &count);
 // Base Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Type::Type(const Types &type, const uint16_t &info, const uint32_t &id)
-	: type(type), info(info), id(id)
-{}
+Type::Type(const Types &type, const uint32_t &id) : type(type), id(id) {}
 Type::~Type() {}
 bool Type::isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 {
@@ -113,29 +111,16 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 			       ", RHS: ", rhs->toStr(), ")"});
 		return false;
 	}
-	if(rhs->hasConst() && !hasConst() && (isPtr() || hasRef())) {
-		err::out(loc, {"losing constness here, cannot continue (LHS: ", toStr(),
-			       ", RHS: ", rhs->toStr(), ")"});
-		return false;
-	}
 	return true;
-}
-String Type::infoToStr()
-{
-	String res;
-	if(info & REF) res += "&";
-	if(info & CONST) res += "const ";
-	return res;
 }
 String Type::baseToStr()
 {
-	return infoToStr() + TypeStrs[type];
+	return TypeStrs[type];
 }
 bool Type::requiresCast(Type *other)
 {
 	if(!isPrimitiveOrPtr() || !other->isPrimitiveOrPtr()) return false;
 	if(isPtr() && other->isPtr()) {
-		if(hasConst() != other->hasConst()) return true;
 		return as<PtrTy>(this)->getTo()->requiresCast(as<PtrTy>(other)->getTo());
 	}
 
@@ -190,12 +175,11 @@ Value *Type::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Void Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-VoidTy::VoidTy() : Type(TVOID, 0, TVOID) {}
-VoidTy::VoidTy(const uint16_t &info) : Type(TVOID, info, TVOID) {}
+VoidTy::VoidTy() : Type(TVOID, TVOID) {}
 VoidTy::~VoidTy() {}
 Type *VoidTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
-	return c.allocType<VoidTy>(getInfo());
+	return c.allocType<VoidTy>();
 }
 String VoidTy::toStr(const size_t &weak_depth)
 {
@@ -215,12 +199,11 @@ Value *VoidTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Any Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-AnyTy::AnyTy() : Type(TANY, 0, TANY) {}
-AnyTy::AnyTy(const uint16_t &info) : Type(TANY, info, TANY) {}
+AnyTy::AnyTy() : Type(TANY, TANY) {}
 AnyTy::~AnyTy() {}
 Type *AnyTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
-	return c.allocType<AnyTy>(getInfo());
+	return c.allocType<AnyTy>();
 }
 String AnyTy::toStr(const size_t &weak_depth)
 {
@@ -241,10 +224,9 @@ Value *AnyTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Int Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-IntTy::IntTy(const uint16_t &bits, const bool &sign) : Type(TINT, 0, TINT), bits(bits), sign(sign)
-{}
-IntTy::IntTy(const uint16_t &info, const uint32_t &id, const uint16_t &bits, const bool &sign)
-	: Type(TINT, info, id), bits(bits), sign(sign)
+IntTy::IntTy(const uint16_t &bits, const bool &sign) : Type(TINT, TINT), bits(bits), sign(sign) {}
+IntTy::IntTy(const uint32_t &id, const uint16_t &bits, const bool &sign)
+	: Type(TINT, id), bits(bits), sign(sign)
 {}
 IntTy::~IntTy() {}
 
@@ -254,11 +236,11 @@ uint32_t IntTy::getID()
 }
 Type *IntTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
-	return c.allocType<IntTy>(getInfo(), getBaseID(), bits, sign);
+	return c.allocType<IntTy>(getBaseID(), bits, sign);
 }
 String IntTy::toStr(const size_t &weak_depth)
 {
-	return infoToStr() + (sign ? "i" : "u") + std::to_string(bits);
+	return (sign ? "i" : "u") + std::to_string(bits);
 }
 
 IntTy *IntTy::create(Context &c, const uint16_t &_bits, const bool &_sign)
@@ -276,10 +258,8 @@ Value *IntTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Float Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-FltTy::FltTy(const uint16_t &bits) : Type(TFLT, 0, TFLT), bits(bits) {}
-FltTy::FltTy(const uint16_t &info, const uint32_t &id, const uint16_t &bits)
-	: Type(TFLT, info, id), bits(bits)
-{}
+FltTy::FltTy(const uint16_t &bits) : Type(TFLT, TFLT), bits(bits) {}
+FltTy::FltTy(const uint32_t &id, const uint16_t &bits) : Type(TFLT, id), bits(bits) {}
 FltTy::~FltTy() {}
 
 uint32_t FltTy::getID()
@@ -288,11 +268,11 @@ uint32_t FltTy::getID()
 }
 Type *FltTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
-	return c.allocType<FltTy>(getInfo(), getBaseID(), bits);
+	return c.allocType<FltTy>(getBaseID(), bits);
 }
 String FltTy::toStr(const size_t &weak_depth)
 {
-	return infoToStr() + "f" + std::to_string(bits);
+	return "f" + std::to_string(bits);
 }
 
 FltTy *FltTy::create(Context &c, const uint16_t &_bits)
@@ -310,9 +290,9 @@ Value *FltTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Type Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-TypeTy::TypeTy() : Type(TTYPE, 0, TTYPE), containedtyid(genContainedTypeID()) {}
-TypeTy::TypeTy(const uint16_t &info, const uint32_t &id, const uint32_t &containedtyid)
-	: Type(TTYPE, info, id), containedtyid(containedtyid)
+TypeTy::TypeTy() : Type(TTYPE, TTYPE), containedtyid(genContainedTypeID()) {}
+TypeTy::TypeTy(const uint32_t &id, const uint32_t &containedtyid)
+	: Type(TTYPE, id), containedtyid(containedtyid)
 {}
 TypeTy::~TypeTy() {}
 
@@ -328,17 +308,16 @@ bool TypeTy::isTemplate(const size_t &weak_depth)
 String TypeTy::toStr(const size_t &weak_depth)
 {
 	Type *ct = getContainedTy();
-	return infoToStr() + "typety<" +
+	return "typety<" +
 	       (ct ? ct->toStr(weak_depth) : "(none:" + std::to_string(containedtyid) + ")") + ">";
 }
 Type *TypeTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	if(!as_is && getContainedTy()) {
 		Type *res = getContainedTy()->clone(c, as_is, weak_depth);
-		res->appendInfo(getInfo());
 		return res;
 	}
-	return c.allocType<TypeTy>(getInfo(), getBaseID(), containedtyid);
+	return c.allocType<TypeTy>(getBaseID(), containedtyid);
 }
 bool TypeTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 {
@@ -395,11 +374,10 @@ Value *TypeTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 PtrTy::PtrTy(Type *to, const uint16_t &count, const bool &is_weak)
-	: Type(TPTR, 0, TPTR), to(to), count(count), is_weak(is_weak)
+	: Type(TPTR, TPTR), to(to), count(count), is_weak(is_weak)
 {}
-PtrTy::PtrTy(const uint16_t &info, const uint32_t &id, Type *to, const uint16_t &count,
-	     const bool &is_weak)
-	: Type(TPTR, info, id), to(to), count(count), is_weak(is_weak)
+PtrTy::PtrTy(const uint32_t &id, Type *to, const uint16_t &count, const bool &is_weak)
+	: Type(TPTR, id), to(to), count(count), is_weak(is_weak)
 {}
 PtrTy::~PtrTy() {}
 uint32_t PtrTy::getUniqID()
@@ -415,9 +393,9 @@ String PtrTy::toStr(const size_t &weak_depth)
 {
 	String extradata;
 	if(count) extradata = "[" + std::to_string(count) + "] ";
-	String res = "*" + extradata + infoToStr();
+	String res = "*" + extradata;
 	if(weak_depth >= MAX_WEAKPTR_DEPTH) {
-		res += to->infoToStr() + " weak<" + std::to_string(to->getID()) + ">";
+		res += " weak<" + std::to_string(to->getID()) + ">";
 	} else {
 		res += to->toStr(weak_depth + is_weak);
 	}
@@ -427,7 +405,7 @@ Type *PtrTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	bool valid_depth = weak_depth < MAX_WEAKPTR_DEPTH;
 	Type *clone	 = valid_depth ? to->clone(c, as_is, weak_depth + is_weak) : to;
-	return c.allocType<PtrTy>(getInfo(), getBaseID(), clone, count, is_weak);
+	return c.allocType<PtrTy>(getBaseID(), clone, count, is_weak);
 }
 bool PtrTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 {
@@ -470,7 +448,7 @@ Value *PtrTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 StructTy::StructTy(const Vector<StringRef> &fieldnames, const Vector<Type *> &fields,
 		   const Vector<StringRef> &templatenames, const Vector<TypeTy *> &templates,
 		   const bool &externed)
-	: Type(TSTRUCT, 0, genTypeID()), fieldnames(fieldnames), fields(fields),
+	: Type(TSTRUCT, genTypeID()), fieldnames(fieldnames), fields(fields),
 	  templatenames(templatenames), templates(templates), has_template(templates.size()),
 	  externed(externed)
 {
@@ -481,12 +459,12 @@ StructTy::StructTy(const Vector<StringRef> &fieldnames, const Vector<Type *> &fi
 		templatepos[templatenames[i]] = i;
 	}
 }
-StructTy::StructTy(const uint16_t &info, const uint32_t &id, const Vector<StringRef> &fieldnames,
+StructTy::StructTy(const uint32_t &id, const Vector<StringRef> &fieldnames,
 		   const Map<StringRef, size_t> &fieldpos, const Vector<Type *> &fields,
 		   const Vector<StringRef> &templatenames,
 		   const Map<StringRef, size_t> &templatepos, const Vector<TypeTy *> &templates,
 		   const bool &has_template, const bool &externed)
-	: Type(TSTRUCT, info, id), fieldpos(fieldpos), fieldnames(fieldnames), fields(fields),
+	: Type(TSTRUCT, id), fieldpos(fieldpos), fieldnames(fieldnames), fields(fields),
 	  templatepos(templatepos), templatenames(templatenames), templates(templates),
 	  has_template(has_template), externed(externed)
 {}
@@ -508,7 +486,7 @@ bool StructTy::isTemplate(const size_t &weak_depth)
 }
 String StructTy::toStr(const size_t &weak_depth)
 {
-	String res = infoToStr() + "struct<" + std::to_string(getID()) + ">{";
+	String res = "struct<" + std::to_string(getID()) + ">{";
 	for(auto &f : fields) {
 		res += f->toStr(weak_depth) + ", ";
 	}
@@ -525,9 +503,8 @@ Type *StructTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 	Vector<TypeTy *> newtemplates;
 	for(auto &field : fields) newfields.push_back(field->clone(c, as_is, weak_depth));
 	for(auto &t : templates) newtemplates.push_back(as<TypeTy>(t->clone(c, as_is, weak_depth)));
-	return c.allocType<StructTy>(getInfo(), getBaseID(), fieldnames, fieldpos, newfields,
-				     templatenames, templatepos, newtemplates, has_template,
-				     externed);
+	return c.allocType<StructTy>(getBaseID(), fieldnames, fieldpos, newfields, templatenames,
+				     templatepos, newtemplates, has_template, externed);
 }
 bool StructTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 {
@@ -651,19 +628,20 @@ Value *StructTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData c
 FuncTy::FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
 	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
 	       const bool &externed, const bool &variadic)
-	: Type(TFUNC, 0, genTypeID()), var(var), args(args), ret(ret), argcomptime(_argcomptime),
-	  intrin(intrin), inty(inty), uniqid(!externed ? genFuncUniqID() : 0), externed(externed),
-	  variadic(variadic)
+	: Type(TFUNC, genTypeID()), var(var), sig(nullptr), args(args), ret(ret),
+	  argcomptime(_argcomptime), intrin(intrin), inty(inty),
+	  uniqid(!externed ? genFuncUniqID() : 0), externed(externed), variadic(variadic)
 {
+	setSigFromVar();
 	if(_argcomptime.empty() && !args.empty()) {
 		for(size_t i = 0; i < args.size(); ++i) argcomptime.push_back(false);
 	}
 }
-FuncTy::FuncTy(const uint16_t &info, const uint32_t &id, StmtVar *var, const Vector<Type *> &args,
+FuncTy::FuncTy(const uint32_t &id, StmtVar *var, StmtFnSig *sig, const Vector<Type *> &args,
 	       Type *ret, const Vector<bool> &_argcomptime, IntrinsicFn intrin,
 	       const IntrinType &inty, const uint32_t &uniqid, const bool &externed,
 	       const bool &variadic)
-	: Type(TFUNC, info, id), var(var), args(args), ret(ret), argcomptime(_argcomptime),
+	: Type(TFUNC, id), var(var), sig(sig), args(args), ret(ret), argcomptime(_argcomptime),
 	  intrin(intrin), inty(inty), uniqid(uniqid), externed(externed), variadic(variadic)
 {
 	if(_argcomptime.empty() && !args.empty()) {
@@ -707,7 +685,7 @@ bool FuncTy::isTemplate(const size_t &weak_depth)
 }
 String FuncTy::toStr(const size_t &weak_depth)
 {
-	String res = infoToStr() + "function<" + std::to_string(getID());
+	String res = "function<" + std::to_string(getID());
 	if(intrin || externed) res += ", ";
 	if(intrin) res += "intrinsic, ";
 	if(externed) res += "extern, ";
@@ -730,9 +708,8 @@ Type *FuncTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	Vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is, weak_depth));
-	return c.allocType<FuncTy>(getInfo(), getBaseID(), var, newargs,
-				   ret->clone(c, as_is, weak_depth), argcomptime, intrin, inty,
-				   uniqid, externed, variadic);
+	return c.allocType<FuncTy>(getBaseID(), var, sig, newargs, ret->clone(c, as_is, weak_depth),
+				   argcomptime, intrin, inty, uniqid, externed, variadic);
 }
 bool FuncTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 {
@@ -792,6 +769,13 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 		Type *sa      = this->args[i];
 		Stmt *ciarg   = callargs[j];
 		bool variadic = false;
+		if(sig && ciarg->isConst() && !sig->getArg(i)->isConst() &&
+		   (isPtr() || sig->getArg(i)->isRef())) {
+			err::out(loc, {"losing constness for argument index ", std::to_string(i),
+				       ", cannot continue"});
+			is_arg_compatible = false;
+			break;
+		}
 		if(i == this->args.size() - 1 && isVariadic()) {
 			variadic = true;
 			--i;
@@ -814,7 +798,6 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 		for(auto &vtmp : variadics) {
 			Type *v = vtmp->clone(c);
 			applyPointerCount(c, v, ptrcount);
-			v->appendInfo(vabase->getInfo());
 			va->addArg(v);
 		}
 		res->args.push_back(va);
@@ -827,9 +810,7 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 	}
 	for(size_t i = 0; i < res->args.size(); ++i) {
 		if(res->args[i]->isAny()) {
-			size_t info  = res->args[i]->getInfo();
 			res->args[i] = callargs[i]->getValueTy()->clone(c);
-			res->args[i]->appendInfo(info);
 		}
 	}
 	return res;
@@ -840,6 +821,15 @@ FuncTy *FuncTy::create(Context &c, StmtVar *_var, const Vector<Type *> &_args, T
 {
 	return c.allocType<FuncTy>(_var, _args, _ret, _argcomptime, _intrin, _inty, _externed,
 				   _variadic);
+}
+void FuncTy::setSigFromVar()
+{
+	if(!var) return;
+	if(var->getVVal()->isFnDef()) {
+		sig = as<StmtFnDef>(var->getVVal())->getSig();
+	} else if(var->getVVal()->isExtern()) {
+		sig = as<StmtFnSig>(as<StmtExtern>(var->getVVal())->getEntity());
+	}
 }
 void FuncTy::updateUniqID()
 {
@@ -859,9 +849,9 @@ Value *FuncTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Variadic Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-VariadicTy::VariadicTy(const Vector<Type *> &args) : Type(TVARIADIC, 0, TVARIADIC), args(args) {}
-VariadicTy::VariadicTy(const uint16_t &info, const uint32_t &id, const Vector<Type *> &args)
-	: Type(TVARIADIC, info, id), args(args)
+VariadicTy::VariadicTy(const Vector<Type *> &args) : Type(TVARIADIC, TVARIADIC), args(args) {}
+VariadicTy::VariadicTy(const uint32_t &id, const Vector<Type *> &args)
+	: Type(TVARIADIC, id), args(args)
 {}
 VariadicTy::~VariadicTy() {}
 bool VariadicTy::isTemplate(const size_t &weak_depth)
@@ -873,7 +863,7 @@ bool VariadicTy::isTemplate(const size_t &weak_depth)
 }
 String VariadicTy::toStr(const size_t &weak_depth)
 {
-	String res = infoToStr() + "variadic<";
+	String res = "variadic<";
 	for(auto &a : args) {
 		res += a->toStr(weak_depth) + ", ";
 	}
@@ -888,7 +878,7 @@ Type *VariadicTy::clone(Context &c, const bool &as_is, const size_t &weak_depth)
 {
 	Vector<Type *> newargs;
 	for(auto &arg : args) newargs.push_back(arg->clone(c, as_is, weak_depth));
-	return c.allocType<VariadicTy>(getInfo(), getBaseID(), newargs);
+	return c.allocType<VariadicTy>(getBaseID(), newargs);
 }
 bool VariadicTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 {

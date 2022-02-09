@@ -189,7 +189,6 @@ VecVal *VecVal::createStr(Context &c, StringRef val, ContainsData has_data)
 		chars.push_back(IntVal::create(c, ty, has_data, ch));
 	}
 	ty = mkPtrTy(c, ty, 0, false);
-	ty->setConst();
 	return c.allocVal<VecVal>(ty, has_data, chars);
 }
 

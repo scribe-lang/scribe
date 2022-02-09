@@ -399,7 +399,7 @@ Stmt *SimplifyPass::createIntermediate(FuncTy *cf, Stmt *a, const size_t &i)
 	if(!a->isExpr()) {
 		return nullptr;
 	}
-	if(!cf->getArg(i)->hasRef()) {
+	if(cf->getSig() && !cf->getSig()->getArg(i)->isRef()) {
 		return nullptr;
 	}
 	StmtExpr *ax = as<StmtExpr>(a);
@@ -414,9 +414,12 @@ Stmt *SimplifyPass::createIntermediate(FuncTy *cf, Stmt *a, const size_t &i)
 	lex::Lexeme name(a->getLoc(), lex::IDEN, n);
 	StmtVar *v = StmtVar::create(ctx, a->getLoc(), name, nullptr, a, 0);
 	v->createAndSetValue(a->getValue()->clone(ctx));
+	v->appendStmtMask(a->getStmtMask());
+	a->castTo(nullptr, 0);
 	intermediates.push_back(v);
 	StmtSimple *newa = StmtSimple::create(ctx, a->getLoc(), name);
 	newa->setValueID(v);
+	newa->appendStmtMask(a->getStmtMask());
 	return newa;
 }
 } // namespace sc

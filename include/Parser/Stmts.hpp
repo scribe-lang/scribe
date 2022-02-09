@@ -54,7 +54,9 @@ enum Stmts : uint16_t
 
 enum class StmtMask : uint8_t
 {
-	COMPTIME = 1 << 0,
+	REF	 = 1 << 0,
+	CONST	 = 1 << 1,
+	COMPTIME = 1 << 2,
 };
 
 class Stmt
@@ -66,6 +68,7 @@ protected:
 
 	uint64_t valueid;
 	Type *cast_to;
+	uint8_t castmask;
 	size_t derefcount; // number of dereferences to be done while generating code
 
 public:
@@ -113,6 +116,8 @@ public:
 	{                                           \
 		stmtmask |= (uint8_t)StmtMask::Mod; \
 	}
+	SetModifierX(Ref, REF);
+	SetModifierX(Const, CONST);
 	SetModifierX(Comptime, COMPTIME);
 #undef SetModifierX
 
@@ -121,6 +126,8 @@ public:
 	{                                            \
 		stmtmask &= ~(uint8_t)StmtMask::Mod; \
 	}
+	UnsetModifierX(Ref, REF);
+	UnsetModifierX(Const, CONST);
 	UnsetModifierX(Comptime, COMPTIME);
 #undef UnsetModifierX
 
@@ -129,8 +136,40 @@ public:
 	{                                                 \
 		return stmtmask & (uint8_t)StmtMask::Mod; \
 	}
+	IsModifierX(Ref, REF);
+	IsModifierX(Const, CONST);
 	IsModifierX(Comptime, COMPTIME);
 #undef IsModifierX
+
+#define SetCastModifierX(Fn, Mod)                   \
+	inline void setCast##Fn()                   \
+	{                                           \
+		castmask |= (uint8_t)StmtMask::Mod; \
+	}
+	SetCastModifierX(Ref, REF);
+	SetCastModifierX(Const, CONST);
+	SetCastModifierX(Comptime, COMPTIME);
+#undef SetCastModifierX
+
+#define UnsetCastModifierX(Fn, Mod)                  \
+	inline void unsetCast##Fn()                  \
+	{                                            \
+		castmask &= ~(uint8_t)StmtMask::Mod; \
+	}
+	UnsetCastModifierX(Ref, REF);
+	UnsetCastModifierX(Const, CONST);
+	UnsetCastModifierX(Comptime, COMPTIME);
+#undef UnsetCastModifierX
+
+#define IsCastModifierX(Fn, Mod)                          \
+	inline bool isCast##Fn() const                    \
+	{                                                 \
+		return castmask & (uint8_t)StmtMask::Mod; \
+	}
+	IsCastModifierX(Ref, REF);
+	IsCastModifierX(Const, CONST);
+	IsCastModifierX(Comptime, COMPTIME);
+#undef IsCastModifierX
 
 	inline void setStmtMask(uint8_t mask)
 	{
@@ -143,6 +182,19 @@ public:
 	inline uint8_t getStmtMask()
 	{
 		return stmtmask;
+	}
+
+	inline void setCastStmtMask(uint8_t mask)
+	{
+		castmask = mask;
+	}
+	inline void appendCastStmtMask(uint8_t mask)
+	{
+		castmask |= mask;
+	}
+	inline uint8_t getCastStmtMask()
+	{
+		return castmask;
 	}
 
 	inline const Stmts &getStmtType() const
@@ -163,9 +215,10 @@ public:
 		return loc->getMod();
 	}
 
-	inline void castTo(Type *t)
+	inline void castTo(Type *t, uint8_t maskfrom)
 	{
 		cast_to = t;
+		appendCastStmtMask(maskfrom);
 	}
 	inline void setValueID(const uint64_t &vid)
 	{
@@ -256,17 +309,15 @@ public:
 class StmtType : public Stmt
 {
 	size_t ptr;    // number of ptrs
-	size_t info;   // all from TypeInfoMask
 	bool variadic; // this is a variadic type
 
 	Stmt *expr; // can be func, func call, name, name.x, ... (expr1)
 
 public:
-	StmtType(const ModuleLoc *loc, const size_t &ptr, const size_t &info, bool variadic,
-		 Stmt *expr);
+	StmtType(const ModuleLoc *loc, const size_t &ptr, bool variadic, Stmt *expr);
 	~StmtType();
-	static StmtType *create(Context &c, const ModuleLoc *loc, const size_t &ptr,
-				const size_t &info, bool variadic, Stmt *expr);
+	static StmtType *create(Context &c, const ModuleLoc *loc, const size_t &ptr, bool variadic,
+				Stmt *expr);
 
 	void disp(const bool &has_next);
 	Stmt *clone(Context &ctx);
@@ -283,29 +334,15 @@ public:
 		variadic = false;
 	}
 
-	inline void addTypeInfoMask(const size_t &mask)
-	{
-		info |= mask;
-	}
-	inline void remTypeInfoMask(const size_t &mask)
-	{
-		info &= ~mask;
-	}
 	inline const size_t &getPtrCount() const
 	{
 		return ptr;
-	}
-	inline const size_t &getInfoMask() const
-	{
-		return info;
 	}
 
 	inline bool isVariadic() const
 	{
 		return variadic;
 	}
-
-	bool hasModifier(const size_t &tim) const;
 
 	inline Stmt *&getExpr()
 	{

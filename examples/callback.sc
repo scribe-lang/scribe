@@ -20,6 +20,6 @@ let main = fn(): i32 {
 	}
 	let sum = 0;
 	v.doEach(accum, sum);
-	io.println("Sum: ", sum);
+	io.println("Sum: ", sum); // Sum: 45
 	return 0;
 };

@@ -116,18 +116,18 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 {
 	type = nullptr;
 
-	size_t ptr    = 0;
-	size_t info   = 0;
-	bool variadic = false;
-	Stmt *count   = nullptr;
-	Stmt *expr    = nullptr;
-	bool dot_turn = false; // to ensure type name is in the form <name><dot><name>...
+	size_t ptr	 = 0;
+	uint8_t stmtmask = 0;
+	bool variadic	 = false;
+	Stmt *count	 = nullptr;
+	Stmt *expr	 = nullptr;
+	bool dot_turn	 = false; // to ensure type name is in the form <name><dot><name>...
 
 	lex::Lexeme &start = p.peek();
 
 	if(p.accept(lex::COMPTIME, lex::FN)) {
 		if(!parse_fnsig(p, expr)) return false;
-		type = StmtType::create(ctx, start.getLoc(), 0, 0, false, expr);
+		type = StmtType::create(ctx, start.getLoc(), 0, false, expr);
 		return true;
 	}
 
@@ -135,8 +135,8 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 
 	while(p.acceptn(lex::MUL)) ++ptr;
 
-	if(p.acceptn(lex::BAND)) info |= TypeInfoMask::REF;
-	if(p.acceptn(lex::CONST)) info |= TypeInfoMask::CONST;
+	if(p.acceptn(lex::BAND)) stmtmask |= (uint8_t)StmtMask::REF;
+	if(p.acceptn(lex::CONST)) stmtmask |= (uint8_t)StmtMask::CONST;
 
 	if(!parse_expr_01(p, expr, true)) {
 		err::out(p.peek(), {"failed to parse type expression"});
@@ -148,7 +148,8 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 		return false;
 	}
 
-	type = StmtType::create(ctx, start.getLoc(), ptr, info, variadic, expr);
+	type = StmtType::create(ctx, start.getLoc(), ptr, variadic, expr);
+	type->setStmtMask(stmtmask);
 	return true;
 }
 
@@ -965,7 +966,7 @@ done:
 			return false;
 		}
 		lex::Lexeme selfeme(in->getLoc(), lex::IDEN, "self");
-		in->addTypeInfoMask(REF);
+		in->setRef();
 		StmtVar *selfvar  = StmtVar::create(ctx, in->getLoc(), selfeme, in, nullptr, 0);
 		StmtFnSig *valsig = as<StmtFnDef>(val)->getSig();
 		valsig->getArgs().insert(valsig->getArgs().begin(), selfvar);
@@ -1039,7 +1040,7 @@ post_args:
 	if(!rettype) {
 		lex::Lexeme voideme = lex::Lexeme(p.peek(-1).getLoc(), lex::VOID, "void");
 		StmtSimple *voidsim = StmtSimple::create(ctx, voideme.getLoc(), voideme);
-		rettype = StmtType::create(ctx, voidsim->getLoc(), 0, 0, false, voidsim);
+		rettype		    = StmtType::create(ctx, voidsim->getLoc(), 0, false, voidsim);
 	}
 
 	fsig = StmtFnSig::create(ctx, start.getLoc(), args, rettype, found_va);
