@@ -131,10 +131,10 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 		is_self = true;
 	}
 	Type *res = stmt->getExpr()->getValueTy();
-	if(!is_self) res = res->clone(ctx);
+	if(!is_self) res = res->specialize(ctx);
 	// generate ptrs
 	for(size_t i = 0; i < stmt->getPtrCount(); ++i) {
-		res = PtrTy::create(ctx, res, 0, false);
+		res = PtrTy::get(ctx, res, 0, false);
 		if(is_self && i == stmt->getPtrCount() - 1) {
 			as<PtrTy>(res)->setWeak(true);
 		}
@@ -147,33 +147,37 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 	lex::Lexeme &lval = stmt->getLexValue();
 	switch(lval.getTokVal()) {
 	case lex::VOID: stmt->createAndSetValue(VoidVal::create(ctx)); break;
-	case lex::ANY: stmt->createAndSetValue(TypeVal::create(ctx, AnyTy::create(ctx))); break;
-	case lex::TYPE: stmt->createAndSetValue(TypeVal::create(ctx, TypeTy::create(ctx))); break;
+	case lex::ANY: stmt->createAndSetValue(TypeVal::create(ctx, AnyTy::get(ctx))); break;
+	case lex::TYPE: stmt->createAndSetValue(TypeVal::create(ctx, TypeTy::get(ctx))); break;
 	case lex::TRUE: {
-		IntVal *iv = IntVal::create(ctx, mkI1Ty(ctx), CDPERMA, 1);
+		IntVal *iv = IntVal::create(ctx, IntTy::get(ctx, 1, true), CDPERMA, 1);
 		stmt->createAndSetValue(iv);
 		break;
 	}
 	case lex::FALSE: // fallthrough
-	case lex::NIL: stmt->createAndSetValue(IntVal::create(ctx, mkI1Ty(ctx), CDPERMA, 0)); break;
+	case lex::NIL: {
+		stmt->createAndSetValue(IntVal::create(ctx, IntTy::get(ctx, 1, true), CDPERMA, 0));
+		break;
+	}
 	case lex::CHAR: {
-		IntVal *iv = IntVal::create(ctx, mkI8Ty(ctx), CDPERMA, lval.getDataStr().front());
+		IntVal *iv =
+		IntVal::create(ctx, IntTy::get(ctx, 8, true), CDPERMA, lval.getDataStr().front());
 		stmt->createAndSetValue(iv);
 		break;
 	}
 	case lex::INT: {
 		Type *ity = nullptr;
 		if(lval.getDataInt() > INT_MAX || lval.getDataInt() < INT_MIN) {
-			ity = mkI64Ty(ctx);
+			ity = IntTy::get(ctx, 64, true);
 		} else {
-			ity = mkI32Ty(ctx);
+			ity = IntTy::get(ctx, 32, true);
 		}
 		IntVal *iv = IntVal::create(ctx, ity, CDPERMA, lval.getDataInt());
 		stmt->createAndSetValue(iv);
 		break;
 	}
 	case lex::FLT: {
-		FltVal *fv = FltVal::create(ctx, mkF32Ty(ctx), CDPERMA, lval.getDataFlt());
+		FltVal *fv = FltVal::create(ctx, FltTy::get(ctx, 32), CDPERMA, lval.getDataFlt());
 		stmt->createAndSetValue(fv);
 		break;
 	}
@@ -182,17 +186,50 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		stmt->setConst();
 		break;
 	}
-	case lex::I1: stmt->createAndSetValue(TypeVal::create(ctx, mkI1Ty(ctx))); break;
-	case lex::I8: stmt->createAndSetValue(TypeVal::create(ctx, mkI8Ty(ctx))); break;
-	case lex::I16: stmt->createAndSetValue(TypeVal::create(ctx, mkI16Ty(ctx))); break;
-	case lex::I32: stmt->createAndSetValue(TypeVal::create(ctx, mkI32Ty(ctx))); break;
-	case lex::I64: stmt->createAndSetValue(TypeVal::create(ctx, mkI64Ty(ctx))); break;
-	case lex::U8: stmt->createAndSetValue(TypeVal::create(ctx, mkU8Ty(ctx))); break;
-	case lex::U16: stmt->createAndSetValue(TypeVal::create(ctx, mkU16Ty(ctx))); break;
-	case lex::U32: stmt->createAndSetValue(TypeVal::create(ctx, mkU32Ty(ctx))); break;
-	case lex::U64: stmt->createAndSetValue(TypeVal::create(ctx, mkU64Ty(ctx))); break;
-	case lex::F32: stmt->createAndSetValue(TypeVal::create(ctx, mkF32Ty(ctx))); break;
-	case lex::F64: stmt->createAndSetValue(TypeVal::create(ctx, mkF64Ty(ctx))); break;
+	case lex::I1: {
+		stmt->createAndSetValue(TypeVal::create(ctx, IntTy::get(ctx, 1, true)));
+		break;
+	}
+	case lex::I8: {
+		stmt->createAndSetValue(TypeVal::create(ctx, IntTy::get(ctx, 8, true)));
+		break;
+	}
+	case lex::I16: {
+		stmt->createAndSetValue(TypeVal::create(ctx, IntTy::get(ctx, 16, true)));
+		break;
+	}
+	case lex::I32: {
+		stmt->createAndSetValue(TypeVal::create(ctx, IntTy::get(ctx, 32, true)));
+		break;
+	}
+	case lex::I64: {
+		stmt->createAndSetValue(TypeVal::create(ctx, IntTy::get(ctx, 64, true)));
+		break;
+	}
+	case lex::U8: {
+		stmt->createAndSetValue(TypeVal::create(ctx, IntTy::get(ctx, 8, false)));
+		break;
+	}
+	case lex::U16: {
+		stmt->createAndSetValue(TypeVal::create(ctx, IntTy::get(ctx, 16, false)));
+		break;
+	}
+	case lex::U32: {
+		stmt->createAndSetValue(TypeVal::create(ctx, IntTy::get(ctx, 32, false)));
+		break;
+	}
+	case lex::U64: {
+		stmt->createAndSetValue(TypeVal::create(ctx, IntTy::get(ctx, 64, false)));
+		break;
+	}
+	case lex::F32: {
+		stmt->createAndSetValue(TypeVal::create(ctx, FltTy::get(ctx, 32)));
+		break;
+	}
+	case lex::F64: {
+		stmt->createAndSetValue(TypeVal::create(ctx, FltTy::get(ctx, 64)));
+		break;
+	}
 	case lex::IDEN: {
 		StmtVar *decl	       = nullptr;
 		Module *mod	       = stmt->getMod();
@@ -485,7 +522,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			return false;
 		}
 		Type *t = lhs->getValueTy();
-		t	= PtrTy::create(ctx, t, 0, false);
+		t	= PtrTy::get(ctx, t, 0, false);
 		stmt->createAndSetValue(VecVal::create(ctx, t, CDFALSE, {lhs->getValue()}));
 		break;
 	}
@@ -508,7 +545,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			break;
 		}
 		Type *t = as<TypeVal>(lhs->getValue())->getVal();
-		stmt->createAndSetValue(TypeVal::create(ctx, PtrTy::create(ctx, t, 0, false)));
+		stmt->createAndSetValue(TypeVal::create(ctx, PtrTy::get(ctx, t, 0, false)));
 		break;
 	}
 	case lex::SUBS: {
@@ -851,8 +888,8 @@ bool TypeAssignPass::visit(StmtFnSig *stmt, Stmt **source)
 		argcomptime.push_back(a->isComptime());
 	}
 	Type *retty = stmt->getRetType()->getValueTy();
-	FuncTy *ft  = FuncTy::create(ctx, nullptr, argst, retty, argcomptime, nullptr, INONE, false,
-				     stmt->hasVariadic());
+	FuncTy *ft  = FuncTy::get(ctx, nullptr, argst, retty, argcomptime, nullptr, INONE, false,
+				  stmt->hasVariadic());
 	stmt->createAndSetValue(FuncVal::create(ctx, ft));
 	// needs to be executed to set the correct value for disable_template variable
 	stmt->requiresTemplateInit();
@@ -936,7 +973,8 @@ bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 	size_t i	      = 0;
 	for(auto &e : stmt->getItems()) {
 		e.setDataStr(getMangledName(stmt, e.getDataStr(), ns));
-		uint64_t vid = createValueIDWith(IntVal::create(ctx, mkI32Ty(ctx), CDPERMA, i));
+		uint64_t vid =
+		createValueIDWith(IntVal::create(ctx, IntTy::get(ctx, 32, true), CDPERMA, i));
 		Stmt *val    = StmtSimple::create(ctx, loc, lex::Lexeme(loc, (int64_t)i++));
 		StmtVar *var = StmtVar::create(ctx, loc, e, nullptr, val, 0);
 		var->setComptime();
@@ -956,12 +994,12 @@ bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 
 	disabled_varname_mangling = true;
 	for(auto &t : templatenames) {
-		templates.push_back(TypeTy::create(ctx));
+		templates.push_back(TypeTy::get(ctx));
 		uint64_t id = createValueIDWith(TypeVal::create(ctx, templates.back()));
 		vmgr.addVar(t, id, nullptr);
 	}
 
-	StructTy *st = StructTy::create(ctx, {}, {}, templatenames, templates, stmt->isExterned());
+	StructTy *st = StructTy::get(ctx, {}, {}, templatenames, templates, stmt->isExterned());
 	stmt->createAndSetValue(TypeVal::create(ctx, st));
 	uint64_t selfid = stmt->getValueID();
 	vmgr.addVar("Self", selfid, nullptr);
@@ -1154,11 +1192,11 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 		err::out(stmt, {"function type has no declaration"});
 		return false;
 	}
-	Type *valtype = val ? val->getValueTy()->clone(ctx) : VoidTy::create(ctx);
+	Type *valtype = val ? val->getValueTy()->specialize(ctx) : VoidTy::get(ctx);
 	bool was_any  = false;
 	if(fn->getRet()->isAny()) {
 		Type *rt   = fn->getRet();
-		Type *newr = valtype->clone(ctx);
+		Type *newr = valtype->specialize(ctx);
 		fn->setRet(newr);
 		fnblk->changeValue(newr->toDefaultValue(ctx, stmt->getLoc(), CDFALSE));
 		if(val && fn->getSig()) {
@@ -1236,16 +1274,16 @@ void TypeAssignPass::applyPrimitiveTypeCoercion(Stmt *lhs, Stmt *rhs, const lex:
 
 	if(oper.getTok().isAssign()) {
 		if(r->isPtr() && !l->isPtr()) return;
-		rhs->castTo(l->clone(ctx), lhs->getStmtMask());
+		rhs->castTo(l->specialize(ctx), lhs->getStmtMask());
 		return;
 	}
 	// 0 => lhs
 	// 1 => rhs
 	bool superior = chooseSuperiorPrimitiveType(l, r);
 	if(superior) {
-		rhs->castTo(l->clone(ctx), lhs->getStmtMask());
+		rhs->castTo(l->specialize(ctx), lhs->getStmtMask());
 	} else {
-		lhs->castTo(r->clone(ctx), rhs->getStmtMask());
+		lhs->castTo(r->specialize(ctx), rhs->getStmtMask());
 	}
 }
 
@@ -1316,7 +1354,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 		Type *cft    = cf->getArg(i);
 		if(!cft->isVariadic()) {
 			Type *cftc = cft->isAny() ? args[i]->getValueTy() : cft;
-			cftc	   = cftc->clone(ctx);
+			cftc	   = cftc->specialize(ctx);
 			if(cfa->isRef()) {
 				RefVal *rv = RefVal::create(ctx, cftc, args[i]->getValue());
 				cfa->createAndSetValue(rv);
@@ -1346,7 +1384,7 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 			StmtVar *newv = as<StmtVar>(cfa->clone(ctx));
 			newv->getVType()->unsetVariadic();
 			newv->getName().setDataStr(argn);
-			Type *t = args[i]->getValueTy()->clone(ctx);
+			Type *t = args[i]->getValueTy()->specialize(ctx);
 			if(newv->isRef()) {
 				RefVal *rv = RefVal::create(ctx, t, args[i]->getValue());
 				newv->createAndSetValue(rv);

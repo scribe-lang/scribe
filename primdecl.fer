@@ -46,29 +46,22 @@ let getOperCStr = fn(op) {
 };
 
 let twoparamint_templ = `
-	g = mkTypeTy(c);
-	i0 = mkI0Ty(c);
+	g = TypeTy::get(c);
 	ADD{tycap}FN("{opname}", createFnVal(c, \\{g, i0}, g, intrinsic_{opn}_{ty}, IVALUE));`;
 let twoparamflt_templ = `
-	g = mkTypeTy(c);
-	f0 = mkF0Ty(c);
+	g = TypeTy::get(c);
 	ADD{tycap}FN("{opname}", createFnVal(c, \\{g, f0}, g, intrinsic_{opn}_{ty}, IVALUE));`;
 let oneparam_templ = `
-	g = mkTypeTy(c);
+	g = TypeTy::get(c);
 	ADD{tycap}FN("{opname}", createFnVal(c, \\{g}, g, intrinsic_{opn}_{ty}, IVALUE));`;
 let twoparamintbool_templ = `
-	i1 = mkI1Ty(c);
-	g = mkTypeTy(c);
-	i0 = mkI0Ty(c);
+	g = TypeTy::get(c);
 	ADD{tycap}FN("{opname}", createFnVal(c, \\{g, i0}, i1, intrinsic_{opn}_{ty}, IVALUE));`;
 let twoparamfltbool_templ = `
-	i1 = mkI1Ty(c);
-	g = mkTypeTy(c);
-	f0 = mkF0Ty(c);
+	g = TypeTy::get(c);
 	ADD{tycap}FN("{opname}", createFnVal(c, \\{g, f0}, i1, intrinsic_{opn}_{ty}, IVALUE));`;
 let oneparambool_templ = `
-	i1 = mkI1Ty(c);
-	g = mkTypeTy(c);
+	g = TypeTy::get(c);
 	ADD{tycap}FN("{opname}", createFnVal(c, \\{g}, i1, intrinsic_{opn}_{ty}, IVALUE));`;
 
 # int

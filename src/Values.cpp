@@ -66,7 +66,7 @@ void Value::clearHasData()
 	has_data = CDFALSE;
 }
 
-VoidVal::VoidVal(Context &c) : Value(VVOID, VoidTy::create(c), CDTRUE) {}
+VoidVal::VoidVal(Context &c) : Value(VVOID, VoidTy::get(c), CDTRUE) {}
 
 String VoidVal::toStr()
 {
@@ -184,11 +184,11 @@ VecVal *VecVal::create(Context &c, Type *ty, ContainsData has_data, const Vector
 VecVal *VecVal::createStr(Context &c, StringRef val, ContainsData has_data)
 {
 	Vector<Value *> chars;
-	Type *ty = mkI8Ty(c);
+	Type *ty = IntTy::get(c, 8, true);
 	for(auto &ch : val) {
 		chars.push_back(IntVal::create(c, ty, has_data, ch));
 	}
-	ty = mkPtrTy(c, ty, 0, false);
+	ty = PtrTy::get(c, ty, 0, false);
 	return c.allocVal<VecVal>(ty, has_data, chars);
 }
 
@@ -256,7 +256,7 @@ String FuncVal::toStr()
 }
 Value *FuncVal::clone(Context &c)
 {
-	return create(c, as<FuncTy>(ty->clone(c)));
+	return create(c, as<FuncTy>(ty));
 }
 bool FuncVal::updateValue(Context &c, Value *v)
 {
@@ -276,7 +276,7 @@ String TypeVal::toStr()
 }
 Value *TypeVal::clone(Context &c)
 {
-	return create(c, ty->clone(c));
+	return create(c, ty);
 }
 bool TypeVal::updateValue(Context &c, Value *v)
 {
@@ -289,7 +289,7 @@ TypeVal *TypeVal::create(Context &c, Type *val)
 }
 
 NamespaceVal::NamespaceVal(Context &c, StringRef val)
-	: Value(VNAMESPACE, mkStrTy(c), CDTRUE), val(val)
+	: Value(VNAMESPACE, PtrTy::getStr(c), CDTRUE), val(val)
 {}
 
 String NamespaceVal::toStr()

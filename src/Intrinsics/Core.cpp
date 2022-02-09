@@ -72,25 +72,25 @@ gen_import:
 INTRINSIC(ismainsrc)
 {
 	bool ismm = stmt->getMod()->isMainModule();
-	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDTRUE, ismm));
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDTRUE, ismm));
 	return true;
 }
 INTRINSIC(isprimitive)
 {
 	bool is_prim = args[0]->getValueTy()->isPrimitive();
-	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_prim));
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_prim));
 	return true;
 }
 INTRINSIC(isprimitiveorptr)
 {
 	bool is_prim_or_ptr = args[0]->getValueTy()->isPrimitiveOrPtr();
-	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_prim_or_ptr));
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_prim_or_ptr));
 	return true;
 }
 INTRINSIC(iscstring)
 {
 	bool is_cstr = args[0]->getValue()->isStrLiteral();
-	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_cstr));
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_cstr));
 	return true;
 }
 INTRINSIC(iscchar)
@@ -101,13 +101,13 @@ INTRINSIC(iscchar)
 		is_cchar &= t->getBits() == 8;
 		is_cchar &= t->isSigned();
 	}
-	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_cchar));
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_cchar));
 	return true;
 }
 INTRINSIC(isequalty)
 {
 	bool is_same_ty = args[0]->getValueTy()->getID() == args[1]->getValueTy()->getID();
-	stmt->createAndSetValue(IntVal::create(c, mkI1Ty(c), CDPERMA, is_same_ty));
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_same_ty));
 	return true;
 }
 INTRINSIC(szof)
@@ -117,7 +117,7 @@ INTRINSIC(szof)
 		err::out(args[0], {"invalid type info, received size 0"});
 		return false;
 	}
-	stmt->createAndSetValue(IntVal::create(c, mkU64Ty(c), CDPERMA, sz));
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 64, false), CDPERMA, sz));
 	return true;
 }
 INTRINSIC(as)
@@ -135,8 +135,8 @@ INTRINSIC(typeof)
 INTRINSIC(ptr)
 {
 	// args[0] should be a TypeVal
-	Type *res = as<TypeVal>(args[0]->getValue())->getVal()->clone(c);
-	res	  = PtrTy::create(c, res, 0, false);
+	Type *res = as<TypeVal>(args[0]->getValue())->getVal()->specialize(c);
+	res	  = PtrTy::get(c, res, 0, false);
 	stmt->createAndSetValue(TypeVal::create(c, res));
 	return true;
 }
@@ -149,7 +149,7 @@ INTRINSIC(valen)
 		return false;
 	}
 	size_t vasz = ta->getFnVALen();
-	stmt->createAndSetValue(IntVal::create(c, mkU64Ty(c), CDPERMA, vasz));
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 64, false), CDPERMA, vasz));
 	return true;
 }
 INTRINSIC(array)
@@ -161,7 +161,7 @@ INTRINSIC(array)
 		counts.insert(counts.begin(), as<IntVal>(args[i]->getValue())->getVal());
 	}
 	for(auto &count : counts) {
-		resty = PtrTy::create(c, resty, count, false);
+		resty = PtrTy::get(c, resty, count, false);
 	}
 	Value *res = resty->toDefaultValue(c, stmt->getLoc(), CDPERMA);
 	if(!res) {
@@ -207,12 +207,12 @@ INTRINSIC(getosid)
 #elif defined(__DragonFly__)
 	res = 8;
 #endif
-	stmt->createAndSetValue(IntVal::create(c, mkI32Ty(c), CDPERMA, res));
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 32, true), CDPERMA, res));
 	return true;
 }
 INTRINSIC(syspathmax)
 {
-	stmt->createAndSetValue(IntVal::create(c, mkI32Ty(c), CDPERMA, PATH_MAX));
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 32, true), CDPERMA, PATH_MAX));
 	return true;
 }
 INTRINSIC(compileerror)
