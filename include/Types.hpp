@@ -39,19 +39,11 @@ enum Types : uint16_t
 	_LAST
 };
 
-// TODO:
-// This enum (and respective variables) will be completely removed
-// Const should be a type in itself
-enum TypeInfoMask
-{
-	REF   = 1 << 0, // is a reference
-	CONST = 1 << 1, // is const
-};
-
 class Stmt;
 class StmtExpr;
 class StmtVar;
 class StmtFnDef;
+class StmtFnSig;
 class StmtFnCallInfo;
 typedef bool (*IntrinsicFn)(Context &c, StmtExpr *stmt, Stmt **source, Vector<Stmt *> &args);
 #define INTRINSIC(name) \
@@ -61,15 +53,13 @@ class Type
 {
 	uint32_t id;
 	Types type;
-	uint16_t info;
 
 public:
-	Type(const Types &type, const uint16_t &info, const uint32_t &id);
+	Type(const Types &type, const uint32_t &id);
 	virtual ~Type();
 
 	bool isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
 
-	String infoToStr();
 	String baseToStr();
 	bool requiresCast(Type *other);
 
@@ -83,18 +73,6 @@ public:
 	virtual void unmergeTemplates(const size_t &weak_depth = 0);
 	virtual bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
 
-	inline void setInfo(const size_t &inf)
-	{
-		info = inf;
-	}
-	inline void appendInfo(const size_t &inf)
-	{
-		info |= inf;
-	}
-	inline uint16_t getInfo() const
-	{
-		return info;
-	}
 	inline bool isPrimitive() const
 	{
 		return isInt() || isFlt();
@@ -131,33 +109,6 @@ public:
 	IsTyX(Variadic, VARIADIC);
 #undef IsTyX
 
-#define SetModifierX(Fn, Mod) \
-	inline void set##Fn() \
-	{                     \
-		info |= Mod;  \
-	}
-	SetModifierX(Const, CONST);
-	SetModifierX(Ref, REF);
-#undef SetModifierX
-
-#define UnsetModifierX(Fn, Mod) \
-	inline void unset##Fn() \
-	{                       \
-		info &= ~Mod;   \
-	}
-	UnsetModifierX(Const, CONST);
-	UnsetModifierX(Ref, REF);
-#undef UnsetModifierX
-
-#define IsModifierX(Fn, Mod)        \
-	inline bool has##Fn() const \
-	{                           \
-		return info & Mod;  \
-	}
-	IsModifierX(Const, CONST);
-	IsModifierX(Ref, REF);
-#undef IsModifierX
-
 	inline const uint32_t &getBaseID() const
 	{
 		return id;
@@ -173,7 +124,6 @@ class VoidTy : public Type
 {
 public:
 	VoidTy();
-	VoidTy(const uint16_t &info);
 	~VoidTy();
 
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
@@ -188,7 +138,6 @@ class AnyTy : public Type
 {
 public:
 	AnyTy();
-	AnyTy(const uint16_t &info);
 	~AnyTy();
 
 	Type *clone(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
@@ -207,7 +156,7 @@ class IntTy : public Type
 
 public:
 	IntTy(const uint16_t &bits, const bool &sign);
-	IntTy(const uint16_t &info, const uint32_t &id, const uint16_t &bits, const bool &sign);
+	IntTy(const uint32_t &id, const uint16_t &bits, const bool &sign);
 	~IntTy();
 
 	uint32_t getID();
@@ -235,7 +184,7 @@ class FltTy : public Type
 
 public:
 	FltTy(const uint16_t &bits);
-	FltTy(const uint16_t &info, const uint32_t &id, const uint16_t &bits);
+	FltTy(const uint32_t &id, const uint16_t &bits);
 	~FltTy();
 
 	uint32_t getID();
@@ -259,7 +208,7 @@ class TypeTy : public Type
 
 public:
 	TypeTy();
-	TypeTy(const uint16_t &info, const uint32_t &id, const uint32_t &containedtyid);
+	TypeTy(const uint32_t &id, const uint32_t &containedtyid);
 	~TypeTy();
 
 	uint32_t getUniqID();
@@ -287,8 +236,7 @@ class PtrTy : public Type
 
 public:
 	PtrTy(Type *to, const uint16_t &count, const bool &is_weak);
-	PtrTy(const uint16_t &info, const uint32_t &id, Type *to, const uint16_t &count,
-	      const bool &is_weak);
+	PtrTy(const uint32_t &id, Type *to, const uint16_t &count, const bool &is_weak);
 	~PtrTy();
 
 	uint32_t getUniqID();
@@ -344,7 +292,7 @@ public:
 	StructTy(const Vector<StringRef> &fieldnames, const Vector<Type *> &fields,
 		 const Vector<StringRef> &templatenames, const Vector<TypeTy *> &templates,
 		 const bool &externed);
-	StructTy(const uint16_t &info, const uint32_t &id, const Vector<StringRef> &fieldnames,
+	StructTy(const uint32_t &id, const Vector<StringRef> &fieldnames,
 		 const Map<StringRef, size_t> &fieldpos, const Vector<Type *> &fields,
 		 const Vector<StringRef> &templatenames, const Map<StringRef, size_t> &templatepos,
 		 const Vector<TypeTy *> &templates, const bool &has_template, const bool &externed);
@@ -424,6 +372,7 @@ enum IntrinType
 class FuncTy : public Type
 {
 	StmtVar *var;
+	StmtFnSig *sig;
 	Vector<Type *> args;
 	Type *ret;
 	Vector<bool> argcomptime;
@@ -437,7 +386,7 @@ public:
 	FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
 	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
 	       const bool &externed, const bool &variadic);
-	FuncTy(const uint16_t &info, const uint32_t &id, StmtVar *var, const Vector<Type *> &args,
+	FuncTy(const uint32_t &id, StmtVar *var, StmtFnSig *sig, const Vector<Type *> &args,
 	       Type *ret, const Vector<bool> &_argcomptime, IntrinsicFn intrin,
 	       const IntrinType &inty, const uint32_t &uniqid, const bool &externed,
 	       const bool &variadic);
@@ -464,7 +413,9 @@ public:
 	inline void setVar(StmtVar *v)
 	{
 		var = v;
+		setSigFromVar();
 	}
+	void setSigFromVar();
 	inline void setArg(const size_t &idx, Type *arg)
 	{
 		args[idx] = arg;
@@ -496,6 +447,10 @@ public:
 	inline StmtVar *&getVar()
 	{
 		return var;
+	}
+	inline StmtFnSig *getSig()
+	{
+		return sig;
 	}
 	inline Vector<Type *> &getArgs()
 	{
@@ -546,7 +501,7 @@ class VariadicTy : public Type
 
 public:
 	VariadicTy(const Vector<Type *> &args);
-	VariadicTy(const uint16_t &info, const uint32_t &id, const Vector<Type *> &args);
+	VariadicTy(const uint32_t &id, const Vector<Type *> &args);
 	~VariadicTy();
 
 	bool isTemplate(const size_t &weak_depth = 0);
@@ -637,7 +592,6 @@ inline Type *mkStrTy(Context &c)
 {
 	Type *res = IntTy::create(c, 8, true);
 	res	  = PtrTy::create(c, res, 0, false);
-	res->setConst();
 	return res;
 }
 inline VoidTy *mkVoidTy(Context &c)

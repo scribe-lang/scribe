@@ -123,7 +123,7 @@ INTRINSIC(szof)
 INTRINSIC(as)
 {
 	// args[0] must have a value of type TypeVal
-	args[1]->castTo(as<TypeVal>(args[0]->getValue())->getVal());
+	args[1]->castTo(as<TypeVal>(args[0]->getValue())->getVal(), args[0]->getStmtMask());
 	*source = args[1];
 	return true;
 }
@@ -137,22 +137,6 @@ INTRINSIC(ptr)
 	// args[0] should be a TypeVal
 	Type *res = as<TypeVal>(args[0]->getValue())->getVal()->clone(c);
 	res	  = PtrTy::create(c, res, 0, false);
-	stmt->createAndSetValue(TypeVal::create(c, res));
-	return true;
-}
-INTRINSIC(ref)
-{
-	// args[0] should be a TypeVal
-	Type *res = as<TypeVal>(args[0]->getValue())->getVal()->clone(c);
-	res->setRef();
-	stmt->createAndSetValue(TypeVal::create(c, res));
-	return true;
-}
-INTRINSIC(cons)
-{
-	// args[0] should be a TypeVal
-	Type *res = as<TypeVal>(args[0]->getValue())->getVal()->clone(c);
-	res->setConst();
 	stmt->createAndSetValue(TypeVal::create(c, res));
 	return true;
 }

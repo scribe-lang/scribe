@@ -8,8 +8,6 @@ INTRINSIC(isequalty);
 INTRINSIC(as);
 INTRINSIC(typeof);
 INTRINSIC(ptr);
-INTRINSIC(ref);
-INTRINSIC(cons);
 INTRINSIC(szof);
 INTRINSIC(valen);
 INTRINSIC(array);

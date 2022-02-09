@@ -199,7 +199,7 @@ skip_rhs_val:
 		// update the callee's arguments if they are references
 		for(size_t i = 0; i < defargs.size(); ++i) {
 			Value *aval = callargs[i]->getValue();
-			if(def->getSigArg(i)->getValueTy()->hasRef()) {
+			if(def->getSigArg(i)->isRef()) {
 				aval->updateValue(ctx, defargs[i]->getValue());
 			}
 		}
@@ -323,7 +323,7 @@ skip_rhs_val:
 		// update the callee's arguments if they are references
 		for(size_t i = 0; i < defargs.size(); ++i) {
 			Value *aval = args[i]->getValue();
-			if(def->getSigArg(i)->getValueTy()->hasRef()) {
+			if(def->getSigArg(i)->isRef()) {
 				aval->updateValue(ctx, def->getSigArg(i)->getValue());
 			}
 		}

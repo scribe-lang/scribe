@@ -27,7 +27,7 @@ let setData = fn(comptime T: type, to: &T, from: &const T) {
 		c.memcpy(@as(@ptr(void), to), @as(@ptr(void), from), len);
 	} else {
 		let comptime sz = @sizeOf(T);
-		c.memcpy(@as(@ptr(void), &to), @as(@cons(@ptr(void)), &from), sz);
+		c.memcpy(@as(@ptr(void), &to), @as(@ptr(void), &from), sz);
 	}
 };
 

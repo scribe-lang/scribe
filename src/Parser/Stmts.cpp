@@ -41,7 +41,8 @@ Value *getValueWithID(const uint64_t &id)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc *loc)
-	: stype(stmt_type), loc(loc), stmtmask(0), valueid(0), cast_to(nullptr), derefcount(0)
+	: stype(stmt_type), loc(loc), stmtmask(0), valueid(0), cast_to(nullptr), castmask(0),
+	  derefcount(0)
 {}
 Stmt::~Stmt() {}
 
@@ -76,10 +77,20 @@ const char *Stmt::getStmtTypeCString() const
 String Stmt::getTypeString()
 {
 	if(!getValueID()) return "";
-	Value *v   = getValue(true);
-	String res = " :<" + std::to_string(valueid) + ">: ";
+	Value *v = getValue(true);
+	String res;
+	res += " :<" + std::to_string(valueid) + ">: ";
+	if(isComptime()) res += "comptime ";
+	if(isRef()) res += "& ";
+	if(isConst()) res += "const ";
 	res += v->getType()->toStr();
-	if(cast_to) res += " -> " + cast_to->toStr();
+	if(cast_to) {
+		res += " -> ";
+		if(isCastComptime()) res += "comptime ";
+		if(isCastRef()) res += "& ";
+		if(isCastConst()) res += "const ";
+		res += cast_to->toStr();
+	}
 	if(v->hasData()) res += " ==> " + v->toStr();
 	return res;
 }
@@ -164,22 +175,19 @@ bool StmtBlock::requiresTemplateInit()
 //////////////////////////////////////////// StmtType /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtType::StmtType(const ModuleLoc *loc, const size_t &ptr, const size_t &info, bool variadic,
-		   Stmt *expr)
-	: Stmt(TYPE, loc), ptr(ptr), info(info), variadic(variadic), expr(expr)
+StmtType::StmtType(const ModuleLoc *loc, const size_t &ptr, bool variadic, Stmt *expr)
+	: Stmt(TYPE, loc), ptr(ptr), variadic(variadic), expr(expr)
 {}
 StmtType::~StmtType() {}
-StmtType *StmtType::create(Context &c, const ModuleLoc *loc, const size_t &ptr, const size_t &info,
-			   bool variadic, Stmt *expr)
+StmtType *StmtType::create(Context &c, const ModuleLoc *loc, const size_t &ptr, bool variadic,
+			   Stmt *expr)
 {
-	return c.allocStmt<StmtType>(loc, ptr, info, variadic, expr);
+	return c.allocStmt<StmtType>(loc, ptr, variadic, expr);
 }
 
 void StmtType::disp(const bool &has_next)
 {
 	String tname(ptr, '*');
-	if(info & REF) tname += "&";
-	if(info & CONST) tname += "const ";
 	if(variadic) tname = "..." + tname;
 
 	if(!tname.empty()) {
@@ -199,16 +207,9 @@ bool StmtType::requiresTemplateInit()
 	return expr->requiresTemplateInit();
 }
 
-bool StmtType::hasModifier(const size_t &tim) const
-{
-	return info & tim;
-}
-
 String StmtType::getStringName()
 {
 	String tname(ptr, '*');
-	if(info & REF) tname += "&";
-	if(info & CONST) tname += "const ";
 	if(variadic) tname = "..." + tname;
 	tname += expr->getStmtTypeString();
 	return tname;
@@ -349,7 +350,9 @@ StmtVar::StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype,
 		 uint8_t varmask)
 	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval), varmask(varmask),
 	  applied_module_id(false), applied_codegen_mangle(false)
-{}
+{
+	if(vtype) appendStmtMask(vtype->getStmtMask());
+}
 StmtVar::~StmtVar() {}
 StmtVar *StmtVar::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype,
 			 Stmt *vval, uint8_t infomask)
@@ -360,11 +363,12 @@ StmtVar *StmtVar::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &na
 void StmtVar::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, {"Variable [in = ", isIn() ? "yes" : "no",
-			      "] [comptime = ", isComptime() ? "yes" : "no", "] [global = ",
-			      isGlobal() ? "yes" : "no", "] [static = ", isStatic() ? "yes" : "no",
-			      "] [volatile = ", isVolatile() ? "yes" : "no",
-			      "]: ", name.getDataStr(), getTypeString(), "\n"});
+	tio::print(
+	has_next,
+	{"Variable [in = ", isIn() ? "yes" : "no", "] [comptime = ", isComptime() ? "yes" : "no",
+	 "] [global = ", isGlobal() ? "yes" : "no", "] [static = ", isStatic() ? "yes" : "no",
+	 "] [const = ", isConst() ? "yes" : "no", "] [volatile = ", isVolatile() ? "yes" : "no",
+	 "]: ", name.getDataStr(), getTypeString(), "\n"});
 	if(vtype) {
 		tio::taba(vval);
 		tio::print(vval, {"Type:\n"});
