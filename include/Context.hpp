@@ -46,7 +46,9 @@ public:
 	StringRef strFrom(int64_t i);
 	StringRef strFrom(uint32_t i);
 	StringRef strFrom(size_t i);
+#ifdef __APPLE__
 	StringRef strFrom(uint64_t i);
+#endif // __APPLE__
 	ModuleLoc *allocModuleLoc(Module *mod, size_t line, size_t col);
 
 	template<typename T, typename... Args> T *allocStmt(Args... args)
