@@ -12,8 +12,9 @@
 */
 
 #ifdef __APPLE__
-	#include <libgen.h> // for basename()
-#endif
+	// for basename() on macOS
+	#include <libgen.h>
+#endif // __APPLE__
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
