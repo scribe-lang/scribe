@@ -83,6 +83,11 @@ StringRef Context::strFrom(size_t i)
 	stringmem.push_front(std::to_string(i));
 	return stringmem.front();
 }
+StringRef Context::strFrom(uint64_t i)
+{
+	stringmem.push_front(std::to_string(i));
+	return stringmem.front();
+}
 ModuleLoc *Context::allocModuleLoc(Module *mod, size_t line, size_t col)
 {
 	modlocmem.emplace_front(mod, line, col);

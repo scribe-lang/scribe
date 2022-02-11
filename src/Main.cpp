@@ -11,6 +11,9 @@
 	furnished to do so.
 */
 
+#ifdef __APPLE__
+	#include <libgen.h> // for basename()
+#endif
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
