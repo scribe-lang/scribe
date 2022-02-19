@@ -32,5 +32,10 @@ let main = fn(): i32 {
 	defer a.deinit();
 	a[4] = 'a';
 	io.println(a); // "Hella"
+
+	// string slice test
+	let b = string.fromSlice("Hello", 2);
+	defer b.deinit();
+	io.println(b);
 	return 0;
 };
