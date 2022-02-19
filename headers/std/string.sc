@@ -52,12 +52,14 @@ let from = fn(data: *const i8): String {
 	return res;
 };
 
-let fromSlice = fn(data: *const i8, count: u64): String {
+let fromSubCStr = fn(data: *const i8, count: u64): String {
+	let len = c.strlen(data);
+	if count > len { count = len; }
 	count = count + 1; // + 1 for null terminator
 	let res = new();
 	res.data = c.malloc(i8, count);
 	c.memcpy(@as(@ptr(void), res.data), @as(@ptr(void), data), count);
-	res.data[count - 1] = 0;
+	res.data[count - 1] = 0; // set null terminator at the end
 	res.length = count - 1;
 	res.capacity = count;
 	return res;
@@ -320,7 +322,7 @@ let delim in const String = fn(ch: i8): vec.Vec(String) {
 			if i == last {
 				res.push(new());
 			} else {
-				res.push(fromSlice(&self.data[last], i - last));
+				res.push(fromSubCStr(&self.data[last], i - last));
 			}
 			last = i + 1;
 			continue;
@@ -330,7 +332,7 @@ let delim in const String = fn(ch: i8): vec.Vec(String) {
 		if self.length == last {
 			res.push(new());
 		} else {
-			res.push(fromSlice(&self.data[last], self.length - last));
+			res.push(fromSubCStr(&self.data[last], self.length - last));
 		}
 	}
 	return res;
