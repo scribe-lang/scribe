@@ -20,6 +20,7 @@ let puts = extern[puts, "<stdio.h>"] fn(data: *const i8): i32;
 let snprintf = extern[snprintf, "<stdio.h>"] fn(buf: *i8, bufsz: u64, fmt: *const i8, args: ...any): i32;
 let strlen = extern[strlen, "<string.h>"] fn(data: *const i8): u64;
 let strcmp = extern[strcmp, "<string.h>"] fn(lhs: *const i8, rhs: *const i8): i32;
+let strncmp = extern[strncmp, "<string.h>"] fn(lhs: *const i8, rhs: *const i8, count: u64): i32;
 let _malloc = extern[malloc, "<stdlib.h>"] fn(size: u64): *void;
 let _calloc = extern[calloc, "<stdlib.h>"] fn(count: u64, sz: u64): *void;
 let _realloc = extern[realloc, "<stdlib.h>"] fn(data: *void, newsz: u64): *void;

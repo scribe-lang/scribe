@@ -33,9 +33,18 @@ let main = fn(): i32 {
 	a[4] = 'a';
 	io.println(a); // "Hella"
 
-	// string slice test
-	let b = string.fromSubCStr("Hello", 2);
+	// sub C-string test
+	let b = string.fromSubCStr("Hello", 4);
 	defer b.deinit();
 	io.println(b);
+
+	// StringRef test
+	let r1 = b.subRef(1, 2);
+	let r2 = b.subRef(1, 1);
+	let r3 = b.subRef(1, 2);
+	io.println(r1);
+	io.println(r2);
+	io.println(r1 == r3); // should be true
+	io.println(r1 == r2); // should be false
 	return 0;
 };

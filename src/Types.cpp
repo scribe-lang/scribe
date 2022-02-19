@@ -20,6 +20,8 @@
 
 namespace sc
 {
+static constexpr uint32_t MAX_FLT_ID = TFLT + 128 * 3;
+
 static const char *TypeStrs[] = {
 "void",	      "<any>",	  "int",    "flt",	  "<template>", "<ptr>",     "<array>",
 "<function>", "<struct>", "<enum>", "<variadic>", "<import>",	"<funcmap>",
@@ -28,7 +30,7 @@ static Map<uint32_t, Type *> containedtypes;
 
 uint32_t genTypeID()
 {
-	static uint32_t id = _LAST;
+	static uint32_t id = MAX_FLT_ID + 1;
 	return id++;
 }
 uint32_t genFuncUniqID()

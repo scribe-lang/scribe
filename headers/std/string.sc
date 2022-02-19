@@ -18,6 +18,62 @@ let getPrecision = fn(): i32 {
 	return float_precision;
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// StringRef Type
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+let StringRef = struct {
+	start: *const i8;
+	count: u64;
+};
+
+let subRefCStr = fn(data: *const i8, start: u64, count: u64): StringRef {
+	let len = c.strlen(data);
+	if start >= len { return StringRef{nil, 0}; }
+	if start + count > len { count = len - start; }
+	if count == 0 { count = len; }
+	return StringRef{&data[start], count};
+};
+
+let getRefCStr = fn(data: *const i8): StringRef {
+	return subRefCStr(data, 0, 0);
+};
+
+let isEmpty in const StringRef = fn(): i1 {
+	return @as(u64, self.start) == nil || self.count == 0;
+};
+
+let data in const StringRef = fn(): *const i8 {
+	return self.start;
+};
+
+let len in const StringRef = fn(): u64 {
+	return self.count;
+};
+
+let __eq__ in const StringRef = fn(other: &const StringRef): i1 {
+	if self.count != other.count { return false; }
+	if self.count == 0 { return true; }
+	return c.strncmp(self.start, other.start, self.count) == 0;
+};
+
+let __ne__ in const StringRef = fn(other: &const StringRef): i1 {
+	return !(self == other);
+};
+
+let subRef in const StringRef = fn(start: u64, count: u64): StringRef {
+	if start >= self.count { return StringRef{nil, 0}; }
+	if start + count > self.count { count = self.count - start; }
+	if count == 0 { count = self.count; }
+	return StringRef{&self.start[start], count};
+};
+
+let deinit in StringRef = fn() {};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// String Type
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 let String = struct {
 	data: *i8;
 	length: u64;
@@ -52,9 +108,8 @@ let from = fn(data: *const i8): String {
 	return res;
 };
 
+// when using this, ensure that count < strlen(data)
 let fromSubCStr = fn(data: *const i8, count: u64): String {
-	let len = c.strlen(data);
-	if count > len { count = len; }
 	count = count + 1; // + 1 for null terminator
 	let res = new();
 	res.data = c.malloc(i8, count);
@@ -63,6 +118,10 @@ let fromSubCStr = fn(data: *const i8, count: u64): String {
 	res.length = count - 1;
 	res.capacity = count;
 	return res;
+};
+
+let fromStringRef = fn(data: &const StringRef): String {
+	return fromSubCStr(data.start, data.count);
 };
 
 let init in String = fn() {
@@ -116,6 +175,24 @@ let copy in const String = fn(): String {
 
 let hash in const String = fn(): u64 {
 	return hashing.cStr(self.data, self.length);
+};
+
+let subString in const String = fn(start: u64, count: u64): String {
+	if start >= self.length { return new(); }
+	return fromSubCStr(&self.data[start], count);
+};
+
+// StringRef related functions
+
+let getRef in const String = fn(): StringRef {
+	return StringRef{self.data, self.length};
+};
+
+let subRef in const String = fn(start: u64, count: u64): StringRef {
+	if start >= self.length { return StringRef{nil, 0}; }
+	if start + count > self.length { count = self.length - start; }
+	if count == 0 { count = self.length; }
+	return StringRef{&self.data[start], count};
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
