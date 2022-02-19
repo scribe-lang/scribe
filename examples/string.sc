@@ -34,7 +34,7 @@ let main = fn(): i32 {
 	io.println(a); // "Hella"
 
 	// string slice test
-	let b = string.fromSlice("Hello", 2);
+	let b = string.fromSubCStr("Hello", 2);
 	defer b.deinit();
 	io.println(b);
 	return 0;
