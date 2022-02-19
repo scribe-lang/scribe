@@ -15,6 +15,8 @@ let fprint = fn(f: *c.FILE, data: ...&const any): i32 {
 			sum += c.fputc(data[i], f);
 		} elif @isEqualTy(data[i], string.String) {
 			sum += c.fputs(data[i].cStr(), f);
+		} elif @isEqualTy(data[i], string.StringRef) {
+			sum += fprintf(f, "%.*s", data[i].len(), data[i].data());
 		} else {
 			let s = data[i].str();
 			defer s.deinit();
