@@ -53,7 +53,7 @@ let from = fn(data: *const i8): String {
 };
 
 let fromSlice = fn(data: *const i8, count: u64): String {
-	let count = count + 1; // + 1 for null terminator
+	count = count + 1; // + 1 for null terminator
 	let res = new();
 	res.data = c.malloc(i8, count);
 	c.memcpy(@as(@ptr(void), res.data), @as(@ptr(void), data), count);
