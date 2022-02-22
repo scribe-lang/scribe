@@ -42,6 +42,7 @@ enum Types : uint16_t
 class Stmt;
 class StmtExpr;
 class StmtVar;
+class StmtStruct;
 class StmtFnDef;
 class StmtFnSig;
 class StmtFnCallInfo;
@@ -275,6 +276,7 @@ public:
 class StructTy : public Type
 {
 	uint32_t id; // to differentiate between each struct ty
+	StmtStruct *decl;
 	Map<StringRef, size_t> fieldpos;
 	Vector<StringRef> fieldnames;
 	Vector<Type *> fields;
@@ -285,10 +287,10 @@ class StructTy : public Type
 	bool externed;
 
 public:
-	StructTy(const Vector<StringRef> &fieldnames, const Vector<Type *> &fields,
-		 const Vector<StringRef> &templatenames, const Vector<TypeTy *> &templates,
-		 const bool &externed);
-	StructTy(uint32_t id, const Vector<StringRef> &fieldnames,
+	StructTy(StmtStruct *decl, const Vector<StringRef> &fieldnames,
+		 const Vector<Type *> &fields, const Vector<StringRef> &templatenames,
+		 const Vector<TypeTy *> &templates, const bool &externed);
+	StructTy(uint32_t id, StmtStruct *decl, const Vector<StringRef> &fieldnames,
 		 const Map<StringRef, size_t> &fieldpos, const Vector<Type *> &fields,
 		 const Vector<StringRef> &templatenames, const Map<StringRef, size_t> &templatepos,
 		 const Vector<TypeTy *> &templates, const bool &has_template, const bool &externed);
@@ -306,7 +308,7 @@ public:
 	// returns a NON-def struct type
 	StructTy *instantiate(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &callargs);
 
-	static StructTy *get(Context &c, const Vector<StringRef> &_fieldnames,
+	static StructTy *get(Context &c, StmtStruct *decl, const Vector<StringRef> &_fieldnames,
 			     const Vector<Type *> &_fields, const Vector<StringRef> &_templatenames,
 			     const Vector<TypeTy *> &_templates, const bool &_externed);
 	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
@@ -320,6 +322,10 @@ public:
 	inline void setExterned(const bool &ext)
 	{
 		externed = ext;
+	}
+	inline StmtStruct *getDecl()
+	{
+		return decl;
 	}
 	inline StringRef getFieldName(const size_t &idx)
 	{
