@@ -895,6 +895,10 @@ public:
 	{
 		return fields;
 	}
+	inline StmtVar *getField(size_t idx)
+	{
+		return fields[idx];
+	}
 	inline const Vector<lex::Lexeme> &getTemplates()
 	{
 		return templates;

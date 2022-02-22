@@ -1063,6 +1063,7 @@ bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 		declaredstructs.insert(sty->getUniqID());
 		return true;
 	}
+	StmtStruct *stdecl = sty->getDecl();
 	Writer st;
 	st.write({"struct struct_", ctx.strFrom(sty->getUniqID()), " {"});
 	if(!sty->getFields().empty()) {
@@ -1070,7 +1071,7 @@ bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 		st.newLine();
 	}
 	for(size_t i = 0; i < sty->getFields().size(); ++i) {
-		String cty, arrcount;
+		String prefix, cty, arrcount;
 		Type *t	 = sty->getField(i);
 		arrcount = getArrCount(t);
 		if(!getCTypeName(cty, stmt, t, false, true, false)) {
@@ -1078,8 +1079,10 @@ bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 				 {"failed to determine C type for scribe type: ", t->toStr()});
 			return false;
 		}
-		st.write(cty);
-		st.write({" ", sty->getFieldName(i), arrcount, ";"});
+		if(stdecl && stdecl->getField(i)->isStatic()) prefix += "static ";
+		if(stdecl && stdecl->getField(i)->isVolatile()) prefix += "volatile ";
+		if(stdecl && stdecl->getField(i)->isConst()) prefix += "const ";
+		st.write({prefix, cty, " ", sty->getFieldName(i), arrcount, ";"});
 		if(i != sty->getFields().size() - 1) st.newLine();
 	}
 	if(!sty->getFields().empty()) {

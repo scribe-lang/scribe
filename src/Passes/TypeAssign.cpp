@@ -999,7 +999,8 @@ bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 		vmgr.addVar(t, id, nullptr);
 	}
 
-	StructTy *st = StructTy::get(ctx, {}, {}, templatenames, templates, stmt->isExterned());
+	StructTy *st =
+	StructTy::get(ctx, stmt, {}, {}, templatenames, templates, stmt->isExterned());
 	stmt->createAndSetValue(TypeVal::create(ctx, st));
 	uint64_t selfid = stmt->getValueID();
 	vmgr.addVar("Self", selfid, nullptr);

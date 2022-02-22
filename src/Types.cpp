@@ -467,10 +467,10 @@ Value *PtrTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Struct Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StructTy::StructTy(const Vector<StringRef> &fieldnames, const Vector<Type *> &fields,
-		   const Vector<StringRef> &templatenames, const Vector<TypeTy *> &templates,
-		   const bool &externed)
-	: Type(TSTRUCT), id(genTypeID()), fieldnames(fieldnames), fields(fields),
+StructTy::StructTy(StmtStruct *decl, const Vector<StringRef> &fieldnames,
+		   const Vector<Type *> &fields, const Vector<StringRef> &templatenames,
+		   const Vector<TypeTy *> &templates, const bool &externed)
+	: Type(TSTRUCT), id(genTypeID()), decl(decl), fieldnames(fieldnames), fields(fields),
 	  templatenames(templatenames), templates(templates), has_template(templates.size()),
 	  externed(externed)
 {
@@ -481,14 +481,14 @@ StructTy::StructTy(const Vector<StringRef> &fieldnames, const Vector<Type *> &fi
 		templatepos[templatenames[i]] = i;
 	}
 }
-StructTy::StructTy(uint32_t id, const Vector<StringRef> &fieldnames,
+StructTy::StructTy(uint32_t id, StmtStruct *decl, const Vector<StringRef> &fieldnames,
 		   const Map<StringRef, size_t> &fieldpos, const Vector<Type *> &fields,
 		   const Vector<StringRef> &templatenames,
 		   const Map<StringRef, size_t> &templatepos, const Vector<TypeTy *> &templates,
 		   const bool &has_template, const bool &externed)
-	: Type(TSTRUCT), id(id), fieldpos(fieldpos), fieldnames(fieldnames), fields(fields),
-	  templatepos(templatepos), templatenames(templatenames), templates(templates),
-	  has_template(has_template), externed(externed)
+	: Type(TSTRUCT), id(id), decl(decl), fieldpos(fieldpos), fieldnames(fieldnames),
+	  fields(fields), templatepos(templatepos), templatenames(templatenames),
+	  templates(templates), has_template(has_template), externed(externed)
 {}
 StructTy::~StructTy() {}
 
@@ -502,7 +502,7 @@ Type *StructTy::specialize(Context &c, const bool &as_is, const size_t &weak_dep
 	for(auto &t : templates) {
 		newtemplates.push_back(as<TypeTy>(t->specialize(c, as_is, weak_depth)));
 	}
-	return c.allocType<StructTy>(id, fieldnames, fieldpos, newfields, templatenames,
+	return c.allocType<StructTy>(id, decl, fieldnames, fieldpos, newfields, templatenames,
 				     templatepos, newtemplates, has_template, externed);
 }
 uint32_t StructTy::getUniqID()
@@ -605,11 +605,12 @@ StructTy *StructTy::instantiate(Context &c, const ModuleLoc *loc, const Vector<S
 	if(!is_field_compatible) return nullptr;
 	return as<StructTy>(this->specialize(c));
 }
-StructTy *StructTy::get(Context &c, const Vector<StringRef> &_fieldnames,
+StructTy *StructTy::get(Context &c, StmtStruct *decl, const Vector<StringRef> &_fieldnames,
 			const Vector<Type *> &_fields, const Vector<StringRef> &_templatenames,
 			const Vector<TypeTy *> &_templates, const bool &_externed)
 {
-	return c.allocType<StructTy>(_fieldnames, _fields, _templatenames, _templates, _externed);
+	return c.allocType<StructTy>(decl, _fieldnames, _fields, _templatenames, _templates,
+				     _externed);
 }
 Type *StructTy::getField(StringRef name)
 {
