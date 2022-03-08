@@ -25,7 +25,7 @@ ModuleLoc::ModuleLoc(Module *mod, const size_t &line, const size_t &col)
 
 String ModuleLoc::getLocStr() const
 {
-	return std::to_string(line) + ":" + std::to_string(col);
+	return std::to_string(line + 1) + ":" + std::to_string(col + 1);
 }
 
 namespace err
