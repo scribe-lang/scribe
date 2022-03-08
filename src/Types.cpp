@@ -798,6 +798,7 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 	}
 	for(size_t i = 0, j = 0; i < this->args.size() && j < callargs.size(); ++i, ++j) {
 		Type *sa      = this->args[i];
+		StmtVar *sigv = getSig() ? getSig()->getArg(i) : nullptr;
 		Stmt *ciarg   = callargs[j];
 		bool variadic = false;
 		if(sig && ciarg->isConst() && !sig->getArg(i)->isConst() &&
@@ -812,6 +813,15 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 			--i;
 		}
 		if(!sa->isCompatible(c, ciarg->getValueTy(), loc)) {
+			is_arg_compatible = false;
+			break;
+		}
+		if(sigv && ciarg->isSimple() &&
+		   as<StmtSimple>(ciarg)->getLexValue().getTokVal() != lex::IDEN &&
+		   !sigv->isConst() && sigv->isRef())
+		{
+			err::out(loc, {"cannot pass literal data to a "
+				       "function expecting a non-const reference"});
 			is_arg_compatible = false;
 			break;
 		}
