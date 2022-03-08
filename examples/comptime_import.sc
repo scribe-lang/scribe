@@ -1,16 +1,18 @@
-let getModule = fn(i: i32): *const i8 {
-	if i == 1 {
+let os = @import("std/os");
+
+let getModule = fn(): *const i8 {
+	if os.currentOS == os.id.Linux {
 		return "std/io";
-	} else {
-		return "std/x";
+	} elif os.currentOS == os.id.Apple {
+		return "std/io_apple";
 	}
+	return nil;
 };
 
-let io = @import(getModule(1));
-let comptime y = getModule(0);
-let comptime x = getModule(1);
+let io = @import(getModule());
+let comptime io_name = getModule();
 
 let main = fn(): i32 {
-	io.println(x, ", ", y);
+	io.println(io_name);
 	return 0;
 };

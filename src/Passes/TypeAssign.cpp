@@ -1217,7 +1217,6 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 	}
 	stmt->setFnBlk(fnblk);
 	stmt->setValueID(stmt->getFnBlk());
-	stmt->setValueTy(valtype);
 	if(val && fn->getSig() && val->isConst() != fn->getSig()->getRetType()->isConst()) {
 		val->castTo(fnretty, fn->getSig()->getRetType()->getStmtMask());
 	}
