@@ -863,8 +863,10 @@ post_mangling:
 		return vmgr.addTypeFn(self->getValueTy(), stmt->getName().getDataStr(),
 				      stmt->getValueID());
 	}
-	return vmgr.addVar(stmt->getName().getDataStr(), stmt->getValueID(), stmt,
-			   stmt->isGlobal());
+	// since FuncTy contains the variable declaration in itself,
+	// no need to pass this stmt to vmgr.addVar()
+	return vmgr.addVar(stmt->getName().getDataStr(), stmt->getValueID(),
+			   stmt->getValueTy()->isFunc() ? nullptr : stmt, stmt->isGlobal());
 }
 bool TypeAssignPass::visit(StmtFnSig *stmt, Stmt **source)
 {
