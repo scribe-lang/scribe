@@ -65,7 +65,6 @@ const char *Stmt::getStmtTypeCString() const
 	case VARDECL: return "variable declaration";
 	case COND: return "conditional";
 	case FOR: return "for loop";
-	case WHILE: return "while loop";
 	case RET: return "return";
 	case CONTINUE: return "continue";
 	case BREAK: return "break";
@@ -774,7 +773,7 @@ StmtFor *StmtFor::create(Context &c, const ModuleLoc *loc, Stmt *init, Stmt *con
 void StmtFor::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, {"For [is inline = ", is_inline ? "yes" : "no", "]\n"});
+	tio::print(has_next, {"For/While [is inline = ", is_inline ? "yes" : "no", "]\n"});
 	if(init) {
 		tio::taba(cond || incr || blk);
 		tio::print(cond || incr || blk, {"Init:\n"});
@@ -805,39 +804,6 @@ void StmtFor::disp(const bool &has_next)
 bool StmtFor::requiresTemplateInit()
 {
 	if(is_inline) return true;
-	if(blk && blk->requiresTemplateInit()) return true;
-	return false;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////// StmtWhile ////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-StmtWhile::StmtWhile(const ModuleLoc *loc, Stmt *cond, StmtBlock *blk)
-	: Stmt(WHILE, loc), cond(cond), blk(blk)
-{}
-StmtWhile::~StmtWhile() {}
-StmtWhile *StmtWhile::create(Context &c, const ModuleLoc *loc, Stmt *cond, StmtBlock *blk)
-{
-	return c.allocStmt<StmtWhile>(loc, cond, blk);
-}
-
-void StmtWhile::disp(const bool &has_next)
-{
-	tio::taba(has_next);
-	tio::print(has_next, {"While\n"});
-	tio::taba(true);
-	tio::print(true, {"Condition:\n"});
-	cond->disp(true);
-	tio::tabr();
-	tio::taba(false);
-	tio::print(false, {"Block:\n"});
-	blk->disp(false);
-	tio::tabr(2);
-}
-
-bool StmtWhile::requiresTemplateInit()
-{
 	if(blk && blk->requiresTemplateInit()) return true;
 	return false;
 }

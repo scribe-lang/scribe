@@ -44,7 +44,6 @@ bool ValueAssignPass::visit(Stmt *stmt, Stmt **source)
 	case VARDECL: return visit(as<StmtVarDecl>(stmt), source);
 	case COND: return visit(as<StmtCond>(stmt), source);
 	case FOR: return visit(as<StmtFor>(stmt), source);
-	case WHILE: return visit(as<StmtWhile>(stmt), source);
 	case RET: return visit(as<StmtRet>(stmt), source);
 	case CONTINUE: return visit(as<StmtContinue>(stmt), source);
 	case BREAK: return visit(as<StmtBreak>(stmt), source);
@@ -485,32 +484,6 @@ bool ValueAssignPass::visit(StmtFor *stmt, Stmt **source)
 			err::out(stmt, {"failed to determine incr value for for-loop"});
 			return false;
 		}
-		cond->clearValue();
-		if(!visit(cond, &cond)) {
-			err::out(stmt, {"failed to determine value for for-condition expression"});
-			return false;
-		}
-	}
-	break_stmt = false;
-	return true;
-}
-bool ValueAssignPass::visit(StmtWhile *stmt, Stmt **source)
-{
-	Stmt *&cond	= stmt->getCond();
-	StmtBlock *&blk = stmt->getBlk();
-	if(!visit(cond, &cond)) {
-		err::out(stmt, {"failed to determine value for for-condition expression"});
-		return false;
-	}
-	while((cond->getValue()->isInt() && as<IntVal>(cond->getValue())->getVal()) ||
-	      (cond->getValue()->isFlt() && as<FltVal>(cond->getValue())->getVal()))
-	{
-		if(!visit(blk, asStmt(&blk))) {
-			err::out(stmt, {"failed to determine value for for-loop block"});
-			return false;
-		}
-		continue_stmt = false;
-		if(break_stmt) break;
 		cond->clearValue();
 		if(!visit(cond, &cond)) {
 			err::out(stmt, {"failed to determine value for for-condition expression"});

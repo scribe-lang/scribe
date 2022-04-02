@@ -177,7 +177,6 @@ bool CDriver::visit(Stmt *stmt, Writer &writer, const bool &semicol)
 	case VARDECL: res = visit(as<StmtVarDecl>(stmt), tmp, semicol); break;
 	case COND: res = visit(as<StmtCond>(stmt), tmp, semicol); break;
 	case FOR: res = visit(as<StmtFor>(stmt), tmp, semicol); break;
-	case WHILE: res = visit(as<StmtWhile>(stmt), tmp, semicol); break;
 	case RET: res = visit(as<StmtRet>(stmt), tmp, semicol); break;
 	case CONTINUE: res = visit(as<StmtContinue>(stmt), tmp, semicol); break;
 	case BREAK: res = visit(as<StmtBreak>(stmt), tmp, semicol); break;
@@ -766,25 +765,6 @@ bool CDriver::visit(StmtFor *stmt, Writer &writer, const bool &semicol)
 	writer.append(tmp);
 	return true;
 }
-bool CDriver::visit(StmtWhile *stmt, Writer &writer, const bool &semicol)
-{
-	writer.clear();
-	writer.write("while(");
-	Writer tmp(writer);
-	if(!visit(stmt->getCond(), tmp, false)) {
-		err::out(stmt, {"failed to generate C code for while-loop condition"});
-		return false;
-	}
-	writer.append(tmp);
-	writer.write(") ");
-	tmp.reset(writer);
-	if(!visit(stmt->getBlk(), tmp, false)) {
-		err::out(stmt, {"failed to generate C code for while block"});
-		return false;
-	}
-	writer.append(tmp);
-	return true;
-}
 bool CDriver::visit(StmtRet *stmt, Writer &writer, const bool &semicol)
 {
 	if(!stmt->getVal()) {
@@ -909,7 +889,6 @@ bool CDriver::acceptsSemicolon(Stmt *stmt)
 	case VARDECL: return true;
 	case COND: return false;
 	case FOR: return false;
-	case WHILE: return false;
 	case RET: return true;
 	case CONTINUE: return true;
 	case BREAK: return true;

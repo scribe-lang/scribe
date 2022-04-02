@@ -91,7 +91,6 @@ public:
 	bool visit(StmtVarDecl *stmt, Writer &writer, const bool &semicol);
 	bool visit(StmtCond *stmt, Writer &writer, const bool &semicol);
 	bool visit(StmtFor *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtWhile *stmt, Writer &writer, const bool &semicol);
 	bool visit(StmtRet *stmt, Writer &writer, const bool &semicol);
 	bool visit(StmtContinue *stmt, Writer &writer, const bool &semicol);
 	bool visit(StmtBreak *stmt, Writer &writer, const bool &semicol);

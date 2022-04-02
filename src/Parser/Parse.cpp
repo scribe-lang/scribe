@@ -57,6 +57,9 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_bra
 			if(p.peekt(1) == lex::FOR) {
 				if(!parse_for(p, stmt)) return false;
 				skip_cols = true;
+			} else if(p.peekt(1) == lex::WHILE) {
+				if(!parse_while(p, stmt)) return false;
+				skip_cols = true;
 			} else if(p.peekt(1) == lex::IF) {
 				if(!parse_conds(p, stmt)) return false;
 				skip_cols = true;
@@ -1530,7 +1533,10 @@ bool Parsing::parse_while(ParseHelper &p, Stmt *&w)
 
 	Stmt *cond	   = nullptr;
 	StmtBlock *blk	   = nullptr;
+	bool is_inline	   = false;
 	lex::Lexeme &start = p.peek();
+
+	if(p.acceptn(lex::INLINE)) is_inline = true;
 
 	if(!p.acceptn(lex::WHILE)) {
 		err::out(p.peek(), {"expected 'while' here, found: ", p.peek().getTok().cStr()});
@@ -1544,7 +1550,7 @@ bool Parsing::parse_while(ParseHelper &p, Stmt *&w)
 		return false;
 	}
 
-	w = StmtWhile::create(ctx, start.getLoc(), cond, blk);
+	w = StmtFor::create(ctx, start.getLoc(), nullptr, cond, nullptr, blk, is_inline);
 	return true;
 }
 bool Parsing::parse_ret(ParseHelper &p, Stmt *&ret)

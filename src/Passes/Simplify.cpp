@@ -47,7 +47,6 @@ bool SimplifyPass::visit(Stmt *stmt, Stmt **source)
 	case VARDECL: return visit(as<StmtVarDecl>(stmt), source);
 	case COND: return visit(as<StmtCond>(stmt), source);
 	case FOR: return visit(as<StmtFor>(stmt), source);
-	case WHILE: return visit(as<StmtWhile>(stmt), source);
 	case RET: return visit(as<StmtRet>(stmt), source);
 	case CONTINUE: return visit(as<StmtContinue>(stmt), source);
 	case BREAK: return visit(as<StmtBreak>(stmt), source);
@@ -335,18 +334,6 @@ bool SimplifyPass::visit(StmtFor *stmt, Stmt **source)
 	}
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
 		err::out(stmt, {"failed to apply simplify pass on func def block"});
-		return false;
-	}
-	return true;
-}
-bool SimplifyPass::visit(StmtWhile *stmt, Stmt **source)
-{
-	if(stmt->getCond() && !visit(stmt->getCond(), &stmt->getCond())) {
-		err::out(stmt, {"failed to apply simplify pass on while condition"});
-		return false;
-	}
-	if(stmt->getBlk() && !visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
-		err::out(stmt, {"failed to apply simplify pass on while block"});
 		return false;
 	}
 	return true;
