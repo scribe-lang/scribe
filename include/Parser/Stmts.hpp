@@ -45,7 +45,6 @@ enum Stmts : uint16_t
 	VARDECL,
 	COND,
 	FOR,
-	WHILE,
 	RET,
 	CONTINUE,
 	BREAK,
@@ -105,7 +104,6 @@ public:
 	isStmtX(VarDecl, VARDECL);
 	isStmtX(Cond, COND);
 	isStmtX(For, FOR);
-	isStmtX(While, WHILE);
 	isStmtX(Return, RET);
 	isStmtX(Continue, CONTINUE);
 	isStmtX(Break, BREAK);
@@ -1035,32 +1033,6 @@ public:
 	inline bool isInline() const
 	{
 		return is_inline;
-	}
-};
-
-class StmtWhile : public Stmt
-{
-	Stmt *cond;
-	StmtBlock *blk;
-
-public:
-	StmtWhile(const ModuleLoc *loc, Stmt *cond, StmtBlock *blk);
-	~StmtWhile();
-	static StmtWhile *create(Context &c, const ModuleLoc *loc, Stmt *cond, StmtBlock *blk);
-
-	void disp(const bool &has_next);
-	Stmt *clone(Context &ctx);
-	void clearValue();
-	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
-
-	inline Stmt *&getCond()
-	{
-		return cond;
-	}
-	inline StmtBlock *&getBlk()
-	{
-		return blk;
 	}
 };
 

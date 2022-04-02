@@ -46,7 +46,6 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 	case VARDECL: res = visit(as<StmtVarDecl>(stmt), source); break;
 	case COND: res = visit(as<StmtCond>(stmt), source); break;
 	case FOR: res = visit(as<StmtFor>(stmt), source); break;
-	case WHILE: res = visit(as<StmtWhile>(stmt), source); break;
 	case RET: res = visit(as<StmtRet>(stmt), source); break;
 	case CONTINUE: res = visit(as<StmtContinue>(stmt), source); break;
 	case BREAK: res = visit(as<StmtBreak>(stmt), source); break;
@@ -1164,18 +1163,6 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 		return false;
 	}
 	(*source)->clearValue();
-	return true;
-}
-bool TypeAssignPass::visit(StmtWhile *stmt, Stmt **source)
-{
-	if(!visit(stmt->getCond(), &stmt->getCond())) {
-		err::out(stmt, {"failed to determine type of while loop condition"});
-		return false;
-	}
-	if(stmt->getBlk() && !visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
-		err::out(stmt, {"failed to determine type of while loop block"});
-		return false;
-	}
 	return true;
 }
 bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
