@@ -40,6 +40,7 @@ public:
 	bool parse_type(ParseHelper &p, StmtType *&type);
 	bool parse_simple(ParseHelper &p, Stmt *&data);
 
+	bool parsePrefixedSuffixedLiteral(ParseHelper &p, Stmt *&expr);
 	bool parse_expr(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
 	bool parse_expr_17(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
 	bool parse_expr_16(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);

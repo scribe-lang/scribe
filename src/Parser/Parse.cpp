@@ -172,6 +172,26 @@ bool Parsing::parse_simple(ParseHelper &p, Stmt *&data)
 	return true;
 }
 
+// ref"Ref of this"
+// 9h
+// 2.5i
+bool Parsing::parsePrefixedSuffixedLiteral(ParseHelper &p, Stmt *&expr)
+{
+	lex::Lexeme &iden = p.peekt() == lex::IDEN ? p.peek() : p.peek(1);
+	lex::Lexeme &lit  = p.peekt() == lex::IDEN ? p.peek(1) : p.peek();
+	lex::Lexeme oper  = lex::Lexeme(iden.getLoc(), lex::TokType::FNCALL);
+
+	p.next();
+	p.next();
+
+	StmtSimple *arg	      = StmtSimple::create(ctx, lit.getLoc(), lit);
+	StmtSimple *fn	      = StmtSimple::create(ctx, iden.getLoc(), iden);
+	StmtFnCallInfo *finfo = StmtFnCallInfo::create(ctx, arg->getLoc(), {arg});
+	expr		      = StmtExpr::create(ctx, lit.getLoc(), 0, fn, oper, finfo, false);
+
+	return true;
+}
+
 bool Parsing::parse_expr(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
 {
 	return parse_expr_17(p, expr, disable_brace_after_iden);
@@ -746,6 +766,13 @@ bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 	Vector<Stmt *> args;
 	Stmt *arg	  = nullptr;
 	bool is_intrinsic = false;
+
+	// prefixed/suffixed literals
+	if(p.accept(lex::IDEN) && p.peek(1).getTok().isLiteral() ||
+	   p.peek().getTok().isLiteral() && p.peekt(1) == lex::IDEN)
+	{
+		return parsePrefixedSuffixedLiteral(p, expr);
+	}
 
 	if(p.acceptn(lex::LPAREN)) {
 		if(!parse_expr(p, lhs, disable_brace_after_iden)) {

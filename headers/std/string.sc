@@ -39,6 +39,10 @@ let getRefCStr = fn(data: *const i8): StringRef {
 	return subRefCStr(data, 0, 0);
 };
 
+let global ref = fn(data: *const i8): StringRef {
+	return getRefCStr(data);
+};
+
 let isEmpty in const StringRef = fn(): i1 {
 	return @as(u64, self.start) == nil || self.count == 0;
 };
@@ -106,6 +110,10 @@ let from = fn(data: *const i8): String {
 	res.length = count - 1;
 	res.capacity = count;
 	return res;
+};
+
+let global s = fn(data: *const i8): String {
+	return from(data);
 };
 
 // when using this, ensure that count < strlen(data)

@@ -178,6 +178,10 @@ public:
 		       val == I64 || val == U8 || val == U16 || val == U32 || val == U64 ||
 		       val == F32 || val == F64;
 	}
+	inline bool isLiteral() const
+	{
+		return val == INT || val == FLT || val == CHAR || val == STR;
+	}
 
 	inline bool isOper() const
 	{
