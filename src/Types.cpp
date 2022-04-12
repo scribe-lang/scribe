@@ -507,11 +507,17 @@ Type *StructTy::specialize(Context &c, const bool &as_is, const size_t &weak_dep
 }
 uint32_t StructTy::getUniqID()
 {
-	uint32_t res = getID();
+	uint32_t res = 0;
 	for(auto &f : fields) {
 		res += f->getUniqID();
 	}
-	return res;
+	uint32_t tmpres	    = res;
+	uint32_t multiplier = 1;
+	while(tmpres) {
+		multiplier *= 10;
+		tmpres /= 10;
+	}
+	return getID() * multiplier + res;
 }
 uint32_t StructTy::getID()
 {
@@ -707,12 +713,18 @@ uint32_t FuncTy::getNonUniqID()
 }
 uint32_t FuncTy::getID()
 {
-	uint32_t res = id + uniqid;
+	uint32_t res   = uniqid;
+	uint32_t tmpid = id;
+	while(tmpid) {
+		res *= 10;
+		tmpid /= 10;
+	}
+	res += id;
 	for(auto &a : args) {
 		res += a->getID();
 	}
 	res += ret->getID();
-	return res * 7;
+	return res;
 }
 bool FuncTy::isTemplate(const size_t &weak_depth)
 {

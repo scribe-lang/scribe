@@ -8,6 +8,8 @@ let vec = @import("std/vec"); // required for vec.str() and str.delim()
 let utils = @import("std/utils");
 let hashing = @import("std/hashing");
 
+let NPOS: const u64 = -1;
+
 let float_precision = 3;
 
 let setPrecision = fn(digits: const i32) {
@@ -26,6 +28,8 @@ let StringRef = struct {
 	start: *const i8;
 	count: u64;
 };
+
+let deinit in StringRef = fn() {};
 
 let subRefCStr = fn(data: *const i8, start: u64, count: u64): StringRef {
 	let len = c.strlen(data);
@@ -59,30 +63,49 @@ let hash in const StringRef = fn(): u64 {
 	return hashing.cStr(self.start, self.count);
 };
 
-let __assn__ in StringRef = fn(other: &const StringRef): &self {
+let __assn__ in StringRef = fn(other: StringRef): &self {
 	self.start = other.start;
 	self.count = other.count;
 	return self;
 };
 
-let __eq__ in const StringRef = fn(other: &const StringRef): i1 {
+let __eq__ in const StringRef = fn(other: StringRef): i1 {
 	if self.count != other.count { return false; }
 	if self.count == 0 { return true; }
 	return c.strncmp(self.start, other.start, self.count) == 0;
 };
 
-let __ne__ in const StringRef = fn(other: &const StringRef): i1 {
+let __ne__ in const StringRef = fn(other: StringRef): i1 {
 	return !(self == other);
 };
 
 let subRef in const StringRef = fn(start: u64, count: u64): StringRef {
 	if start >= self.count { return StringRef{nil, 0}; }
-	if start + count > self.count { count = self.count - start; }
-	if count == 0 { count = self.count; }
+	if count == 0 || count == NPOS { count = self.count - start; }
+	elif start + count > self.count { count = self.count - start; }
 	return StringRef{&self.start[start], count};
 };
 
-let deinit in StringRef = fn() {};
+let find in StringRef = fn(other: StringRef): u64 {
+	let slen = self.len();
+	let olen = other.len();
+	if olen == 0 || olen > slen { return NPOS; }
+	let pos: u64 = NPOS;
+	for let i: u64 = 0; i < slen; ++i {
+		if self.start[i] != *other.start { continue; }
+		let found = true;
+		for let j: u64 = 0; j < olen; ++j {
+			if i + j >= slen || self.start[i + j] != other.start[j] {
+				found = false;
+				break;
+			}
+		}
+		if !found { continue; }
+		pos = i;
+		break;
+	}
+	return pos;
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // String Type
@@ -97,6 +120,14 @@ let String = struct {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Creation/Deletion Functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+let deinit in String = fn() {
+	if @as(u64, self.data) == nil { return; }
+	c.free(i8, self.data);
+	self.length = 0;
+	self.capacity = 0;
+	self.data = nil;
+};
 
 let new = fn(): String {
 	return String{nil, 0, 0};
@@ -140,20 +171,6 @@ let fromSubCStr = fn(data: *const i8, count: u64): String {
 
 let fromStringRef = fn(data: &const StringRef): String {
 	return fromSubCStr(data.start, data.count);
-};
-
-let init in String = fn() {
-	self.data = nil;
-	self.length = 0;
-	self.capacity = 0;
-};
-
-let deinit in String = fn() {
-	if @as(u64, self.data) == nil { return; }
-	c.free(i8, self.data);
-	self.length = 0;
-	self.capacity = 0;
-	self.data = nil;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -208,8 +225,8 @@ let getRef in const String = fn(): StringRef {
 
 let subRef in const String = fn(start: u64, count: u64): StringRef {
 	if start >= self.length { return StringRef{nil, 0}; }
-	if start + count > self.length { count = self.length - start; }
-	if count == 0 { count = self.length; }
+	if count == 0 || count == NPOS { count = self.length - start; }
+	elif start + count > self.length { count = self.length - start; }
 	return StringRef{&self.data[start], count};
 };
 
@@ -407,6 +424,27 @@ let __eq__ in const String = fn(other: &const String): i1 {
 
 let __ne__ in const String = fn(other: &const String): i1 {
 	return !(self == other);
+};
+
+let find in const String = fn(other: StringRef): u64 {
+	let slen = self.len();
+	let olen = other.len();
+	if olen == 0 || olen > slen { return NPOS; }
+	let pos: u64 = NPOS;
+	for let i: u64 = 0; i < slen; ++i {
+		if self.data[i] != *other.start { continue; }
+		let found = true;
+		for let j: u64 = 0; j < olen; ++j {
+			if i + j >= slen || self.data[i + j] != other.start[j] {
+				found = false;
+				break;
+			}
+		}
+		if !found { continue; }
+		pos = i;
+		break;
+	}
+	return pos;
 };
 
 let delim in const String = fn(ch: i8): vec.Vec(String) {
