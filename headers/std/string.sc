@@ -55,6 +55,16 @@ let len in const StringRef = fn(): u64 {
 	return self.count;
 };
 
+let hash in const StringRef = fn(): u64 {
+	return hashing.cStr(self.start, self.count);
+};
+
+let __assn__ in StringRef = fn(other: &const StringRef): &self {
+	self.start = other.start;
+	self.count = other.count;
+	return self;
+};
+
 let __eq__ in const StringRef = fn(other: &const StringRef): i1 {
 	if self.count != other.count { return false; }
 	if self.count == 0 { return true; }
