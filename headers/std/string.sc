@@ -230,70 +230,6 @@ let subRef in const String = fn(start: u64, count: u64): StringRef {
 	return StringRef{&self.data[start], count};
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// str() Functions
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-let iToStr = fn(comptime T: type, data: &const T): String {
-	let length = utils.countIntDigits(data);
-	let res = withCap(length);
-	// + 1 because snprintf includes space for null terminator
-	// which is also taken care of by withCap()
-	c.snprintf(res.getBuf(), length + 1, "%lld", data);
-	return res;
-};
-
-let uToStr = fn(comptime T: type, data: &const T): String {
-	let length = utils.countUIntDigits(data);
-	let res = withCap(length);
-	// + 1 because snprintf includes space for null terminator
-	// which is also taken care of by withCap()
-	c.snprintf(res.getBuf(), length + 1, "%llu", data);
-	return res;
-};
-
-let fToStr = fn(comptime T: type, data: &const T): String {
-	let length = utils.countIntDigits(data) + getPrecision() + 1; // + 1 for decimal point
-	let res = withCap(length);
-	// + 1 because snprintf includes space for null terminator
-	// which is also taken care of by withCap()
-	c.snprintf(res.getBuf(), length + 1, "%.*lf", getPrecision(), data);
-	return res;
-};
-
-let str in const i1 = fn(): String {
-	if self == true { return from("true"); }
-	return from("false");
-};
-let str in const i8 = fn(): String { return iToStr(i8, self); };
-let str in const i16 = fn(): String { return iToStr(i16, self); };
-let str in const i32 = fn(): String { return iToStr(i32, self); };
-let str in const i64 = fn(): String { return iToStr(i64, self); };
-
-let str in const u8 = fn(): String { return uToStr(u8, self); };
-let str in const u16 = fn(): String { return uToStr(u16, self); };
-let str in const u32 = fn(): String { return uToStr(u32, self); };
-let str in const u64 = fn(): String { return uToStr(u64, self); };
-
-let str in const f32 = fn(): String { return fToStr(f32, self); };
-let str in const f64 = fn(): String { return fToStr(f64, self); };
-
-let str in const vec.Vec = fn(): String {
-	let res = from("[");
-	for let i = 0; i < self.length; ++i {
-		inline if @isEqualTy(self.T, String) {
-			res += self.data[i];
-		} else {
-			let tmp = self.data[i].str();
-			defer tmp.deinit();
-			res += tmp;
-		}
-		if i < self.length - 1 { res.appendCStr(", "); }
-	}
-	res.appendCStr("]");
-	return res;
-};
-
 let isSpace in const i8 = fn(): i1 {
 	return c.isspace(self);
 };
@@ -315,19 +251,24 @@ let appendChar in String = fn(ch: i8): &String {
 	return self;
 };
 
-let appendCStr in String = fn(other: *const i8): &String {
-	let otherlen = c.strlen(other);
-	if !otherlen { return self; }
+let appendCStr in String = fn(other: *const i8, count: u64): &String {
+	if !count || count == NPOS { count = c.strlen(other); }
+	if !count { return self; }
 	if self.capacity == 0 {
-		self.capacity = otherlen + 1;
+		self.capacity = count + 1;
 		self.data = c.malloc(i8, self.capacity);
-	} elif self.capacity < self.length + otherlen + 1 {
-		self.capacity = self.length + otherlen + 1;
+	} elif self.capacity < self.length + count + 1 {
+		self.capacity = self.length + count + 1;
 		self.data = c.realloc(i8, self.data, self.capacity);
 	}
-	c.memcpy(@as(@ptr(void), &self.data[self.length]), @as(@ptr(void), other), otherlen + 1);
-	self.length += otherlen;
+	c.memcpy(@as(@ptr(void), &self.data[self.length]), @as(@ptr(void), other), count);
+	self.length += count;
+	self.data[self.length] = 0;
 	return self;
+};
+
+let appendRef in String = fn(other: StringRef): &String {
+	return self.appendCStr(other.start, other.count);
 };
 
 let appendInt in String = fn(data: i64): &String {
@@ -376,7 +317,7 @@ let appendFlt in String = fn(data: f64): &String {
 };
 
 let append in String = fn(other: &const String): &String {
-	return self.appendCStr(other.cStr());
+	return self.appendCStr(other.data, other.length);
 };
 
 let erase in String = fn(idx: u64): i1 {
@@ -483,6 +424,72 @@ let trim in String = fn() {
 		self.erase(i);
 		--i;
 	}
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// str() Functions
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+let iToStr = fn(comptime T: type, data: &const T): String {
+	let length = utils.countIntDigits(data);
+	let res = withCap(length);
+	// + 1 because snprintf includes space for null terminator
+	// which is also taken care of by withCap()
+	c.snprintf(res.getBuf(), length + 1, "%lld", data);
+	return res;
+};
+
+let uToStr = fn(comptime T: type, data: &const T): String {
+	let length = utils.countUIntDigits(data);
+	let res = withCap(length);
+	// + 1 because snprintf includes space for null terminator
+	// which is also taken care of by withCap()
+	c.snprintf(res.getBuf(), length + 1, "%llu", data);
+	return res;
+};
+
+let fToStr = fn(comptime T: type, data: &const T): String {
+	let length = utils.countIntDigits(data) + getPrecision() + 1; // + 1 for decimal point
+	let res = withCap(length);
+	// + 1 because snprintf includes space for null terminator
+	// which is also taken care of by withCap()
+	c.snprintf(res.getBuf(), length + 1, "%.*lf", getPrecision(), data);
+	return res;
+};
+
+let str in const i1 = fn(): String {
+	if self == true { return from("true"); }
+	return from("false");
+};
+let str in const i8 = fn(): String { return iToStr(i8, self); };
+let str in const i16 = fn(): String { return iToStr(i16, self); };
+let str in const i32 = fn(): String { return iToStr(i32, self); };
+let str in const i64 = fn(): String { return iToStr(i64, self); };
+
+let str in const u8 = fn(): String { return uToStr(u8, self); };
+let str in const u16 = fn(): String { return uToStr(u16, self); };
+let str in const u32 = fn(): String { return uToStr(u32, self); };
+let str in const u64 = fn(): String { return uToStr(u64, self); };
+
+let str in const f32 = fn(): String { return fToStr(f32, self); };
+let str in const f64 = fn(): String { return fToStr(f64, self); };
+
+let str in const vec.Vec = fn(): String {
+	let res = from("[");
+	for let i = 0; i < self.length; ++i {
+		inline if @isEqualTy(self.T, String) {
+			res += self.data[i];
+		} elif @isEqualTy(self.T, StringRef) {
+			res.appendRef(self.data[i]);
+		} else {
+			let tmp = self.data[i].str();
+			defer tmp.deinit();
+			res += tmp;
+		}
+		if i < self.length - 1 { res.appendCStr(", ", 2); }
+	}
+	res.appendCStr("]", 1);
+	return res;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

@@ -9,13 +9,13 @@ let Point = struct {
 
 let str in const Point = fn(): string.String {
 	let str = string.new();
-	str.appendCStr("{");
+	str.appendCStr("{", 1);
 	str.appendInt(self.x);
-	str.appendCStr(", ");
+	str.appendCStr(", ", 2);
 	str.appendUInt(self.y);
-	str.appendCStr(", ");
+	str.appendCStr(", ", 2);
 	str.appendFlt(self.z);
-	str.appendCStr("}");
+	str.appendCStr("}", 1);
 	return str;
 };
 
