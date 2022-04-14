@@ -22,7 +22,7 @@ class SimplifyPass : public Pass
 {
 	// intermediate variables that have to be added
 	// in a block, before the location of usage
-	Vector<StmtVar *> intermediates;
+	Vector<Vector<StmtVar *>> intermediates;
 
 	bool trySetMainFunction(StmtVar *var, StringRef varname);
 	Stmt *createIntermediate(FuncTy *cf, Stmt *a, const size_t &i);

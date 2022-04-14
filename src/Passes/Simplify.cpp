@@ -59,15 +59,18 @@ bool SimplifyPass::visit(Stmt *stmt, Stmt **source)
 bool SimplifyPass::visit(StmtBlock *stmt, Stmt **source)
 {
 	auto &stmts = stmt->getStmts();
+	intermediates.push_back({});
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(!visit(stmts[i], &stmts[i])) {
 			err::out(stmt, {"failed to perform simplify pass on stmt in block"});
 			return false;
 		}
-		if(!intermediates.empty()) {
-			stmts.insert(stmts.begin() + i, intermediates.begin(), intermediates.end());
-			i += intermediates.size();
-			intermediates.clear();
+		auto &intermediate_list = intermediates.back();
+		if(!intermediate_list.empty()) {
+			stmts.insert(stmts.begin() + i, intermediate_list.begin(),
+				     intermediate_list.end());
+			i += intermediate_list.size();
+			intermediate_list.clear();
 		}
 		if(!stmts[i]) {
 			stmts.erase(stmts.begin() + i);
@@ -83,6 +86,7 @@ bool SimplifyPass::visit(StmtBlock *stmt, Stmt **source)
 			--i;
 		}
 	}
+	intermediates.pop_back();
 	return true;
 }
 bool SimplifyPass::visit(StmtType *stmt, Stmt **source)
@@ -403,7 +407,7 @@ Stmt *SimplifyPass::createIntermediate(FuncTy *cf, Stmt *a, const size_t &i)
 	v->createAndSetValue(a->getValue()->clone(ctx));
 	v->appendStmtMask(a->getStmtMask());
 	a->castTo(nullptr, 0);
-	intermediates.push_back(v);
+	intermediates.back().push_back(v);
 	StmtSimple *newa = StmtSimple::create(ctx, a->getLoc(), name);
 	newa->setValueID(v);
 	newa->appendStmtMask(a->getStmtMask());

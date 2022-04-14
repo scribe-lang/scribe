@@ -46,6 +46,11 @@ let __subscr__ in Vec = fn(idx: u64): &self.T {
 	return self.data[idx];
 };
 
+// returns a non reference copy of the data
+let getByVal in Vec = fn(idx: u64): self.T {
+	return self.data[idx];
+};
+
 let len in Vec = fn(): u64 {
 	return self.length;
 };

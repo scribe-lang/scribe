@@ -4,6 +4,7 @@
 // All objects inserted into the map are managed by it - both key and value
 
 let c = @import("std/c");
+let vec = @import("std/vec");
 let hashing = @import("std/hashing");
 
 let static INIT_CAPACITY: u64 = 1024;
@@ -193,6 +194,19 @@ let get in Dict = fn(key: &const self.K): &self.V {
 		k = k.next;
 	}
 	return self.emptyvalue;
+};
+
+let getKeys in Dict = fn(): vec.Vec(self.K) {
+	let keys = vec.new(self.K, true);
+	for let i: u64 = 0; i < self.length; ++i {
+		if @as(u64, self.table[i]) == 0 { continue; }
+		let k = self.table[i];
+		while @as(u64, k) {
+			keys.push(k.key);
+			k = k.next;
+		}
+	}
+	return keys;
 };
 
 inline if @isMainSrc() {
