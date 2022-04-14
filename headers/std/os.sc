@@ -50,8 +50,8 @@ let getExePath = fn(exe: *const i8): string.String {
 
 	for let i = 0; i < delimpath.len(); ++i {
 		res = delimpath[i];
-		res.appendCStr("/");
-		res.appendCStr(exe);
+		res.appendCStr("/", 1);
+		res.appendCStr(exe, 0);
 		if fs.exists(res.cStr()) { break; }
 		res.clear();
 	}
