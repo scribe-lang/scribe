@@ -833,8 +833,9 @@ post_mangling:
 	}
 	if(vtype) stmt->appendStmtMask(vtype->getStmtMask());
 	if(val) stmt->appendStmtMask(val->getStmtMask());
-	// no checking if stmt had const originally because let const is not allowed
+	// no checking if stmt had const or ref originally because let const/& is not allowed
 	if(vtype && !vtype->isConst()) stmt->unsetConst();
+	if(vtype && !vtype->isRef()) stmt->unsetRef();
 	if(vtype && stmt->getValue()->isType()) {
 		Type *t	   = as<TypeVal>(stmt->getValue())->getVal();
 		Value *res = t->toDefaultValue(ctx, stmt->getLoc(), CDFALSE);
