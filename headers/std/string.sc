@@ -69,6 +69,10 @@ let __assn__ in StringRef = fn(other: StringRef): &self {
 	return self;
 };
 
+let __subscr__ in StringRef = fn(idx: u64): &i8 {
+	return self.start[idx];
+};
+
 let __eq__ in const StringRef = fn(other: StringRef): i1 {
 	if self.count != other.count { return false; }
 	if self.count == 0 { return true; }
