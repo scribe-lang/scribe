@@ -8,6 +8,16 @@ let Vec = struct<T> {
 	managed: i1;
 };
 
+let deinit in Vec = fn() {
+	defer c.free(self.T, self.data);
+	if !self.managed || @isPrimitive(self.T) { return; }
+	for let i: u64 = 0; i < self.length; ++i {
+		inline if !@isPrimitive(self.T) {
+			self.data[i].deinit();
+		}
+	}
+};
+
 // a function with a comptime argument is guaranteed to be specialized
 let new = fn(comptime T: type, managed: i1): Vec(T) {
 	return Vec(T){0, 0, nil, managed};
@@ -42,6 +52,11 @@ let pop in Vec = fn() {
 	}
 };
 
+let __assn__ in Vec = fn(other: &const self): &self {
+	c.memcpy(@as(@ptr(void), &self), @as(@ptr(void), &other), @sizeOf(self));
+	return self;
+};
+
 let __subscr__ in Vec = fn(idx: u64): &self.T {
 	return self.data[idx];
 };
@@ -49,6 +64,14 @@ let __subscr__ in Vec = fn(idx: u64): &self.T {
 // returns a non reference copy of the data
 let getByVal in Vec = fn(idx: u64): self.T {
 	return self.data[idx];
+};
+
+let back in Vec = fn(): &self.T {
+	return self.data[self.length - 1];
+};
+
+let backByVal in Vec = fn(): self.T {
+	return self.data[self.length - 1];
 };
 
 let len in Vec = fn(): u64 {
@@ -61,16 +84,6 @@ let cap in Vec = fn(): u64 {
 
 let isEmpty in Vec = fn(): i1 {
 	return self.length == 0;
-};
-
-let deinit in Vec = fn() {
-	defer c.free(self.T, self.data);
-	if !self.managed || @isPrimitive(self.T) { return; }
-	for let i: u64 = 0; i < self.length; ++i {
-		inline if !@isPrimitive(self.T) {
-			self.data[i].deinit();
-		}
-	}
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
