@@ -256,6 +256,7 @@ let appendChar in String = fn(ch: i8): &String {
 };
 
 let appendCStr in String = fn(other: *const i8, count: u64): &String {
+	if @as(u64, other) == nil { return self; }
 	if !count || count == NPOS { count = c.strlen(other); }
 	if !count { return self; }
 	if self.capacity == 0 {
