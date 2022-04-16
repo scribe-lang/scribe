@@ -19,15 +19,19 @@ message("-- Using PREFIX = ${CMAKE_INSTALL_PREFIX}")
 # add cmake_modules path
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules")
 
-set(SCRIBE_VERSION_MAJOR 0)
-set(SCRIBE_VERSION_MINOR 1)
-set(SCRIBE_VERSION_PATCH 0)
-
 set(COMPILER_VERSION_MAJOR 0)
 set(COMPILER_VERSION_MINOR 0)
 set(COMPILER_VERSION_PATCH 1)
 
 execute_process(COMMAND date "+%a %b %d, %Y at %H:%M:%S" OUTPUT_VARIABLE BUILD_DATE OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git config --get remote.origin.url OUTPUT_VARIABLE REPO_URL OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git log --format=%H -n 1 OUTPUT_VARIABLE COMMIT_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git diff --quiet RESULT_VARIABLE ret)
+if(ret EQUAL 0)
+	set(TREE_STATUS "Clean")
+else()
+	set(TREE_STATUS "Dirty")
+endif()
 
 set(ORIGIN "$ORIGIN")
 if(APPLE)

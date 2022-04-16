@@ -77,6 +77,8 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	Type *cstr = PtrTy::getStr(c);
 	VoidTy *v  = VoidTy::get(c);
 
+	ADDFN("compilerID", createFnVal(c, {}, cstr, intrinsic_compilerid, IPARSE));
+
 	g = TypeTy::get(c);
 	ADDFN("import", createComptimeFnVal(c, {cstr}, g, {true}, intrinsic_import, IPARSE));
 
