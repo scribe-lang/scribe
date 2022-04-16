@@ -49,9 +49,9 @@ int main(int argc, char **argv)
 	}
 
 	if(args.has("version")) {
-		fprintf(stdout, "%s compiler %d.%d.%d (language %d.%d.%d)\nBuilt with %s\nOn %s\n",
-			PROJECT_NAME, SCRIBE_MAJOR, SCRIBE_MINOR, COMPILER_MAJOR, COMPILER_MINOR,
-			COMPILER_PATCH, SCRIBE_PATCH, BUILD_CXX_COMPILER, BUILD_DATE);
+		fprintf(stdout, "%s compiler %d.%d.%d (%s %s [%s])\nBuilt with %s\nOn %s\n",
+			PROJECT_NAME, COMPILER_MAJOR, COMPILER_MINOR, COMPILER_PATCH, REPO_URL,
+			COMMIT_ID, TREE_STATUS, BUILD_CXX_COMPILER, BUILD_DATE);
 		return 0;
 	}
 	String file = String(args.get(1));

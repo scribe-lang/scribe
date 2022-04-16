@@ -59,6 +59,10 @@ let cap in Vec = fn(): u64 {
 	return self.capacity;
 };
 
+let isEmpty in Vec = fn(): i1 {
+	return self.length == 0;
+};
+
 let deinit in Vec = fn() {
 	defer c.free(self.T, self.data);
 	if !self.managed || @isPrimitive(self.T) { return; }

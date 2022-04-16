@@ -27,8 +27,18 @@
 
 namespace sc
 {
+static StringRef GetCompilerID(Context &c);
 static bool IsValidSource(String &modname);
 static size_t SizeOf(Type *ty);
+
+INTRINSIC(compilerid)
+{
+	static StringRef id = GetCompilerID(c);
+	VecVal *res	    = VecVal::createStr(c, id, CDPERMA);
+	stmt->createAndSetValue(res);
+	stmt->setConst();
+	return true;
+}
 
 INTRINSIC(import)
 {
@@ -228,6 +238,16 @@ INTRINSIC(compileerror)
 	}
 	err::out(stmt, {e});
 	return false;
+}
+
+static StringRef GetCompilerID(Context &c)
+{
+	StringRef MA = COMPILER_MAJOR_S;
+	StringRef MI = COMPILER_MINOR_S;
+	StringRef PA = COMPILER_PATCH_S;
+	StringRef id =
+	c.strFrom({MA, ".", MI, ".", PA, " (", REPO_URL, " ", COMMIT_ID, " [", TREE_STATUS, "])"});
+	return id;
 }
 
 static bool IsValidSource(String &modname)

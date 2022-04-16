@@ -94,9 +94,8 @@ void ArgParser::parse()
 
 void ArgParser::print_help(FILE *file)
 {
-	std::cout << PROJECT_NAME << " compiler " << SCRIBE_MAJOR << "." << SCRIBE_MINOR << "."
-		  << SCRIBE_PATCH << " (language " << COMPILER_MAJOR << COMPILER_MINOR
-		  << COMPILER_PATCH << ")\n";
+	std::cout << PROJECT_NAME << " compiler " << COMPILER_MAJOR << "." << COMPILER_MINOR << "."
+		  << COMPILER_PATCH << "\n";
 
 	std::cout << "usage: " << argv[0];
 	for(auto &arg : arg_defs) {
