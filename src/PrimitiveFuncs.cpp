@@ -113,15 +113,15 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	ADDFN("ptr", createFnVal(c, {g}, g2, intrinsic_ptr, IPARSE));
 
 	g = TypeTy::get(c);
-	ADDFN("sizeOf", createFnVal(c, {g}, u64, intrinsic_szof, IVALUE));
+	ADDFN("sizeOf", createFnVal(c, {g}, u64, intrinsic_szof, IPARSE));
 
 	// valen must be IPARSE since the value has to be decided during type assignment
 	// ie, cannot be decided during value assignment pass
 	ADDFN("valen", createFnVal(c, {}, i32, intrinsic_valen, IPARSE));
 
-	ADDFN("getOSID", createFnVal(c, {}, i32, intrinsic_getosid, IVALUE));
+	ADDFN("getOSID", createFnVal(c, {}, i32, intrinsic_getosid, IPARSE));
 
-	ADDFN("sysPathMax", createFnVal(c, {}, i32, intrinsic_syspathmax, IVALUE));
+	ADDFN("sysPathMax", createFnVal(c, {}, i32, intrinsic_syspathmax, IPARSE));
 
 	ADDFN("compileError", createFnVal(c, {a}, v, intrinsic_compileerror, IPARSE, true));
 
