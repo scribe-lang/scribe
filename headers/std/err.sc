@@ -2,7 +2,6 @@
 // Used to propagate errors across functions
 // without using return values or args
 
-let io = @import("std/io");
 let vec = @import("std/vec");
 let string = @import("std/string");
 
@@ -39,7 +38,6 @@ let getStrStack = fn(): &vec.Vec(string.String) {
 let init = fn() {
 	if inited { return; }
 	getStack() = vec.new(Error, true);
-	io.println("Is Managed: ", getStack().managed);
 	getStrStack() = vec.new(string.String, true);
 	inited = true;
 };
