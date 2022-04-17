@@ -89,9 +89,12 @@ bool CDriver::compile(StringRef outfile)
 				 {"optimization option must have a value, found nothing"});
 			return false;
 		}
-		if(res != "0" && res != "1" && res != "2" && res != "3") {
-			err::out(mainmod->getParseTree(), {"optimization option value must be"
-							   " one of 0, 1, 2, or 3; found nothing"});
+		if(res != "0" && res != "1" && res != "2" && res != "3" && res != "s" && res != "z")
+		{
+			err::out(mainmod->getParseTree(),
+				 {"optimization option value must be one of"
+				  " 0, 1, 2, 3, s, or z; found: ",
+				  res});
 			return false;
 		}
 		opt = res;
