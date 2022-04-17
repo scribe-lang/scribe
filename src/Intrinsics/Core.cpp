@@ -274,10 +274,13 @@ static bool IsValidSource(String &modname)
 
 static size_t SizeOf(Type *ty)
 {
+	static const size_t szvoidp = sizeof(void *);
+
 	if(ty->isPtr()) {
 		return sizeof(void *);
 	}
 	if(ty->isInt()) {
+		if(as<IntTy>(ty)->getBits() < 8) return 1;
 		return as<IntTy>(ty)->getBits() / 8;
 	}
 	if(ty->isFlt()) {
@@ -289,7 +292,10 @@ static size_t SizeOf(Type *ty)
 		size_t biggest = 0;
 		for(auto &t : st->getFields()) {
 			size_t newsz = SizeOf(t);
-			if(newsz > biggest) biggest = newsz;
+			// biggest cannot be greater than sizeof(void *)
+			if(newsz > biggest && biggest < szvoidp) {
+				biggest = newsz > szvoidp ? szvoidp : newsz;
+			}
 			sz += newsz;
 		}
 		while(sz % biggest != 0) {
