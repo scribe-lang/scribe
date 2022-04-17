@@ -32,10 +32,7 @@ let StringRef = struct {
 let deinit in StringRef = fn() {};
 
 let subRefCStr = fn(data: *const i8, start: u64, count: u64): StringRef {
-	let len = c.strlen(data);
-	if start >= len { return StringRef{nil, 0}; }
-	if start + count > len { count = len - start; }
-	if count == 0 { count = len; }
+	if count == 0 { count = c.strlen(&data[start]); }
 	return StringRef{&data[start], count};
 };
 
@@ -45,6 +42,10 @@ let getRefCStr = fn(data: *const i8): StringRef {
 
 let global ref = fn(data: *const i8): StringRef {
 	return getRefCStr(data);
+};
+
+let getRef in const i8 = fn(): StringRef {
+	return subRefCStr(&self, 0, 1);
 };
 
 let isEmpty in const StringRef = fn(): i1 {
@@ -69,13 +70,13 @@ let __assn__ in StringRef = fn(other: StringRef): &self {
 	return self;
 };
 
-let __subscr__ in StringRef = fn(idx: u64): &i8 {
+let __subscr__ in StringRef = fn(idx: u64): &const i8 {
 	return self.start[idx];
 };
 
 let __eq__ in const StringRef = fn(other: StringRef): i1 {
 	if self.count != other.count { return false; }
-	if self.count == 0 { return true; }
+	if self.count == 0 { return false; }
 	return c.strncmp(self.start, other.start, self.count) == 0;
 };
 
