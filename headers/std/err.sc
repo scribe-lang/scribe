@@ -50,6 +50,15 @@ let deinit = fn() {
 
 let allToRef = fn(data: ...&const any): string.StringRef {
 	let comptime len = @valen();
+	inline if len == 1 && @isCString(data[0]) {
+		return string.getRefCStr(data[0]);
+	}
+	inline if len == 1 && @isEqualTy(data[0], string.String) {
+		return data[0].getRef();
+	}
+	inline if len == 1 && @isEqualTy(data[0], string.StringRef) {
+		return data[0];
+	}
 	let errstr = string.new();
 	inline for let comptime i = 0; i < len; ++i {
 		inline if @isCString(data[i]) {
@@ -83,11 +92,15 @@ let present = fn(): i1 {
 
 let getCode = fn(): i32 {
 	if !inited { return -1; }
+	if getStack().empty() { return -1; }
 	return getStack().back().code;
 };
 
 let getMsg = fn(): string.StringRef {
 	if !inited { return ref"err system uninitialized"; }
+	if getStack().empty() {
+		return ref"no error present in stack";
+	}
 	return getStack().back().msg;
 };
 
