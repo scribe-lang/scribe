@@ -92,13 +92,13 @@ let present = fn(): i1 {
 
 let getCode = fn(): i32 {
 	if !inited { return -1; }
-	if getStack().empty() { return -1; }
+	if getStack().isEmpty() { return -1; }
 	return getStack().back().code;
 };
 
 let getMsg = fn(): string.StringRef {
 	if !inited { return ref"err system uninitialized"; }
-	if getStack().empty() {
+	if getStack().isEmpty() {
 		return ref"no error present in stack";
 	}
 	return getStack().back().msg;
