@@ -1,0 +1,34 @@
+let sysconf = extern[sysconf, "<unistd.h>"] fn(name: i32): i64;
+
+// sysconf() names
+let _SC_ARG_MAX: i32 = extern[_SC_ARG_MAX, "<unistd.h>"];
+let _SC_CHILD_MAX: i32 = extern[_SC_CHILD_MAX, "<unistd.h>"];
+let _SC_HOST_NAME_MAX: i32 = extern[_SC_HOST_NAME_MAX, "<unistd.h>"];
+let _SC_LOGIN_NAME_MAX: i32 = extern[_SC_LOGIN_NAME_MAX, "<unistd.h>"];
+let _SC_NGROUPS_MAX: i32 = extern[_SC_NGROUPS_MAX, "<unistd.h>"];
+let _SC_CLK_TCK: i32 = extern[_SC_CLK_TCK, "<unistd.h>"];
+let _SC_OPEN_MAX: i32 = extern[_SC_OPEN_MAX, "<unistd.h>"];
+let _SC_PAGESIZE: i32 = extern[_SC_PAGESIZE, "<unistd.h>"];
+let _SC_PAGE_SIZE: i32 = extern[_SC_PAGE_SIZE, "<unistd.h>"];
+let _SC_RE_DUP_MAX: i32 = extern[_SC_RE_DUP_MAX, "<unistd.h>"];
+let _SC_STREAM_MAX: i32 = extern[_SC_STREAM_MAX, "<unistd.h>"];
+let _SC_SYMLOOP_MAX: i32 = extern[_SC_SYMLOOP_MAX, "<unistd.h>"];
+let _SC_TTY_NAME_MAX: i32 = extern[_SC_TTY_NAME_MAX, "<unistd.h>"];
+let _SC_TZNAME_MAX: i32 = extern[_SC_TZNAME_MAX, "<unistd.h>"];
+let _SC_VERSION: i32 = extern[_SC_VERSION, "<unistd.h>"];
+let _SC_BC_BASE_MAX: i32 = extern[_SC_BC_BASE_MAX, "<unistd.h>"];
+let _SC_BC_DIM_MAX: i32 = extern[_SC_BC_DIM_MAX, "<unistd.h>"];
+let _SC_BC_SCALE_MAX: i32 = extern[_SC_BC_SCALE_MAX, "<unistd.h>"];
+let _SC_BC_STRING_MAX: i32 = extern[_SC_BC_STRING_MAX, "<unistd.h>"];
+let _SC_COLL_WEIGHTS_MAX: i32 = extern[_SC_COLL_WEIGHTS_MAX, "<unistd.h>"];
+let _SC_EXPR_NEST_MAX: i32 = extern[_SC_EXPR_NEST_MAX, "<unistd.h>"];
+let _SC_LINE_MAX: i32 = extern[_SC_LINE_MAX, "<unistd.h>"];
+let _SC_2_VERSION: i32 = extern[_SC_2_VERSION, "<unistd.h>"];
+let _SC_2_C_DEV: i32 = extern[_SC_2_C_DEV, "<unistd.h>"];
+let _SC_2_FORT_DEV: i32 = extern[_SC_2_FORT_DEV, "<unistd.h>"];
+let _SC_2_FORT_RUN: i32 = extern[_SC_2_FORT_RUN, "<unistd.h>"];
+let _SC_2_LOCALEDEF: i32 = extern[_SC_2_LOCALEDEF, "<unistd.h>"];
+let _SC_PHYS_PAGES: i32 = extern[_SC_PHYS_PAGES, "<unistd.h>"];
+let _SC_AVPHYS_PAGES: i32 = extern[_SC_AVPHYS_PAGES, "<unistd.h>"];
+let _SC_NPROCESSORS_CONF: i32 = extern[_SC_NPROCESSORS_CONF, "<unistd.h>"];
+let _SC_NPROCESSORS_ONLN: i32 = extern[_SC_NPROCESSORS_ONLN, "<unistd.h>"];

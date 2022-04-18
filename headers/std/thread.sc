@@ -1,3 +1,5 @@
+let unistd = @import("std/unistd");
+
 let pthread_t: u64 = extern[pthread_t, "<pthread.h>", "-pthread"];
 let pthread_attr_t = extern[pthread_attr_t, "<pthread.h>", "-pthread"] struct {};
 
@@ -5,6 +7,10 @@ let pthread_create = extern[pthread_create, "<pthread.h>", "-pthread"] fn(id: *p
 let pthread_join = extern[pthread_join, "<pthread.h>", "-pthread"] fn(id: pthread_t, value_ptr: **void): i32;
 
 let getSelf = extern[pthread_self, "<pthread.h>", "-pthread"] fn(): pthread_t;
+
+let getConcurrency = fn(): i64 {
+	return unistd.sysconf(unistd._SC_NPROCESSORS_ONLN);
+};
 
 let Thread = struct {
 	threadid: pthread_t;
