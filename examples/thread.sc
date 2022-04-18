@@ -16,6 +16,8 @@ let main = fn(): i32 {
 	mtx.init();
 	defer mtx.deinit();
 
+	io.println("Hardware concurrency: ", thread.getConcurrency());
+
 	let data: u64 = 5;
 	let t = thread.new();
 	let t2 = thread.new();
