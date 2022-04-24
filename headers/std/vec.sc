@@ -38,6 +38,10 @@ let push in Vec = fn(d: &const self.T): self {
 	return self;
 };
 
+let pushVal in Vec = fn(d: self.T): self {
+	return self.push(d);
+};
+
 let pop in Vec = fn() {
 	if self.length == 0 {
 		// throw "vec.pop() in an empty vector";
