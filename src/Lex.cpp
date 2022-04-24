@@ -806,6 +806,8 @@ void Tokenizer::remove_back_slash(String &s)
 				*it = '\a';
 			else if(*it == 'b')
 				*it = '\b';
+			else if(*it == 'e')
+				*it = '\e';
 			else if(*it == 'f')
 				*it = '\f';
 			else if(*it == 'n')
@@ -837,6 +839,11 @@ String view_backslash(StringRef data)
 		if(*it == '\b') {
 			it = res.erase(it);
 			res.insert(it - res.begin(), "\\b");
+			continue;
+		}
+		if(*it == '\e') {
+			it = res.erase(it);
+			res.insert(it - res.begin(), "\\e");
 			continue;
 		}
 		if(*it == '\f') {
