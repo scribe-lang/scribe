@@ -12,7 +12,7 @@ let main = fn(): i32 {
 
 	let newpath = string.from(p);
 	defer newpath.deinit();
-	newpath.appendCStr(":/tmp/bin", 0);
+	newpath.append(":/tmp/bin");
 	os.setEnv("PATH", newpath.cStr(), true);
 	io.println("Final PATH is: ", os.getEnv("PATH"));
 

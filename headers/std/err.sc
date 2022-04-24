@@ -18,9 +18,9 @@ let deinit in Error = fn() {
 
 let str in const Error = fn(): string.String {
 	let s = string.from("{ Code: ");
-	s.appendInt(self.code);
-	s.appendCStr(", Message: ", 0);
-	s.appendRef(self.msg);
+	s.append(self.code); // internally calls s.appendInt()
+	s.append(", Message: ");
+	s.append(self.msg); // internally calls s.appendRef()
 	s.appendCStr(" }", 2);
 	return s;
 };
@@ -61,19 +61,7 @@ let allToRef = fn(data: ...&const any): string.StringRef {
 	}
 	let errstr = string.new();
 	inline for let comptime i = 0; i < len; ++i {
-		inline if @isCString(data[i]) {
-			errstr.appendCStr(data[i], 0);
-		} elif @isCChar(data[i]) {
-			errstr.appendChar(data[i]);
-		} elif @isEqualTy(data[i], string.String) {
-			errstr += data[i];
-		} elif @isEqualTy(data[i], string.StringRef) {
-			errstr.appendRef(data[i]);
-		} else {
-			let s = data[i].str();
-			defer s.deinit();
-			errstr += s;
-		}
+		errstr.append(data[i]); // String.append() is a generic function
 	}
 	getStrStack().push(errstr);
 	return errstr.getRef();
