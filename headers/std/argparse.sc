@@ -134,6 +134,14 @@ let getArgIdx in ArgParser = fn(idx: u64): string.StringRef {
 	return self.nooptargs[idx];
 };
 
+let getAllArgIdxFrom in ArgParser = fn(idx: u64): vec.Vec(string.StringRef) {
+	let res = vec.new(string.StringRef, true);
+	for let i = idx; i < self.nooptargs.len(); ++i {
+		res.push(self.nooptargs[i]);
+	}
+	return res;
+};
+
 let getArgVal in ArgParser = fn(data: string.StringRef): string.StringRef {
 	if !self.args.find(data) { return ref""; }
 	return self.args.get(data).getVal();
