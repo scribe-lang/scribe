@@ -91,10 +91,19 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	ADDFN("isPrimitiveOrPtr", createFnVal(c, {g}, i1, intrinsic_isprimitiveorptr, IPARSE));
 
 	g = TypeTy::get(c);
-	ADDFN("isCString", createFnVal(c, {g}, i1, intrinsic_iscstring, IPARSE));
+	ADDFN("isInt", createFnVal(c, {g}, i1, intrinsic_isint, IPARSE));
+
+	g = TypeTy::get(c);
+	ADDFN("isIntSigned", createFnVal(c, {g}, i1, intrinsic_isintsigned, IPARSE));
+
+	g = TypeTy::get(c);
+	ADDFN("isFlt", createFnVal(c, {g}, i1, intrinsic_isflt, IPARSE));
 
 	g = TypeTy::get(c);
 	ADDFN("isCChar", createFnVal(c, {g}, i1, intrinsic_iscchar, IPARSE));
+
+	g = TypeTy::get(c);
+	ADDFN("isCString", createFnVal(c, {g}, i1, intrinsic_iscstring, IPARSE));
 
 	g  = TypeTy::get(c);
 	g2 = TypeTy::get(c);

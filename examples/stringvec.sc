@@ -7,7 +7,7 @@ let main = fn(): i32 {
 	defer v.deinit();
 	for let i = 0; i < 10; ++i {
 		let s = string.from("Hi ");
-		s.appendInt(i);
+		s.append(i); // internally calls s.appendInt(i)
 		v.push(s);
 	}
 	io.println("Vector: ", v);

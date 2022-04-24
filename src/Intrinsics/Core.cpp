@@ -97,10 +97,23 @@ INTRINSIC(isprimitiveorptr)
 	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_prim_or_ptr));
 	return true;
 }
-INTRINSIC(iscstring)
+INTRINSIC(isint)
 {
-	bool is_cstr = args[0]->getValue()->isStrLiteral();
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_cstr));
+	bool is_int = args[0]->getValueTy()->isInt();
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_int));
+	return true;
+}
+INTRINSIC(isintsigned)
+{
+	bool is_signed = args[0]->getValueTy()->isInt();
+	if(is_signed) is_signed = as<IntTy>(args[0]->getValueTy())->isSigned();
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_signed));
+	return true;
+}
+INTRINSIC(isflt)
+{
+	bool is_flt = args[0]->getValueTy()->isFlt();
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_flt));
 	return true;
 }
 INTRINSIC(iscchar)
@@ -112,6 +125,12 @@ INTRINSIC(iscchar)
 		is_cchar &= t->isSigned();
 	}
 	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_cchar));
+	return true;
+}
+INTRINSIC(iscstring)
+{
+	bool is_cstr = args[0]->getValue()->isStrLiteral();
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_cstr));
 	return true;
 }
 INTRINSIC(isequalty)

@@ -292,7 +292,7 @@ let appendInt in String = fn(data: i64): &String {
 	return self;
 };
 
-let appendUInt in String = fn(data: i64): &String {
+let appendUInt in String = fn(data: u64): &String {
 	let otherlen = utils.countUIntDigits(data);
 	if self.capacity == 0 {
 		self.capacity = otherlen + 1;
@@ -322,8 +322,30 @@ let appendFlt in String = fn(data: f64): &String {
 	return self;
 };
 
-let append in String = fn(other: &const String): &String {
-	return self.appendCStr(other.data, other.length);
+let append in String = fn(data: &const any): &String {
+	inline if @isEqualTy(data, i8) {
+		return self.appendChar(data);
+	} elif @isCString(data) {
+		return self.appendCStr(data, 0);
+	} elif @isEqualTy(data, StringRef) {
+		return self.appendRef(data);
+	} elif @isInt(data) {
+		inline if @isIntSigned(data) {
+			return self.appendInt(data);
+		} else {
+			return self.appendUInt(data);
+		}
+	} elif @isFlt(data) {
+		self.appendFlt(data);
+	} elif @isEqualTy(data, String) {
+		return self.appendCStr(data.data, data.length);
+	} else { // just attempt to convert the data to string and append that
+		let s = data.str();
+		defer s.deinit();
+		return self.appendCStr(s.data, s.length);
+	}
+	// unreachable
+	return self; // this exists only to avoid warning by C compiler about non-void return
 };
 
 let erase in String = fn(idx: u64): i1 {
@@ -356,7 +378,7 @@ let __add__ in const String = fn(other: &const String): String {
 	return res;
 };
 
-let __add_assn__ in String = fn(other: &const String): &String {
+let __add_assn__ in String = fn(other: &const any): &String {
 	return self.append(other);
 };
 
@@ -483,15 +505,7 @@ let str in const f64 = fn(): String { return fToStr(f64, self); };
 let str in const vec.Vec = fn(): String {
 	let res = from("[");
 	for let i = 0; i < self.length; ++i {
-		inline if @isEqualTy(self.T, String) {
-			res += self.data[i];
-		} elif @isEqualTy(self.T, StringRef) {
-			res.appendRef(self.data[i]);
-		} else {
-			let tmp = self.data[i].str();
-			defer tmp.deinit();
-			res += tmp;
-		}
+		res += self.data[i];
 		if i < self.length - 1 { res.appendCStr(", ", 2); }
 	}
 	res.appendCStr("]", 1);

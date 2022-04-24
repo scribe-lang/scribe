@@ -10,11 +10,11 @@ let Point = struct {
 let str in const Point = fn(): string.String {
 	let str = string.new();
 	str.appendCStr("{", 1);
-	str.appendInt(self.x);
+	str.append(self.x); // should then call str.appendInt()
 	str.appendCStr(", ", 2);
-	str.appendUInt(self.y);
+	str.append(self.y); // should then call str.appendUInt()
 	str.appendCStr(", ", 2);
-	str.appendFlt(self.z);
+	str.append(self.z); // should then call str.appendFlt()
 	str.appendCStr("}", 1);
 	return str;
 };
