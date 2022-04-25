@@ -25,7 +25,7 @@ Stmt *StmtBlock::clone(Context &ctx)
 	for(auto &stmt : stmts) {
 		newstmts.push_back(stmt->clone(ctx));
 	}
-	Stmt *res = StmtBlock::create(ctx, getLoc(), newstmts, is_top);
+	Stmt *res = StmtBlock::create(ctx, getLoc(), newstmts, is_top, disable_layering);
 	res->appendStmtMask(getStmtMask());
 	res->castTo(getCast(), this->getCastStmtMask());
 	return res;

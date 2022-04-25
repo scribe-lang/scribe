@@ -136,20 +136,22 @@ Type *Stmt::getValueTy(const bool &exact)
 //////////////////////////////////////////// StmtBlock ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtBlock::StmtBlock(const ModuleLoc *loc, const Vector<Stmt *> &stmts, const bool &is_top)
-	: Stmt(BLOCK, loc), stmts(stmts), is_top(is_top)
+StmtBlock::StmtBlock(const ModuleLoc *loc, const Vector<Stmt *> &stmts, const bool &is_top,
+		     bool disable_layering)
+	: Stmt(BLOCK, loc), stmts(stmts), is_top(is_top), disable_layering(disable_layering)
 {}
 StmtBlock::~StmtBlock() {}
 StmtBlock *StmtBlock::create(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &stmts,
-			     const bool &is_top)
+			     const bool &is_top, bool disable_layering)
 {
-	return c.allocStmt<StmtBlock>(loc, stmts, is_top);
+	return c.allocStmt<StmtBlock>(loc, stmts, is_top, disable_layering);
 }
 
 void StmtBlock::disp(const bool &has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, {"Block [top = ", is_top ? "yes" : "no", "]:", getTypeString(), "\n"});
+	tio::print(has_next, {"Block [top = ", is_top ? "yes" : "no", "] [disable layering = ",
+			      disable_layering ? "yes" : "no", "]:", getTypeString(), "\n"});
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(!stmts[i]) {
 			tio::taba(has_next);
