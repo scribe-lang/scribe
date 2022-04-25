@@ -32,10 +32,10 @@ let system = c.system;
 // allocates string
 let getCWD = fn(): string.String {
 	let path = string.withCap(PATH_MAX);
-	c.getcwd(path.getBuf(), PATH_MAX);
+	c.unistd.getcwd(path.getBuf(), PATH_MAX);
 	return path;
 };
-let setCWD = c.chdir;
+let setCWD = c.unistd.chdir;
 
 let getExePath = fn(exe: *const i8): string.String {
 	let res = string.new();

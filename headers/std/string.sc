@@ -512,6 +512,19 @@ let str in const vec.Vec = fn(): String {
 	return res;
 };
 
+let str in const c.ioctl.winsize = fn(): String {
+	let res = from("{ws_row: ");
+	res += self.ws_row;
+	res += ", ws_col: ";
+	res += self.ws_col;
+	res += ", ws_xpixel: ";
+	res += self.ws_xpixel;
+	res += ", ws_ypixel: ";
+	res += self.ws_ypixel;
+	res += "}";
+	return res;
+};
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Tests
 ///////////////////////////////////////////////////////////////////////////////////////////////////
