@@ -70,7 +70,9 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 
 bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 {
-	if(stmt->getMod()->isMainModule() || !stmt->isTop()) vmgr.pushLayer();
+	if(!stmt->isLayeringDisabled()) {
+		if(stmt->getMod()->isMainModule() || !stmt->isTop()) vmgr.pushLayer();
+	}
 
 	if(stmt->isTop()) deferstack.pushFunc();
 
@@ -93,6 +95,15 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 			stmts.erase(stmts.begin() + i);
 			--i;
 		}
+		// remove blocks at top level (also helps with conditional imports)
+		if(stmt->isTop() && stmts[i]->isBlock()) {
+			StmtBlock *blk		 = as<StmtBlock>(stmts[i]);
+			Vector<Stmt *> &blkstmts = blk->getStmts();
+			stmts.erase(stmts.begin() + i);
+			stmts.insert(stmts.begin() + i, blkstmts.begin(), blkstmts.end());
+			i += blkstmts.size();
+			--i;
+		}
 		if(i != stmts.size() - 1 || inserted_defers) continue;
 		Vector<Stmt *> deferred = deferstack.getTopStmts(ctx);
 		stmts.insert(stmts.end(), deferred.begin(), deferred.end());
@@ -108,7 +119,9 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 
 	if(stmt->isTop()) deferstack.popFunc();
 
-	if(stmt->getMod()->isMainModule() || !stmt->isTop()) vmgr.popLayer();
+	if(!stmt->isLayeringDisabled()) {
+		if(stmt->getMod()->isMainModule() || !stmt->isTop()) vmgr.popLayer();
+	}
 	return true;
 }
 bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
@@ -1068,6 +1081,8 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 		}
 		if(!this_is_it) continue;
 	end:
+		// no vmgr.(push/pop)Layer() if the inline conditional is at top level
+		if(vmgr.isTop()) b->disableLayering();
 		if(!visit(b, asStmt(&b))) {
 			err::out(stmt, {"failed to determine types in inline conditional block"});
 			return false;

@@ -135,6 +135,10 @@ public:
 	{
 		return !funcstack.empty();
 	}
+	inline bool isTop()
+	{
+		return funcstack.empty() && layers.size() == 1;
+	}
 	bool addVar(StringRef var, const uint64_t &vid, StmtVar *decl, bool global = false);
 	bool addTypeFn(Type *ty, StringRef name, const uint64_t &fn);
 	bool addTypeFn(const uint64_t &id, StringRef name, const uint64_t &fn);
