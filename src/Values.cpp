@@ -23,7 +23,7 @@ Value::Value(const Values &vty, Type *ty, ContainsData has_data)
 Value::~Value() {}
 bool Value::isStrLiteral()
 {
-	if(!ty->isPtr() || as<PtrTy>(ty)->getCount()) return false;
+	if(!ty->isPtr()) return false;
 	Type *inner = as<PtrTy>(ty)->getTo();
 	if(!inner->isInt()) return false;
 	IntTy *i = as<IntTy>(inner);

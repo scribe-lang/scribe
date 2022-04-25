@@ -903,17 +903,14 @@ bool CDriver::acceptsSemicolon(Stmt *stmt)
 bool CDriver::getCTypeName(String &res, Stmt *stmt, Type *ty, bool for_cast, bool for_decl,
 			   bool is_weak)
 {
-	String pre;
-	String post;
-
 	if(is_weak) {
-		if(for_decl) res = pre + "struct ";
-		res += "struct_" + std::to_string(ty->getUniqID()) + post;
+		if(for_decl) res = "struct ";
+		res += "struct_" + std::to_string(ty->getUniqID());
 		return true;
 	}
 
 	if(ty->isVoid()) {
-		res = pre + "void" + post;
+		res = "void";
 		return true;
 	}
 	if(ty->isTypeTy()) {
@@ -924,18 +921,18 @@ bool CDriver::getCTypeName(String &res, Stmt *stmt, Type *ty, bool for_cast, boo
 				 {"failed to determine C type for scribe type: ", ctyp->toStr()});
 			return false;
 		}
-		res = pre + cty + post;
+		res = cty;
 		return true;
 	}
 	if(ty->isInt()) {
 		bool is_signed = as<IntTy>(ty)->isSigned();
 		String bits    = std::to_string(as<IntTy>(ty)->getBits());
-		res	       = pre + (is_signed ? "i" : "u") + bits + post;
+		res	       = (is_signed ? "i" : "u") + bits;
 		return true;
 	}
 	if(ty->isFlt()) {
 		String bits = std::to_string(as<FltTy>(ty)->getBits());
-		res	    = pre + "f" + bits + post;
+		res	    = "f" + bits;
 		return true;
 	}
 	if(ty->isPtr()) {
@@ -946,7 +943,7 @@ bool CDriver::getCTypeName(String &res, Stmt *stmt, Type *ty, bool for_cast, boo
 				 {"failed to determine C type for scribe type: ", to->toStr()});
 			return false;
 		}
-		res = pre + cty + (!as<PtrTy>(ty)->getCount() ? "*" : "") + post;
+		res = cty + (!as<PtrTy>(ty)->getCount() ? "*" : "");
 		return true;
 	}
 	if(ty->isFunc()) {
@@ -958,7 +955,7 @@ bool CDriver::getCTypeName(String &res, Stmt *stmt, Type *ty, bool for_cast, boo
 			err::out(stmt, {"failed to add struct def '", s->toStr(), "' in C code"});
 			return false;
 		}
-		res = pre + "struct_" + std::to_string(s->getUniqID()) + post;
+		res = "struct_" + std::to_string(s->getUniqID());
 		return true;
 	}
 	err::out(stmt, {"invalid scribe type encountered: ", ty->toStr()});
