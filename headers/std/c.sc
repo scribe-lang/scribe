@@ -1,6 +1,9 @@
 /*
- * These are the core C functions used across standard library
+ * These are the core C functions/libraries used across standard library
  */
+
+let ioctl = @import("std/c/ioctl");
+let unistd = @import("std/c/unistd");
 
 let FILE = extern[FILE, "<stdio.h>"] struct {};
 
@@ -31,8 +34,6 @@ let memcmp = extern[memcmp, "<string.h>"] fn(lhs: *const void, rhs: *const void,
 let getenv = extern[getenv, "<stdlib.h>"] fn(name: *const i8): *const i8; // in C, actually returns *i8
 let setenv = extern[setenv, "<stdlib.h>"] fn(name: *const i8, val: *const i8, overwrite: i1): i32;
 let system = extern[system, "<stdlib.h>"] fn(command: *const i8): i32;
-let getcwd = extern[getcwd, "<unistd.h>"] fn(buf: *i8, size: u64): *i8;
-let chdir = extern[chdir, "<unistd.h>"] fn(path: *const i8): i32;
 let isspace = extern[isspace, "<ctype.h>"] fn(ch: i32): i32;
 
 let malloc = fn(comptime T: type, count: u64): *T {

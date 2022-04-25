@@ -1,5 +1,11 @@
-let sysconf = extern[sysconf, "<unistd.h>"] fn(name: i32): i64;
+let getcwd = extern[getcwd, "<unistd.h>"] fn(buf: *i8, size: u64): *i8;
+let chdir = extern[chdir, "<unistd.h>"] fn(path: *const i8): i32;
 
+let STDIN_FILENO: i32 = extern[STDIN_FILENO, "<unistd.h>"];
+let STDOUT_FILENO: i32 = extern[STDOUT_FILENO, "<unistd.h>"];
+let STDERR_FILENO: i32 = extern[STDERR_FILENO, "<unistd.h>"];
+
+let sysconf = extern[sysconf, "<unistd.h>"] fn(name: i32): i64;
 // sysconf() names
 let _SC_ARG_MAX: i32 = extern[_SC_ARG_MAX, "<unistd.h>"];
 let _SC_CHILD_MAX: i32 = extern[_SC_CHILD_MAX, "<unistd.h>"];
