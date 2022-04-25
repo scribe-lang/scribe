@@ -24,6 +24,71 @@
 
 namespace sc
 {
+CTy::CTy()
+	: recurse(0), isstatic(false), isvolatile(false), isconst(false), isref(false),
+	  iscast(false), isdecl(false), isweak(false)
+{}
+CTy::CTy(const String &base, const String &ptr, const String &arr)
+	: base(base), ptr(ptr), arr(arr), recurse(0), isstatic(false), isvolatile(false),
+	  isconst(false), isref(false), iscast(false), isdecl(false), isweak(false)
+{}
+
+CTy CTy::operator+(const CTy &other) const
+{
+	return CTy(base + other.base, ptr + other.ptr, arr + other.arr);
+}
+CTy &CTy::operator+=(const CTy &other)
+{
+	base += other.base;
+	ptr += other.ptr;
+	arr += other.arr;
+	return *this;
+}
+
+String CTy::toStr(StringRef *varname)
+{
+	String res;
+	if(isstatic) res += "static ";
+	if(isvolatile) res += "volatile ";
+	if(isconst) res += "const ";
+	res += base + " ";
+	if(!arr.empty() && (!ptr.empty() || isref)) {
+		res += "(";
+	}
+	res += ptr;
+	if(isref) res += "*";
+	if(varname) res += *varname;
+	if(!arr.empty() && (!ptr.empty() || isref)) {
+		res += ")";
+	}
+	res += arr;
+	return res;
+}
+
+size_t CTy::size()
+{
+	size_t sz = 0;
+	if(isstatic) sz += 7;	// "static "
+	if(isvolatile) sz += 9; // "volatile "
+	if(isconst) sz += 6;	// "const "
+	if(isref) ++sz;		// "*"
+	sz += base.size() + ptr.size() + arr.size();
+	// space after base (see toStr())
+	++sz;
+	return sz;
+}
+
+void CTy::clear()
+{
+	base.clear();
+	ptr.clear();
+	arr.clear();
+	isstatic   = false;
+	isvolatile = false;
+	isconst	   = false;
+	isref	   = false;
+}
+
 CDriver::CDriver(RAIIParser &parser)
 	: CodeGenDriver(parser), preheadermacros(default_preheadermacros),
 	  headers(default_includes), typedefs(default_typedefs)
@@ -487,14 +552,14 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 
 		StmtFnDef *fn	 = as<StmtFnDef>(stmt->getVVal());
 		StmtType *sigret = fn->getSigRetType();
-		String retcty;
-		if(!getCTypeName(retcty, sigret, sigret->getValueTy(), false, false, false)) {
+		CTy retcty;
+		if(!getCType(retcty, sigret, sigret->getValueTy())) {
 			err::out(stmt, {"failed to determine C type for scribe type: ",
 					sigret->getValueTy()->toStr()});
 			return false;
 		}
-		if(sigret->isConst()) retcty = "const " + retcty;
-		if(sigret->isRef()) retcty += "*";
+		retcty.setConst(sigret->isConst());
+		retcty.setRef(sigret->isRef());
 
 		String spacevarname = " ";
 		spacevarname += varname;
@@ -531,10 +596,10 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 			macros.push_back(ctx.strFrom({"#define ", varname, " ", tmp.getData()}));
 			return true;
 		}
-		String prefix, cty, arrcount, cval;
-		Type *t	 = stmt->getValueTy();
-		arrcount = getArrCount(t);
-		if(!getCTypeName(cty, stmt, t, false, false, false)) {
+		CTy cty;
+		String cval;
+		Type *t = stmt->getValueTy();
+		if(!getCType(cty, stmt, t)) {
 			err::out(stmt,
 				 {"failed to determine C type for scribe type: ", t->toStr()});
 			return false;
@@ -544,11 +609,11 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 					stmt->getValue()->toStr()});
 			return false;
 		}
-		if(stmt->isStatic()) prefix += "static ";
-		if(stmt->isVolatile()) prefix += "volatile ";
-		if(stmt->isConst()) prefix += "const ";
-		if(stmt->isRef()) cty += "*";
-		writer.write({prefix, cty, " ", varname, arrcount, " = ", cval});
+		cty.setStatic(stmt->isStatic());
+		cty.setVolatile(stmt->isVolatile());
+		cty.setConst(stmt->isConst());
+		cty.setRef(stmt->isRef());
+		writer.write({cty.toStr(&varname), " = ", cval});
 		return true;
 	}
 
@@ -566,18 +631,17 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 			return true;
 		}
 	}
-	String prefix, cty, arrcount;
+	CTy cty;
 	Type *valty = stmt->getCast() ? stmt->getCast() : stmt->getValueTy();
-	arrcount    = getArrCount(valty);
-	if(!getCTypeName(cty, stmt, valty, false, false, false)) {
+	if(!getCType(cty, stmt, valty)) {
 		err::out(stmt, {"unable to determine C type for scribe type: ", valty->toStr()});
 		return false;
 	}
-	if(stmt->isStatic()) prefix += "static ";
-	if(stmt->isVolatile()) prefix += "volatile ";
-	if(stmt->isConst()) prefix += "const ";
-	if(stmt->isRef()) cty += "*";
-	writer.write({prefix, cty, " ", varname, arrcount});
+	cty.setStatic(stmt->isStatic());
+	cty.setVolatile(stmt->isVolatile());
+	cty.setConst(stmt->isConst());
+	cty.setRef(stmt->isRef());
+	writer.write(cty.toStr(&varname));
 	if(!tmp.empty()) {
 		writer.write(" = ");
 		if(stmt->isRef()) {
@@ -592,16 +656,16 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 }
 bool CDriver::visit(StmtFnSig *stmt, Writer &writer, const bool &semicol)
 {
-	String cty;
+	CTy cty;
 	Stmt *retty = stmt->getRetType();
-	if(!getCTypeName(cty, retty, retty->getValueTy(), false, false, false)) {
+	if(!getCType(cty, retty, retty->getValueTy())) {
 		err::out(stmt, {"unable to determine C type for scribe type: ",
 				stmt->getValueTy()->toStr()});
 		return false;
 	}
-	if(retty->isConst()) writer.write("const ");
-	writer.write(cty);
-	if(retty->isRef()) writer.write("*");
+	cty.setConst(retty->isConst());
+	cty.setRef(retty->isRef());
+	writer.write(cty.toStr(nullptr));
 	writer.write("(");
 	for(size_t i = 0; i < stmt->getArgs().size(); ++i) {
 		auto &a = stmt->getArgs()[i];
@@ -900,54 +964,54 @@ bool CDriver::acceptsSemicolon(Stmt *stmt)
 	return false;
 }
 
-bool CDriver::getCTypeName(String &res, Stmt *stmt, Type *ty, bool for_cast, bool for_decl,
-			   bool is_weak)
+bool CDriver::getCType(CTy &cty, Stmt *stmt, Type *ty)
 {
-	if(is_weak) {
-		if(for_decl) res = "struct ";
-		res += "struct_" + std::to_string(ty->getUniqID());
+	if(cty.isTop()) cty.arr = getArrCount(ty);
+	cty.incRecurse();
+
+	if(cty.isWeak()) {
+		if(cty.isDecl()) cty.base = "struct ";
+		cty.base += "struct_" + std::to_string(ty->getUniqID());
 		return true;
 	}
 
 	if(ty->isVoid()) {
-		res = "void";
+		cty.base = "void";
 		return true;
 	}
 	if(ty->isTypeTy()) {
 		Type *ctyp = as<TypeTy>(ty)->getContainedTy();
-		String cty;
-		if(!getCTypeName(cty, stmt, ctyp, for_cast, for_decl, is_weak)) {
+		if(!getCType(cty, stmt, ctyp)) {
 			err::out(stmt,
 				 {"failed to determine C type for scribe type: ", ctyp->toStr()});
 			return false;
 		}
-		res = cty;
 		return true;
 	}
 	if(ty->isInt()) {
 		bool is_signed = as<IntTy>(ty)->isSigned();
 		String bits    = std::to_string(as<IntTy>(ty)->getBits());
-		res	       = (is_signed ? "i" : "u") + bits;
+		cty.base       = (is_signed ? "i" : "u") + bits;
 		return true;
 	}
 	if(ty->isFlt()) {
 		String bits = std::to_string(as<FltTy>(ty)->getBits());
-		res	    = "f" + bits;
+		cty.base    = "f" + bits;
 		return true;
 	}
 	if(ty->isPtr()) {
 		Type *to = as<PtrTy>(ty)->getTo();
-		String cty;
-		if(!getCTypeName(cty, stmt, to, for_cast, for_decl, as<PtrTy>(ty)->isWeak())) {
+		cty.setWeak(as<PtrTy>(ty)->isWeak());
+		if(!getCType(cty, stmt, to)) {
 			err::out(stmt,
 				 {"failed to determine C type for scribe type: ", to->toStr()});
 			return false;
 		}
-		res = cty + (!as<PtrTy>(ty)->getCount() ? "*" : "");
+		if(!as<PtrTy>(ty)->getCount()) cty.ptr += "*";
 		return true;
 	}
 	if(ty->isFunc()) {
-		return getFuncPointer(res, as<FuncTy>(ty), stmt, for_cast, for_decl, is_weak);
+		return getFuncPointer(cty, as<FuncTy>(ty), stmt);
 	}
 	if(ty->isStruct()) {
 		StructTy *s = as<StructTy>(ty);
@@ -955,7 +1019,7 @@ bool CDriver::getCTypeName(String &res, Stmt *stmt, Type *ty, bool for_cast, boo
 			err::out(stmt, {"failed to add struct def '", s->toStr(), "' in C code"});
 			return false;
 		}
-		res = "struct_" + std::to_string(s->getUniqID());
+		cty.base = "struct_" + std::to_string(s->getUniqID());
 		return true;
 	}
 	err::out(stmt, {"invalid scribe type encountered: ", ty->toStr()});
@@ -1050,18 +1114,19 @@ bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 		st.newLine();
 	}
 	for(size_t i = 0; i < sty->getFields().size(); ++i) {
-		String prefix, cty, arrcount;
-		Type *t	 = sty->getField(i);
-		arrcount = getArrCount(t);
-		if(!getCTypeName(cty, stmt, t, false, true, false)) {
+		CTy cty;
+		StringRef fieldname = sty->getFieldName(i);
+		Type *t		    = sty->getField(i);
+		cty.setDecl(true);
+		if(!getCType(cty, stmt, t)) {
 			err::out(stmt,
 				 {"failed to determine C type for scribe type: ", t->toStr()});
 			return false;
 		}
-		if(stdecl && stdecl->getField(i)->isStatic()) prefix += "static ";
-		if(stdecl && stdecl->getField(i)->isVolatile()) prefix += "volatile ";
-		if(stdecl && stdecl->getField(i)->isConst()) prefix += "const ";
-		st.write({prefix, cty, " ", sty->getFieldName(i), arrcount, ";"});
+		cty.setStatic(stdecl && stdecl->getField(i)->isStatic());
+		cty.setVolatile(stdecl && stdecl->getField(i)->isVolatile());
+		cty.setConst(stdecl && stdecl->getField(i)->isConst());
+		st.write({cty.toStr(&fieldname), ";"});
 		if(i != sty->getFields().size() - 1) st.newLine();
 	}
 	if(!sty->getFields().empty()) {
@@ -1081,18 +1146,16 @@ bool CDriver::applyCast(Stmt *stmt, Writer &writer, Writer &tmp)
 {
 	if(stmt->getCast()) {
 		writer.write("(");
-		String cty;
-		// bool has_ref = stmt->getCast()->hasRef();
-		// stmt->getCast()->unsetRef();
-		if(!getCTypeName(cty, stmt, stmt->getCast(), true, false, false)) {
+		CTy cty;
+		cty.setCast(true);
+		if(!getCType(cty, stmt, stmt->getCast())) {
 			err::out(stmt, {"received invalid c type name for scribe cast type: ",
 					stmt->getCast()->toStr()});
 			return false;
 		}
-		// if(has_ref) stmt->getCast()->setRef();
-		if(stmt->isCastConst()) writer.write("const ");
-		writer.write(cty);
-		if(stmt->isCastRef()) writer.write("*");
+		cty.setConst(stmt->isCastConst());
+		cty.setRef(stmt->isCastRef());
+		writer.write(cty.toStr(nullptr));
 		writer.write(")(");
 		writer.append(tmp);
 		writer.write(")");
@@ -1133,37 +1196,37 @@ bool CDriver::writeCallArgs(const ModuleLoc *loc, const Vector<Stmt *> &args, Ty
 	}
 	return true;
 }
-bool CDriver::getFuncPointer(String &res, FuncTy *f, Stmt *stmt, bool for_cast, bool for_decl,
-			     bool is_weak)
+bool CDriver::getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt)
 {
 	static Set<uint64_t> funcids;
-	String decl = "typedef ";
-	String cty;
-	res = "func_" + std::to_string(f->getUniqID());
+	res.base = "func_" + std::to_string(f->getUniqID());
 	if(funcids.find(f->getUniqID()) != funcids.end()) return true;
-	if(!getCTypeName(cty, stmt, f->getRet(), for_cast, for_decl, is_weak)) {
+
+	String decl = "typedef ";
+	CTy cty;
+	cty.setCast(res.isCast());
+	cty.setDecl(res.isDecl());
+	cty.setWeak(res.isWeak());
+	if(!getCType(cty, stmt, f->getRet())) {
 		err::out(stmt,
 			 {"failed to determine C type for scribe type: ", f->getRet()->toStr()});
 		return false;
 	}
-	if(f->getSig() && f->getSig()->getRetType()->isConst()) decl += "const ";
-	decl += cty;
-	if(f->getSig() && f->getSig()->getRetType()->isRef()) decl += "*";
-	decl += " (*" + res + ")";
-	decl += "(";
+	cty.setConst(f->getSig() && f->getSig()->getRetType()->isConst());
+	cty.setRef(f->getSig() && f->getSig()->getRetType()->isRef());
+	decl += cty.toStr(nullptr) + " (*" + res.base + ")(";
 	for(size_t i = 0; i < f->getArgs().size(); ++i) {
 		Type *t	     = f->getArg(i);
 		StmtVar *arg = f->getSig() ? f->getSig()->getArg(i) : nullptr;
 		cty.clear();
-		if(!getCTypeName(cty, stmt, t, for_cast, for_decl, is_weak)) {
+		if(!getCType(cty, stmt, t)) {
 			err::out(stmt,
 				 {"failed to determine C type for scribe type: ", t->toStr()});
 			return false;
 		}
-		if(arg && arg->isConst()) decl += "const ";
-		decl += cty;
-		if(arg && arg->isRef()) decl += "*";
-		decl += ", ";
+		cty.setConst(arg && arg->isConst());
+		cty.setRef(arg && arg->isRef());
+		decl += cty.toStr(nullptr) + ", ";
 	}
 	if(f->getArgs().size() > 0) {
 		decl.pop_back();

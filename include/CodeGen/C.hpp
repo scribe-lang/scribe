@@ -19,6 +19,71 @@
 
 namespace sc
 {
+struct CTy
+{
+	String base;
+	String ptr;
+	String arr;
+
+private:
+	size_t recurse;
+	bool isstatic;
+	bool isvolatile;
+	bool isconst;
+	bool isref;
+	bool iscast;
+	bool isdecl;
+	bool isweak;
+
+public:
+	CTy();
+	CTy(const String &base, const String &ptr, const String &arr);
+
+	CTy operator+(const CTy &other) const;
+	CTy &operator+=(const CTy &other);
+
+	String toStr(StringRef *varname);
+	size_t size();
+	void clear();
+
+#define SetX(name, var)                 \
+	inline void set##name(bool val) \
+	{                               \
+		var = val;              \
+	}
+
+#define IsX(name, var)         \
+	inline bool is##name() \
+	{                      \
+		return var;    \
+	}
+
+	SetX(Static, isstatic);
+	SetX(Volatile, isvolatile);
+	SetX(Const, isconst);
+	SetX(Ref, isref);
+	SetX(Cast, iscast);
+	SetX(Decl, isdecl);
+	SetX(Weak, isweak);
+
+	IsX(Static, isstatic);
+	IsX(Volatile, isvolatile);
+	IsX(Const, isconst);
+	IsX(Ref, isref);
+	IsX(Cast, iscast);
+	IsX(Decl, isdecl);
+	IsX(Weak, isweak);
+
+	inline void incRecurse()
+	{
+		++recurse;
+	}
+	inline bool isTop()
+	{
+		return recurse == 0;
+	}
+};
+
 class CDriver : public CodeGenDriver
 {
 	Vector<StringRef> headerflags;
@@ -42,15 +107,13 @@ class CDriver : public CodeGenDriver
 	StringRef getConstantDataVar(const lex::Lexeme &val, Type *ty);
 	StringRef getNewConstantVar();
 	static bool acceptsSemicolon(Stmt *stmt);
-	bool getCTypeName(String &res, Stmt *stmt, Type *ty, bool for_cast, bool for_decl,
-			  bool is_weak);
+	bool getCType(CTy &res, Stmt *stmt, Type *ty);
 	bool getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool i8_to_char = true);
 	bool addStructDef(Stmt *stmt, StructTy *sty);
 	bool writeCallArgs(const ModuleLoc *loc, const Vector<Stmt *> &args, Type *ty,
 			   Writer &writer);
 	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
-	bool getFuncPointer(String &res, FuncTy *f, Stmt *stmt, bool for_cast, bool for_decl,
-			    bool is_weak);
+	bool getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt);
 	StringRef getArrCount(Type *t);
 	StringRef getSystemCompiler();
 
