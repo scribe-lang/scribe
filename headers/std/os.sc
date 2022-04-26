@@ -1,24 +1,16 @@
 let c = @import("std/c");
 let fs = @import("std/fs");
+let core = @import("std/core");
 let string = @import("std/string");
 
 // this way is done so the value is usable at compile time - externs cannot be used at comptime
 let comptime PATH_MAX = @sysPathMax();
 
-// list of operating system names
-let id = enum {
-	Unknown,
-	Linux,
-	Windows,
-	Apple,
-	Android,
-	FreeBSD,
-	NetBSD,
-	OpenBSD,
-	DragonFly,
-};
-
-let comptime currentOS = @getOSID();
+// these exist here for ease of use and being intuitive
+// any they exist in std/core so they're usable in any
+// source (std/core has no dependency)
+let id = core.os;
+let comptime currentOS = core.currentOS;
 
 let getEnv = fn(key: *const i8): *const i8 {
 	return c.getenv(key);
