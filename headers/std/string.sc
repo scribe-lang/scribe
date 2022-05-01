@@ -147,7 +147,7 @@ let withCap = fn(capacity: u64): String {
 	return res;
 };
 
-let from = fn(data: *const i8): String {
+let fromCStr = fn(data: *const i8): String {
 	let count = c.strlen(data) + 1; // + 1 for null terminator
 	let res = new();
 	res.data = c.malloc(i8, count);
@@ -156,10 +156,6 @@ let from = fn(data: *const i8): String {
 	res.length = count - 1;
 	res.capacity = count;
 	return res;
-};
-
-let global s = fn(data: *const i8): String {
-	return from(data);
 };
 
 // when using this, ensure that count < strlen(data)
@@ -176,6 +172,22 @@ let fromSubCStr = fn(data: *const i8, count: u64): String {
 
 let fromStringRef = fn(data: &const StringRef): String {
 	return fromSubCStr(data.start, data.count);
+};
+
+let from = fn(data: &const any): String {
+	inline if @isCString(data) {
+		return fromCStr(data);
+	} elif @isEqualTy(data, StringRef) {
+		return fromStringRef(data);
+	} else {
+		return data.str();
+	}
+	// unreachable
+	return new();
+};
+
+let global s = fn(data: *const i8): String {
+	return fromCStr(data);
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

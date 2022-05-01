@@ -296,6 +296,8 @@ static size_t SizeOf(Type *ty)
 	static const size_t szvoidp = sizeof(void *);
 
 	if(ty->isPtr()) {
+		uint16_t count = as<PtrTy>(ty)->getCount();
+		if(count) return count * SizeOf(as<PtrTy>(ty)->getTo());
 		return sizeof(void *);
 	}
 	if(ty->isInt()) {
