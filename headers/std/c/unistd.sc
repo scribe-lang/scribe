@@ -1,5 +1,6 @@
 let getcwd = extern[getcwd, "<unistd.h>"] fn(buf: *i8, size: u64): *i8;
 let chdir = extern[chdir, "<unistd.h>"] fn(path: *const i8): i32;
+let readlink = extern[readlink, "<unistd.h>"] fn(pathname: *const i8, buf: *i8, bufsiz: u64): i64;
 
 let STDIN_FILENO: i32 = extern[STDIN_FILENO, "<unistd.h>"];
 let STDOUT_FILENO: i32 = extern[STDOUT_FILENO, "<unistd.h>"];

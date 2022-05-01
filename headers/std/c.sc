@@ -12,6 +12,8 @@ let stdin: *FILE = extern[stdin, "<stdio.h>"];
 let stdout: *FILE = extern[stdout, "<stdio.h>"];
 let stderr: *FILE = extern[stderr, "<stdio.h>"];
 
+let errno: i32 = extern[errno, "<string.h>"];
+
 let fopen = extern[fopen, "<stdio.h>"] fn(name: *const i8, mode: *const i8): *FILE;
 let fclose = extern[fclose, "<stdio.h>"] fn(file: *FILE): i32;
 let fflush = extern[fflush, "<stdio.h>"] fn(file: *FILE): i32;
@@ -38,6 +40,7 @@ let getenv = extern[getenv, "<stdlib.h>"] fn(name: *const i8): *const i8; // in 
 let setenv = extern[setenv, "<stdlib.h>"] fn(name: *const i8, val: *const i8, overwrite: i1): i32;
 let system = extern[system, "<stdlib.h>"] fn(command: *const i8): i32;
 let isspace = extern[isspace, "<ctype.h>"] fn(ch: i32): i32;
+let strerror = extern[strerror, "<string.h>"] fn(errnum: i32): *const i8;
 
 let malloc = fn(comptime T: type, count: u64): *T {
         let comptime sz = @sizeOf(T);
