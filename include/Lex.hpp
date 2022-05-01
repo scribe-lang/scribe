@@ -199,6 +199,11 @@ public:
 		return val == XINC || val == XDEC;
 	}
 
+	inline bool isComparison() const
+	{
+		return val == EQ || val == LT || GT || val == LE || val == GE || val == NE;
+	}
+
 	inline bool isAssign() const
 	{
 		return (val == ASSN || val == ADD_ASSN || val == SUB_ASSN || val == MUL_ASSN ||
