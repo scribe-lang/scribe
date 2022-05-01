@@ -2,6 +2,7 @@
  * These are the core C functions/libraries used across standard library
  */
 
+let stat = @import("std/c/stat");
 let ioctl = @import("std/c/ioctl");
 let unistd = @import("std/c/unistd");
 
