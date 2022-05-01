@@ -483,9 +483,13 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 				err::out(stmt, {"failed to generate C code for RHS in expression"});
 				return false;
 			}
+			if(optok.isComparison()) writer.write("(");
 			writer.append(l);
+			if(optok.isComparison()) writer.write(")");
 			writer.write({" ", lex::TokStrs[oper], " "});
+			if(optok.isComparison()) writer.write("(");
 			writer.append(r);
+			if(optok.isComparison()) writer.write(")");
 			break;
 		}
 		Vector<Stmt *> args = {lhs};
