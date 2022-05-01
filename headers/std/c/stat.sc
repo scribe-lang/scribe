@@ -18,11 +18,57 @@ let Stat = extern[struct stat, "<sys/stat.h>"] struct {
 	st_mtimensec: ctype.long;
 	st_ctime: i64;
 	st_ctimensec: ctype.long;
-	__glibc_reserved1: @array(ctype.long, 3);
+	__glibc_reserved: @array(ctype.long, 3);
 };
 
 let new = fn(): Stat {
 	return Stat{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, @array(ctype.long, 3)};
+};
+
+let copy in Stat = fn(other: &const Stat) {
+	self.st_dev = other.st_dev;
+	self.st_ino = other.st_ino;
+	self.st_nlink = other.st_nlink;
+	self.st_mode = other.st_mode;
+	self.st_uid = other.st_uid;
+	self.st_gid = other.st_gid;
+	self.pad = other.pad;
+	self.st_rdev = other.st_rdev;
+	self.st_size = other.st_size;
+	self.st_blksize = other.st_blksize;
+	self.st_blocks = other.st_blocks;
+	self.st_atime = other.st_atime;
+	self.st_atimensec = other.st_atimensec;
+	self.st_mtime = other.st_mtime;
+	self.st_mtimensec = other.st_mtimensec;
+	self.st_ctime = other.st_ctime;
+	self.st_ctimensec = other.st_ctimensec;
+	self.__glibc_reserved[0] = other.__glibc_reserved[0];
+	self.__glibc_reserved[1] = other.__glibc_reserved[1];
+	self.__glibc_reserved[2] = other.__glibc_reserved[2];
+};
+
+let clear in Stat = fn() {
+	self.st_dev = 0;
+	self.st_ino = 0;
+	self.st_nlink = 0;
+	self.st_mode = 0;
+	self.st_uid = 0;
+	self.st_gid = 0;
+	self.pad = 0;
+	self.st_rdev = 0;
+	self.st_size = 0;
+	self.st_blksize = 0;
+	self.st_blocks = 0;
+	self.st_atime = 0;
+	self.st_atimensec = 0;
+	self.st_mtime = 0;
+	self.st_mtimensec = 0;
+	self.st_ctime = 0;
+	self.st_ctimensec = 0;
+	self.__glibc_reserved[0] = 0;
+	self.__glibc_reserved[1] = 0;
+	self.__glibc_reserved[2] = 0;
 };
 
 let stat = extern[stat, "<sys/stat.h>"] fn(pathname: *const i8, statbuf: *Stat): ctype.int;
