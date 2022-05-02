@@ -747,13 +747,18 @@ bool CDriver::visit(StmtStruct *stmt, Writer &writer, const bool &semicol)
 }
 bool CDriver::visit(StmtVarDecl *stmt, Writer &writer, const bool &semicol)
 {
-	for(auto &d : stmt->getDecls()) {
+	for(size_t i = 0; i < stmt->getDecls().size(); ++i) {
+		auto &d = stmt->getDecls()[i];
 		Writer tmp(writer);
 		if(!visit(d, tmp, semicol)) {
 			err::out(stmt, {"failed to generate C code for var decl"});
 			return false;
 		}
 		writer.append(tmp);
+		if(i < stmt->getDecls().size() - 1) {
+			writer.write(";");
+			writer.newLine();
+		}
 	}
 	return true;
 }
