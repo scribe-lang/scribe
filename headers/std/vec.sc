@@ -56,6 +56,18 @@ let pop in Vec = fn() {
 	}
 };
 
+let clear in Vec = fn() {
+	let l = self.length;
+	self.length = 0;
+	if !self.managed || @isPrimitive(self.T) { return; }
+	for let i: u64 = 0; i < l; ++i {
+		inline if !@isPrimitive(self.T) {
+			self.data[i].deinit();
+		}
+	}
+	c.memset(@as(@ptr(void), self.data), 0, @sizeOf(self.T) * self.capacity);
+};
+
 let __assn__ in Vec = fn(other: &const self): &self {
 	c.memcpy(@as(@ptr(void), &self), @as(@ptr(void), &other), @sizeOf(self));
 	return self;
