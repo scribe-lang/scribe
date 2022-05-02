@@ -27,6 +27,12 @@ static const Vector<StringRef> default_typedefs = {
 "typedef int64_t i64;",	 "typedef uint8_t u8;", "typedef uint16_t u16;", "typedef uint32_t u32;",
 "typedef uint64_t u64;", "typedef float f32;",	"typedef double f64;"};
 
+static const StringRef default_macro_magic = "#if defined(_SYS_STAT_H) && defined(__USE_XOPEN2K8)\n\
+#define st_atimensec st_atim.tv_nsec\n\
+#define st_mtimensec st_mtim.tv_nsec\n\
+#define st_ctimensec st_ctim.tv_nsec\n\
+#endif";
+
 } // namespace sc
 
 #endif // CODEGEN_C_PRELUDE_HPP

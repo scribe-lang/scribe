@@ -120,6 +120,8 @@ bool CDriver::compile(StringRef outfile)
 		finalmod.newLine();
 	}
 	if(macros.size() > 0) finalmod.newLine();
+	finalmod.write(default_macro_magic);
+	finalmod.newLine();
 	for(auto &t : typedefs) {
 		finalmod.write(t);
 		finalmod.newLine();

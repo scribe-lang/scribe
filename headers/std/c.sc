@@ -14,7 +14,7 @@ let stdin: *FILE = extern[stdin, "<stdio.h>"];
 let stdout: *FILE = extern[stdout, "<stdio.h>"];
 let stderr: *FILE = extern[stderr, "<stdio.h>"];
 
-let errno: i32 = extern[errno, "<string.h>"];
+let errno: i32 = extern[errno, "<errno.h>"];
 
 let fopen = extern[fopen, "<stdio.h>"] fn(name: *const i8, mode: *const i8): *FILE;
 let fclose = extern[fclose, "<stdio.h>"] fn(file: *FILE): i32;
