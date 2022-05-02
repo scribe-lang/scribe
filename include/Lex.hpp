@@ -201,7 +201,7 @@ public:
 
 	inline bool isComparison() const
 	{
-		return val == EQ || val == LT || GT || val == LE || val == GE || val == NE;
+		return val == EQ || val == LT || val == GT || val == LE || val == GE || val == NE;
 	}
 
 	inline bool isAssign() const

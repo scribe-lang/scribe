@@ -6,6 +6,7 @@ let grp = @import("std/c/grp");
 let pwd = @import("std/c/pwd");
 let stat = @import("std/c/stat");
 let ioctl = @import("std/c/ioctl");
+let dirent = @import("std/c/dirent");
 let unistd = @import("std/c/unistd");
 
 let FILE = extern[FILE, "<stdio.h>"] struct {};
