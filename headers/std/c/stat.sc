@@ -7,7 +7,7 @@ let Stat = extern[struct stat, "<sys/stat.h>"] struct {
 	st_mode: u32;
 	st_uid: u32;
 	st_gid: u32;
-	pad: ctype.int;
+	__pad0: ctype.int;
 	st_rdev: u64;
 	st_size: i64;
 	st_blksize: i64;
@@ -34,7 +34,7 @@ let copy in Stat = fn(other: &const Stat) {
 	self.st_mode = other.st_mode;
 	self.st_uid = other.st_uid;
 	self.st_gid = other.st_gid;
-	self.pad = other.pad;
+	self.__pad0 = other.__pad0;
 	self.st_rdev = other.st_rdev;
 	self.st_size = other.st_size;
 	self.st_blksize = other.st_blksize;
@@ -57,7 +57,7 @@ let clear in Stat = fn() {
 	self.st_mode = 0;
 	self.st_uid = 0;
 	self.st_gid = 0;
-	self.pad = 0;
+	self.__pad0 = 0;
 	self.st_rdev = 0;
 	self.st_size = 0;
 	self.st_blksize = 0;
