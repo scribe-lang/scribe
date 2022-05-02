@@ -2,6 +2,8 @@
  * These are the core C functions/libraries used across standard library
  */
 
+let grp = @import("std/c/grp");
+let pwd = @import("std/c/pwd");
 let stat = @import("std/c/stat");
 let ioctl = @import("std/c/ioctl");
 let unistd = @import("std/c/unistd");
@@ -41,6 +43,8 @@ let setenv = extern[setenv, "<stdlib.h>"] fn(name: *const i8, val: *const i8, ov
 let system = extern[system, "<stdlib.h>"] fn(command: *const i8): i32;
 let isspace = extern[isspace, "<ctype.h>"] fn(ch: i32): i32;
 let strerror = extern[strerror, "<string.h>"] fn(errnum: i32): *const i8;
+let dirname = extern[dirname, "<libgen.h>"] fn(path: *i8): *i8;
+let basename = extern[basename, "<libgen.h>"] fn(path: *i8): *i8;
 
 let malloc = fn(comptime T: type, count: u64): *T {
         let comptime sz = @sizeOf(T);

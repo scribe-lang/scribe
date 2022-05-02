@@ -3,6 +3,8 @@ let fs = @import("std/fs");
 let core = @import("std/core");
 let string = @import("std/string");
 
+let system = c.system;
+
 // this way is done so the value is usable at compile time - externs cannot be used at comptime
 let comptime PATH_MAX = @sysPathMax();
 
@@ -12,6 +14,8 @@ let comptime PATH_MAX = @sysPathMax();
 let id = core.os;
 let comptime currentOS = core.currentOS;
 
+let setCWD = c.unistd.chdir;
+
 let getEnv = fn(key: *const i8): *const i8 {
 	return c.getenv(key);
 };
@@ -19,7 +23,21 @@ let setEnv = fn(key: *const i8, val: *const i8, overwrite: i1): i32 {
 	return c.setenv(key, val, overwrite);
 };
 
-let system = c.system;
+let dirName = fn(path: *const i8): string.String {
+	let p = string.withCap(PATH_MAX);
+	defer p.deinit();
+	p.append(path);
+	let res = c.basename(p.getBuf());
+	return string.from(res);
+};
+
+let baseName = fn(path: *const i8): string.String {
+	let p = string.withCap(PATH_MAX);
+	defer p.deinit();
+	p.append(path);
+	let res = c.dirname(p.getBuf());
+	return string.from(res);
+};
 
 // allocates string
 let getCWD = fn(): string.String {
@@ -27,7 +45,6 @@ let getCWD = fn(): string.String {
 	c.unistd.getcwd(path.getBuf(), PATH_MAX);
 	return path;
 };
-let setCWD = c.unistd.chdir;
 
 let getExePath = fn(exe: *const i8): string.String {
 	let res = string.new();

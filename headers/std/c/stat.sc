@@ -25,6 +25,8 @@ let new = fn(): Stat {
 	return Stat{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, @array(ctype.long, 3)};
 };
 
+let deinit in Stat = fn() {};
+
 let copy in Stat = fn(other: &const Stat) {
 	self.st_dev = other.st_dev;
 	self.st_ino = other.st_ino;
