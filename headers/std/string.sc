@@ -198,6 +198,10 @@ let getBuf in String = fn(): *&i8 {
 	return self.data;
 };
 
+let setLen in String = fn(len: u64) {
+	self.length = len;
+};
+
 let cStr in const String = fn(): *const i8 {
 	if @as(u64, self.data) == nil { return ""; }
 	return self.data;
@@ -370,7 +374,7 @@ let erase in String = fn(idx: u64): i1 {
 	return true;
 };
 
-let __assn__ in String = fn(other: &const String): &String {
+let __assn__ in String = fn(other: &const any): &String {
 	self.clear();
 	self.append(other);
 	return self;

@@ -1126,7 +1126,7 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 		err::out(stmt, {"failed to determine type of incr expression in for loop"});
 		return false;
 	}
-	if(!cond->getValueTy()->isPrimitive()) {
+	if(cond && !cond->getValueTy()->isPrimitive()) {
 		err::out(stmt, {"inline for-loop's condition must be a primitive (int/flt)"});
 		return false;
 	}
