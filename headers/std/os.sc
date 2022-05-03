@@ -24,19 +24,17 @@ let setEnv = fn(key: *const i8, val: *const i8, overwrite: i1): i32 {
 };
 
 let dirName = fn(path: *const i8): string.String {
-	let p = string.withCap(PATH_MAX);
-	defer p.deinit();
-	p.append(path);
-	let res = c.basename(p.getBuf());
-	return string.from(res);
+	let p: @array(i8, PATH_MAX);
+	c.strcpy(p, path);
+	c.dirname(p);
+	return string.from(p);
 };
 
 let baseName = fn(path: *const i8): string.String {
-	let p = string.withCap(PATH_MAX);
-	defer p.deinit();
-	p.append(path);
-	let res = c.dirname(p.getBuf());
-	return string.from(res);
+	let p: @array(i8, PATH_MAX);
+	c.strcpy(p, path);
+	c.basename(p);
+	return string.from(p);
 };
 
 // allocates string

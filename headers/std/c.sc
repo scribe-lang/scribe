@@ -5,6 +5,7 @@
 let grp = @import("std/c/grp");
 let pwd = @import("std/c/pwd");
 let stat = @import("std/c/stat");
+let time = @import("std/c/time");
 let ioctl = @import("std/c/ioctl");
 let dirent = @import("std/c/dirent");
 let unistd = @import("std/c/unistd");
@@ -71,6 +72,7 @@ let comptime i32min: const i32 = -2147483648;
 let comptime i32max: const i32 = 2147483647;
 let comptime i64min: const i64 = -9223372036854775807;
 let comptime i64max: const i64 = 9223372036854775807;
+let comptime u64max: const u64 = 18446744073709551615;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Tests

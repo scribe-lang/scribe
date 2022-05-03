@@ -402,7 +402,7 @@ uint32_t PtrTy::getUniqID()
 }
 uint32_t PtrTy::getID()
 {
-	return getBaseID();
+	return getBaseID() + count * 17;
 }
 bool PtrTy::isTemplate(const size_t &weak_depth)
 {

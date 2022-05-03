@@ -874,7 +874,7 @@ post_mangling:
 
 	if(!stmt->isRef()) {
 		stmt->createAndSetValue(stmt->getValue()->clone(ctx));
-	} else if(stmt->getValue()->hasPermaData()) {
+	} else if(stmt->getValue()->hasPermaData() && !stmt->getValue()->isType()) {
 		err::out(stmt, {"a reference variable cannot have perma data"});
 		return false;
 	}

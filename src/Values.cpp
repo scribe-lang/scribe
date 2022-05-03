@@ -268,7 +268,7 @@ FuncVal *FuncVal::create(Context &c, FuncTy *val)
 	return c.allocVal<FuncVal>(val);
 }
 
-TypeVal::TypeVal(Context &c, Type *val) : Value(VTYPE, val, CDTRUE) {}
+TypeVal::TypeVal(Context &c, Type *val) : Value(VTYPE, val, CDPERMA) {}
 
 String TypeVal::toStr()
 {
