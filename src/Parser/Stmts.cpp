@@ -436,11 +436,15 @@ bool StmtFnSig::requiresTemplateInit()
 	if(has_variadic) return true;
 	for(auto &a : args) {
 		if(a->getValue()->getType()->isTemplate()) return true;
-		if(a->getValue()->getType()->isAny()) return true;
 		if(a->isComptime()) return true;
+		Type *t = a->getValue()->getType();
+		while(t->isPtr()) t = as<PtrTy>(t)->getTo();
+		if(t->isAny()) return true;
 	}
 	if(rettype->getValue()->getType()->isTemplate()) return true;
-	if(rettype->getValue()->getType()->isAny()) return true;
+	Type *t = rettype->getValue()->getType();
+	while(t->isPtr()) t = as<PtrTy>(t)->getTo();
+	if(t->isAny()) return true;
 	disable_template = true;
 	return false;
 }
