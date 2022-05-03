@@ -25,23 +25,24 @@
 namespace sc
 {
 CTy::CTy()
-	: recurse(0), isstatic(false), isvolatile(false), isconst(false), isref(false),
-	  iscast(false), isdecl(false), isweak(false)
+	: recurse(0), ptrs(0), ptrsin(0), isstatic(false), isvolatile(false), isconst(false),
+	  isref(false), iscast(false), isdecl(false), isweak(false)
 {}
-CTy::CTy(const String &base, const String &ptr, const String &arr)
-	: base(base), ptr(ptr), arr(arr), recurse(0), isstatic(false), isvolatile(false),
-	  isconst(false), isref(false), iscast(false), isdecl(false), isweak(false)
+CTy::CTy(const String &base, const String &arr, size_t ptrs)
+	: base(base), arr(arr), recurse(0), ptrs(ptrs), ptrsin(0), isstatic(false),
+	  isvolatile(false), isconst(false), isref(false), iscast(false), isdecl(false),
+	  isweak(false)
 {}
 
 CTy CTy::operator+(const CTy &other) const
 {
-	return CTy(base + other.base, ptr + other.ptr, arr + other.arr);
+	return CTy(base + other.base, arr + other.arr, ptrs + other.ptrs);
 }
 CTy &CTy::operator+=(const CTy &other)
 {
 	base += other.base;
-	ptr += other.ptr;
 	arr += other.arr;
+	ptrs += other.ptrs;
 	return *this;
 }
 
@@ -52,13 +53,16 @@ String CTy::toStr(StringRef *varname)
 	if(isvolatile) res += "volatile ";
 	if(isconst) res += "const ";
 	res += base + " ";
-	if(!arr.empty() && (!ptr.empty() || isref)) {
+	if(ptrs - ptrsin) {
+		res += String(ptrs - ptrsin, '*');
+	}
+	if(!arr.empty() && (ptrsin || isref)) {
 		res += "(";
 	}
-	res += ptr;
+	res += String(ptrsin, '*');
 	if(isref) res += "*";
 	if(varname) res += *varname;
-	if(!arr.empty() && (!ptr.empty() || isref)) {
+	if(!arr.empty() && (ptrsin || isref)) {
 		res += ")";
 	}
 	res += arr;
@@ -72,7 +76,7 @@ size_t CTy::size()
 	if(isvolatile) sz += 9; // "volatile "
 	if(isconst) sz += 6;	// "const "
 	if(isref) ++sz;		// "*"
-	sz += base.size() + ptr.size() + arr.size();
+	sz += base.size() + ptrs + arr.size();
 	// space after base (see toStr())
 	++sz;
 	return sz;
@@ -81,8 +85,8 @@ size_t CTy::size()
 void CTy::clear()
 {
 	base.clear();
-	ptr.clear();
 	arr.clear();
+	ptrs	   = 0;
 	isstatic   = false;
 	isvolatile = false;
 	isconst	   = false;
@@ -101,7 +105,7 @@ bool CDriver::compile(StringRef outfile)
 	Writer mainwriter;
 	if(!visit(mainmod->getParseTree(), mainwriter, false)) {
 		err::out(mainmod->getParseTree(),
-			 {"failed to compile module: %s", mainmod->getPath()});
+			 {"failed to compile module: ", mainmod->getPath()});
 		return false;
 	}
 	Writer finalmod;
@@ -977,7 +981,11 @@ bool CDriver::acceptsSemicolon(Stmt *stmt)
 
 bool CDriver::getCType(CTy &cty, Stmt *stmt, Type *ty)
 {
-	if(cty.isTop()) cty.arr = getArrCount(ty);
+	if(cty.isTop()) {
+		size_t ptrsin = 0;
+		cty.arr	      = getArrCount(ty, ptrsin);
+		cty.setPtrsIn(ptrsin);
+	}
 	cty.incRecurse();
 
 	if(cty.isWeak()) {
@@ -1018,7 +1026,7 @@ bool CDriver::getCType(CTy &cty, Stmt *stmt, Type *ty)
 				 {"failed to determine C type for scribe type: ", to->toStr()});
 			return false;
 		}
-		if(!as<PtrTy>(ty)->getCount()) cty.ptr += "*";
+		if(!as<PtrTy>(ty)->getCount()) cty.incPtrs();
 		return true;
 	}
 	if(ty->isFunc()) {
@@ -1248,12 +1256,19 @@ bool CDriver::getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt)
 	funcids.insert(f->getUniqID());
 	return true;
 }
-StringRef CDriver::getArrCount(Type *t)
+StringRef CDriver::getArrCount(Type *t, size_t &ptrsin)
 {
 	String res;
-	while(t->isPtr() && as<PtrTy>(t)->getCount()) {
-		res = res + "[" + std::to_string(as<PtrTy>(t)->getCount()) + "]";
-		t   = as<PtrTy>(t)->getTo();
+	bool enable_ptrsin = true;
+	while(t->isPtr()) {
+		if(!as<PtrTy>(t)->getCount()) {
+			t = as<PtrTy>(t)->getTo();
+			if(enable_ptrsin) ++ptrsin;
+			continue;
+		}
+		enable_ptrsin = false;
+		res	      = res + "[" + std::to_string(as<PtrTy>(t)->getCount()) + "]";
+		t	      = as<PtrTy>(t)->getTo();
 	}
 	return ctx.moveStr(std::move(res));
 }

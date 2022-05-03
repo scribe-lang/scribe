@@ -22,11 +22,12 @@ namespace sc
 struct CTy
 {
 	String base;
-	String ptr;
 	String arr;
 
 private:
 	size_t recurse;
+	size_t ptrs;
+	size_t ptrsin;
 	bool isstatic;
 	bool isvolatile;
 	bool isconst;
@@ -37,7 +38,7 @@ private:
 
 public:
 	CTy();
-	CTy(const String &base, const String &ptr, const String &arr);
+	CTy(const String &base, const String &arr, size_t ptrs);
 
 	CTy operator+(const CTy &other) const;
 	CTy &operator+=(const CTy &other);
@@ -82,6 +83,20 @@ public:
 	{
 		return recurse == 0;
 	}
+
+	inline void incPtrs()
+	{
+		++ptrs;
+	}
+
+	inline void setPtrsIn(size_t _ptrsin)
+	{
+		ptrsin = _ptrsin;
+	}
+	inline size_t getPtrsIn()
+	{
+		return ptrsin;
+	}
 };
 
 class CDriver : public CodeGenDriver
@@ -114,7 +129,7 @@ class CDriver : public CodeGenDriver
 			   Writer &writer);
 	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
 	bool getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt);
-	StringRef getArrCount(Type *t);
+	StringRef getArrCount(Type *t, size_t &ptrsin);
 	StringRef getSystemCompiler();
 
 	inline StringRef getMangledName(StringRef name, Stmt *stmt)
