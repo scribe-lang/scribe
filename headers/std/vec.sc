@@ -12,7 +12,7 @@ let deinit in Vec = fn() {
 	defer c.free(self.T, self.data);
 	if !self.managed || @isPrimitive(self.T) { return; }
 	for let i: u64 = 0; i < self.length; ++i {
-		inline if !@isPrimitive(self.T) {
+		inline if !@isPrimitiveOrPtr(self.T) {
 			self.data[i].deinit();
 		}
 	}
@@ -116,6 +116,203 @@ let each in Vec = fn(): iter.Iter(self, u64) {
 
 let eachRev in Vec = fn(): iter.Iter(self, u64) {
 	return iter.Iter(self, u64){self, self.length - 1, -1, -1};
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// SmoothSort Implementation; Vec.sort(cmp: fn(a: &const self.T, b: &const self.T): i32)
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+let a_ctz_l = fn(x: u64): i32 {
+	if x == 0 { return 0; }
+	let count = 0;
+	let bit: u64 = 1;
+	while (x & bit) == 0 {
+		bit <<= 1;
+		++count;
+	}
+	return count;
+};
+
+let pntz = fn(p: @array(u64, 2)): i32 {
+	let r = a_ctz_l(p[0] - 1);
+	if r != 0 || (r = 8 * @sizeOf(u64) + a_ctz_l(p[1])) != 8 * @sizeOf(u64) {
+		return r;
+	}
+	return 0;
+};
+
+let cycle = fn(width: u64, ar: **u8, n: i32) {
+	let tmp: @array(u8, 256);
+	let comptime sztmp = @sizeOf(tmp);
+	let l: u64;
+
+	if n < 2 { return; }
+
+	ar[n] = tmp;
+	while width {
+		if sztmp < width { l = sztmp; }
+		else { l = width; }
+		c.memcpy(@as(@ptr(void), ar[n]), @as(@ptr(void), ar[0]), l);
+		for let i = 0; i < n; ++i {
+			c.memcpy(@as(@ptr(void), ar[i]), @as(@ptr(void), ar[i + 1]), l);
+			ar[i] = @as(u64, ar[i]) + l;
+		}
+		width -= l;
+	}
+};
+
+let shl = fn(p: @array(u64, 2), n: i32) {
+	if n >= 8 * @sizeOf(u64) {
+		n -= 8 * @sizeOf(u64);
+		p[1] = p[0];
+		p[0] = 0;
+	}
+	p[1] <<= n;
+	p[1] |= p[0] >> (@sizeOf(u64) * 8 - n);
+	p[0] <<= n;
+};
+
+let shr = fn(p: @array(u64, 2), n: i32) {
+	if n >= 8 * @sizeOf(u64) {
+		n -= 8 * @sizeOf(u64);
+		p[0] = p[1];
+		p[1] = 0;
+	}
+	p[0] >>= n;
+	p[0] |= p[1] << (@sizeOf(u64) * 8 - n);
+	p[1] >>= n;
+};
+
+let sift = fn(comptime T: type, head: *u8, width: u64, cmp: fn(a: &const T, b: &const T): i32, pshift: i32, lp: *u64) {
+	let rt: *u8, lf: *u8;
+	let ar: @array(*u8, 14 * @sizeOf(u64) + 1);
+	let i = 1;
+	ar[0] = head;
+	while pshift > 1 {
+		rt = @as(u64, head) - width;
+		lf = @as(u64, head) - width - lp[pshift - 2];
+		let ar0tmp = @as(@ptr(T), ar[0]);
+		let rttmp = @as(@ptr(T), rt);
+		let lftmp = @as(@ptr(T), lf);
+		if cmp(*ar0tmp, *lftmp) >= 0 && cmp(*ar0tmp, *rttmp) >= 0 {
+			break;
+		}
+		if cmp(*lftmp, *rttmp) >= 0 {
+			ar[i++] = lf;
+			head = lf;
+			pshift -= 1;
+		} else {
+			ar[i++] = rt;
+			head = rt;
+			pshift -= 2;
+		}
+	}
+	cycle(width, ar, i);
+};
+
+let trinkle = fn(comptime T: type, head: *u8, width: u64, cmp: fn(a: &const T, b: &const T): i32,
+		 pp: @array(u64, 2), pshift: i32, trusty: i32, lp: *u64) {
+	let stepson: *u8, rt: *u8, lf: *u8;
+	let p: @array(u64, 2);
+	let ar: @array(*u8, 14 * @sizeOf(u64) + 1);
+	let i = 1;
+	let trail: i32;
+
+	p[0] = pp[0];
+	p[1] = pp[1];
+
+	ar[0] = head;
+
+	while p[0] != 1 || p[1] != 0 {
+		stepson = @as(u64, head) - lp[pshift];
+		let stepsontmp = @as(@ptr(T), stepson);
+		let ar0tmp = @as(@ptr(T), ar[0]);
+		if cmp(*stepsontmp, *ar0tmp) <= 0 { break; }
+		if !trusty && pshift > 1 {
+			rt = @as(u64, head) - width;
+			lf = @as(u64, head) - width - lp[pshift - 2];
+			let rttmp = @as(@ptr(T), rt);
+			let lftmp = @as(@ptr(T), lf);
+			if cmp(*rttmp, *stepsontmp) >= 0 || cmp(*lftmp, *stepsontmp) >= 0 {
+				break;
+			}
+		}
+
+		ar[i++] = stepson;
+		head = stepson;
+		trail = pntz(p);
+		shr(p, trail);
+		pshift += trail;
+		trusty = 0;
+	}
+	if !trusty {
+		cycle(width, ar, i);
+		sift(T, head, width, cmp, pshift, lp);
+	}
+};
+
+let sort in Vec = fn(sorter: fn(a: &const self.T, b: &const self.T): i32) {
+	let comptime width = @sizeOf(self.T);
+	let lp: @array(u64, 12 * @sizeOf(u64));
+	let size: u64 = width * self.length;
+	let head: *u8, high: *u8;
+	let p: @array(u64, 2);
+	p[0] = 1;
+	p[1] = 0;
+	let pshift = 1;
+	let trail: i32;
+
+	if !size { return; }
+
+	head = @as(@ptr(u8), self.data);
+	high = @as(u64, head) + size - width;
+
+	lp[0] = lp[1] = width;
+	for let i: u64 = 2; (lp[i] = lp[i - 2] + lp[i - 1] + width) < size; ++i {}
+
+	while @as(u64, head) < @as(u64, high) {
+		if (p[0] & 3) == 3 {
+			sift(self.T, head, width, sorter, pshift, lp);
+			shr(p, 2);
+			pshift += 2;
+		} else {
+			if lp[pshift - 1] >= (@as(u64, high) - @as(u64, head)) {
+				trinkle(self.T, head, width, sorter, p, pshift, 0, lp);
+			} else {
+				sift(self.T, head, width, sorter, pshift, lp);
+			}
+
+			if pshift == 1 {
+				shl(p, 1);
+				pshift = 0;
+			} else {
+				shl(p, pshift - 1);
+				pshift = 1;
+			}
+		}
+		p[0] |= 1;
+		head = @as(u64, head) + width;
+	}
+
+	trinkle(self.T, head, width, sorter, p, pshift, 0, lp);
+
+	while pshift != 1 || p[0] != 1 || p[1] != 0 {
+		if pshift <= 1 {
+			trail = pntz(p);
+			shr(p, trail);
+			pshift += trail;
+		} else {
+			shl(p, 2);
+			pshift -= 2;
+			p[0] ^= 7;
+			shr(p, 1);
+			trinkle(self.T, @as(u64, head) - lp[pshift] - width, width, sorter, p, pshift + 1, 1, lp);
+			shl(p, 1);
+			p[0] |= 1;
+			trinkle(self.T, @as(u64, head) - width, width, sorter, p, pshift, 1, lp);
+		}
+		head = @as(u64, head) - width;
+	}
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
