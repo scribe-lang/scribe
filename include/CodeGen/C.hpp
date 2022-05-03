@@ -75,6 +75,15 @@ public:
 	IsX(Decl, isdecl);
 	IsX(Weak, isweak);
 
+	inline void clearArray()
+	{
+		arr.clear();
+	}
+	inline bool isArray()
+	{
+		return !arr.empty();
+	}
+
 	inline void incRecurse()
 	{
 		++recurse;
@@ -87,6 +96,11 @@ public:
 	inline void incPtrs()
 	{
 		++ptrs;
+	}
+
+	inline size_t getPtrs()
+	{
+		return ptrs;
 	}
 
 	inline void setPtrsIn(size_t _ptrsin)
@@ -108,6 +122,7 @@ class CDriver : public CodeGenDriver
 	Vector<StringRef> macros;
 	Vector<StringRef> typedefs;
 	Vector<StringRef> structdecls;
+	Vector<StringRef> funcptrs;
 	Vector<StringRef> funcdecls;
 	struct ConstantInfo
 	{

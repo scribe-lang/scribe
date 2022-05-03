@@ -136,6 +136,11 @@ bool CDriver::compile(StringRef outfile)
 		finalmod.newLine();
 	}
 	if(structdecls.size() > 0) finalmod.newLine();
+	for(auto &d : funcptrs) {
+		finalmod.write(d);
+		finalmod.newLine();
+	}
+	if(funcptrs.size() > 0) finalmod.newLine();
 	for(auto &d : funcdecls) {
 		finalmod.write(d);
 		finalmod.newLine();
@@ -208,6 +213,7 @@ bool CDriver::compile(StringRef outfile)
 	String cmd;
 	cmd += compiler;
 	cmd += " -std=c" + std + " -O" + opt + " ";
+	if(opt == "0") cmd += "-g ";
 	for(auto &h : headerflags) {
 		cmd += h;
 		cmd += " ";
@@ -477,11 +483,15 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 			}
 			if(optok.isUnaryPre()) {
 				writer.write(optok.getUnaryNoCharCStr());
+				writer.write("(");
 				writer.append(l);
+				writer.write(")");
 				break;
 			}
 			if(optok.isUnaryPost()) {
+				writer.write("(");
 				writer.append(l);
+				writer.write(")");
 				writer.write(optok.getUnaryNoCharCStr());
 				break;
 			}
@@ -1174,6 +1184,11 @@ bool CDriver::applyCast(Stmt *stmt, Writer &writer, Writer &tmp)
 		}
 		cty.setConst(stmt->isCastConst());
 		cty.setRef(stmt->isCastRef());
+		// don't write something like (i8 [30])
+		if(cty.isArray() && !cty.getPtrs() && !cty.isRef()) {
+			cty.clearArray();
+			cty.incPtrs();
+		}
 		writer.write(cty.toStr(nullptr));
 		writer.write(")(");
 		writer.append(tmp);
@@ -1252,7 +1267,7 @@ bool CDriver::getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt)
 		decl.pop_back();
 	}
 	decl += ");";
-	typedefs.push_back(ctx.moveStr(std::move(decl)));
+	funcptrs.push_back(ctx.moveStr(std::move(decl)));
 	funcids.insert(f->getUniqID());
 	return true;
 }

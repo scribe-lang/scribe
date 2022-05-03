@@ -42,6 +42,25 @@ let pushVal in Vec = fn(d: self.T): self {
 	return self.push(d);
 };
 
+let insert in Vec = fn(d: &const self.T, idx: u64): self {
+	if idx >= self.length { return self.push(d); }
+	if self.length >= self.capacity {
+		self.capacity *= 2;
+		self.data = c.realloc(self.T, self.data, self.capacity);
+	}
+	let comptime sz = @sizeOf(self.T);
+	for let i: u64 = self.length; i > idx; --i {
+		c.memcpy(@as(@ptr(void), &self.data[i]), @as(@ptr(void), &self.data[i - 1]), sz);
+	}
+	c.memcpy(@as(@ptr(void), &self.data[idx]), @as(@ptr(void), &d), sz);
+	++self.length;
+	return self;
+};
+
+let insertVal in Vec = fn(d: self.T, idx: u64): self {
+	return self.insert(d, idx);
+};
+
 let pop in Vec = fn() {
 	if self.length == 0 {
 		// throw "vec.pop() in an empty vector";
@@ -59,13 +78,21 @@ let pop in Vec = fn() {
 let clear in Vec = fn() {
 	let l = self.length;
 	self.length = 0;
-	if !self.managed || @isPrimitive(self.T) { return; }
+	if !self.managed || @isPrimitive(self.T) {
+		c.memset(@as(@ptr(void), self.data), 0, @sizeOf(self.T) * self.capacity);
+		return;
+	}
 	for let i: u64 = 0; i < l; ++i {
 		inline if !@isPrimitive(self.T) {
 			self.data[i].deinit();
 		}
 	}
 	c.memset(@as(@ptr(void), self.data), 0, @sizeOf(self.T) * self.capacity);
+};
+
+let setManaged in Vec = fn(managed: i1): self {
+	self.managed = managed;
+	return self;
 };
 
 let __assn__ in Vec = fn(other: &const self): &self {
@@ -120,6 +147,7 @@ let eachRev in Vec = fn(): iter.Iter(self, u64) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // SmoothSort Implementation; Vec.sort(cmp: fn(a: &const self.T, b: &const self.T): i32)
+// Source: https://git.musl-libc.org/cgit/musl/tree/src/stdlib/qsort.c
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 let a_ctz_l = fn(x: u64): i32 {
@@ -251,7 +279,7 @@ let trinkle = fn(comptime T: type, head: *u8, width: u64, cmp: fn(a: &const T, b
 	}
 };
 
-let sort in Vec = fn(sorter: fn(a: &const self.T, b: &const self.T): i32) {
+let sort in Vec = fn(cmp: fn(a: &const self.T, b: &const self.T): i32) {
 	let comptime width = @sizeOf(self.T);
 	let lp: @array(u64, 12 * @sizeOf(u64));
 	let size: u64 = width * self.length;
@@ -272,14 +300,14 @@ let sort in Vec = fn(sorter: fn(a: &const self.T, b: &const self.T): i32) {
 
 	while @as(u64, head) < @as(u64, high) {
 		if (p[0] & 3) == 3 {
-			sift(self.T, head, width, sorter, pshift, lp);
+			sift(self.T, head, width, cmp, pshift, lp);
 			shr(p, 2);
 			pshift += 2;
 		} else {
 			if lp[pshift - 1] >= (@as(u64, high) - @as(u64, head)) {
-				trinkle(self.T, head, width, sorter, p, pshift, 0, lp);
+				trinkle(self.T, head, width, cmp, p, pshift, 0, lp);
 			} else {
-				sift(self.T, head, width, sorter, pshift, lp);
+				sift(self.T, head, width, cmp, pshift, lp);
 			}
 
 			if pshift == 1 {
@@ -294,7 +322,7 @@ let sort in Vec = fn(sorter: fn(a: &const self.T, b: &const self.T): i32) {
 		head = @as(u64, head) + width;
 	}
 
-	trinkle(self.T, head, width, sorter, p, pshift, 0, lp);
+	trinkle(self.T, head, width, cmp, p, pshift, 0, lp);
 
 	while pshift != 1 || p[0] != 1 || p[1] != 0 {
 		if pshift <= 1 {
@@ -306,10 +334,10 @@ let sort in Vec = fn(sorter: fn(a: &const self.T, b: &const self.T): i32) {
 			pshift -= 2;
 			p[0] ^= 7;
 			shr(p, 1);
-			trinkle(self.T, @as(u64, head) - lp[pshift] - width, width, sorter, p, pshift + 1, 1, lp);
+			trinkle(self.T, @as(u64, head) - lp[pshift] - width, width, cmp, p, pshift + 1, 1, lp);
 			shl(p, 1);
 			p[0] |= 1;
-			trinkle(self.T, @as(u64, head) - width, width, sorter, p, pshift, 1, lp);
+			trinkle(self.T, @as(u64, head) - width, width, cmp, p, pshift, 1, lp);
 		}
 		head = @as(u64, head) - width;
 	}
