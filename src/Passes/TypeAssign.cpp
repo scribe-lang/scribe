@@ -699,6 +699,19 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		if(!lhs->isComptime()) both_comptime = false;
 		if(rhs && !rhs->isComptime()) both_comptime = false;
 
+		// type cast for const pointers
+		if(rhs) {
+			Type *rhsty = rhs->getValueTy();
+			bool fnrhsconst =
+			fn->getSig() ? fn->getSig()->getArg(1)->isConst() : rhs->isConst();
+			if(rhs && rhs->isConst() != fnrhsconst && fn->getArg(1)->isPtr() &&
+			   rhsty->isPtr()) {
+				uint8_t rhsmask =
+				fn->getSig() ? fn->getSig()->getArg(1)->getStmtMask() : 0;
+				rhs->castTo(fn->getArg(1), rhsmask);
+			}
+		}
+
 		for(size_t i = 0; i < args.size(); ++i) {
 			Stmt *&arg	 = args[i];
 			bool argcomptime = fn->isArgComptime(i);
@@ -871,6 +884,13 @@ post_mangling:
 			val->castTo(vtype->getValueTy(), vtype->getStmtMask());
 		}
 		if(!val->getCast()) applyPrimitiveTypeCoercion(vtype->getValueTy(), val);
+	}
+	if(stmt->getValueTy()->isFunc() && stmt->getVType()) {
+		FuncTy *ty = as<FuncTy>(stmt->getValueTy());
+		Stmt *s	   = stmt->getVType()->getExpr();
+		if(!ty->getSig() && s && s->isFnSig()) {
+			ty->setSig(as<StmtFnSig>(s));
+		}
 	}
 	if(stmt->isIn()) {
 		StmtFnDef *def = as<StmtFnDef>(stmt->getVVal());

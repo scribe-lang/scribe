@@ -416,6 +416,10 @@ public:
 		var = v;
 		setSigFromVar();
 	}
+	inline void setSig(StmtFnSig *s)
+	{
+		sig = s;
+	}
 	void setSigFromVar();
 	inline void setArg(const size_t &idx, Type *arg)
 	{

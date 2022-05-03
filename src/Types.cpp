@@ -313,7 +313,7 @@ Type *TypeTy::specialize(Context &c, const bool &as_is, const size_t &weak_depth
 }
 uint32_t TypeTy::getUniqID()
 {
-	if(getContainedTy()) getContainedTy()->getUniqID();
+	if(getContainedTy()) return getContainedTy()->getUniqID();
 	return getID();
 }
 uint32_t TypeTy::getID()
@@ -697,9 +697,9 @@ uint32_t FuncTy::getSignatureID()
 {
 	uint32_t res = TFUNC;
 	for(auto &a : args) {
-		res += a->getID();
+		res += a->getUniqID();
 	}
-	res += ret->getID();
+	res += ret->getUniqID();
 	return res * 7;
 }
 uint32_t FuncTy::getNonUniqID()
