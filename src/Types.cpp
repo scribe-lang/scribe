@@ -179,7 +179,7 @@ Value *Type::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 
 VoidTy::VoidTy() : Type(TVOID) {}
 VoidTy::~VoidTy() {}
-Type *VoidTy::specialize(Context &c, const bool &as_is, const size_t &weak_depth)
+Type *VoidTy::specialize(Context &c, const size_t &weak_depth)
 {
 	return this;
 }
@@ -204,7 +204,7 @@ Value *VoidTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 
 AnyTy::AnyTy() : Type(TANY) {}
 AnyTy::~AnyTy() {}
-Type *AnyTy::specialize(Context &c, const bool &as_is, const size_t &weak_depth)
+Type *AnyTy::specialize(Context &c, const size_t &weak_depth)
 {
 	return this;
 }
@@ -231,7 +231,7 @@ Value *AnyTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 IntTy::IntTy(const uint16_t &bits, const bool &sign) : Type(TINT), bits(bits), sign(sign) {}
 IntTy::~IntTy() {}
 
-Type *IntTy::specialize(Context &c, const bool &as_is, const size_t &weak_depth)
+Type *IntTy::specialize(Context &c, const size_t &weak_depth)
 {
 	return this;
 }
@@ -267,7 +267,7 @@ Value *IntTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 FltTy::FltTy(const uint16_t &bits) : Type(TFLT), bits(bits) {}
 FltTy::~FltTy() {}
 
-Type *FltTy::specialize(Context &c, const bool &as_is, const size_t &weak_depth)
+Type *FltTy::specialize(Context &c, const size_t &weak_depth)
 {
 	return this;
 }
@@ -304,12 +304,12 @@ TypeTy::TypeTy() : Type(TTYPE), containedtyid(genContainedTypeID()) {}
 TypeTy::TypeTy(const uint32_t &containedtyid) : Type(TTYPE), containedtyid(containedtyid) {}
 TypeTy::~TypeTy() {}
 
-Type *TypeTy::specialize(Context &c, const bool &as_is, const size_t &weak_depth)
+Type *TypeTy::specialize(Context &c, const size_t &weak_depth)
 {
-	if(!as_is && getContainedTy()) {
-		return getContainedTy()->specialize(c, as_is, weak_depth);
+	if(getContainedTy()) {
+		return getContainedTy()->specialize(c, weak_depth);
 	}
-	return c.allocType<TypeTy>(containedtyid);
+	return this;
 }
 uint32_t TypeTy::getUniqID()
 {
@@ -389,15 +389,16 @@ PtrTy::PtrTy(Type *to, const uint16_t &count, const bool &is_weak)
 {}
 PtrTy::~PtrTy() {}
 
-Type *PtrTy::specialize(Context &c, const bool &as_is, const size_t &weak_depth)
+Type *PtrTy::specialize(Context &c, const size_t &weak_depth)
 {
 	bool valid_depth = weak_depth < MAX_WEAKPTR_DEPTH;
-	Type *res	 = valid_depth ? to->specialize(c, as_is, weak_depth + is_weak) : to;
+	Type *res	 = valid_depth ? to->specialize(c, weak_depth + is_weak) : to;
+	if(res == to) return this;
 	return c.allocType<PtrTy>(res, count, is_weak);
 }
 uint32_t PtrTy::getUniqID()
 {
-	if(to && !is_weak) return to->getUniqID();
+	if(to && !is_weak) return to->getUniqID() + getID();
 	return getID();
 }
 uint32_t PtrTy::getID()
@@ -413,7 +414,7 @@ String PtrTy::toStr(const size_t &weak_depth)
 	String extradata;
 	if(count) extradata = "[" + std::to_string(count) + "] ";
 	String res = "*" + extradata;
-	if(weak_depth >= MAX_WEAKPTR_DEPTH) {
+	if(weak_depth) {
 		res += " weak<" + std::to_string(to->getID()) + ">";
 	} else {
 		res += to->toStr(weak_depth + is_weak);
@@ -449,6 +450,7 @@ Value *PtrTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
 	Vector<Value *> vec;
+	if(count > 0) vec.reserve(count);
 	Value *res = weak_depth >= MAX_WEAKPTR_DEPTH
 		     ? IntVal::create(c, IntTy::get(c, sizeof(void *) * 8, 0), cd, 0)
 		     : to->toDefaultValue(c, loc, cd, weak_depth + is_weak);
@@ -492,15 +494,17 @@ StructTy::StructTy(uint32_t id, StmtStruct *decl, const Vector<StringRef> &field
 {}
 StructTy::~StructTy() {}
 
-Type *StructTy::specialize(Context &c, const bool &as_is, const size_t &weak_depth)
+Type *StructTy::specialize(Context &c, const size_t &weak_depth)
 {
 	Vector<Type *> newfields;
+	newfields.reserve(fields.size());
 	Vector<TypeTy *> newtemplates;
+	newtemplates.reserve(templates.size());
 	for(auto &field : fields) {
-		newfields.push_back(field->specialize(c, as_is, weak_depth));
+		newfields.push_back(field->specialize(c, weak_depth));
 	}
 	for(auto &t : templates) {
-		newtemplates.push_back(as<TypeTy>(t->specialize(c, as_is, weak_depth)));
+		newtemplates.push_back(as<TypeTy>(t->specialize(c, weak_depth)));
 	}
 	return c.allocType<StructTy>(id, decl, fieldnames, fieldpos, newfields, templatenames,
 				     templatepos, newtemplates, has_template, externed);
@@ -671,7 +675,7 @@ FuncTy::FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
 {
 	setSigFromVar();
 	if(_argcomptime.empty() && !args.empty()) {
-		for(size_t i = 0; i < args.size(); ++i) argcomptime.push_back(false);
+		argcomptime = Vector<bool>(args.size(), false);
 	}
 }
 FuncTy::FuncTy(uint32_t id, StmtVar *var, StmtFnSig *sig, const Vector<Type *> &args, Type *ret,
@@ -681,16 +685,17 @@ FuncTy::FuncTy(uint32_t id, StmtVar *var, StmtFnSig *sig, const Vector<Type *> &
 	  intrin(intrin), inty(inty), uniqid(uniqid), externed(externed), variadic(variadic)
 {
 	if(_argcomptime.empty() && !args.empty()) {
-		for(size_t i = 0; i < args.size(); ++i) argcomptime.push_back(false);
+		argcomptime = Vector<bool>(args.size(), false);
 	}
 }
 FuncTy::~FuncTy() {}
 
-Type *FuncTy::specialize(Context &c, const bool &as_is, const size_t &weak_depth)
+Type *FuncTy::specialize(Context &c, const size_t &weak_depth)
 {
 	Vector<Type *> newargs;
-	for(auto &arg : args) newargs.push_back(arg->specialize(c, as_is, weak_depth));
-	return c.allocType<FuncTy>(id, var, sig, newargs, ret->specialize(c, as_is, weak_depth),
+	newargs.reserve(args.size());
+	for(auto &arg : args) newargs.push_back(arg->specialize(c, weak_depth));
+	return c.allocType<FuncTy>(id, var, sig, newargs, ret->specialize(c, weak_depth),
 				   argcomptime, intrin, inty, uniqid, externed, variadic);
 }
 uint32_t FuncTy::getSignatureID()
@@ -905,10 +910,11 @@ Value *FuncTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 VariadicTy::VariadicTy(const Vector<Type *> &args) : Type(TVARIADIC), args(args) {}
 VariadicTy::~VariadicTy() {}
 
-Type *VariadicTy::specialize(Context &c, const bool &as_is, const size_t &weak_depth)
+Type *VariadicTy::specialize(Context &c, const size_t &weak_depth)
 {
 	Vector<Type *> newargs;
-	for(auto &arg : args) newargs.push_back(arg->specialize(c, as_is, weak_depth));
+	newargs.reserve(args.size());
+	for(auto &arg : args) newargs.push_back(arg->specialize(c, weak_depth));
 	return c.allocType<VariadicTy>(newargs);
 }
 bool VariadicTy::isTemplate(const size_t &weak_depth)
@@ -964,6 +970,7 @@ Value *VariadicTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData
 				  const size_t &weak_depth)
 {
 	Vector<Value *> vec;
+	vec.reserve(args.size());
 	for(auto &a : args) {
 		Value *v = a->toDefaultValue(c, loc, cd, weak_depth);
 		if(!v) {

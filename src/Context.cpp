@@ -17,31 +17,45 @@
 #include "Types.hpp"
 #include "Values.hpp"
 
+// #define MEM_COUNT
+
 namespace sc
 {
 Context::Context(RAIIParser *parser) : parser(parser) {}
 Context::~Context()
 {
-	// size_t s1 = 0, l1 = 0, s2 = 0, t1 = 0, v1 = 0;
-	// for(auto &s : stringmem) ++s1;
+#ifdef MEM_COUNT
+	size_t s1 = 0, l1 = 0, s2 = 0, t1 = 0, v1 = 0;
+	for(auto &s : stringmem) ++s1;
+#endif
 	for(auto &l : modlocmem) {
-		// ++l1;
+#ifdef MEM_COUNT
+		++l1;
+#endif
 	}
 	for(auto &s : stmtmem) {
-		// ++s2;
+#ifdef MEM_COUNT
+		++s2;
+#endif
 		delete s;
 	}
 	for(auto &t : typemem) {
-		// ++t1;
+#ifdef MEM_COUNT
+		++t1;
+#endif
 		delete t;
 	}
 	for(auto &v : valmem) {
-		// ++v1;
+#ifdef MEM_COUNT
+		++v1;
+#endif
 		delete v;
 	}
-	// printf("Total deallocation:\nStrings: %zu\nModLocs:"
-	//        " %zu\nStmts: %zu\nTypes: %zu\nVals: %zu\n",
-	//        s1, l1, s2, t1, v1);
+#ifdef MEM_COUNT
+	printf("Total deallocation:\nStrings: %zu\nModLocs:"
+	       " %zu\nStmts: %zu\nTypes: %zu\nVals: %zu\n",
+	       s1, l1, s2, t1, v1);
+#endif
 }
 
 StringRef Context::strFrom(InitList<StringRef> strs)

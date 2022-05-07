@@ -18,7 +18,7 @@
 namespace sc
 {
 Value::Value(const Values &vty, Type *ty, ContainsData has_data)
-	: vty(vty), ty(ty), has_data(has_data)
+	: vty(vty), has_data(has_data), ty(ty)
 {}
 Value::~Value() {}
 bool Value::isStrLiteral()
@@ -74,7 +74,7 @@ String VoidVal::toStr()
 }
 Value *VoidVal::clone(Context &c)
 {
-	return create(c);
+	return this;
 }
 bool VoidVal::updateValue(Context &c, Value *v)
 {
@@ -83,7 +83,8 @@ bool VoidVal::updateValue(Context &c, Value *v)
 
 VoidVal *VoidVal::create(Context &c)
 {
-	return c.allocVal<VoidVal>();
+	static VoidVal *vv = c.allocVal<VoidVal>();
+	return vv;
 }
 
 IntVal::IntVal(Context &c, Type *ty, ContainsData has_data, const int64_t &data)

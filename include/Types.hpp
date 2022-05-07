@@ -70,8 +70,7 @@ public:
 	virtual bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	virtual void unmergeTemplates(const size_t &weak_depth = 0);
 	virtual bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
-	virtual Type *specialize(Context &c, const bool &as_is = false,
-				 const size_t &weak_depth = 0) = 0;
+	virtual Type *specialize(Context &c, const size_t &weak_depth = 0) = 0;
 
 	inline bool isPrimitive() const
 	{
@@ -129,7 +128,7 @@ public:
 	String toStr(const size_t &weak_depth = 0);
 
 	static VoidTy *get(Context &c);
-	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
+	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
@@ -143,7 +142,7 @@ public:
 	String toStr(const size_t &weak_depth = 0);
 
 	static AnyTy *get(Context &c);
-	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
+	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0);
@@ -162,7 +161,7 @@ public:
 	String toStr(const size_t &weak_depth = 0);
 
 	static IntTy *get(Context &c, const uint16_t &_bits, const bool &_sign);
-	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
+	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
 	inline const uint16_t &getBits() const
 	{
@@ -189,7 +188,7 @@ public:
 	String toStr(const size_t &weak_depth = 0);
 
 	static FltTy *get(Context &c, const uint16_t &_bits);
-	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
+	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
 	inline const uint16_t &getBits() const
 	{
@@ -217,7 +216,7 @@ public:
 	void unmergeTemplates(const size_t &weak_depth = 0);
 
 	static TypeTy *get(Context &c);
-	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
+	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
 	void clearContainedTy();
 	void setContainedTy(Type *ty);
@@ -246,7 +245,7 @@ public:
 
 	static PtrTy *get(Context &c, Type *ptr_to, const uint16_t &count, const bool &is_weak);
 	static PtrTy *getStr(Context &c);
-	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
+	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
 	inline void setWeak(const bool &weak)
 	{
@@ -311,7 +310,7 @@ public:
 	static StructTy *get(Context &c, StmtStruct *decl, const Vector<StringRef> &_fieldnames,
 			     const Vector<Type *> &_fields, const Vector<StringRef> &_templatenames,
 			     const Vector<TypeTy *> &_templates, const bool &_externed);
-	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
+	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
 	inline void insertField(StringRef name, Type *ty)
 	{
@@ -409,8 +408,14 @@ public:
 	static FuncTy *get(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
 			   const Vector<bool> &_argcomptime, IntrinsicFn _intrin,
 			   const IntrinType &_inty, const bool &_externed, const bool &_variadic);
-	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
+	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
+	// used in initTemplateFunc
+	inline void setFuncID(FuncTy *other)
+	{
+		id     = other->id;
+		uniqid = other->uniqid;
+	}
 	inline void setVar(StmtVar *v)
 	{
 		var = v;
@@ -515,7 +520,7 @@ public:
 	bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
 
 	static VariadicTy *get(Context &c, const Vector<Type *> &_args);
-	Type *specialize(Context &c, const bool &as_is = false, const size_t &weak_depth = 0);
+	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
 	inline void addArg(Type *ty)
 	{

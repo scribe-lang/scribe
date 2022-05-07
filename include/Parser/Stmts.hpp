@@ -27,7 +27,7 @@ uint64_t genValueID();
 uint64_t createValueIDWith(Value *v);
 Value *getValueWithID(const uint64_t &id);
 
-enum Stmts : uint16_t
+enum Stmts : uint8_t
 {
 	BLOCK,
 	TYPE,
@@ -61,14 +61,13 @@ enum class StmtMask : uint8_t
 class Stmt
 {
 protected:
-	Stmts stype;
 	const ModuleLoc *loc;
-	uint8_t stmtmask; // for StmtMask
-
 	uint64_t valueid;
 	Type *cast_to;
+	uint16_t derefcount; // number of dereferences to be done while generating code
+	Stmts stype;
+	uint8_t stmtmask; // for StmtMask
 	uint8_t castmask;
-	size_t derefcount; // number of dereferences to be done while generating code
 
 public:
 	Stmt(const Stmts &stmt_type, const ModuleLoc *loc);
@@ -237,7 +236,7 @@ public:
 		assert(valueid && "valueid cannot be zero for setValueTy()");
 		values[valueid]->setType(t);
 	}
-	inline void setDerefCount(const size_t &count)
+	inline void setDerefCount(const uint16_t &count)
 	{
 		derefcount = count;
 	}
@@ -261,7 +260,7 @@ public:
 	{
 		return cast_to;
 	}
-	inline const size_t &getDerefCount()
+	inline const uint16_t &getDerefCount()
 	{
 		return derefcount;
 	}
@@ -700,6 +699,11 @@ public:
 	void clearValue();
 	bool requiresTemplateInit();
 	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+
+	inline void setBlk(StmtBlock *_blk)
+	{
+		blk = _blk;
+	}
 
 	inline void setParentVar(StmtVar *pvar)
 	{
