@@ -179,6 +179,8 @@ let from = fn(data: &const any): String {
 		return fromCStr(data);
 	} elif @isEqualTy(data, StringRef) {
 		return fromStringRef(data);
+	} elif @isEqualTy(data, String) {
+		return fromCStr(data.data);
 	} else {
 		return data.str();
 	}
@@ -215,7 +217,7 @@ let cap in const String = fn(): u64 {
 	return self.capacity;
 };
 
-let empty in const String = fn(): i1 {
+let isEmpty in const String = fn(): i1 {
 	return self.length == 0;
 };
 

@@ -4,7 +4,8 @@ let string = @import("std/string");
 
 let main = fn(): i32 {
 	let p = os.getEnv("PATH");
-	if @as(u64, p) == nil {
+	defer p.deinit();
+	if p.isEmpty() {
 		io.println("No PATH available");
 		return 1;
 	}

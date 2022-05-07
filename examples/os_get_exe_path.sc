@@ -9,7 +9,7 @@ let main = fn(argc: i32, argv: **i8): i32 {
 	let exe = argv[1];
 	let res = os.getExePath(exe);
 	defer res.deinit();
-	if res.empty() {
+	if res.isEmpty() {
 		io.println("Exe '", exe, "' does not exist in PATH");
 		return 1;
 	}
