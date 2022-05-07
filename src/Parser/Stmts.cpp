@@ -41,8 +41,8 @@ Value *getValueWithID(const uint64_t &id)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc *loc)
-	: stype(stmt_type), loc(loc), stmtmask(0), valueid(0), cast_to(nullptr), castmask(0),
-	  derefcount(0)
+	: loc(loc), valueid(0), cast_to(nullptr), derefcount(0), stype(stmt_type), stmtmask(0),
+	  castmask(0)
 {}
 Stmt::~Stmt() {}
 
@@ -112,7 +112,7 @@ Value *Stmt::getValue(const bool &exact)
 	if(!exact && v->isRef()) {
 		v = as<RefVal>(v)->getVal();
 	}
-	size_t tmp = derefcount;
+	uint16_t tmp = derefcount;
 	while(tmp > 0 && !exact) {
 		v = as<VecVal>(v)->getValAt(0);
 		--tmp;
@@ -123,8 +123,8 @@ Type *Stmt::getValueTy(const bool &exact)
 {
 	assert(valueid && "valueid cannot be zero for getValueTy()");
 	if(cast_to && !exact) return cast_to;
-	size_t tmp = derefcount;
-	Type *t	   = values[valueid]->getType();
+	uint16_t tmp = derefcount;
+	Type *t	     = values[valueid]->getType();
 	while(!exact && tmp > 0) {
 		t = as<PtrTy>(t)->getTo();
 		--tmp;

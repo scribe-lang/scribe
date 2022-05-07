@@ -18,7 +18,7 @@
 
 namespace sc
 {
-enum Values
+enum Values : uint8_t
 {
 	VVOID,
 	VINT,
@@ -30,7 +30,7 @@ enum Values
 	VNAMESPACE,
 	VREF,
 };
-enum ContainsData
+enum ContainsData : uint8_t
 {
 	CDFALSE, // no value is contained
 	CDTRUE,	 // value is contained
@@ -45,8 +45,8 @@ class Value
 {
 protected:
 	Values vty;
-	Type *ty;
 	ContainsData has_data;
+	Type *ty;
 
 public:
 	Value(const Values &vty, Type *ty, ContainsData has_data);

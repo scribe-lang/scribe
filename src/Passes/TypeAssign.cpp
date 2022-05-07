@@ -326,15 +326,15 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		StringRef fieldname = rsim->getLexValue().getDataStr();
 		// if value is struct, that's definitely not struct def
 		// struct def will be in TypeVal(Struct)
-		StructVal *sv	= nullptr;
-		Value *res	= nullptr;
-		Value *v	= lhs->getValue(true);
-		size_t ptrcount = 0;
+		StructVal *sv	    = nullptr;
+		Value *res	    = nullptr;
+		Value *v	    = lhs->getValue(true);
+		uint16_t derefcount = 0;
 		while(v->getType()->isPtr()) {
 			v = as<VecVal>(v)->getValAt(0);
-			++ptrcount;
+			++derefcount;
 		}
-		lhs->setDerefCount(ptrcount);
+		lhs->setDerefCount(derefcount);
 		if(!lhs->getValue()->isStruct()) {
 			goto typefn;
 		}
@@ -1335,6 +1335,7 @@ bool TypeAssignPass::chooseSuperiorPrimitiveType(Type *l, Type *r)
 
 bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> &args)
 {
+	static Map<StringRef, StmtVar *> alreadytemplated;
 	static Map<StringRef, StmtVar *> beingtemplated;
 	// nothing to do if function has no definition
 	if(!cf->getVar() || !cf->getVar()->getVVal()) return true;
@@ -1344,22 +1345,30 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 		if(cfvar->getVVal()->isFnDef()) as<StmtFnDef>(cfvar->getVVal())->incUsed();
 		return true;
 	}
-	StringRef uniqname =
-	ctx.strFrom({cfvar->getName().getDataStr(), ctx.strFrom(cf->getNonUniqID())});
-	if(beingtemplated.find(uniqname) != beingtemplated.end()) {
-		cf = as<FuncTy>(beingtemplated[uniqname]->getValueTy());
+	// semiunique because cf is yet to be modified according to variadics and such
+	// in the loop below
+	StringRef semiuniqname =
+	ctx.strFrom({cfvar->getName().getDataStr(), ctx.strFrom(cf->getSignatureID())});
+	if(beingtemplated.find(semiuniqname) != beingtemplated.end()) {
+		cf = as<FuncTy>(beingtemplated[semiuniqname]->getValueTy());
 		return true;
 	}
-	cfvar		 = as<StmtVar>(cfvar->clone(ctx)); // template must be cloned
-	StmtFnSig *cfsig = nullptr;
+
 	StmtBlock *cfblk = nullptr;
+	// disable cloning of blk till necessary
+	if(cfvar->getVVal()->isFnDef()) {
+		StmtFnDef *cfdef = as<StmtFnDef>(cfvar->getVVal());
+		cfblk		 = cfdef->getBlk();
+		cfdef->setBlk(nullptr);
+	}
+	StmtVar *origcfvar = cfvar;
+	cfvar		   = as<StmtVar>(cfvar->clone(ctx)); // template must be cloned
+	StmtFnSig *cfsig   = nullptr;
 	cf->setVar(cfvar);
 	if(cfvar->getVVal()->isFnDef()) {
 		StmtFnDef *cfdef = as<StmtFnDef>(cfvar->getVVal());
 		cfdef->setParentVar(cfvar);
 		cfsig = cfdef->getSig();
-		cfblk = cfdef->getBlk();
-		cfdef->incUsed();
 	} else if(cfvar->getVVal()->isExtern()) {
 		StmtExtern *cfext = as<StmtExtern>(cfvar->getVVal());
 		cfext->setParentVar(cfvar);
@@ -1433,10 +1442,29 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 	cfvar->getVVal()->setValueID(cfsig);
 	cfvar->setValueID(cfsig);
 
+	StringRef uniqname =
+	ctx.strFrom({cfvar->getName().getDataStr(), ctx.strFrom(cf->getSignatureID())});
+	if(alreadytemplated.find(uniqname) != alreadytemplated.end()) {
+		if(cfblk) as<StmtFnDef>(origcfvar->getVVal())->setBlk(cfblk);
+		cf = as<FuncTy>(alreadytemplated[uniqname]->getValueTy());
+		// cf->setVar(alreadytemplated[uniqname]);
+		// cf->setFuncID(as<FuncTy>(cf->getVar()->getValueTy()));
+		if(cf->getVar()->getVVal()->isFnDef()) {
+			as<StmtFnDef>(cf->getVar()->getVVal())->incUsed();
+		}
+		popFunc();
+		return true;
+	}
+
 	// dv: default return value
 	Value *dv = nullptr;
 	if(cf->isExtern()) {
 		goto end;
+	}
+	if(cfblk) {
+		as<StmtFnDef>(origcfvar->getVVal())->setBlk(cfblk);
+		cfblk = as<StmtBlock>(cfblk->clone(ctx));
+		as<StmtFnDef>(cfvar->getVVal())->setBlk(cfblk);
 	}
 	if(!cfblk) {
 		err::out(caller, {"function definition for specialization has no block"});
@@ -1452,6 +1480,8 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 	}
 	cfsig->getRetType()->setValueTy(cf->getRet());
 	beingtemplated.erase(uniqname);
+	if(cfvar->getVVal()->isFnDef()) as<StmtFnDef>(cfvar->getVVal())->incUsed();
+	alreadytemplated[uniqname] = cfvar;
 end:
 	popFunc();
 
