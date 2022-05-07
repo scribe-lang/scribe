@@ -16,8 +16,12 @@ let comptime currentOS = core.currentOS;
 
 let setCWD = c.unistd.chdir;
 
-let getEnv = fn(key: *const i8): *const i8 {
-	return c.getenv(key);
+let getEnv = fn(key: *const i8): string.String {
+	let val = c.getenv(key);
+	let res = string.new();
+	if @as(u64, val) == nil { return res; }
+	res.append(val);
+	return res;
 };
 let setEnv = fn(key: *const i8, val: *const i8, overwrite: i1): i32 {
 	return c.setenv(key, val, overwrite);
@@ -47,11 +51,10 @@ let getCWD = fn(): string.String {
 let getExePath = fn(exe: *const i8): string.String {
 	let res = string.new();
 	if @as(u64, exe) == nil { return res; }
-	let p = getEnv("PATH");
-	if @as(u64, p) == nil { return res; }
-
-	let path = string.from(p);
+	let path = getEnv("PATH");
 	defer path.deinit();
+	if path.isEmpty() { return path; }
+
 	let delimpath = path.delim(':');
 	defer delimpath.deinit();
 

@@ -7,7 +7,7 @@ let main = fn(): i32 {
 	let str = string.new();
 	defer str.deinit();
 	while f.read(str) >= 0 {
-		if str.empty() { continue; }
+		if str.isEmpty() { continue; }
 		io.print(str);
 	}
 	io.println();
