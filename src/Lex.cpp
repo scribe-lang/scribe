@@ -677,8 +677,7 @@ TokType Tokenizer::get_operator(StringRef data, size_t &i, const size_t &line,
 			if(NEXT == '&' || NEXT == '=') {
 				++i;
 				if(CURR == '&') op_type = LAND;
-				else if(CURR == '=')
-					op_type = BAND_ASSN;
+				else if(CURR == '=') op_type = BAND_ASSN;
 				break;
 			}
 		}
@@ -688,8 +687,7 @@ TokType Tokenizer::get_operator(StringRef data, size_t &i, const size_t &line,
 			if(NEXT == '|' || NEXT == '=') {
 				++i;
 				if(CURR == '|') op_type = LOR;
-				else if(CURR == '=')
-					op_type = BOR_ASSN;
+				else if(CURR == '=') op_type = BOR_ASSN;
 				break;
 			}
 		}
@@ -802,22 +800,14 @@ void Tokenizer::remove_back_slash(String &s)
 			if(it + 1 >= s.end()) continue;
 			it = s.erase(it);
 			if(*it == '0') *it = '\0';
-			else if(*it == 'a')
-				*it = '\a';
-			else if(*it == 'b')
-				*it = '\b';
-			else if(*it == 'e')
-				*it = '\e';
-			else if(*it == 'f')
-				*it = '\f';
-			else if(*it == 'n')
-				*it = '\n';
-			else if(*it == 'r')
-				*it = '\r';
-			else if(*it == 't')
-				*it = '\t';
-			else if(*it == 'v')
-				*it = '\v';
+			else if(*it == 'a') *it = '\a';
+			else if(*it == 'b') *it = '\b';
+			else if(*it == 'e') *it = '\e';
+			else if(*it == 'f') *it = '\f';
+			else if(*it == 'n') *it = '\n';
+			else if(*it == 'r') *it = '\r';
+			else if(*it == 't') *it = '\t';
+			else if(*it == 'v') *it = '\v';
 		}
 	}
 }
