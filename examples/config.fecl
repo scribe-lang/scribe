@@ -1,0 +1,3 @@
+file_pattern = '(.*)\.sc';
+exec_cmd = 'scribe $p';
+clean_cmd = 'rm -f $f';
