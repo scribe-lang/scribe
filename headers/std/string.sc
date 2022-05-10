@@ -91,10 +91,10 @@ let subRef in const StringRef = fn(start: u64, count: u64): StringRef {
 	return StringRef{&self.start[start], count};
 };
 
-let find in StringRef = fn(other: StringRef): u64 {
+let find in const StringRef = fn(other: StringRef): u64 {
 	let slen = self.len();
 	let olen = other.len();
-	if olen == 0 || olen > slen { return NPOS; }
+	if slen == 0 || olen == 0 || olen > slen { return NPOS; }
 	let pos: u64 = NPOS;
 	for let i: u64 = 0; i < slen; ++i {
 		if self.start[i] != *other.start { continue; }
@@ -108,6 +108,29 @@ let find in StringRef = fn(other: StringRef): u64 {
 		if !found { continue; }
 		pos = i;
 		break;
+	}
+	return pos;
+};
+
+let rfind in const StringRef = fn(other: StringRef): u64 {
+	let slen = self.len();
+	let olen = other.len();
+	if slen == 0 || olen == 0 || olen > slen { return NPOS; }
+	let pos: u64 = NPOS;
+	let i: u64 = slen - 1, j: u64 = olen - 1;
+	let found = false;
+	while i >= 0 && j >= 0 {
+		if self.start[i] != other.start[j] {
+			if i == 0 { break; }
+			--i;
+			found = false;
+			continue;
+		}
+		found = true;
+		if j == 0 { pos = i; }
+		if i == 0 || j == 0 { break; }
+		--i;
+		--j;
 	}
 	return pos;
 };
@@ -416,7 +439,7 @@ let __ne__ in const String = fn(other: &const String): i1 {
 let find in const String = fn(other: StringRef): u64 {
 	let slen = self.len();
 	let olen = other.len();
-	if olen == 0 || olen > slen { return NPOS; }
+	if slen == 0 || olen == 0 || olen > slen { return NPOS; }
 	let pos: u64 = NPOS;
 	for let i: u64 = 0; i < slen; ++i {
 		if self.data[i] != *other.start { continue; }
@@ -430,6 +453,29 @@ let find in const String = fn(other: StringRef): u64 {
 		if !found { continue; }
 		pos = i;
 		break;
+	}
+	return pos;
+};
+
+let rfind in const String = fn(other: StringRef): u64 {
+	let slen = self.len();
+	let olen = other.len();
+	if slen == 0 || olen == 0 || olen > slen { return NPOS; }
+	let pos: u64 = NPOS;
+	let i: u64 = slen - 1, j: u64 = olen - 1;
+	let found = false;
+	while i >= 0 && j >= 0 {
+		if self.data[i] != other.start[j] {
+			if i == 0 { break; }
+			--i;
+			found = false;
+			continue;
+		}
+		found = true;
+		if j == 0 { pos = i; }
+		if i == 0 || j == 0 { break; }
+		--i;
+		--j;
 	}
 	return pos;
 };
