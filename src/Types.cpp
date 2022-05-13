@@ -45,7 +45,7 @@ uint32_t genContainedTypeID()
 }
 
 size_t getPointerCount(Type *t);
-Type *applyPointerCount(Context &c, Type *t, const uint16_t &count);
+Type *applyPointerCount(Context &c, Type *t, uint16_t count);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Base Type
@@ -228,7 +228,7 @@ Value *AnyTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Int Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-IntTy::IntTy(const uint16_t &bits, const bool &sign) : Type(TINT), bits(bits), sign(sign) {}
+IntTy::IntTy(uint16_t bits, bool sign) : Type(TINT), bits(bits), sign(sign) {}
 IntTy::~IntTy() {}
 
 Type *IntTy::specialize(Context &c, const size_t &weak_depth)
@@ -244,7 +244,7 @@ String IntTy::toStr(const size_t &weak_depth)
 	return (sign ? "i" : "u") + std::to_string(bits);
 }
 
-IntTy *IntTy::get(Context &c, const uint16_t &_bits, const bool &_sign)
+IntTy *IntTy::get(Context &c, uint16_t _bits, bool _sign)
 {
 	static Map<uint32_t, IntTy *> resmap;
 	auto loc = resmap.find(_bits + (_sign * 2));
@@ -264,7 +264,7 @@ Value *IntTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Float Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-FltTy::FltTy(const uint16_t &bits) : Type(TFLT), bits(bits) {}
+FltTy::FltTy(uint16_t bits) : Type(TFLT), bits(bits) {}
 FltTy::~FltTy() {}
 
 Type *FltTy::specialize(Context &c, const size_t &weak_depth)
@@ -280,7 +280,7 @@ String FltTy::toStr(const size_t &weak_depth)
 	return "f" + std::to_string(bits);
 }
 
-FltTy *FltTy::get(Context &c, const uint16_t &_bits)
+FltTy *FltTy::get(Context &c, uint16_t _bits)
 {
 	static Map<uint32_t, FltTy *> resmap;
 	auto loc = resmap.find(_bits);
@@ -301,7 +301,7 @@ Value *FltTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 TypeTy::TypeTy() : Type(TTYPE), containedtyid(genContainedTypeID()) {}
-TypeTy::TypeTy(const uint32_t &containedtyid) : Type(TTYPE), containedtyid(containedtyid) {}
+TypeTy::TypeTy(uint32_t containedtyid) : Type(TTYPE), containedtyid(containedtyid) {}
 TypeTy::~TypeTy() {}
 
 Type *TypeTy::specialize(Context &c, const size_t &weak_depth)
@@ -384,7 +384,7 @@ Value *TypeTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Pointer Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-PtrTy::PtrTy(Type *to, const uint16_t &count, const bool &is_weak)
+PtrTy::PtrTy(Type *to, uint16_t count, bool is_weak)
 	: Type(TPTR), to(to), count(count), is_weak(is_weak)
 {}
 PtrTy::~PtrTy() {}
@@ -432,7 +432,7 @@ void PtrTy::unmergeTemplates(const size_t &weak_depth)
 	if(weak_depth >= MAX_WEAKPTR_DEPTH) return;
 	to->unmergeTemplates(weak_depth + is_weak);
 }
-PtrTy *PtrTy::get(Context &c, Type *ptr_to, const uint16_t &count, const bool &is_weak)
+PtrTy *PtrTy::get(Context &c, Type *ptr_to, uint16_t count, bool is_weak)
 {
 	return c.allocType<PtrTy>(ptr_to, count, is_weak);
 }
@@ -471,7 +471,7 @@ Value *PtrTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 
 StructTy::StructTy(StmtStruct *decl, const Vector<StringRef> &fieldnames,
 		   const Vector<Type *> &fields, const Vector<StringRef> &templatenames,
-		   const Vector<TypeTy *> &templates, const bool &externed)
+		   const Vector<TypeTy *> &templates, bool externed)
 	: Type(TSTRUCT), id(genTypeID()), decl(decl), fieldnames(fieldnames), fields(fields),
 	  templatenames(templatenames), templates(templates), has_template(templates.size()),
 	  externed(externed)
@@ -487,7 +487,7 @@ StructTy::StructTy(uint32_t id, StmtStruct *decl, const Vector<StringRef> &field
 		   const Map<StringRef, size_t> &fieldpos, const Vector<Type *> &fields,
 		   const Vector<StringRef> &templatenames,
 		   const Map<StringRef, size_t> &templatepos, const Vector<TypeTy *> &templates,
-		   const bool &has_template, const bool &externed)
+		   bool has_template, bool externed)
 	: Type(TSTRUCT), id(id), decl(decl), fieldpos(fieldpos), fieldnames(fieldnames),
 	  fields(fields), templatepos(templatepos), templatenames(templatenames),
 	  templates(templates), has_template(has_template), externed(externed)
@@ -617,7 +617,7 @@ StructTy *StructTy::instantiate(Context &c, const ModuleLoc *loc, const Vector<S
 }
 StructTy *StructTy::get(Context &c, StmtStruct *decl, const Vector<StringRef> &_fieldnames,
 			const Vector<Type *> &_fields, const Vector<StringRef> &_templatenames,
-			const Vector<TypeTy *> &_templates, const bool &_externed)
+			const Vector<TypeTy *> &_templates, bool _externed)
 {
 	return c.allocType<StructTy>(decl, _fieldnames, _fields, _templatenames, _templates,
 				     _externed);
@@ -668,7 +668,7 @@ Value *StructTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData c
 
 FuncTy::FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
 	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
-	       const bool &externed, const bool &variadic)
+	       bool externed, bool variadic)
 	: Type(TFUNC), id(genTypeID()), var(var), sig(nullptr), args(args), ret(ret),
 	  argcomptime(_argcomptime), intrin(intrin), inty(inty),
 	  uniqid(!externed ? genFuncUniqID() : 0), externed(externed), variadic(variadic)
@@ -680,7 +680,7 @@ FuncTy::FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
 }
 FuncTy::FuncTy(uint32_t id, StmtVar *var, StmtFnSig *sig, const Vector<Type *> &args, Type *ret,
 	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
-	       const uint32_t &uniqid, const bool &externed, const bool &variadic)
+	       uint32_t uniqid, bool externed, bool variadic)
 	: Type(TFUNC), id(id), var(var), sig(sig), args(args), ret(ret), argcomptime(_argcomptime),
 	  intrin(intrin), inty(inty), uniqid(uniqid), externed(externed), variadic(variadic)
 {
@@ -875,7 +875,7 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 }
 FuncTy *FuncTy::get(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
 		    const Vector<bool> &_argcomptime, IntrinsicFn _intrin, const IntrinType &_inty,
-		    const bool &_externed, const bool &_variadic)
+		    bool _externed, bool _variadic)
 {
 	return c.allocType<FuncTy>(_var, _args, _ret, _argcomptime, _intrin, _inty, _externed,
 				   _variadic);
@@ -991,7 +991,7 @@ size_t getPointerCount(Type *t)
 	}
 	return i;
 }
-Type *applyPointerCount(Context &c, Type *t, const uint16_t &count)
+Type *applyPointerCount(Context &c, Type *t, uint16_t count)
 {
 	for(size_t i = 0; i < count; ++i) {
 		t = PtrTy::get(c, t, 0, false);

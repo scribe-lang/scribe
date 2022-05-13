@@ -29,7 +29,7 @@ uint64_t createValueIDWith(Value *v)
 	values[id]  = v;
 	return id;
 }
-Value *getValueWithID(const uint64_t &id)
+Value *getValueWithID(uint64_t id)
 {
 	auto loc = values.find(id);
 	if(loc == values.end()) return nullptr;
@@ -105,7 +105,7 @@ bool Stmt::updateValue(Context &c, Value *v)
 	while(v->isRef()) v = as<RefVal>(v)->getVal();
 	return self->updateValue(c, v);
 }
-Value *Stmt::getValue(const bool &exact)
+Value *Stmt::getValue(bool exact)
 {
 	assert(valueid && "valueid cannot be zero for getValue()");
 	Value *v = values[valueid];
@@ -119,7 +119,7 @@ Value *Stmt::getValue(const bool &exact)
 	}
 	return v;
 }
-Type *Stmt::getValueTy(const bool &exact)
+Type *Stmt::getValueTy(bool exact)
 {
 	assert(valueid && "valueid cannot be zero for getValueTy()");
 	if(cast_to && !exact) return cast_to;
@@ -136,18 +136,18 @@ Type *Stmt::getValueTy(const bool &exact)
 //////////////////////////////////////////// StmtBlock ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtBlock::StmtBlock(const ModuleLoc *loc, const Vector<Stmt *> &stmts, const bool &is_top,
+StmtBlock::StmtBlock(const ModuleLoc *loc, const Vector<Stmt *> &stmts, bool is_top,
 		     bool disable_layering)
 	: Stmt(BLOCK, loc), stmts(stmts), is_top(is_top), disable_layering(disable_layering)
 {}
 StmtBlock::~StmtBlock() {}
 StmtBlock *StmtBlock::create(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &stmts,
-			     const bool &is_top, bool disable_layering)
+			     bool is_top, bool disable_layering)
 {
 	return c.allocStmt<StmtBlock>(loc, stmts, is_top, disable_layering);
 }
 
-void StmtBlock::disp(const bool &has_next)
+void StmtBlock::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Block [top = ", is_top ? "yes" : "no", "] [disable layering = ",
@@ -186,7 +186,7 @@ StmtType *StmtType::create(Context &c, const ModuleLoc *loc, const size_t &ptr, 
 	return c.allocStmt<StmtType>(loc, ptr, variadic, expr);
 }
 
-void StmtType::disp(const bool &has_next)
+void StmtType::disp(bool has_next)
 {
 	String tname(ptr, '*');
 	if(variadic) tname = "..." + tname;
@@ -236,7 +236,7 @@ StmtSimple *StmtSimple::create(Context &c, const ModuleLoc *loc, const lex::Lexe
 	return c.allocStmt<StmtSimple>(loc, val);
 }
 
-void StmtSimple::disp(const bool &has_next)
+void StmtSimple::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Simple [decl = ", decl ? "yes" : "no", "] [self = ",
@@ -263,7 +263,7 @@ StmtFnCallInfo *StmtFnCallInfo::create(Context &c, const ModuleLoc *loc, const V
 	return c.allocStmt<StmtFnCallInfo>(loc, args);
 }
 
-void StmtFnCallInfo::disp(const bool &has_next)
+void StmtFnCallInfo::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Function Call Info: ", args.empty() ? "(empty)" : "", "\n"});
@@ -291,18 +291,18 @@ bool StmtFnCallInfo::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtExpr::StmtExpr(const ModuleLoc *loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
-		   Stmt *rhs, const bool &is_intrinsic_call)
+		   Stmt *rhs, bool is_intrinsic_call)
 	: Stmt(EXPR, loc), commas(commas), lhs(lhs), oper(oper), rhs(rhs), or_blk(nullptr),
 	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call), calledfn(nullptr)
 {}
 StmtExpr::~StmtExpr() {}
 StmtExpr *StmtExpr::create(Context &c, const ModuleLoc *loc, const size_t &commas, Stmt *lhs,
-			   const lex::Lexeme &oper, Stmt *rhs, const bool &is_intrinsic_call)
+			   const lex::Lexeme &oper, Stmt *rhs, bool is_intrinsic_call)
 {
 	return c.allocStmt<StmtExpr>(loc, commas, lhs, oper, rhs, is_intrinsic_call);
 }
 
-void StmtExpr::disp(const bool &has_next)
+void StmtExpr::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Expression [parsing intinsic: ", is_intrinsic_call ? "yes" : "no",
@@ -361,7 +361,7 @@ StmtVar *StmtVar::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &na
 	return c.allocStmt<StmtVar>(loc, name, vtype, vval, infomask);
 }
 
-void StmtVar::disp(const bool &has_next)
+void StmtVar::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(
@@ -397,18 +397,18 @@ bool StmtVar::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtFnSig::StmtFnSig(const ModuleLoc *loc, Vector<StmtVar *> &args, StmtType *rettype,
-		     const bool &has_variadic)
+		     bool has_variadic)
 	: Stmt(FNSIG, loc), args(args), rettype(rettype), disable_template(false),
 	  has_variadic(has_variadic)
 {}
 StmtFnSig::~StmtFnSig() {}
 StmtFnSig *StmtFnSig::create(Context &c, const ModuleLoc *loc, Vector<StmtVar *> &args,
-			     StmtType *rettype, const bool &has_variadic)
+			     StmtType *rettype, bool has_variadic)
 {
 	return c.allocStmt<StmtFnSig>(loc, args, rettype, has_variadic);
 }
 
-void StmtFnSig::disp(const bool &has_next)
+void StmtFnSig::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Function signature [variadic = ", has_variadic ? "yes" : "no", "]",
@@ -462,7 +462,7 @@ StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc *loc, StmtFnSig *sig, S
 	return c.allocStmt<StmtFnDef>(loc, sig, blk);
 }
 
-void StmtFnDef::disp(const bool &has_next)
+void StmtFnDef::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Function definition [has parent: ", parentvar ? "yes" : "no", "]",
@@ -498,7 +498,7 @@ StmtHeader *StmtHeader::create(Context &c, const ModuleLoc *loc, const lex::Lexe
 	return c.allocStmt<StmtHeader>(loc, names, flags);
 }
 
-void StmtHeader::disp(const bool &has_next)
+void StmtHeader::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Header\n"});
@@ -529,7 +529,7 @@ StmtLib *StmtLib::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &fl
 	return c.allocStmt<StmtLib>(loc, flags);
 }
 
-void StmtLib::disp(const bool &has_next)
+void StmtLib::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Libs\n"});
@@ -559,7 +559,7 @@ StmtExtern *StmtExtern::create(Context &c, const ModuleLoc *loc, const lex::Lexe
 	return c.allocStmt<StmtExtern>(loc, fname, headers, libs, entity);
 }
 
-void StmtExtern::disp(const bool &has_next)
+void StmtExtern::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Extern for ", fname.getDataStr(), " [has parent: ",
@@ -604,7 +604,7 @@ StmtEnum *StmtEnum::create(Context &c, const ModuleLoc *loc, const Vector<lex::L
 	return c.allocStmt<StmtEnum>(loc, items);
 }
 
-void StmtEnum::disp(const bool &has_next)
+void StmtEnum::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Enumerations:", getTypeString(), "\n"});
@@ -636,7 +636,7 @@ StmtStruct *StmtStruct::create(Context &c, const ModuleLoc *loc, const Vector<St
 	return c.allocStmt<StmtStruct>(loc, fields, templates);
 }
 
-void StmtStruct::disp(const bool &has_next)
+void StmtStruct::disp(bool has_next)
 {
 	String templatestr;
 	if(!templates.empty()) {
@@ -695,7 +695,7 @@ StmtVarDecl *StmtVarDecl::create(Context &c, const ModuleLoc *loc, const Vector<
 	return c.allocStmt<StmtVarDecl>(loc, decls);
 }
 
-void StmtVarDecl::disp(const bool &has_next)
+void StmtVarDecl::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Variable declarations\n"});
@@ -720,17 +720,17 @@ bool StmtVarDecl::requiresTemplateInit()
 Conditional::Conditional(Stmt *cond, StmtBlock *blk) : cond(cond), blk(blk) {}
 Conditional::~Conditional() {}
 
-StmtCond::StmtCond(const ModuleLoc *loc, const Vector<Conditional> &conds, const bool &is_inline)
+StmtCond::StmtCond(const ModuleLoc *loc, const Vector<Conditional> &conds, bool is_inline)
 	: Stmt(COND, loc), conds(conds), is_inline(is_inline)
 {}
 StmtCond::~StmtCond() {}
 StmtCond *StmtCond::create(Context &c, const ModuleLoc *loc, const Vector<Conditional> &conds,
-			   const bool &is_inline)
+			   bool is_inline)
 {
 	return c.allocStmt<StmtCond>(loc, conds, is_inline);
 }
 
-void StmtCond::disp(const bool &has_next)
+void StmtCond::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Conditional [is inline = ", is_inline ? "yes" : "no", "]\n"});
@@ -766,17 +766,17 @@ bool StmtCond::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtFor::StmtFor(const ModuleLoc *loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *blk,
-		 const bool &is_inline)
+		 bool is_inline)
 	: Stmt(FOR, loc), init(init), cond(cond), incr(incr), blk(blk), is_inline(is_inline)
 {}
 StmtFor::~StmtFor() {}
 StmtFor *StmtFor::create(Context &c, const ModuleLoc *loc, Stmt *init, Stmt *cond, Stmt *incr,
-			 StmtBlock *blk, const bool &is_inline)
+			 StmtBlock *blk, bool is_inline)
 {
 	return c.allocStmt<StmtFor>(loc, init, cond, incr, blk, is_inline);
 }
 
-void StmtFor::disp(const bool &has_next)
+void StmtFor::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"For/While [is inline = ", is_inline ? "yes" : "no", "]\n"});
@@ -825,7 +825,7 @@ StmtRet *StmtRet::create(Context &c, const ModuleLoc *loc, Stmt *val)
 	return c.allocStmt<StmtRet>(loc, val);
 }
 
-void StmtRet::disp(const bool &has_next)
+void StmtRet::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Return", getTypeString(), "\n"});
@@ -853,7 +853,7 @@ StmtContinue *StmtContinue::create(Context &c, const ModuleLoc *loc)
 	return c.allocStmt<StmtContinue>(loc);
 }
 
-void StmtContinue::disp(const bool &has_next)
+void StmtContinue::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Continue\n"});
@@ -875,7 +875,7 @@ StmtBreak *StmtBreak::create(Context &c, const ModuleLoc *loc)
 	return c.allocStmt<StmtBreak>(loc);
 }
 
-void StmtBreak::disp(const bool &has_next)
+void StmtBreak::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Break\n"});
@@ -898,7 +898,7 @@ StmtDefer *StmtDefer::create(Context &c, const ModuleLoc *loc, Stmt *val)
 	return c.allocStmt<StmtDefer>(loc, val);
 }
 
-void StmtDefer::disp(const bool &has_next)
+void StmtDefer::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Defer", getTypeString(), "\n"});

@@ -33,7 +33,7 @@ public:
 	void append(Writer &other);
 
 	void write(StringRef data);
-	void write(const int64_t &data);
+	void write(int64_t data);
 	void write(const double &data);
 	void writeConstChar(const int64_t data);
 	void writeConstString(StringRef data);

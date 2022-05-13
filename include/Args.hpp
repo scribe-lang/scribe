@@ -46,12 +46,12 @@ public:
 		help = val;
 		return *this;
 	}
-	inline ArgInfo &set_reqd(const bool &req)
+	inline ArgInfo &set_reqd(bool req)
 	{
 		reqd = req;
 		return *this;
 	}
-	inline ArgInfo &set_val_reqd(const bool &req)
+	inline ArgInfo &set_val_reqd(bool req)
 	{
 		val_reqd = req;
 		return *this;

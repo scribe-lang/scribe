@@ -34,8 +34,7 @@ class Module
 	bool is_main_module;
 
 public:
-	Module(Context &ctx, StringRef id, StringRef path, StringRef code,
-	       const bool &is_main_module);
+	Module(Context &ctx, StringRef id, StringRef path, StringRef code, bool is_main_module);
 	~Module();
 
 	bool tokenize();
@@ -73,13 +72,13 @@ class RAIIParser
 
 	Map<StringRef, Module *> modules;
 
-	Module *addModule(StringRef path, const bool &main_module);
+	Module *addModule(StringRef path, bool main_module);
 
 public:
 	RAIIParser(args::ArgParser &args);
 	~RAIIParser();
 
-	bool parse(const String &_path, const bool &main_module = false);
+	bool parse(const String &_path, bool main_module = false);
 	void combineAllModules();
 
 	bool hasModule(StringRef path);
@@ -89,8 +88,8 @@ public:
 	Context &getContext();
 
 	// force ignores arg parser
-	void dumpTokens(const bool &force);
-	void dumpParseTree(const bool &force);
+	void dumpTokens(bool force);
+	void dumpParseTree(bool force);
 };
 } // namespace sc
 

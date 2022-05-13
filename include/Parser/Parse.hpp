@@ -35,30 +35,30 @@ public:
 	// on successful parse, returns true, and tree is allocated
 	// if with_brace is true, it will attempt to find the beginning and ending brace for each
 	// block
-	bool parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_brace = true);
+	bool parse_block(ParseHelper &p, StmtBlock *&tree, bool with_brace = true);
 
 	bool parse_type(ParseHelper &p, StmtType *&type);
 	bool parse_simple(ParseHelper &p, Stmt *&data);
 
 	bool parsePrefixedSuffixedLiteral(ParseHelper &p, Stmt *&expr);
-	bool parse_expr(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_17(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_16(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_15(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_14(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_13(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_12(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_11(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_10(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_09(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_08(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_07(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_06(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_05(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_04(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_03(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_02(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
-	bool parse_expr_01(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden);
+	bool parse_expr(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_17(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_16(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_15(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_14(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_13(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_12(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_11(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_10(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_09(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_08(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_07(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_06(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_05(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_04(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_03(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_02(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
+	bool parse_expr_01(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden);
 
 	bool parse_var(ParseHelper &p, StmtVar *&var, const Occurs &intype, const Occurs &otype,
 		       const Occurs &oval);
@@ -71,7 +71,7 @@ public:
 	bool parse_extern(ParseHelper &p, Stmt *&ext);
 
 	bool parse_enum(ParseHelper &p, Stmt *&ed);
-	bool parse_struct(ParseHelper &p, Stmt *&sd, const bool &allowed_templs);
+	bool parse_struct(ParseHelper &p, Stmt *&sd, bool allowed_templs);
 
 	bool parse_vardecl(ParseHelper &p, Stmt *&vd); // combines VAR_DECL_BASE and VAR_DECL
 

@@ -30,7 +30,7 @@ class Layer
 	Map<StringRef, ValDecl> items;
 
 public:
-	inline bool add(StringRef name, const uint64_t &vid, StmtVar *decl)
+	inline bool add(StringRef name, uint64_t vid, StmtVar *decl)
 	{
 		if(exists(name)) return false;
 		items[name] = {vid, decl};
@@ -70,13 +70,13 @@ public:
 	{
 		return layers.size();
 	}
-	inline bool add(StringRef name, const uint64_t &vid, StmtVar *decl)
+	inline bool add(StringRef name, uint64_t vid, StmtVar *decl)
 	{
 		return layers.back().add(name, vid, decl);
 	}
-	bool exists(StringRef name, const bool &top_only);
-	uint64_t getVal(StringRef name, const bool &top_only);
-	StmtVar *getDecl(StringRef name, const bool &top_only);
+	bool exists(StringRef name, bool top_only);
+	uint64_t getVal(StringRef name, bool top_only);
+	StmtVar *getDecl(StringRef name, bool top_only);
 };
 class Function : public LayerStack
 {
@@ -139,9 +139,9 @@ public:
 	{
 		return funcstack.empty() && layers.size() == 1;
 	}
-	bool addVar(StringRef var, const uint64_t &vid, StmtVar *decl, bool global = false);
-	bool addTypeFn(Type *ty, StringRef name, const uint64_t &fn);
-	bool addTypeFn(const uint64_t &id, StringRef name, const uint64_t &fn);
+	bool addVar(StringRef var, uint64_t vid, StmtVar *decl, bool global = false);
+	bool addTypeFn(Type *ty, StringRef name, uint64_t fn);
+	bool addTypeFn(uint64_t id, StringRef name, uint64_t fn);
 	bool exists(StringRef var, bool top_only, bool include_globals);
 	bool existsTypeFn(Type *ty, StringRef name);
 	uint64_t getVar(StringRef var, bool top_only, bool include_globals);

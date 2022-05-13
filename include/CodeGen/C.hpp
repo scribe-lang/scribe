@@ -166,28 +166,28 @@ public:
 
 	bool compile(StringRef outfile) override;
 
-	bool visit(Stmt *stmt, Writer &writer, const bool &semicol);
+	bool visit(Stmt *stmt, Writer &writer, bool semicol);
 
-	bool visit(StmtBlock *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtType *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtSimple *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtFnCallInfo *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtExpr *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtVar *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtFnSig *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtFnDef *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtHeader *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtLib *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtExtern *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtEnum *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtStruct *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtVarDecl *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtCond *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtFor *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtRet *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtContinue *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtBreak *stmt, Writer &writer, const bool &semicol);
-	bool visit(StmtDefer *stmt, Writer &writer, const bool &semicol);
+	bool visit(StmtBlock *stmt, Writer &writer, bool semicol);
+	bool visit(StmtType *stmt, Writer &writer, bool semicol);
+	bool visit(StmtSimple *stmt, Writer &writer, bool semicol);
+	bool visit(StmtFnCallInfo *stmt, Writer &writer, bool semicol);
+	bool visit(StmtExpr *stmt, Writer &writer, bool semicol);
+	bool visit(StmtVar *stmt, Writer &writer, bool semicol);
+	bool visit(StmtFnSig *stmt, Writer &writer, bool semicol);
+	bool visit(StmtFnDef *stmt, Writer &writer, bool semicol);
+	bool visit(StmtHeader *stmt, Writer &writer, bool semicol);
+	bool visit(StmtLib *stmt, Writer &writer, bool semicol);
+	bool visit(StmtExtern *stmt, Writer &writer, bool semicol);
+	bool visit(StmtEnum *stmt, Writer &writer, bool semicol);
+	bool visit(StmtStruct *stmt, Writer &writer, bool semicol);
+	bool visit(StmtVarDecl *stmt, Writer &writer, bool semicol);
+	bool visit(StmtCond *stmt, Writer &writer, bool semicol);
+	bool visit(StmtFor *stmt, Writer &writer, bool semicol);
+	bool visit(StmtRet *stmt, Writer &writer, bool semicol);
+	bool visit(StmtContinue *stmt, Writer &writer, bool semicol);
+	bool visit(StmtBreak *stmt, Writer &writer, bool semicol);
+	bool visit(StmtDefer *stmt, Writer &writer, bool semicol);
 };
 } // namespace sc
 

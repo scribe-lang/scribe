@@ -17,7 +17,7 @@
 
 namespace sc
 {
-bool LayerStack::exists(StringRef name, const bool &top_only)
+bool LayerStack::exists(StringRef name, bool top_only)
 {
 	size_t i     = layers.size() - 1;
 	bool is_done = false;
@@ -29,7 +29,7 @@ bool LayerStack::exists(StringRef name, const bool &top_only)
 	}
 	return false;
 }
-uint64_t LayerStack::getVal(StringRef name, const bool &top_only)
+uint64_t LayerStack::getVal(StringRef name, bool top_only)
 {
 	size_t i     = layers.size() - 1;
 	bool is_done = false;
@@ -42,7 +42,7 @@ uint64_t LayerStack::getVal(StringRef name, const bool &top_only)
 	}
 	return 0;
 }
-StmtVar *LayerStack::getDecl(StringRef name, const bool &top_only)
+StmtVar *LayerStack::getDecl(StringRef name, bool top_only)
 {
 	size_t i     = layers.size() - 1;
 	bool is_done = false;
@@ -62,7 +62,7 @@ ValueManager::ValueManager(Context &c)
 {
 	AddPrimitiveFuncs(c, *this);
 }
-bool ValueManager::addVar(StringRef var, const uint64_t &vid, StmtVar *decl, bool global)
+bool ValueManager::addVar(StringRef var, uint64_t vid, StmtVar *decl, bool global)
 {
 	if(global) {
 		if(globals.find(var) != globals.end()) return false;
@@ -72,11 +72,11 @@ bool ValueManager::addVar(StringRef var, const uint64_t &vid, StmtVar *decl, boo
 	if(!funcstack.empty()) return funcstack.back().add(var, vid, decl);
 	return layers.add(var, vid, decl);
 }
-bool ValueManager::addTypeFn(Type *ty, StringRef name, const uint64_t &fn)
+bool ValueManager::addTypeFn(Type *ty, StringRef name, uint64_t fn)
 {
 	return addTypeFn(ty->getID(), name, fn);
 }
-bool ValueManager::addTypeFn(const uint64_t &id, StringRef name, const uint64_t &fn)
+bool ValueManager::addTypeFn(uint64_t id, StringRef name, uint64_t fn)
 {
 	if(typefuncs.find(id) == typefuncs.end()) {
 		typefuncs[id] = {};
@@ -98,7 +98,7 @@ bool ValueManager::exists(StringRef var, bool top_only, bool include_globals)
 }
 bool ValueManager::existsTypeFn(Type *ty, StringRef name)
 {
-	const uint64_t &id = ty->getID();
+	uint64_t id = ty->getID();
 	if(typefuncs.find(id) == typefuncs.end()) {
 		typefuncs[id] = {};
 	}
@@ -131,7 +131,7 @@ StmtVar *ValueManager::getDecl(StringRef var, bool top_only, bool include_global
 }
 uint64_t ValueManager::getTypeFn(Type *ty, StringRef name)
 {
-	const uint64_t &id = ty->getID();
+	uint64_t id = ty->getID();
 	if(typefuncs.find(id) == typefuncs.end()) {
 		typefuncs[id] = {};
 	}

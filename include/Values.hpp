@@ -117,13 +117,13 @@ class IntVal : public Value
 	int64_t data;
 
 public:
-	IntVal(Context &c, Type *ty, ContainsData has_data, const int64_t &data);
+	IntVal(Context &c, Type *ty, ContainsData has_data, int64_t data);
 
 	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
-	static IntVal *create(Context &c, Type *ty, ContainsData has_data, const int64_t &val);
+	static IntVal *create(Context &c, Type *ty, ContainsData has_data, int64_t val);
 
 	inline int64_t &getVal()
 	{

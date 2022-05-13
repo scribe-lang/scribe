@@ -87,7 +87,7 @@ VoidVal *VoidVal::create(Context &c)
 	return vv;
 }
 
-IntVal::IntVal(Context &c, Type *ty, ContainsData has_data, const int64_t &data)
+IntVal::IntVal(Context &c, Type *ty, ContainsData has_data, int64_t data)
 	: Value(VINT, ty, has_data), data(data)
 {}
 
@@ -107,7 +107,7 @@ bool IntVal::updateValue(Context &c, Value *v)
 	return true;
 }
 
-IntVal *IntVal::create(Context &c, Type *ty, ContainsData has_data, const int64_t &val)
+IntVal *IntVal::create(Context &c, Type *ty, ContainsData has_data, int64_t val)
 {
 	return c.allocVal<IntVal>(ty, has_data, val);
 }

@@ -25,7 +25,7 @@ namespace sc
 extern Map<uint64_t, Value *> values;
 uint64_t genValueID();
 uint64_t createValueIDWith(Value *v);
-Value *getValueWithID(const uint64_t &id);
+Value *getValueWithID(uint64_t id);
 
 enum Stmts : uint8_t
 {
@@ -73,11 +73,11 @@ public:
 	Stmt(const Stmts &stmt_type, const ModuleLoc *loc);
 	virtual ~Stmt();
 
-	virtual void disp(const bool &has_next)			      = 0;
-	virtual Stmt *clone(Context &ctx)			      = 0;
-	virtual void clearValue()				      = 0;
-	virtual bool requiresTemplateInit()			      = 0;
-	virtual void _setFuncUsed(const bool &inc, Set<Stmt *> &done) = 0;
+	virtual void disp(bool has_next)		       = 0;
+	virtual Stmt *clone(Context &ctx)		       = 0;
+	virtual void clearValue()			       = 0;
+	virtual bool requiresTemplateInit()		       = 0;
+	virtual void _setFuncUsed(bool inc, Set<Stmt *> &done) = 0;
 
 	const char *getStmtTypeCString() const;
 	String getTypeString();
@@ -217,7 +217,7 @@ public:
 		cast_to = t;
 		appendCastStmtMask(maskfrom);
 	}
-	inline void setValueID(const uint64_t &vid)
+	inline void setValueID(uint64_t vid)
 	{
 		valueid = vid;
 	}
@@ -236,12 +236,12 @@ public:
 		assert(valueid && "valueid cannot be zero for setValueTy()");
 		values[valueid]->setType(t);
 	}
-	inline void setDerefCount(const uint16_t &count)
+	inline void setDerefCount(uint16_t count)
 	{
 		derefcount = count;
 	}
 
-	inline const uint64_t &getValueID()
+	inline uint64_t getValueID()
 	{
 		return valueid;
 	}
@@ -253,14 +253,14 @@ public:
 	// updates data in this->value using v
 	bool updateValue(Context &c, Value *v);
 	// if exact = true, cast and deref will be skipped
-	Value *getValue(const bool &exact = false);
+	Value *getValue(bool exact = false);
 	// if exact = true, cast and deref will be skipped
-	Type *getValueTy(const bool &exact = false);
+	Type *getValueTy(bool exact = false);
 	inline Type *getCast()
 	{
 		return cast_to;
 	}
-	inline const uint16_t &getDerefCount()
+	inline uint16_t getDerefCount()
 	{
 		return derefcount;
 	}
@@ -283,17 +283,17 @@ class StmtBlock : public Stmt
 	bool disable_layering;
 
 public:
-	StmtBlock(const ModuleLoc *loc, const Vector<Stmt *> &stmts, const bool &is_top,
+	StmtBlock(const ModuleLoc *loc, const Vector<Stmt *> &stmts, bool is_top,
 		  bool disable_layering);
 	~StmtBlock();
 	static StmtBlock *create(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &stmts,
-				 const bool &is_top, bool disable_layering);
+				 bool is_top, bool disable_layering);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline void disableLayering()
 	{
@@ -327,11 +327,11 @@ public:
 	static StmtType *create(Context &c, const ModuleLoc *loc, const size_t &ptr, bool variadic,
 				Stmt *expr);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline void setVariadic()
 	{
@@ -381,11 +381,11 @@ public:
 	~StmtSimple();
 	static StmtSimple *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &val);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline void setDecl(StmtVar *d)
 	{
@@ -399,7 +399,7 @@ public:
 	{
 		self = s;
 	}
-	inline void setAppliedModuleID(const bool &apply)
+	inline void setAppliedModuleID(bool apply)
 	{
 		applied_module_id = apply;
 	}
@@ -430,11 +430,11 @@ public:
 	~StmtFnCallInfo();
 	static StmtFnCallInfo *create(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &args);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline void setArg(const size_t &idx, Stmt *a)
 	{
@@ -463,17 +463,17 @@ class StmtExpr : public Stmt
 
 public:
 	StmtExpr(const ModuleLoc *loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
-		 Stmt *rhs, const bool &is_intrinsic_call);
+		 Stmt *rhs, bool is_intrinsic_call);
 	~StmtExpr();
 	// or_blk and or_blk_var can be set separately - nullptr/INVALID by default
 	static StmtExpr *create(Context &c, const ModuleLoc *loc, const size_t &commas, Stmt *lhs,
-				const lex::Lexeme &oper, Stmt *rhs, const bool &is_intrinsic_call);
+				const lex::Lexeme &oper, Stmt *rhs, bool is_intrinsic_call);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline void setCommas(const size_t &c)
 	{
@@ -548,11 +548,11 @@ public:
 	static StmtVar *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &name,
 			       StmtType *vtype, Stmt *vval, uint8_t varmask);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 #define SetModifierX(Fn, Mod)                     \
 	inline void set##Fn()                     \
@@ -591,7 +591,7 @@ public:
 	{
 		vval = val;
 	}
-	inline void setCodeGenMangle(const bool &cgmangle)
+	inline void setCodeGenMangle(bool cgmangle)
 	{
 		applied_codegen_mangle = cgmangle;
 	}
@@ -608,7 +608,7 @@ public:
 	{
 		return vval;
 	}
-	inline void setAppliedModuleID(const bool &apply)
+	inline void setAppliedModuleID(bool apply)
 	{
 		applied_module_id = apply;
 	}
@@ -632,16 +632,16 @@ class StmtFnSig : public Stmt
 
 public:
 	StmtFnSig(const ModuleLoc *loc, Vector<StmtVar *> &args, StmtType *rettype,
-		  const bool &has_variadic);
+		  bool has_variadic);
 	~StmtFnSig();
 	static StmtFnSig *create(Context &c, const ModuleLoc *loc, Vector<StmtVar *> &args,
-				 StmtType *rettype, const bool &has_variadic);
+				 StmtType *rettype, bool has_variadic);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline void insertArg(StmtVar *arg)
 	{
@@ -655,7 +655,7 @@ public:
 	{
 		disable_template = true;
 	}
-	inline void setVariadic(const bool &va)
+	inline void setVariadic(bool va)
 	{
 		has_variadic = va;
 	}
@@ -694,11 +694,11 @@ public:
 	~StmtFnDef();
 	static StmtFnDef *create(Context &c, const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline void setBlk(StmtBlock *_blk)
 	{
@@ -769,11 +769,11 @@ public:
 	static StmtHeader *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &names,
 				  const lex::Lexeme &flags);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline const lex::Lexeme &getNames() const
 	{
@@ -794,11 +794,11 @@ public:
 	StmtLib(const ModuleLoc *loc, const lex::Lexeme &flags);
 	static StmtLib *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &flags);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline const lex::Lexeme &getFlags() const
 	{
@@ -822,11 +822,11 @@ public:
 	static StmtExtern *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &fname,
 				  StmtHeader *headers, StmtLib *libs, Stmt *entity);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline void setParentVar(StmtVar *var)
 	{
@@ -867,11 +867,11 @@ public:
 	~StmtEnum();
 	static StmtEnum *create(Context &c, const ModuleLoc *loc, const Vector<lex::Lexeme> &items);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline Vector<lex::Lexeme> &getItems()
 	{
@@ -894,13 +894,13 @@ public:
 	static StmtStruct *create(Context &c, const ModuleLoc *loc, const Vector<StmtVar *> &fields,
 				  const Vector<lex::Lexeme> &templates);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void setExterned(const bool &externed)
+	inline void setExterned(bool externed)
 	{
 		is_externed = externed;
 	}
@@ -935,11 +935,11 @@ public:
 	static StmtVarDecl *create(Context &c, const ModuleLoc *loc,
 				   const Vector<StmtVar *> &decls);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline Vector<StmtVar *> &getDecls()
 	{
@@ -986,16 +986,16 @@ class StmtCond : public Stmt
 	bool is_inline;
 
 public:
-	StmtCond(const ModuleLoc *loc, const Vector<Conditional> &conds, const bool &is_inline);
+	StmtCond(const ModuleLoc *loc, const Vector<Conditional> &conds, bool is_inline);
 	~StmtCond();
 	static StmtCond *create(Context &c, const ModuleLoc *loc, const Vector<Conditional> &conds,
-				const bool &is_inline);
+				bool is_inline);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline Vector<Conditional> &getConditionals()
 	{
@@ -1017,17 +1017,17 @@ class StmtFor : public Stmt
 
 public:
 	StmtFor(const ModuleLoc *loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *blk,
-		const bool &is_inline);
+		bool is_inline);
 	~StmtFor();
 	// init, cond, incr can be nullptr
 	static StmtFor *create(Context &c, const ModuleLoc *loc, Stmt *init, Stmt *cond, Stmt *incr,
-			       StmtBlock *blk, const bool &is_inline);
+			       StmtBlock *blk, bool is_inline);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline Stmt *&getInit()
 	{
@@ -1061,11 +1061,11 @@ public:
 	~StmtRet();
 	static StmtRet *create(Context &c, const ModuleLoc *loc, Stmt *val);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline void setFnBlk(StmtBlock *blk)
 	{
@@ -1088,11 +1088,11 @@ public:
 	StmtContinue(const ModuleLoc *loc);
 	static StmtContinue *create(Context &c, const ModuleLoc *loc);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 };
 
 class StmtBreak : public Stmt
@@ -1101,11 +1101,11 @@ public:
 	StmtBreak(const ModuleLoc *loc);
 	static StmtBreak *create(Context &c, const ModuleLoc *loc);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 };
 
 class StmtDefer : public Stmt
@@ -1117,11 +1117,11 @@ public:
 	~StmtDefer();
 	static StmtDefer *create(Context &c, const ModuleLoc *loc, Stmt *val);
 
-	void disp(const bool &has_next);
+	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 	void clearValue();
 	bool requiresTemplateInit();
-	void _setFuncUsed(const bool &inc, Set<Stmt *> &done);
+	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline Stmt *&getVal()
 	{
