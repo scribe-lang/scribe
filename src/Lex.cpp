@@ -375,9 +375,9 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 			}
 			int64_t intval;
 			if(num.size() > 2 && base != 10) {
-				// base of 2: starts with 0 => 01111
+				// base of 8: starts with 0 => 0755
 				// everything else: starts with 0 and letter
-				num = num.substr(base == 2 ? 1 : 2);
+				num = num.substr(base == 8 ? 1 : 2);
 			}
 			std::from_chars(num.data(), num.data() + num.size(), intval, base);
 			toks.emplace_back(locAlloc(line, i - line_start - num.size()), intval);
@@ -505,10 +505,9 @@ StringRef Tokenizer::get_num(StringRef data, size_t &i, size_t &line, size_t &li
 		}
 		case '9':
 		case '8':
-			if(base <= 8) base = 10;
-			break;
-			goto fail;
 		case '7':
+			if(base >= 8) break;
+			goto fail;
 		case '6':
 		case '5':
 		case '4':
@@ -516,14 +515,12 @@ StringRef Tokenizer::get_num(StringRef data, size_t &i, size_t &line, size_t &li
 		case '2':
 			if(base > 2) break;
 			goto fail;
-		case '1': read_base = false; break;
+		case '1': break;
 		case '0': {
 			if(i == first_digit_at) {
 				read_base = true;
 				base	  = 8;
-				break;
 			}
-			read_base = false;
 			break;
 		}
 		case '.':
@@ -556,10 +553,12 @@ StringRef Tokenizer::get_num(StringRef data, size_t &i, size_t &line, size_t &li
 					 {"encountered invalid character '", String(1, c),
 					  "' while retrieving a number of base ",
 					  ctx.strFrom((int64_t)base)});
+				return "";
 			} else {
 				goto end;
 			}
 		}
+		if(!buf.empty() || c != '0') read_base = false;
 		buf.push_back(c);
 		++i;
 	}
