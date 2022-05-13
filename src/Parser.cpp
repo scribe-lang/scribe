@@ -31,8 +31,7 @@ namespace sc
 //////////////////////////////////////////// Module ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Module::Module(Context &ctx, StringRef id, StringRef path, StringRef code,
-	       const bool &is_main_module)
+Module::Module(Context &ctx, StringRef id, StringRef path, StringRef code, bool is_main_module)
 	: ctx(ctx), id(id), path(path), code(code), tokens(), ptree(nullptr),
 	  is_main_module(is_main_module)
 {}
@@ -127,7 +126,7 @@ void RAIIParser::combineAllModules()
 		modulestack.pop_back();
 	}
 }
-Module *RAIIParser::addModule(StringRef path, const bool &main_module)
+Module *RAIIParser::addModule(StringRef path, bool main_module)
 {
 	auto res = modules.find(path);
 	if(res != modules.end()) return res->second;
@@ -153,7 +152,7 @@ Module *RAIIParser::addModule(StringRef path, const bool &main_module)
 	modules[path] = mod;
 	return mod;
 }
-bool RAIIParser::parse(const String &_path, const bool &main_module)
+bool RAIIParser::parse(const String &_path, bool main_module)
 {
 	if(hasModule(_path)) {
 		std::cerr << "cannot parse an existing source: " << _path << "\n";
@@ -199,7 +198,7 @@ Context &RAIIParser::getContext()
 {
 	return ctx;
 }
-void RAIIParser::dumpTokens(const bool &force)
+void RAIIParser::dumpTokens(bool force)
 {
 	if(!args.has("tokens") && !force) return;
 
@@ -210,7 +209,7 @@ void RAIIParser::dumpTokens(const bool &force)
 		modules[*file]->dumpTokens();
 	}
 }
-void RAIIParser::dumpParseTree(const bool &force)
+void RAIIParser::dumpParseTree(bool force)
 {
 	if(!args.has("parse") && !args.has("semantic") && !force) return;
 

@@ -19,7 +19,7 @@ namespace sc
 //////////////////////////////////////////// StmtBlock ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtBlock::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtBlock::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -32,7 +32,7 @@ void StmtBlock::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////////// StmtType /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtType::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtType::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -43,7 +43,7 @@ void StmtType::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 ////////////////////////////////////////// StmtSimple /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtSimple::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtSimple::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -53,7 +53,7 @@ void StmtSimple::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////// StmtFnCallInfo ///////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtFnCallInfo::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtFnCallInfo::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -66,7 +66,7 @@ void StmtFnCallInfo::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////////// StmtExpr /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtExpr::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtExpr::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -83,7 +83,7 @@ void StmtExpr::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////////// StmtVar //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtVar::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtVar::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -95,7 +95,7 @@ void StmtVar::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////////// StmtFnSig ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtFnSig::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtFnSig::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -107,7 +107,7 @@ void StmtFnSig::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////////// StmtFnDef ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtFnDef::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtFnDef::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -124,7 +124,7 @@ void StmtFnDef::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 ////////////////////////////////////////// StmtHeader /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtHeader::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtHeader::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -134,7 +134,7 @@ void StmtHeader::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////////// StmtLib //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtLib::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtLib::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -144,7 +144,7 @@ void StmtLib::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 ////////////////////////////////////////// StmtExtern /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtExtern::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtExtern::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -157,7 +157,7 @@ void StmtExtern::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 /////////////////////////////////////////// StmtEnum //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtEnum::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtEnum::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -167,7 +167,7 @@ void StmtEnum::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 ///////////////////////////////////////// StmtStruct //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtStruct::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtStruct::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -178,7 +178,7 @@ void StmtStruct::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 ///////////////////////////////////////// StmtVarDecl /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtVarDecl::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtVarDecl::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -189,7 +189,7 @@ void StmtVarDecl::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////////// StmtCond /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtCond::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtCond::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -203,7 +203,7 @@ void StmtCond::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////////// StmtFor //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtFor::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtFor::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -217,7 +217,7 @@ void StmtFor::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////////// StmtRet //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtRet::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtRet::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -228,7 +228,7 @@ void StmtRet::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 ////////////////////////////////////////// StmtContinue ///////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtContinue::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtContinue::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -238,7 +238,7 @@ void StmtContinue::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////////// StmtBreak ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtBreak::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtBreak::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
@@ -248,7 +248,7 @@ void StmtBreak::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
 //////////////////////////////////////////// StmtDefer ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StmtDefer::_setFuncUsed(const bool &inc, Set<Stmt *> &done)
+void StmtDefer::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);

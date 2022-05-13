@@ -26,7 +26,7 @@ inline uint64_t createFnVal(Context &c, const Vector<Type *> &args, Type *ret, I
 	return createComptimeFnVal(c, args, ret, {}, fn, inty, is_va);
 }
 
-void addIntFn(Context &c, ValueManager &vmgr, StringRef name, const uint64_t &fid)
+void addIntFn(Context &c, ValueManager &vmgr, StringRef name, uint64_t fid)
 {
 	static Vector<int> bits	 = {1, 8, 16, 32, 64};
 	static Vector<bool> sign = {true, false};
@@ -44,7 +44,7 @@ void addIntFn(Context &c, ValueManager &vmgr, StringRef name, const uint64_t &fi
 	}
 }
 
-void addFltFn(Context &c, ValueManager &vmgr, StringRef name, const uint64_t &fid)
+void addFltFn(Context &c, ValueManager &vmgr, StringRef name, uint64_t fid)
 {
 	static Vector<int> bits = {32, 64};
 	static Map<int, FltTy *> tys;

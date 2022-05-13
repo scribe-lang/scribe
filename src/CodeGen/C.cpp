@@ -236,7 +236,7 @@ bool CDriver::compile(StringRef outfile)
 	return true;
 }
 
-bool CDriver::visit(Stmt *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(Stmt *stmt, Writer &writer, bool semicol)
 {
 	bool res = false;
 	Writer tmp(writer);
@@ -282,7 +282,7 @@ bool CDriver::visit(Stmt *stmt, Writer &writer, const bool &semicol)
 	return res;
 }
 
-bool CDriver::visit(StmtBlock *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtBlock *stmt, Writer &writer, bool semicol)
 {
 	if(!stmt->isTop()) {
 		writer.write("{");
@@ -307,12 +307,12 @@ bool CDriver::visit(StmtBlock *stmt, Writer &writer, const bool &semicol)
 	}
 	return true;
 }
-bool CDriver::visit(StmtType *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtType *stmt, Writer &writer, bool semicol)
 {
 	writer.clear();
 	return false;
 }
-bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtSimple *stmt, Writer &writer, bool semicol)
 {
 	writer.clear();
 	switch(stmt->getLexValue().getTokVal()) {
@@ -334,11 +334,11 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, const bool &semicol)
 	writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
 	return true;
 }
-bool CDriver::visit(StmtFnCallInfo *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtFnCallInfo *stmt, Writer &writer, bool semicol)
 {
 	return true;
 }
-bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 {
 	writer.clear();
 	if(stmt->getValue()->hasPermaData()) {
@@ -522,7 +522,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, const bool &semicol)
 	}
 	return true;
 }
-bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 {
 	writer.clear();
 	StringRef varname = stmt->getName().getDataStr();
@@ -674,7 +674,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, const bool &semicol)
 	}
 	return true;
 }
-bool CDriver::visit(StmtFnSig *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtFnSig *stmt, Writer &writer, bool semicol)
 {
 	CTy cty;
 	Stmt *retty = stmt->getRetType();
@@ -700,7 +700,7 @@ bool CDriver::visit(StmtFnSig *stmt, Writer &writer, const bool &semicol)
 	writer.write(")");
 	return true;
 }
-bool CDriver::visit(StmtFnDef *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtFnDef *stmt, Writer &writer, bool semicol)
 {
 	if(!visit(stmt->getSig(), writer, false)) {
 		err::out(stmt, {"failed to generate C code for function"});
@@ -714,7 +714,7 @@ bool CDriver::visit(StmtFnDef *stmt, Writer &writer, const bool &semicol)
 	}
 	return true;
 }
-bool CDriver::visit(StmtHeader *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtHeader *stmt, Writer &writer, bool semicol)
 {
 	if(!stmt->getNames().getDataStr().empty()) {
 		Vector<StringRef> headersf = stringDelim(stmt->getNames().getDataStr(), ",");
@@ -734,32 +734,32 @@ bool CDriver::visit(StmtHeader *stmt, Writer &writer, const bool &semicol)
 	}
 	return true;
 }
-bool CDriver::visit(StmtLib *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtLib *stmt, Writer &writer, bool semicol)
 {
 	if(!stmt->getFlags().getDataStr().empty()) {
 		libflags.push_back(stmt->getFlags().getDataStr());
 	}
 	return true;
 }
-bool CDriver::visit(StmtExtern *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtExtern *stmt, Writer &writer, bool semicol)
 {
 	if(stmt->getHeaders()) visit(stmt->getHeaders(), writer, false);
 	if(stmt->getLibs()) visit(stmt->getLibs(), writer, false);
 	// nothing to do of entity
 	return true;
 }
-bool CDriver::visit(StmtEnum *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtEnum *stmt, Writer &writer, bool semicol)
 {
 	err::out(stmt, {"Unimplemented enum C code generation"});
 	return false;
 }
-bool CDriver::visit(StmtStruct *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtStruct *stmt, Writer &writer, bool semicol)
 {
 	// structs are not defined by themselves
 	// they are defined when a struct type is encountered
 	return true;
 }
-bool CDriver::visit(StmtVarDecl *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtVarDecl *stmt, Writer &writer, bool semicol)
 {
 	for(size_t i = 0; i < stmt->getDecls().size(); ++i) {
 		auto &d = stmt->getDecls()[i];
@@ -776,7 +776,7 @@ bool CDriver::visit(StmtVarDecl *stmt, Writer &writer, const bool &semicol)
 	}
 	return true;
 }
-bool CDriver::visit(StmtCond *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtCond *stmt, Writer &writer, bool semicol)
 {
 	if(stmt->isInline()) {
 		if(stmt->getConditionals().empty()) return true;
@@ -807,7 +807,7 @@ bool CDriver::visit(StmtCond *stmt, Writer &writer, const bool &semicol)
 	}
 	return true;
 }
-bool CDriver::visit(StmtFor *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtFor *stmt, Writer &writer, bool semicol)
 {
 	if(stmt->isInline()) {
 		if(stmt->getBlk()->getStmts().empty()) return true;
@@ -857,7 +857,7 @@ bool CDriver::visit(StmtFor *stmt, Writer &writer, const bool &semicol)
 	writer.append(tmp);
 	return true;
 }
-bool CDriver::visit(StmtRet *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtRet *stmt, Writer &writer, bool semicol)
 {
 	if(!stmt->getVal()) {
 		writer.write("return");
@@ -878,17 +878,17 @@ bool CDriver::visit(StmtRet *stmt, Writer &writer, const bool &semicol)
 	}
 	return true;
 }
-bool CDriver::visit(StmtContinue *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtContinue *stmt, Writer &writer, bool semicol)
 {
 	writer.write("continue");
 	return true;
 }
-bool CDriver::visit(StmtBreak *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtBreak *stmt, Writer &writer, bool semicol)
 {
 	writer.write("break");
 	return true;
 }
-bool CDriver::visit(StmtDefer *stmt, Writer &writer, const bool &semicol)
+bool CDriver::visit(StmtDefer *stmt, Writer &writer, bool semicol)
 {
 	err::out(stmt, {"defer should never come as a part of code generation"});
 	return false;

@@ -1489,7 +1489,7 @@ end:
 	return true;
 }
 
-void TypeAssignPass::pushFunc(FuncVal *fn, const bool &is_va, const size_t &va_len)
+void TypeAssignPass::pushFunc(FuncVal *fn, bool is_va, const size_t &va_len)
 {
 	vmgr.pushFunc(fn ? fn->getVal() : nullptr);
 	vmgr.pushLayer();
@@ -1497,7 +1497,7 @@ void TypeAssignPass::pushFunc(FuncVal *fn, const bool &is_va, const size_t &va_l
 	is_fn_va.push_back(is_va);
 	valen.push_back(va_len);
 }
-void TypeAssignPass::updateLastFunc(FuncVal *fn, const bool &is_va, const size_t &va_len)
+void TypeAssignPass::updateLastFunc(FuncVal *fn, bool is_va, const size_t &va_len)
 {
 	vmgr.getTopFunc().setTy(fn->getVal());
 	is_fn_va.back() = is_va;

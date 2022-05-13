@@ -243,13 +243,13 @@ Lexeme::Lexeme(const ModuleLoc *loc, const TokType &type)
 Lexeme::Lexeme(const ModuleLoc *loc, const TokType &type, StringRef _data)
 	: loc(loc), tok(type), data({.s = _data, .i = 0lu, .f = 0.0})
 {}
-Lexeme::Lexeme(const ModuleLoc *loc, const int64_t &_data)
+Lexeme::Lexeme(const ModuleLoc *loc, int64_t _data)
 	: loc(loc), tok(INT), data({.s = "", .i = _data, .f = 0.0})
 {}
 Lexeme::Lexeme(const ModuleLoc *loc, const long double &_data)
 	: loc(loc), tok(FLT), data({.s = "", .i = 0lu, .f = _data})
 {}
-String Lexeme::str(const int64_t &pad) const
+String Lexeme::str(int64_t pad) const
 {
 	String res;
 	int64_t len;

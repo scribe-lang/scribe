@@ -39,8 +39,8 @@ class TypeAssignPass : public Pass
 	bool chooseSuperiorPrimitiveType(Type *l, Type *r);
 	bool initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> &args);
 
-	void pushFunc(FuncVal *fn, const bool &is_va, const size_t &va_len);
-	void updateLastFunc(FuncVal *fn, const bool &is_va, const size_t &va_len);
+	void pushFunc(FuncVal *fn, bool is_va, const size_t &va_len);
+	void updateLastFunc(FuncVal *fn, bool is_va, const size_t &va_len);
 	void popFunc();
 
 public:

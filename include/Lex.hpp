@@ -269,10 +269,10 @@ public:
 	Lexeme(const ModuleLoc *loc = nullptr);
 	explicit Lexeme(const ModuleLoc *loc, const TokType &type);
 	explicit Lexeme(const ModuleLoc *loc, const TokType &type, StringRef _data);
-	explicit Lexeme(const ModuleLoc *loc, const int64_t &_data);
+	explicit Lexeme(const ModuleLoc *loc, int64_t _data);
 	explicit Lexeme(const ModuleLoc *loc, const long double &_data);
 
-	String str(const int64_t &pad = 10) const;
+	String str(int64_t pad = 10) const;
 
 	inline bool operator==(const Lexeme &other) const
 	{
@@ -287,7 +287,7 @@ public:
 	{
 		data.s = str;
 	}
-	inline void setDataInt(const int64_t &i)
+	inline void setDataInt(int64_t i)
 	{
 		data.i = i;
 	}
@@ -300,7 +300,7 @@ public:
 	{
 		return data.s;
 	}
-	inline const int64_t &getDataInt() const
+	inline int64_t getDataInt() const
 	{
 		return data.i;
 	}

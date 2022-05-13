@@ -23,7 +23,7 @@ Parsing::Parsing(Context &ctx) : ctx(ctx) {}
 
 // on successful parse, returns true, and tree is allocated
 // if with_brace is true, it will attempt to find the beginning and ending brace for each block
-bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, const bool &with_brace)
+bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, bool with_brace)
 {
 	tree = nullptr;
 
@@ -192,14 +192,14 @@ bool Parsing::parsePrefixedSuffixedLiteral(ParseHelper &p, Stmt *&expr)
 	return true;
 }
 
-bool Parsing::parse_expr(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	return parse_expr_17(p, expr, disable_brace_after_iden);
 }
 
 // Left Associative
 // ,
-bool Parsing::parse_expr_17(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_17(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -236,7 +236,7 @@ bool Parsing::parse_expr_17(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 }
 // Left Associative
 // ?:
-bool Parsing::parse_expr_16(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_16(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -283,7 +283,7 @@ after_quest:
 }
 // Right Associative
 // =
-bool Parsing::parse_expr_15(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_15(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -317,7 +317,7 @@ bool Parsing::parse_expr_15(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 // <<= >>=
 // &= |= ^=
 // or-block
-bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -368,7 +368,7 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 }
 // Left Associative
 // ||
-bool Parsing::parse_expr_13(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_13(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -398,7 +398,7 @@ bool Parsing::parse_expr_13(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 }
 // Left Associative
 // &&
-bool Parsing::parse_expr_12(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_12(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -428,7 +428,7 @@ bool Parsing::parse_expr_12(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 }
 // Left Associative
 // |
-bool Parsing::parse_expr_11(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_11(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -458,7 +458,7 @@ bool Parsing::parse_expr_11(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 }
 // Left Associative
 // ^
-bool Parsing::parse_expr_10(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_10(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -488,7 +488,7 @@ bool Parsing::parse_expr_10(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 }
 // Left Associative
 // &
-bool Parsing::parse_expr_09(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_09(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -518,7 +518,7 @@ bool Parsing::parse_expr_09(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 }
 // Left Associative
 // == !=
-bool Parsing::parse_expr_08(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_08(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -549,7 +549,7 @@ bool Parsing::parse_expr_08(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 // Left Associative
 // < <=
 // > >=
-bool Parsing::parse_expr_07(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_07(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -579,7 +579,7 @@ bool Parsing::parse_expr_07(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 }
 // Left Associative
 // << >>
-bool Parsing::parse_expr_06(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_06(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -609,7 +609,7 @@ bool Parsing::parse_expr_06(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 }
 // Left Associative
 // + -
-bool Parsing::parse_expr_05(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_05(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -639,7 +639,7 @@ bool Parsing::parse_expr_05(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 }
 // Left Associative
 // * / %
-bool Parsing::parse_expr_04(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_04(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -672,7 +672,7 @@ bool Parsing::parse_expr_04(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 // + - (unary)
 // * & (deref, addrof)
 // ! ~ (log/bit)
-bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -731,7 +731,7 @@ bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 // Left Associative
 // ++ -- (post)
 // ... (postva)
-bool Parsing::parse_expr_02(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_02(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -754,7 +754,7 @@ bool Parsing::parse_expr_02(ParseHelper &p, Stmt *&expr, const bool &disable_bra
 	expr = lhs;
 	return true;
 }
-bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr, const bool &disable_brace_after_iden)
+bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -1229,7 +1229,7 @@ bool Parsing::parse_enum(ParseHelper &p, Stmt *&ed)
 	return true;
 }
 
-bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd, const bool &allowed_templs)
+bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd, bool allowed_templs)
 {
 	sd = nullptr;
 

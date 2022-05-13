@@ -45,7 +45,7 @@ void Writer::write(StringRef data)
 {
 	dest += data;
 }
-void Writer::write(const int64_t &data)
+void Writer::write(int64_t data)
 {
 	dest += std::to_string(data);
 }

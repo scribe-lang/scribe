@@ -154,20 +154,20 @@ class IntTy : public Type
 	bool sign; // signed
 
 public:
-	IntTy(const uint16_t &bits, const bool &sign);
+	IntTy(uint16_t bits, bool sign);
 	~IntTy();
 
 	uint32_t getID();
 	String toStr(const size_t &weak_depth = 0);
 
-	static IntTy *get(Context &c, const uint16_t &_bits, const bool &_sign);
+	static IntTy *get(Context &c, uint16_t _bits, bool _sign);
 	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
-	inline const uint16_t &getBits() const
+	inline uint16_t getBits() const
 	{
 		return bits;
 	}
-	inline const bool &isSigned() const
+	inline bool isSigned() const
 	{
 		return sign;
 	}
@@ -181,16 +181,16 @@ class FltTy : public Type
 	uint16_t bits;
 
 public:
-	FltTy(const uint16_t &bits);
+	FltTy(uint16_t bits);
 	~FltTy();
 
 	uint32_t getID();
 	String toStr(const size_t &weak_depth = 0);
 
-	static FltTy *get(Context &c, const uint16_t &_bits);
+	static FltTy *get(Context &c, uint16_t _bits);
 	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
-	inline const uint16_t &getBits() const
+	inline uint16_t getBits() const
 	{
 		return bits;
 	}
@@ -205,7 +205,7 @@ class TypeTy : public Type
 
 public:
 	TypeTy();
-	TypeTy(const uint32_t &containedtyid);
+	TypeTy(uint32_t containedtyid);
 	~TypeTy();
 
 	uint32_t getUniqID();
@@ -233,7 +233,7 @@ class PtrTy : public Type
 	bool is_weak;	// required for self referencing members in struct
 
 public:
-	PtrTy(Type *to, const uint16_t &count, const bool &is_weak);
+	PtrTy(Type *to, uint16_t count, bool is_weak);
 	~PtrTy();
 
 	uint32_t getUniqID();
@@ -243,11 +243,11 @@ public:
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 
-	static PtrTy *get(Context &c, Type *ptr_to, const uint16_t &count, const bool &is_weak);
+	static PtrTy *get(Context &c, Type *ptr_to, uint16_t count, bool is_weak);
 	static PtrTy *getStr(Context &c);
 	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
-	inline void setWeak(const bool &weak)
+	inline void setWeak(bool weak)
 	{
 		is_weak = weak;
 	}
@@ -255,7 +255,7 @@ public:
 	{
 		return to;
 	}
-	inline const uint16_t &getCount()
+	inline uint16_t getCount()
 	{
 		return count;
 	}
@@ -288,11 +288,11 @@ class StructTy : public Type
 public:
 	StructTy(StmtStruct *decl, const Vector<StringRef> &fieldnames,
 		 const Vector<Type *> &fields, const Vector<StringRef> &templatenames,
-		 const Vector<TypeTy *> &templates, const bool &externed);
+		 const Vector<TypeTy *> &templates, bool externed);
 	StructTy(uint32_t id, StmtStruct *decl, const Vector<StringRef> &fieldnames,
 		 const Map<StringRef, size_t> &fieldpos, const Vector<Type *> &fields,
 		 const Vector<StringRef> &templatenames, const Map<StringRef, size_t> &templatepos,
-		 const Vector<TypeTy *> &templates, const bool &has_template, const bool &externed);
+		 const Vector<TypeTy *> &templates, bool has_template, bool externed);
 	~StructTy();
 
 	uint32_t getUniqID();
@@ -309,7 +309,7 @@ public:
 
 	static StructTy *get(Context &c, StmtStruct *decl, const Vector<StringRef> &_fieldnames,
 			     const Vector<Type *> &_fields, const Vector<StringRef> &_templatenames,
-			     const Vector<TypeTy *> &_templates, const bool &_externed);
+			     const Vector<TypeTy *> &_templates, bool _externed);
 	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
 	inline void insertField(StringRef name, Type *ty)
@@ -318,7 +318,7 @@ public:
 		fieldnames.push_back(name);
 		fields.push_back(ty);
 	}
-	inline void setExterned(const bool &ext)
+	inline void setExterned(bool ext)
 	{
 		externed = ext;
 	}
@@ -346,7 +346,7 @@ public:
 	{
 		templates.clear();
 	}
-	inline void setTemplate(const bool &has_templ)
+	inline void setTemplate(bool has_templ)
 	{
 		has_template = has_templ;
 	}
@@ -387,10 +387,10 @@ class FuncTy : public Type
 public:
 	FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
 	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
-	       const bool &externed, const bool &variadic);
+	       bool externed, bool variadic);
 	FuncTy(uint32_t id, StmtVar *var, StmtFnSig *sig, const Vector<Type *> &args, Type *ret,
 	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
-	       const uint32_t &uniqid, const bool &externed, const bool &variadic);
+	       uint32_t uniqid, bool externed, bool variadic);
 	~FuncTy();
 
 	// returns ID of parameters + ret type
@@ -407,7 +407,7 @@ public:
 
 	static FuncTy *get(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
 			   const Vector<bool> &_argcomptime, IntrinsicFn _intrin,
-			   const IntrinType &_inty, const bool &_externed, const bool &_variadic);
+			   const IntrinType &_inty, bool _externed, bool _variadic);
 	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
 	// used in initTemplateFunc
@@ -446,11 +446,11 @@ public:
 	{
 		args.erase(args.begin() + idx);
 	}
-	inline void setExterned(const bool &ext)
+	inline void setExterned(bool ext)
 	{
 		externed = ext;
 	}
-	inline void setVariadic(const bool &va)
+	inline void setVariadic(bool va)
 	{
 		variadic = va;
 	}
