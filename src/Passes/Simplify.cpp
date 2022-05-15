@@ -235,18 +235,13 @@ bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
 		*source = nullptr;
 		return true;
 	}
-	if(!stmt->isUsed()) {
-		stmt->decUsed();
-		// No point in continuing as this will be erased in CleanupPass
+	if(stmt->getBlk() && stmt->getBlk()->requiresTemplateInit()) {
+		*source = nullptr;
 		return true;
 	}
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
 		err::out(stmt, {"failed to apply simplify pass on func def block"});
 		return false;
-	}
-	if(stmt->getBlk() && stmt->getBlk()->requiresTemplateInit()) {
-		*source = nullptr;
-		return true;
 	}
 	return true;
 }

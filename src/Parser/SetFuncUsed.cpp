@@ -47,6 +47,10 @@ void StmtSimple::_setFuncUsed(bool inc, Set<Stmt *> &done)
 {
 	if(done.find(this) != done.end()) return;
 	done.insert(this);
+	if(getValueID() && getValueTy()->isFunc()) {
+		FuncTy *t = as<FuncTy>(getValueTy());
+		if(t->getVar()) t->getVar()->_setFuncUsed(inc, done);
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

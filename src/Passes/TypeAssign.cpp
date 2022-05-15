@@ -426,12 +426,6 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 					arg->castTo(coerced_to, fnarg->getStmtMask());
 				}
 				if(!arg->getCast()) applyPrimitiveTypeCoercion(coerced_to, arg);
-				if(arg->getValueTy()->isFunc()) {
-					FuncTy *f = as<FuncTy>(arg->getValueTy());
-					if(f->getVar() && f->getVar()->getVVal()->isFnDef()) {
-						as<StmtFnDef>(f->getVar()->getVVal())->incUsed();
-					}
-				}
 				if(!fnargcomptime || vpass.visit(arg, &arg)) {
 					continue;
 				}
@@ -715,12 +709,6 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		for(size_t i = 0; i < args.size(); ++i) {
 			Stmt *&arg	 = args[i];
 			bool argcomptime = fn->isArgComptime(i);
-			if(arg->getValueTy()->isFunc()) {
-				FuncTy *f = as<FuncTy>(arg->getValueTy());
-				if(f->getVar() && f->getVar()->getVVal()->isFnDef()) {
-					as<StmtFnDef>(f->getVar()->getVVal())->incUsed();
-				}
-			}
 			if((!both_comptime && !argcomptime) || vpass.visit(args[i], &args[i])) {
 				continue;
 			}
@@ -1342,7 +1330,6 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 	StmtVar *&cfvar = cf->getVar();
 	if(!cfvar) return true;
 	if(!cfvar->getVVal()->requiresTemplateInit()) {
-		if(cfvar->getVVal()->isFnDef()) as<StmtFnDef>(cfvar->getVVal())->incUsed();
 		return true;
 	}
 	// semiunique because cf is yet to be modified according to variadics and such
@@ -1447,11 +1434,6 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 	if(alreadytemplated.find(uniqname) != alreadytemplated.end()) {
 		if(cfblk) as<StmtFnDef>(origcfvar->getVVal())->setBlk(cfblk);
 		cf = as<FuncTy>(alreadytemplated[uniqname]->getValueTy());
-		// cf->setVar(alreadytemplated[uniqname]);
-		// cf->setFuncID(as<FuncTy>(cf->getVar()->getValueTy()));
-		if(cf->getVar()->getVVal()->isFnDef()) {
-			as<StmtFnDef>(cf->getVar()->getVVal())->incUsed();
-		}
 		popFunc();
 		return true;
 	}
@@ -1480,7 +1462,6 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 	}
 	cfsig->getRetType()->setValueTy(cf->getRet());
 	beingtemplated.erase(uniqname);
-	if(cfvar->getVVal()->isFnDef()) as<StmtFnDef>(cfvar->getVVal())->incUsed();
 	alreadytemplated[uniqname] = cfvar;
 end:
 	popFunc();
