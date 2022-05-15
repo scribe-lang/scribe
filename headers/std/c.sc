@@ -64,6 +64,29 @@ let free = fn(comptime T: type, data: *T) {
         _free(@as(@ptr(void), data));
 };
 
+let getTypeSpecifier = fn(comptime ty: type): *const i8 {
+	inline if @isEqualTy(ty, i1) || @isEqualTy(ty, i16) || @isEqualTy(ty, i32) {
+		return "%d";
+	} elif @isEqualTy(ty, u8) || @isEqualTy(ty, u16) || @isEqualTy(ty, u32) {
+		return "%u";
+	} elif @isEqualTy(ty, i64) {
+		return "%lld";
+	} elif @isEqualTy(ty, u64) {
+		return "%llu";
+	} elif @isEqualTy(ty, i8) {
+		return "%c";
+	} elif @isEqualTy(ty, f32) {
+		return "%.*f";
+	} elif @isEqualTy(ty, f64) {
+		return "%.*lf";
+	} elif @isCString(ty) {
+		return "%s";
+	} elif @isPtr(ty) {
+		return "%p";
+	}
+	return nil;
+};
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Numeric Limits
 ///////////////////////////////////////////////////////////////////////////////////////////////////
