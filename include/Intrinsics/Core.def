@@ -2,6 +2,7 @@ INTRINSIC(compilerid);
 INTRINSIC(import);
 INTRINSIC(ismainsrc);
 INTRINSIC(isprimitive);
+INTRINSIC(isptr);
 INTRINSIC(isprimitiveorptr);
 INTRINSIC(isint);
 INTRINSIC(isintsigned);

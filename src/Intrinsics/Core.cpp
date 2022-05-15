@@ -91,6 +91,12 @@ INTRINSIC(isprimitive)
 	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_prim));
 	return true;
 }
+INTRINSIC(isptr)
+{
+	bool is_ptr = args[0]->getValueTy()->isPtr();
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_ptr));
+	return true;
+}
 INTRINSIC(isprimitiveorptr)
 {
 	bool is_prim_or_ptr = args[0]->getValueTy()->isPrimitiveOrPtr();

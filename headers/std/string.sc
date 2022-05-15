@@ -527,7 +527,7 @@ let iToStr = fn(comptime T: type, data: &const T): String {
 	let res = withCap(length);
 	// + 1 because snprintf includes space for null terminator
 	// which is also taken care of by withCap()
-	c.snprintf(res.getBuf(), length + 1, "%lld", data);
+	c.snprintf(res.getBuf(), length + 1, c.getTypeSpecifier(T), data);
 	return res;
 };
 
@@ -536,7 +536,7 @@ let uToStr = fn(comptime T: type, data: &const T): String {
 	let res = withCap(length);
 	// + 1 because snprintf includes space for null terminator
 	// which is also taken care of by withCap()
-	c.snprintf(res.getBuf(), length + 1, "%llu", data);
+	c.snprintf(res.getBuf(), length + 1, c.getTypeSpecifier(T), data);
 	return res;
 };
 
@@ -545,7 +545,7 @@ let fToStr = fn(comptime T: type, data: &const T): String {
 	let res = withCap(length);
 	// + 1 because snprintf includes space for null terminator
 	// which is also taken care of by withCap()
-	c.snprintf(res.getBuf(), length + 1, "%.*lf", getPrecision(), data);
+	c.snprintf(res.getBuf(), length + 1, c.getTypeSpecifier(T), getPrecision(), data);
 	return res;
 };
 

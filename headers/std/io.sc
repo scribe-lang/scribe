@@ -9,14 +9,14 @@ let fprint = fn(f: *c.FILE, data: ...&const any): i32 {
 	let comptime len = @valen();
 	let sum = 0;
 	inline for let comptime i = 0; i < len; ++i {
-		inline if @isCString(data[i]) {
-			sum += c.fputs(data[i], f);
-		} elif @isCChar(data[i]) {
-			sum += c.fputc(data[i], f);
-		} elif @isEqualTy(data[i], string.String) {
+		inline if @isEqualTy(data[i], string.String) {
 			sum += c.fputs(data[i].cStr(), f);
 		} elif @isEqualTy(data[i], string.StringRef) {
 			sum += fprintf(f, "%.*s", data[i].len(), data[i].data());
+		} elif @isFlt(data[i]) {
+			sum += c.fprintf(f, c.getTypeSpecifier(@typeOf(data[i])), string.getPrecision(), data[i]);
+		} elif @isPrimitiveOrPtr(data[i]) {
+			sum += c.fprintf(f, c.getTypeSpecifier(@typeOf(data[i])), data[i]);
 		} else {
 			let s = data[i].str();
 			defer s.deinit();
