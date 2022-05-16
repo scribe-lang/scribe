@@ -604,8 +604,8 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		return true;
 	}
 	if(stmt->getVVal() && stmt->getValue()->hasData()) {
-		// variable is an existing function or struct (FuncVal || TypeTy)
-		if(stmt->getValue()->isFunc() || stmt->getValue()->isType()) {
+		// variable is an existing function (FuncVal)
+		if(stmt->getValue()->isFunc()) {
 			Writer tmp(writer);
 			Stmt *val = stmt->getVVal();
 			if(!visit(val, tmp, false)) {
@@ -614,6 +614,23 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 				return false;
 			}
 			macros.push_back(ctx.strFrom({"#define ", varname, " ", tmp.getData()}));
+			return true;
+		}
+		// variable is an existing type/struct (TypeVal)
+		// this is not required as type aliases are internal to the language
+		// and are not propagated over to the C code
+		if(stmt->getValue()->isType()) {
+			// Writer tmp(writer);
+			// Type *t = stmt->getValueTy();
+			// CTy cty;
+			// if(!getCType(cty, stmt, t)) {
+			// 	err::out(stmt, {"failed to determine C "
+			// 			"type for scribe type: ",
+			// 			t->toStr()});
+			// 	return false;
+			// }
+			// typedefs.push_back(
+			// ctx.strFrom({"typedef ", cty.toStr(nullptr), " ", varname, ";"}));
 			return true;
 		}
 		CTy cty;
@@ -1061,8 +1078,14 @@ bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool 
 	case VVOID: return true;
 	case VINT: {
 		IntTy *t = as<IntTy>(type);
-		if(i8_to_char && t->getBits() == 8 && t->isSigned()) {
-			res = "'" + String(1, as<IntVal>(value)->getVal()) + "'";
+		if(i8_to_char && t->getBits() == 8 && t->isSigned() &&
+		   as<IntVal>(value)->getVal() > 31) {
+			if(as<IntVal>(value)->getVal() == '\'' ||
+			   as<IntVal>(value)->getVal() == '\\') {
+				res = "'\\" + String(1, as<IntVal>(value)->getVal()) + "'";
+			} else {
+				res = "'" + String(1, as<IntVal>(value)->getVal()) + "'";
+			}
 			return true;
 		}
 		res = std::to_string(as<IntVal>(value)->getVal());

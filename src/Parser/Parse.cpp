@@ -1198,12 +1198,18 @@ end:
 bool Parsing::parse_enum(ParseHelper &p, Stmt *&ed)
 {
 	Vector<lex::Lexeme> enumvars;
+	StmtType *tagty = nullptr;
 
 	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::ENUM)) {
 		err::out(p.peek(),
 			 {"expected 'enum' keyword here, found: ", p.peek().getTok().cStr()});
+		return false;
+	}
+	if(p.acceptn(lex::COL) && !parse_type(p, tagty)) {
+		err::out(p.peek(),
+			 {"expected tag type for enum, found: ", p.peek().getTok().cStr()});
 		return false;
 	}
 	if(!p.acceptn(lex::LBRACE)) {
@@ -1225,7 +1231,7 @@ bool Parsing::parse_enum(ParseHelper &p, Stmt *&ed)
 		err::out(start, {"cannot have empty enumeration"});
 		return false;
 	}
-	ed = StmtEnum::create(ctx, start.getLoc(), enumvars);
+	ed = StmtEnum::create(ctx, start.getLoc(), enumvars, tagty);
 	return true;
 }
 

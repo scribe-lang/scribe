@@ -996,10 +996,25 @@ bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 	StringRef enum_mangle = ctx.strFrom({"enum_", ctx.strFrom(enum_id++)});
 	NamespaceVal *ns      = NamespaceVal::create(ctx, enum_mangle);
 	size_t i	      = 0;
+	Type *ty	      = nullptr;
+	if(stmt->getTagTy() && !visit(stmt->getTagTy(), asStmt(&stmt->getTagTy()))) {
+		err::out(stmt, {"failed to determine provided tag type for enum"});
+		return false;
+	}
+	if(stmt->getTagTy() && !stmt->getTagTy()->getValue()->isType()) {
+		err::out(stmt, {"expected enum tag type to be a type"});
+		return false;
+	}
+	if(stmt->getTagTy() && !stmt->getTagTy()->getValueTy()->isInt()) {
+		err::out(stmt, {"expected enum tag type to be an integer type, found: ",
+				stmt->getTagTy()->getValueTy()->toStr()});
+		return false;
+	}
+	if(stmt->getTagTy()) ty = stmt->getTagTy()->getValueTy();
+	else ty = IntTy::get(ctx, 32, true);
 	for(auto &e : stmt->getItems()) {
 		e.setDataStr(getMangledName(stmt, e.getDataStr(), ns));
-		uint64_t vid =
-		createValueIDWith(IntVal::create(ctx, IntTy::get(ctx, 32, true), CDPERMA, i));
+		uint64_t vid = createValueIDWith(IntVal::create(ctx, ty, CDPERMA, i));
 		Stmt *val    = StmtSimple::create(ctx, loc, lex::Lexeme(loc, (int64_t)i++));
 		StmtVar *var = StmtVar::create(ctx, loc, e, nullptr, val, 0);
 		var->setComptime();
@@ -1009,6 +1024,7 @@ bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 		vmgr.addVar(e.getDataStr(), vid, var);
 	}
 	stmt->createAndSetValue(ns);
+	addEnumTagTy(enum_mangle, ty);
 	return true;
 }
 bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
@@ -1202,7 +1218,7 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 		err::out(stmt, {"failed to determine type of the return argument"});
 		return false;
 	}
-	FuncTy *fn	 = vmgr.getTopFunc().getTy();
+	FuncTy *fn	 = vmgr.getTopFunc().getTagTy();
 	StmtBlock *fnblk = as<StmtFnDef>(fn->getVar()->getVVal())->getBlk();
 	if(!fn->getVar()) {
 		err::out(stmt, {"function type has no declaration"});

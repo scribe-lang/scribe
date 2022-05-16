@@ -15,9 +15,18 @@ let getOSName = fn(): *const i8 {
 	}
 };
 
+let TempEnum = enum : i16 {
+	A,
+	B,
+	C
+};
+
 // TODO: for now there can be no semblence of templates in main() function as it will be ignored by the type system
 // this needs to be fixed - type system will have to consider main to be an exception to the ignore rule
 let main = fn(): i32 {
 	io.println(getOSName());
+	let comptime x = @enumTagTy(TempEnum); // x = i16
+	let y: x; // y: i16
+	let z = TempEnum.A; // z: i16 = 0
 	return 0;
 };

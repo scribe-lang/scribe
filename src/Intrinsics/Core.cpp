@@ -206,6 +206,22 @@ INTRINSIC(array)
 	stmt->createAndSetValue(res);
 	return true;
 }
+INTRINSIC(enumtagty)
+{
+	Value *v = args[0]->getValue();
+	if(!v->isNamespace()) {
+		err::out(stmt, {"expected enum, found: ", v->getType()->toStr()});
+		return false;
+	}
+	TypeAssignPass *ta = c.getPass<TypeAssignPass>();
+	Type *ty	   = ta->getEnumTagTy(as<NamespaceVal>(v)->getVal());
+	if(!ty) {
+		err::out(stmt, {"invalid enum encountered: ", as<NamespaceVal>(v)->getVal()});
+		return false;
+	}
+	stmt->createAndSetValue(TypeVal::create(c, ty));
+	return true;
+}
 INTRINSIC(assn_ptr)
 {
 	args[0]->updateValue(c, args[1]->getValue());
@@ -242,7 +258,7 @@ INTRINSIC(getosid)
 #elif defined(__DragonFly__)
 	res = 8;
 #endif
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 32, true), CDPERMA, res));
+	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 8, true), CDPERMA, res));
 	return true;
 }
 INTRINSIC(syspathmax)

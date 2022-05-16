@@ -72,6 +72,7 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	IntTy *i0  = IntTy::get(c, 0, true); // 0 bits => any int
 	FltTy *f0  = FltTy::get(c, 0);	     // 0 bits => any flt
 	IntTy *i1  = IntTy::get(c, 1, true);
+	IntTy *i8  = IntTy::get(c, 8, true);
 	IntTy *i32 = IntTy::get(c, 32, true);
 	IntTy *u64 = IntTy::get(c, 64, false);
 	Type *cstr = PtrTy::getStr(c);
@@ -131,7 +132,7 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 	// ie, cannot be decided during value assignment pass
 	ADDFN("valen", createFnVal(c, {}, i32, intrinsic_valen, IPARSE));
 
-	ADDFN("getOSID", createFnVal(c, {}, i32, intrinsic_getosid, IPARSE));
+	ADDFN("getOSID", createFnVal(c, {}, i8, intrinsic_getosid, IPARSE));
 
 	ADDFN("sysPathMax", createFnVal(c, {}, i32, intrinsic_syspathmax, IPARSE));
 
@@ -139,8 +140,12 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 
 	g  = TypeTy::get(c);
 	g2 = TypeTy::get(c);
-	ADDFN("array", createComptimeFnVal(c, {g, i32, i32}, g2, {false, true, true},
+	ADDFN("array", createComptimeFnVal(c, {g, i32, i32}, g2, {true, true, true},
 					   intrinsic_array, IPARSE, true));
+
+	g  = TypeTy::get(c);
+	g2 = TypeTy::get(c);
+	ADDFN("enumTagTy", createComptimeFnVal(c, {g}, g2, {true}, intrinsic_enumtagty, IPARSE));
 
 	g = TypeTy::get(c);
 	ADDPTRFN("__assn__", createFnVal(c, {g, g}, g, intrinsic_assn_ptr, IVALUE));

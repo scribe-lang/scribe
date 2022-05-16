@@ -181,7 +181,9 @@ Stmt *StmtExtern::clone(Context &ctx)
 
 Stmt *StmtEnum::clone(Context &ctx)
 {
-	Stmt *res = StmtEnum::create(ctx, getLoc(), items);
+	StmtType *newty = tagty;
+	if(newty) newty = as<StmtType>(newty->clone(ctx));
+	Stmt *res = StmtEnum::create(ctx, getLoc(), items, newty);
 	res->appendStmtMask(getStmtMask());
 	res->castTo(getCast(), this->getCastStmtMask());
 	return res;
