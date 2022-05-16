@@ -16,6 +16,7 @@ INTRINSIC(ptr);
 INTRINSIC(szof);
 INTRINSIC(valen);
 INTRINSIC(array);
+INTRINSIC(enumtagty);
 INTRINSIC(assn_ptr);
 INTRINSIC(getosid);
 INTRINSIC(syspathmax);

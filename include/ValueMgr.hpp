@@ -89,7 +89,7 @@ public:
 	{
 		fty = ty;
 	}
-	inline FuncTy *getTy()
+	inline FuncTy *getTagTy()
 	{
 		return fty;
 	}

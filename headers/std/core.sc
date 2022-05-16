@@ -1,7 +1,7 @@
 // this file does not depend on any other
 
 // list of operating system names
-let os = enum {
+let os = enum : i8 {
 	Unknown,
 	Linux,
 	Windows,

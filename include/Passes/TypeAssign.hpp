@@ -26,6 +26,8 @@ class TypeAssignPass : public Pass
 	ValueManager vmgr;
 	ValueAssignPass vpass;
 	DeferStack deferstack;
+	// each enum's (tag) type - used by @enumTy()
+	Map<StringRef, Type *> enumtagtys;
 	// vars created during type assign - enums, specialized funcs
 	Vector<StmtVar *> additionalvars;
 	// variadic length of current function
@@ -70,6 +72,16 @@ public:
 	bool visit(StmtBreak *stmt, Stmt **source) override;
 	bool visit(StmtDefer *stmt, Stmt **source) override;
 
+	inline void addEnumTagTy(StringRef name, Type *ty)
+	{
+		enumtagtys[name] = ty;
+	}
+	inline Type *getEnumTagTy(StringRef name) const
+	{
+		auto found = enumtagtys.find(name);
+		if(found == enumtagtys.end()) return nullptr;
+		return found->second;
+	}
 	inline size_t getFnVALen() const
 	{
 		return valen.size() > 0 ? valen.back() : 0;

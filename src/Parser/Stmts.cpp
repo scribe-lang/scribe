@@ -595,19 +595,26 @@ bool StmtExtern::requiresTemplateInit()
 /////////////////////////////////////////// StmtEnum //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtEnum::StmtEnum(const ModuleLoc *loc, const Vector<lex::Lexeme> &items)
-	: Stmt(ENUMDEF, loc), items(items)
+StmtEnum::StmtEnum(const ModuleLoc *loc, const Vector<lex::Lexeme> &items, StmtType *tagty)
+	: Stmt(ENUMDEF, loc), items(items), tagty(tagty)
 {}
 StmtEnum::~StmtEnum() {}
-StmtEnum *StmtEnum::create(Context &c, const ModuleLoc *loc, const Vector<lex::Lexeme> &items)
+StmtEnum *StmtEnum::create(Context &c, const ModuleLoc *loc, const Vector<lex::Lexeme> &items,
+			   StmtType *tagty)
 {
-	return c.allocStmt<StmtEnum>(loc, items);
+	return c.allocStmt<StmtEnum>(loc, items, tagty);
 }
 
 void StmtEnum::disp(bool has_next)
 {
 	tio::taba(has_next);
 	tio::print(has_next, {"Enumerations:", getTypeString(), "\n"});
+	if(tagty) {
+		tio::taba(!items.empty());
+		tio::print(!items.empty(), {"Provided Tag Type:\n"});
+		tagty->disp(false);
+		tio::tabr();
+	}
 	for(size_t i = 0; i < items.size(); ++i) {
 		tio::taba(i != items.size() - 1);
 		tio::print(i != items.size() - 1, {items[i].str(0), "\n"});

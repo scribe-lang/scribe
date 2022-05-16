@@ -861,11 +861,13 @@ public:
 class StmtEnum : public Stmt
 {
 	Vector<lex::Lexeme> items;
+	StmtType *tagty; // optional
 
 public:
-	StmtEnum(const ModuleLoc *loc, const Vector<lex::Lexeme> &items);
+	StmtEnum(const ModuleLoc *loc, const Vector<lex::Lexeme> &items, StmtType *tagty);
 	~StmtEnum();
-	static StmtEnum *create(Context &c, const ModuleLoc *loc, const Vector<lex::Lexeme> &items);
+	static StmtEnum *create(Context &c, const ModuleLoc *loc, const Vector<lex::Lexeme> &items,
+				StmtType *tagty);
 
 	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
@@ -876,6 +878,10 @@ public:
 	inline Vector<lex::Lexeme> &getItems()
 	{
 		return items;
+	}
+	inline StmtType *&getTagTy()
+	{
+		return tagty;
 	}
 };
 

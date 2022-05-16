@@ -136,6 +136,7 @@ void StmtExtern::clearValue()
 void StmtEnum::clearValue()
 {
 	if(values[valueid]) values[valueid]->clearHasData();
+	if(tagty) tagty->clearValue();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
