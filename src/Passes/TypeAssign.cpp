@@ -14,6 +14,7 @@
 #include "Passes/TypeAssign.hpp"
 
 #include <climits>
+#include <float.h>
 
 #include "Parser.hpp"
 #include "Utils.hpp"
@@ -189,7 +190,13 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		break;
 	}
 	case lex::FLT: {
-		FltVal *fv = FltVal::create(ctx, FltTy::get(ctx, 32), CDPERMA, lval.getDataFlt());
+		Type *fty = nullptr;
+		if(lval.getDataFlt() > FLT_MAX || lval.getDataFlt() < FLT_MIN) {
+			fty = FltTy::get(ctx, 64);
+		} else {
+			fty = FltTy::get(ctx, 32);
+		}
+		FltVal *fv = FltVal::create(ctx, fty, CDPERMA, lval.getDataFlt());
 		stmt->createAndSetValue(fv);
 		break;
 	}
