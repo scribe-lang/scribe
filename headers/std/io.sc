@@ -12,7 +12,7 @@ let fprint = fn(f: *c.FILE, data: ...&const any): i32 {
 		inline if @isEqualTy(data[i], string.String) {
 			sum += c.fputs(data[i].cStr(), f);
 		} elif @isEqualTy(data[i], string.StringRef) {
-			sum += fprintf(f, "%.*s", data[i].len(), data[i].data());
+			sum += c.fprintf(f, "%.*s", data[i].len(), data[i].data());
 		} elif @isFlt(data[i]) {
 			sum += c.fprintf(f, c.getTypeSpecifier(@typeOf(data[i])), string.getPrecision(), data[i]);
 		} elif @isPrimitiveOrPtr(data[i]) {
