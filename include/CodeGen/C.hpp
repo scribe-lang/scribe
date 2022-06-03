@@ -149,7 +149,7 @@ class CDriver : public CodeGenDriver
 
 	inline StringRef getMangledName(StringRef name, Stmt *stmt)
 	{
-		String res = std::to_string(stmt->getValueTy(true)->getUniqID());
+		String res = std::to_string(stmt->getTy(true)->getUniqID());
 		res.insert(res.begin(), name.begin(), name.end());
 		return ctx.moveStr(std::move(res));
 	}

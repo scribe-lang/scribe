@@ -99,8 +99,8 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 		return false;
 	}
 	if(!lhs_ptr && rhs_ptr) {
-		err::out(loc, {"cannot use a pointer type (RHS: ", rhs->toStr(),
-			       ") against non pointer (LHS: ", toStr(), ")"});
+		err::out(loc, {"cannot use a pointer type (LHS: ", rhs->toStr(),
+			       ") against non pointer (RHS: ", toStr(), ")"});
 		return false;
 	}
 	if(!rhs_ptr && lhs_ptr && !is_rhs_prim) {
@@ -165,6 +165,16 @@ bool Type::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 	return false;
 }
 void Type::unmergeTemplates(const size_t &weak_depth) {}
+
+bool Type::isStrLiteral()
+{
+	if(!isPtr()) return false;
+	PtrTy *pty = as<PtrTy>(this);
+	if(!pty->getTo() || !pty->getTo()->isInt()) return false;
+	IntTy *toty = as<IntTy>(pty->getTo());
+	if(!toty->isSigned() || toty->getBits() != 8) return false;
+	return true;
+}
 
 Value *Type::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			    const size_t &weak_depth)
@@ -257,7 +267,7 @@ IntTy *IntTy::get(Context &c, uint16_t _bits, bool _sign)
 Value *IntTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
-	return IntVal::create(c, this, cd, 0);
+	return IntVal::create(c, cd, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -293,7 +303,7 @@ FltTy *FltTy::get(Context &c, uint16_t _bits)
 Value *FltTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
-	return FltVal::create(c, this, cd, 0.0);
+	return FltVal::create(c, cd, 0.0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -384,7 +394,7 @@ Value *TypeTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 // Pointer Type
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-PtrTy::PtrTy(Type *to, uint16_t count, bool is_weak)
+PtrTy::PtrTy(Type *to, uint64_t count, bool is_weak)
 	: Type(TPTR), to(to), count(count), is_weak(is_weak)
 {}
 PtrTy::~PtrTy() {}
@@ -432,7 +442,7 @@ void PtrTy::unmergeTemplates(const size_t &weak_depth)
 	if(weak_depth >= MAX_WEAKPTR_DEPTH) return;
 	to->unmergeTemplates(weak_depth + is_weak);
 }
-PtrTy *PtrTy::get(Context &c, Type *ptr_to, uint16_t count, bool is_weak)
+PtrTy *PtrTy::get(Context &c, Type *ptr_to, uint64_t count, bool is_weak)
 {
 	return c.allocType<PtrTy>(ptr_to, count, is_weak);
 }
@@ -445,14 +455,21 @@ PtrTy *PtrTy::getStr(Context &c)
 	}
 	return res;
 }
+PtrTy *PtrTy::getStr(Context &c, size_t count)
+{
+	Type *ch   = IntTy::get(c, 8, true);
+	PtrTy *res = PtrTy::get(c, ch, count, false);
+	return res;
+}
 
 Value *PtrTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			     const size_t &weak_depth)
 {
+	if(!count) return IntVal::create(c, cd, 0);
 	Vector<Value *> vec;
-	if(count > 0) vec.reserve(count);
+	vec.reserve(count);
 	Value *res = weak_depth >= MAX_WEAKPTR_DEPTH
-		     ? IntVal::create(c, IntTy::get(c, sizeof(void *) * 8, 0), cd, 0)
+		     ? IntVal::create(c, cd, 0)
 		     : to->toDefaultValue(c, loc, cd, weak_depth + is_weak);
 	if(!res) {
 		err::out(loc, {"failed to get default value from array's type"});
@@ -462,7 +479,7 @@ Value *PtrTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 	for(size_t i = 1; i < count; ++i) {
 		vec.push_back(res->clone(c));
 	}
-	return VecVal::create(c, this, cd, vec);
+	return VecVal::create(c, cd, vec);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -608,7 +625,7 @@ StructTy *StructTy::instantiate(Context &c, const ModuleLoc *loc, const Vector<S
 	for(size_t i = 0; i < this->fields.size(); ++i) {
 		Type *sf    = this->fields[i];
 		Stmt *ciarg = callargs[i];
-		if(sf->isCompatible(c, ciarg->getValueTy(), loc)) continue;
+		if(sf->isCompatible(c, ciarg->getTy(), loc)) continue;
 		is_field_compatible = false;
 		break;
 	}
@@ -651,7 +668,7 @@ Value *StructTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData c
 	for(auto &f : fieldpos) {
 		Value *res = fields[f.second]->toDefaultValue(c, loc, cd, weak_depth);
 		if(!res) {
-			err::out(loc, {"failed to get default value from array's type"});
+			err::out(loc, {"failed to get default value from struct field type"});
 			return nullptr;
 		}
 		st[f.first] = res;
@@ -659,7 +676,7 @@ Value *StructTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData c
 	for(auto &t : templatepos) {
 		st[t.first] = TypeVal::create(c, templates[t.second]);
 	}
-	return StructVal::create(c, this, cd, st);
+	return StructVal::create(c, cd, st);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -811,7 +828,7 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 	Vector<Type *> variadics;
 	bool has_templ = false;
 	for(size_t i = 0; i < args.size() && i < callargs.size(); ++i) {
-		has_templ |= args[i]->mergeTemplatesFrom(callargs[i]->getValueTy());
+		has_templ |= args[i]->mergeTemplatesFrom(callargs[i]->getTy());
 	}
 	for(size_t i = 0, j = 0; i < this->args.size() && j < callargs.size(); ++i, ++j) {
 		Type *sa      = this->args[i];
@@ -829,7 +846,7 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 			variadic = true;
 			--i;
 		}
-		if(!sa->isCompatible(c, ciarg->getValueTy(), loc)) {
+		if(!sa->isCompatible(c, ciarg->getTy(), loc)) {
 			is_arg_compatible = false;
 			break;
 		}
@@ -842,7 +859,7 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 			is_arg_compatible = false;
 			break;
 		}
-		if(variadic) variadics.push_back(ciarg->getValueTy());
+		if(variadic) variadics.push_back(ciarg->getTy());
 	}
 	if(!is_arg_compatible) return nullptr;
 
@@ -868,7 +885,7 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 	}
 	for(size_t i = 0; i < res->args.size(); ++i) {
 		if(res->args[i]->isAny()) {
-			res->args[i] = callargs[i]->getValueTy()->specialize(c);
+			res->args[i] = callargs[i]->getTy()->specialize(c);
 		}
 	}
 	return res;
@@ -979,7 +996,7 @@ Value *VariadicTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData
 		}
 		vec.push_back(v);
 	}
-	return VecVal::create(c, this, cd, vec);
+	return VecVal::create(c, cd, vec);
 }
 
 size_t getPointerCount(Type *t)

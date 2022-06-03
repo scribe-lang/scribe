@@ -101,7 +101,7 @@ bool SimplifyPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 {
 	auto &args = stmt->getArgs();
 	for(size_t i = 0; i < args.size(); ++i) {
-		if(args[i]->getValue()->isType()) {
+		if(args[i]->getVal() && args[i]->getVal()->isType()) {
 			args.erase(args.begin() + i);
 			--i;
 			continue;
@@ -126,7 +126,7 @@ bool SimplifyPass::visit(StmtExpr *stmt, Stmt **source)
 		err::out(stmt, {"failed to apply simplify pass on LHS in expression"});
 		return false;
 	}
-	if(!stmt->getCalledFn() || stmt->getValue()->hasPermaData()) return true;
+	if(!stmt->getCalledFn() || stmt->getVal()) return true;
 
 	FuncTy *cf = stmt->getCalledFn();
 	if(cf->isIntrinsic()) return true;
@@ -152,11 +152,7 @@ bool SimplifyPass::visit(StmtExpr *stmt, Stmt **source)
 }
 bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 {
-	if(!stmt->getValueID()) {
-		err::out(stmt, {"variable: '", stmt->getName().getDataStr(), "' has no value id"});
-		return false;
-	}
-	if(stmt->getValue()->isNamespace()) {
+	if(stmt->getVal() && stmt->getVal()->isNamespace()) {
 		*source = nullptr;
 		return true;
 	}
@@ -197,15 +193,15 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 	}
 	auto &args = stmt->getArgs();
 	for(size_t i = 0; i < args.size(); ++i) {
-		if(args[i]->getValueTy()->isVariadic()) {
+		if(args[i]->getTy()->isVariadic()) {
 			err::out(stmt,
 				 {"variadic argument in function cannot reach simplify stage"});
 			return false;
 		}
 		Stmt *argtyexpr = args[i]->getVType()->getExpr();
-		if(args[i]->getValue()->isType()) {
+		if(args[i]->getVal() && args[i]->getVal()->isType()) {
 			args.erase(args.begin() + i);
-			as<FuncTy>(stmt->getValueTy())->eraseArg(i);
+			as<FuncTy>(stmt->getTy())->eraseArg(i);
 			--i;
 			continue;
 		}
@@ -339,7 +335,7 @@ bool SimplifyPass::visit(StmtFor *stmt, Stmt **source)
 }
 bool SimplifyPass::visit(StmtRet *stmt, Stmt **source)
 {
-	if(stmt->getVal() && !visit(stmt->getVal(), &stmt->getVal())) {
+	if(stmt->getRetVal() && !visit(stmt->getRetVal(), &stmt->getRetVal())) {
 		err::out(stmt, {"failed to apply simplify pass on return value"});
 		return false;
 	}
@@ -362,7 +358,7 @@ bool SimplifyPass::trySetMainFunction(StmtVar *var, StringRef varname)
 {
 	StmtFnDef *fn = as<StmtFnDef>(var->getVVal());
 	if(!startsWith(var->getName().getDataStr(), "main_0")) return false;
-	Type *retbase = fn->getSig()->getRetType()->getValueTy();
+	Type *retbase = fn->getSig()->getRetType()->getTy();
 	if(!retbase || !retbase->isInt()) return false;
 	// false => 0 args
 	// true => 2 args
@@ -370,8 +366,8 @@ bool SimplifyPass::trySetMainFunction(StmtVar *var, StringRef varname)
 	if(fn->getSigArgs().empty()) { // int main()
 		return true;
 	} else if(fn->getSigArgs().size() == 2) { // int main(int argc, char **argv)
-		Type *a1 = fn->getSigArg(0)->getValueTy();
-		Type *a2 = fn->getSigArg(1)->getValueTy();
+		Type *a1 = fn->getSigArg(0)->getTy();
+		Type *a2 = fn->getSigArg(1)->getTy();
 		if(!a1->isInt()) return false;
 		if(!a2->isPtr()) return false;
 		if(!as<PtrTy>(a2)->getTo()->isPtr()) return false;
@@ -399,12 +395,12 @@ Stmt *SimplifyPass::createIntermediate(FuncTy *cf, Stmt *a, const size_t &i)
 	n = ctx.strFrom({n, "__interm", ctx.strFrom(genIntermediateID())});
 	lex::Lexeme name(a->getLoc(), lex::IDEN, n);
 	StmtVar *v = StmtVar::create(ctx, a->getLoc(), name, nullptr, a, 0);
-	v->createAndSetValue(a->getValue()->clone(ctx));
+	v->setTyVal(a);
 	v->appendStmtMask(a->getStmtMask());
 	a->castTo(nullptr, 0);
 	intermediates.back().push_back(v);
 	StmtSimple *newa = StmtSimple::create(ctx, a->getLoc(), name);
-	newa->setValueID(v);
+	newa->setTyVal(v);
 	newa->appendStmtMask(a->getStmtMask());
 	return newa;
 }

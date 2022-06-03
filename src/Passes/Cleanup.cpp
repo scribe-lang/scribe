@@ -90,7 +90,7 @@ bool CleanupPass::visit(StmtExpr *stmt, Stmt **source)
 }
 bool CleanupPass::visit(StmtVar *stmt, Stmt **source)
 {
-	StringRef id	  = ctx.strFrom(stmt->getValueTy(true)->getID());
+	StringRef id	  = ctx.strFrom(stmt->getTy(true)->getID());
 	StringRef varname = ctx.strFrom({stmt->getName().getDataStr(), id});
 	if(stmt->getVVal() && stmt->getVVal()->isFnDef()) {
 		if(funcs.find(varname) != funcs.end()) {

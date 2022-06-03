@@ -62,7 +62,8 @@ class Stmt
 {
 protected:
 	const ModuleLoc *loc;
-	uint64_t valueid;
+	Type *ty;
+	Value *val;
 	Type *cast_to;
 	uint16_t derefcount; // number of dereferences to be done while generating code
 	Stmts stype;
@@ -168,6 +169,35 @@ public:
 	IsCastModifierX(Comptime, COMPTIME);
 #undef IsCastModifierX
 
+	inline void setTyVal(Type *t, Value *v)
+	{
+		ty  = t;
+		val = v;
+	}
+	inline void setTyVal(Stmt *s)
+	{
+		ty  = s->ty;
+		val = s->val;
+	}
+	inline void setTy(Type *t)
+	{
+		ty = t;
+	}
+	inline void setVal(Value *v)
+	{
+		val = v;
+	}
+	inline void setUpdateVal(Context &c, Value *v)
+	{
+		if(val) val->updateValue(c, v);
+		else val = v;
+	}
+	// sets value as TypeVal(t), and type as t
+	inline void setTypeVal(Context &c, Type *t)
+	{
+		ty  = t;
+		val = TypeVal::create(c, ty);
+	}
 	inline void setStmtMask(uint8_t mask)
 	{
 		stmtmask = mask;
@@ -211,51 +241,27 @@ public:
 	{
 		return loc->getMod();
 	}
+	Type *getTy(bool exact = false);
+	inline Value *getVal()
+	{
+		return val;
+	}
+	inline bool updateValue(Context &c, Value *v)
+	{
+		if(!val) return false;
+		return val->updateValue(c, v);
+	}
 
 	inline void castTo(Type *t, uint8_t maskfrom)
 	{
 		cast_to = t;
 		appendCastStmtMask(maskfrom);
 	}
-	inline void setValueID(uint64_t vid)
-	{
-		valueid = vid;
-	}
-	inline void setValueID(Stmt *stmt)
-	{
-		valueid = stmt->getValueID();
-	}
-	// creates a new valueid and sets the value for it
-	inline void createAndSetValue(Value *v)
-	{
-		valueid		= genValueID();
-		values[valueid] = v;
-	}
-	inline void setValueTy(Type *t)
-	{
-		assert(valueid && "valueid cannot be zero for setValueTy()");
-		values[valueid]->setType(t);
-	}
 	inline void setDerefCount(uint16_t count)
 	{
 		derefcount = count;
 	}
 
-	inline uint64_t getValueID()
-	{
-		return valueid;
-	}
-	// changes the value at the valueid (valueid is unchanged)
-	inline void changeValue(Value *v)
-	{
-		values[valueid] = v;
-	}
-	// updates data in this->value using v
-	bool updateValue(Context &c, Value *v);
-	// if exact = true, cast and deref will be skipped
-	Value *getValue(bool exact = false);
-	// if exact = true, cast and deref will be skipped
-	Type *getValueTy(bool exact = false);
 	inline Type *getCast()
 	{
 		return cast_to;
@@ -1078,7 +1084,7 @@ public:
 		fnblk = blk;
 	}
 
-	inline Stmt *&getVal()
+	inline Stmt *&getRetVal()
 	{
 		return val;
 	}
@@ -1129,7 +1135,7 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline Stmt *&getVal()
+	inline Stmt *&getDeferVal()
 	{
 		return val;
 	}

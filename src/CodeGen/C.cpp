@@ -323,8 +323,7 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, bool semicol)
 	case lex::INT:	 // fallthrough
 	case lex::FLT:	 // fallthrough
 	case lex::CHAR:	 // fallthrough
-	case lex::STR:
-		writer.write(getConstantDataVar(stmt->getLexValue(), stmt->getValueTy(true)));
+	case lex::STR: writer.write(getConstantDataVar(stmt->getLexValue(), stmt->getTy(true)));
 	default: return true;
 	}
 	// No perma data here as all variables lose permadata attribute
@@ -341,11 +340,11 @@ bool CDriver::visit(StmtFnCallInfo *stmt, Writer &writer, bool semicol)
 bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 {
 	writer.clear();
-	if(stmt->getValue()->hasPermaData()) {
+	if(stmt->getVal() && stmt->getVal()->hasPermaData()) {
 		String cval;
-		if(!getCValue(cval, stmt, stmt->getValue(), stmt->getValueTy())) {
+		if(!getCValue(cval, stmt, stmt->getVal(), stmt->getTy())) {
 			err::out(stmt, {"failed to get C value for scribe value: ",
-					stmt->getValue()->toStr()});
+					stmt->getVal()->toStr()});
 			return false;
 		}
 		if(!cval.empty()) {
@@ -386,15 +385,15 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 	case lex::FNCALL: {
 		StringRef fname	     = as<StmtSimple>(lhs)->getLexValue().getDataStr();
 		Vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
-		writer.write({fname, ctx.strFrom(lhs->getValueTy()->getUniqID()), "("});
-		if(!writeCallArgs(stmt->getLoc(), args, lhs->getValueTy(), writer)) return false;
+		writer.write({fname, ctx.strFrom(lhs->getTy()->getUniqID()), "("});
+		if(!writeCallArgs(stmt->getLoc(), args, lhs->getTy(), writer)) return false;
 		writer.write(")");
 		break;
 	}
 	case lex::STCALL: {
 		Vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
-		writer.write({"(struct_", ctx.strFrom(lhs->getValueTy()->getUniqID()), "){"});
-		if(!writeCallArgs(stmt->getLoc(), args, lhs->getValueTy(), writer)) return false;
+		writer.write({"(struct_", ctx.strFrom(lhs->getTy()->getUniqID()), "){"});
+		if(!writeCallArgs(stmt->getLoc(), args, lhs->getTy(), writer)) return false;
 		writer.write("}");
 		break;
 	}
@@ -460,7 +459,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 	case lex::RSHIFT_ASSN: {
 	applyoperfn:
 		lex::Tok &optok = stmt->getOper().getTok();
-		if(oper == lex::SUBS && lhs->getValueTy()->isPtr()) {
+		if(oper == lex::SUBS && lhs->getTy()->isPtr()) {
 			if(!visit(lhs, l, false)) {
 				err::out(stmt, {"failed to generate C code for LHS in expression"});
 				return false;
@@ -475,8 +474,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 			writer.write("]");
 			break;
 		}
-		if(lhs->getValueTy()->isPrimitiveOrPtr() &&
-		   (!rhs || rhs->getValueTy()->isPrimitiveOrPtr())) {
+		if(lhs->getTy()->isPrimitiveOrPtr() && (!rhs || rhs->getTy()->isPrimitiveOrPtr())) {
 			if(!visit(lhs, l, false)) {
 				err::out(stmt, {"failed to generate C code for LHS in expression"});
 				return false;
@@ -535,7 +533,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		if(!ent) {
 			macros.push_back(ctx.strFrom({"#define ", varname, " ", extname}));
 		} else if(ent->isStructDef()) {
-			StringRef uniqid = ctx.strFrom(ent->getValueTy()->getUniqID());
+			StringRef uniqid = ctx.strFrom(ent->getTy()->getUniqID());
 			StringRef res = ctx.strFrom({"typedef ", extname, " struct_", uniqid, ";"});
 			typedefs.push_back(res);
 		} else if(ent->isFnSig()) {
@@ -573,9 +571,9 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		StmtFnDef *fn	 = as<StmtFnDef>(stmt->getVVal());
 		StmtType *sigret = fn->getSigRetType();
 		CTy retcty;
-		if(!getCType(retcty, sigret, sigret->getValueTy())) {
+		if(!getCType(retcty, sigret, sigret->getTy())) {
 			err::out(stmt, {"failed to determine C type for scribe type: ",
-					sigret->getValueTy()->toStr()});
+					sigret->getTy()->toStr()});
 			return false;
 		}
 		retcty.setConst(sigret->isConst());
@@ -603,14 +601,14 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		// they are defined when a struct type is encountered
 		return true;
 	}
-	if(stmt->getVVal() && stmt->getValue()->hasData()) {
+	if(stmt->getVVal() && stmt->getVal() && stmt->getVal()->hasData()) {
 		// variable is an existing function (FuncVal)
-		if(stmt->getValue()->isFunc()) {
+		if(stmt->getVal()->isFunc()) {
 			Writer tmp(writer);
 			Stmt *val = stmt->getVVal();
 			if(!visit(val, tmp, false)) {
 				err::out(stmt, {"failed to get C value for scribe value: ",
-						stmt->getValue()->toStr()});
+						stmt->getVal()->toStr()});
 				return false;
 			}
 			macros.push_back(ctx.strFrom({"#define ", varname, " ", tmp.getData()}));
@@ -619,9 +617,9 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		// variable is an existing type/struct (TypeVal)
 		// this is not required as type aliases are internal to the language
 		// and are not propagated over to the C code
-		if(stmt->getValue()->isType()) {
+		if(stmt->getVal()->isType()) {
 			// Writer tmp(writer);
-			// Type *t = stmt->getValueTy();
+			// Type *t = stmt->getTy();
 			// CTy cty;
 			// if(!getCType(cty, stmt, t)) {
 			// 	err::out(stmt, {"failed to determine C "
@@ -635,15 +633,15 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		}
 		CTy cty;
 		String cval;
-		Type *t = stmt->getValueTy();
+		Type *t = stmt->getTy();
 		if(!getCType(cty, stmt, t)) {
 			err::out(stmt,
 				 {"failed to determine C type for scribe type: ", t->toStr()});
 			return false;
 		}
-		if(!getCValue(cval, stmt, stmt->getValue(), stmt->getValueTy())) {
+		if(!getCValue(cval, stmt, stmt->getVal(), stmt->getTy())) {
 			err::out(stmt, {"failed to get C value for scribe value: ",
-					stmt->getValue()->toStr()});
+					stmt->getVal()->toStr()});
 			return false;
 		}
 		cty.setStatic(stmt->isStatic());
@@ -669,7 +667,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		}
 	}
 	CTy cty;
-	Type *valty = stmt->getCast() ? stmt->getCast() : stmt->getValueTy();
+	Type *valty = stmt->getCast() ? stmt->getCast() : stmt->getTy();
 	if(!getCType(cty, stmt, valty)) {
 		err::out(stmt, {"unable to determine C type for scribe type: ", valty->toStr()});
 		return false;
@@ -695,9 +693,9 @@ bool CDriver::visit(StmtFnSig *stmt, Writer &writer, bool semicol)
 {
 	CTy cty;
 	Stmt *retty = stmt->getRetType();
-	if(!getCType(cty, retty, retty->getValueTy())) {
-		err::out(stmt, {"unable to determine C type for scribe type: ",
-				stmt->getValueTy()->toStr()});
+	if(!getCType(cty, retty, retty->getTy())) {
+		err::out(stmt,
+			 {"unable to determine C type for scribe type: ", stmt->getTy()->toStr()});
 		return false;
 	}
 	cty.setConst(retty->isConst());
@@ -876,12 +874,12 @@ bool CDriver::visit(StmtFor *stmt, Writer &writer, bool semicol)
 }
 bool CDriver::visit(StmtRet *stmt, Writer &writer, bool semicol)
 {
-	if(!stmt->getVal()) {
+	if(!stmt->getRetVal()) {
 		writer.write("return");
 		return true;
 	}
 	Writer tmp(writer);
-	if(!visit(stmt->getVal(), tmp, false)) {
+	if(!visit(stmt->getRetVal(), tmp, false)) {
 		err::out(stmt, {"failed to generate C code for return value"});
 		return false;
 	}

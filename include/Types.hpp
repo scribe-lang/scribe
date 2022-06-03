@@ -88,6 +88,7 @@ public:
 	{
 		return isFlt();
 	}
+	bool isStrLiteral();
 
 	virtual Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 				      const size_t &weak_depth = 0);
@@ -229,11 +230,11 @@ public:
 class PtrTy : public Type
 {
 	Type *to;
-	uint16_t count; // 0 = normal pointer, > 0 = array pointer with count = size
+	uint64_t count; // 0 = normal pointer, > 0 = array pointer with count = size
 	bool is_weak;	// required for self referencing members in struct
 
 public:
-	PtrTy(Type *to, uint16_t count, bool is_weak);
+	PtrTy(Type *to, uint64_t count, bool is_weak);
 	~PtrTy();
 
 	uint32_t getUniqID();
@@ -243,8 +244,9 @@ public:
 	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
 	void unmergeTemplates(const size_t &weak_depth = 0);
 
-	static PtrTy *get(Context &c, Type *ptr_to, uint16_t count, bool is_weak);
+	static PtrTy *get(Context &c, Type *ptr_to, uint64_t count, bool is_weak);
 	static PtrTy *getStr(Context &c);
+	static PtrTy *getStr(Context &c, size_t count);
 	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
 	inline void setWeak(bool weak)
@@ -255,7 +257,7 @@ public:
 	{
 		return to;
 	}
-	inline uint16_t getCount()
+	inline uint64_t getCount()
 	{
 		return count;
 	}
@@ -353,6 +355,10 @@ public:
 	inline bool isExtern()
 	{
 		return externed;
+	}
+	inline bool isTemplateField(StringRef name)
+	{
+		return templatepos.find(name) != templatepos.end();
 	}
 
 	Type *getField(StringRef name);
