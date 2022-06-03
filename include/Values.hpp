@@ -20,7 +20,6 @@ namespace sc
 {
 enum Values : uint8_t
 {
-	VVOID,
 	VINT,
 	VFLT,
 	VVEC,
@@ -60,7 +59,6 @@ public:
 	{                            \
 		return vty == V##vt; \
 	}
-	IsVal(Void, VOID);
 	IsVal(Int, INT);
 	IsVal(Flt, FLT);
 	IsVal(Vec, VEC);
@@ -88,18 +86,6 @@ template<typename T> T *as(Value *v)
 {
 	return static_cast<T *>(v);
 }
-
-class VoidVal : public Value
-{
-public:
-	VoidVal(Context &c);
-
-	String toStr();
-	Value *clone(Context &c);
-	bool updateValue(Context &c, Value *v);
-
-	static VoidVal *create(Context &c);
-};
 
 class IntVal : public Value
 {

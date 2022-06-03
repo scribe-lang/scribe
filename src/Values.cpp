@@ -55,27 +55,6 @@ void Value::clearHasData()
 	has_data = CDFALSE;
 }
 
-VoidVal::VoidVal(Context &c) : Value(VVOID, CDPERMA) {}
-
-String VoidVal::toStr()
-{
-	return "<void>";
-}
-Value *VoidVal::clone(Context &c)
-{
-	return this;
-}
-bool VoidVal::updateValue(Context &c, Value *v)
-{
-	return v->isVoid();
-}
-
-VoidVal *VoidVal::create(Context &c)
-{
-	static VoidVal *vv = c.allocVal<VoidVal>();
-	return vv;
-}
-
 IntVal::IntVal(Context &c, ContainsData has_data, int64_t data) : Value(VINT, has_data), data(data)
 {}
 
