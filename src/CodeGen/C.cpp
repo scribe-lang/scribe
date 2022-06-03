@@ -1072,8 +1072,6 @@ bool CDriver::getCType(CTy &cty, Stmt *stmt, Type *ty)
 bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool i8_to_char)
 {
 	switch(value->getValType()) {
-	// in case of VVOID, since res will be empty, it will cause actual expression to emit
-	case VVOID: return true;
 	case VINT: {
 		IntTy *t = as<IntTy>(type);
 		if(i8_to_char && t->getBits() == 8 && t->isSigned() &&

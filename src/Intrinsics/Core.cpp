@@ -174,14 +174,12 @@ INTRINSIC(typeof)
 INTRINSIC(ptr)
 {
 	// args[0] should be a TypeVal
-	if(!args[0]->getVal() || (!args[0]->getVal()->isType() && !args[0]->getVal()->isVoid())) {
+	if(!args[0]->getVal() || !args[0]->getVal()->isType()) {
 		err::out(args[0], {"expected a type for the first argument to @ptr()"});
 		return false;
 	}
-	Type *res = nullptr;
-	if(args[0]->getVal()->isVoid()) res = VoidTy::get(c);
-	else res = as<TypeVal>(args[0]->getVal())->getVal()->specialize(c);
-	res = PtrTy::get(c, res, 0, false);
+	Type *res = as<TypeVal>(args[0]->getVal())->getVal()->specialize(c);
+	res	  = PtrTy::get(c, res, 0, false);
 	stmt->setTypeVal(c, res);
 	return true;
 }

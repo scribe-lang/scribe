@@ -205,7 +205,8 @@ VoidTy *VoidTy::get(Context &c)
 Value *VoidTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth)
 {
-	return VoidVal::create(c);
+	err::out(loc, {"void type has no value"});
+	return nullptr;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

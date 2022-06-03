@@ -92,7 +92,7 @@ String Stmt::getTypeString()
 	if(getVal() && getVal()->hasData()) res += " ==> " + getVal()->toStr();
 	return res;
 }
-inline Type *Stmt::getTy(bool exact)
+Type *Stmt::getTy(bool exact)
 {
 	if(cast_to && !exact) return cast_to;
 	uint16_t tmp = derefcount;

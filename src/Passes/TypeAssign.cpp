@@ -161,7 +161,7 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 {
 	lex::Lexeme &tok = stmt->getLexValue();
 	switch(tok.getTokVal()) {
-	case lex::VOID: stmt->setTyVal(VoidTy::get(ctx), VoidVal::create(ctx)); break;
+	case lex::VOID: stmt->setTypeVal(ctx, VoidTy::get(ctx)); break;
 	case lex::ANY: stmt->setTypeVal(ctx, AnyTy::get(ctx)); break;
 	case lex::TYPE: stmt->setTypeVal(ctx, TypeTy::get(ctx)); break;
 	case lex::TRUE: {
