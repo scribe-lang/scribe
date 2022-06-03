@@ -29,7 +29,7 @@ uint64_t createValueIDWith(Value *v)
 	values[id]  = v;
 	return id;
 }
-Value *getValueWithID(uint64_t id)
+Value *getValWithID(uint64_t id)
 {
 	auto loc = values.find(id);
 	if(loc == values.end()) return nullptr;
@@ -41,8 +41,8 @@ Value *getValueWithID(uint64_t id)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 Stmt::Stmt(const Stmts &stmt_type, const ModuleLoc *loc)
-	: loc(loc), valueid(0), cast_to(nullptr), derefcount(0), stype(stmt_type), stmtmask(0),
-	  castmask(0)
+	: loc(loc), ty(nullptr), val(nullptr), cast_to(nullptr), derefcount(0), stype(stmt_type),
+	  stmtmask(0), castmask(0)
 {}
 Stmt::~Stmt() {}
 
@@ -75,14 +75,13 @@ const char *Stmt::getStmtTypeCString() const
 
 String Stmt::getTypeString()
 {
-	if(!getValueID()) return "";
-	Value *v = getValue(true);
+	if(!getTy() && !getVal()) return "";
 	String res;
-	res += " :<" + std::to_string(valueid) + ">: ";
+	res += " :: ";
 	if(isComptime()) res += "comptime ";
 	if(isRef()) res += "& ";
 	if(isConst()) res += "const ";
-	res += v->getType()->toStr();
+	res += getTy()->toStr();
 	if(cast_to) {
 		res += " -> ";
 		if(isCastComptime()) res += "comptime ";
@@ -90,44 +89,16 @@ String Stmt::getTypeString()
 		if(isCastConst()) res += "const ";
 		res += cast_to->toStr();
 	}
-	if(v->hasData()) res += " ==> " + v->toStr();
+	if(getVal() && getVal()->hasData()) res += " ==> " + getVal()->toStr();
 	return res;
 }
-bool Stmt::updateValue(Context &c, Value *v)
+inline Type *Stmt::getTy(bool exact)
 {
-	assert(valueid && "valueid cannot be zero for updateValue()");
-	if(!values[valueid]) {
-		values[valueid] = v;
-		return true;
-	}
-	Value *self = values[valueid];
-	while(self->isRef()) self = as<RefVal>(self)->getVal();
-	while(v->isRef()) v = as<RefVal>(v)->getVal();
-	return self->updateValue(c, v);
-}
-Value *Stmt::getValue(bool exact)
-{
-	assert(valueid && "valueid cannot be zero for getValue()");
-	Value *v = values[valueid];
-	if(!exact && v->isRef()) {
-		v = as<RefVal>(v)->getVal();
-	}
-	uint16_t tmp = derefcount;
-	while(tmp > 0 && !exact) {
-		v = as<VecVal>(v)->getValAt(0);
-		--tmp;
-	}
-	return v;
-}
-Type *Stmt::getValueTy(bool exact)
-{
-	assert(valueid && "valueid cannot be zero for getValueTy()");
 	if(cast_to && !exact) return cast_to;
 	uint16_t tmp = derefcount;
-	Type *t	     = values[valueid]->getType();
-	while(!exact && tmp > 0) {
+	Type *t	     = ty;
+	while(!exact && tmp-- > 0) {
 		t = as<PtrTy>(t)->getTo();
-		--tmp;
 	}
 	return t;
 }
@@ -435,14 +406,14 @@ bool StmtFnSig::requiresTemplateInit()
 	if(disable_template) return false;
 	if(has_variadic) return true;
 	for(auto &a : args) {
-		if(a->getValue()->getType()->isTemplate()) return true;
+		if(a->getTy()->isTemplate()) return true;
 		if(a->isComptime()) return true;
-		Type *t = a->getValue()->getType();
+		Type *t = a->getTy();
 		while(t->isPtr()) t = as<PtrTy>(t)->getTo();
 		if(t->isAny()) return true;
 	}
-	if(rettype->getValue()->getType()->isTemplate()) return true;
-	Type *t = rettype->getValue()->getType();
+	if(rettype->getTy()->isTemplate()) return true;
+	Type *t = rettype->getTy();
 	while(t->isPtr()) t = as<PtrTy>(t)->getTo();
 	if(t->isAny()) return true;
 	disable_template = true;

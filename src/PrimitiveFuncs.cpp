@@ -13,20 +13,20 @@
 
 namespace sc
 {
-uint64_t createComptimeFnVal(Context &c, const Vector<Type *> &args, Type *ret,
+FuncVal *createComptimeFnVal(Context &c, const Vector<Type *> &args, Type *ret,
 			     const Vector<bool> &argcomptime, IntrinsicFn fn,
 			     const IntrinType &inty, bool is_va = false)
 {
 	FuncTy *t = FuncTy::get(c, nullptr, args, ret, argcomptime, fn, inty, false, is_va);
-	return createValueIDWith(FuncVal::create(c, t));
+	return FuncVal::create(c, t);
 }
-inline uint64_t createFnVal(Context &c, const Vector<Type *> &args, Type *ret, IntrinsicFn fn,
+inline FuncVal *createFnVal(Context &c, const Vector<Type *> &args, Type *ret, IntrinsicFn fn,
 			    const IntrinType &inty, bool is_va = false)
 {
 	return createComptimeFnVal(c, args, ret, {}, fn, inty, is_va);
 }
 
-void addIntFn(Context &c, ValueManager &vmgr, StringRef name, uint64_t fid)
+void addIntFn(Context &c, ValueManager &vmgr, StringRef name, FuncVal *fv)
 {
 	static Vector<int> bits	 = {1, 8, 16, 32, 64};
 	static Vector<bool> sign = {true, false};
@@ -39,12 +39,12 @@ void addIntFn(Context &c, ValueManager &vmgr, StringRef name, uint64_t fid)
 				tys[b + s] = IntTy::get(c, b, s);
 			}
 			ty = tys[b + s];
-			vmgr.addTypeFn(ty->getID(), name, fid);
+			vmgr.addTypeFn(ty->getID(), name, fv);
 		}
 	}
 }
 
-void addFltFn(Context &c, ValueManager &vmgr, StringRef name, uint64_t fid)
+void addFltFn(Context &c, ValueManager &vmgr, StringRef name, FuncVal *fv)
 {
 	static Vector<int> bits = {32, 64};
 	static Map<int, FltTy *> tys;
@@ -55,11 +55,11 @@ void addFltFn(Context &c, ValueManager &vmgr, StringRef name, uint64_t fid)
 			tys[b] = FltTy::get(c, b);
 		}
 		ty = tys[b];
-		vmgr.addTypeFn(ty->getID(), name, fid);
+		vmgr.addTypeFn(ty->getID(), name, fv);
 	}
 }
 
-#define ADDFN(name, fn) vmgr.addVar(name, fn, nullptr, true)
+#define ADDFN(name, fn) vmgr.addVar(name, fn->getVal(), fn, nullptr, true)
 #define ADDINTFN(name, fn) addIntFn(c, vmgr, name, fn)
 #define ADDFLTFN(name, fn) addFltFn(c, vmgr, name, fn)
 #define ADDPTRFN(name, fn) vmgr.addTypeFn(TPTR, name, fn)

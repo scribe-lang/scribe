@@ -29,18 +29,31 @@ bool LayerStack::exists(StringRef name, bool top_only)
 	}
 	return false;
 }
-uint64_t LayerStack::getVal(StringRef name, bool top_only)
+Type *LayerStack::getTy(StringRef name, bool top_only)
 {
 	size_t i     = layers.size() - 1;
 	bool is_done = false;
 	while(!is_done && i >= 0) {
 		if(i == 0) is_done = true;
-		uint64_t res = layers[i].getVal(name);
+		Type *res = layers[i].getTy(name);
 		if(res) return res;
 		if(top_only) break;
 		--i;
 	}
-	return 0;
+	return nullptr;
+}
+Value *LayerStack::getVal(StringRef name, bool top_only)
+{
+	size_t i     = layers.size() - 1;
+	bool is_done = false;
+	while(!is_done && i >= 0) {
+		if(i == 0) is_done = true;
+		Value *res = layers[i].getVal(name);
+		if(res) return res;
+		if(top_only) break;
+		--i;
+	}
+	return nullptr;
 }
 StmtVar *LayerStack::getDecl(StringRef name, bool top_only)
 {
@@ -55,6 +68,19 @@ StmtVar *LayerStack::getDecl(StringRef name, bool top_only)
 	}
 	return nullptr;
 }
+VarDecl *LayerStack::getAll(StringRef name, bool top_only)
+{
+	size_t i     = layers.size() - 1;
+	bool is_done = false;
+	while(!is_done && i >= 0) {
+		if(i == 0) is_done = true;
+		VarDecl *res = layers[i].getAll(name);
+		if(res) return res;
+		if(top_only) break;
+		--i;
+	}
+	return nullptr;
+}
 
 Function::Function(FuncTy *ty) : fty(ty) {}
 
@@ -62,21 +88,21 @@ ValueManager::ValueManager(Context &c)
 {
 	AddPrimitiveFuncs(c, *this);
 }
-bool ValueManager::addVar(StringRef var, uint64_t vid, StmtVar *decl, bool global)
+bool ValueManager::addVar(StringRef var, Type *ty, Value *val, StmtVar *decl, bool global)
 {
 	if(global) {
 		if(globals.find(var) != globals.end()) return false;
-		globals[var] = {vid, decl};
+		globals[var] = {ty, val, decl};
 		return true;
 	}
-	if(!funcstack.empty()) return funcstack.back().add(var, vid, decl);
-	return layers.add(var, vid, decl);
+	if(!funcstack.empty()) return funcstack.back().add(var, ty, val, decl);
+	return layers.add(var, ty, val, decl);
 }
-bool ValueManager::addTypeFn(Type *ty, StringRef name, uint64_t fn)
+bool ValueManager::addTypeFn(Type *ty, StringRef name, FuncVal *fn)
 {
 	return addTypeFn(ty->getID(), name, fn);
 }
-bool ValueManager::addTypeFn(uint64_t id, StringRef name, uint64_t fn)
+bool ValueManager::addTypeFn(uint32_t id, StringRef name, FuncVal *fn)
 {
 	if(typefuncs.find(id) == typefuncs.end()) {
 		typefuncs[id] = {};
@@ -98,24 +124,36 @@ bool ValueManager::exists(StringRef var, bool top_only, bool include_globals)
 }
 bool ValueManager::existsTypeFn(Type *ty, StringRef name)
 {
-	uint64_t id = ty->getID();
+	uint32_t id = ty->getID();
 	if(typefuncs.find(id) == typefuncs.end()) {
 		typefuncs[id] = {};
 	}
 	auto &funcmap = typefuncs[id];
 	return funcmap.find(name) != funcmap.end();
 }
-uint64_t ValueManager::getVar(StringRef var, bool top_only, bool include_globals)
+Type *ValueManager::getTy(StringRef var, bool top_only, bool include_globals)
 {
 	if(!funcstack.empty()) {
-		uint64_t res = funcstack.back().getVal(var, top_only);
+		Type *res = funcstack.back().getTy(var, top_only);
 		if(res || top_only) return res;
 	}
-	uint64_t res = layers.getVal(var, top_only);
+	Type *res = layers.getTy(var, top_only);
 	if(res || top_only || !include_globals) return res;
 	auto gres = globals.find(var);
-	if(gres != globals.end()) return gres->second.valueid;
-	return 0;
+	if(gres != globals.end()) return gres->second.ty;
+	return nullptr;
+}
+Value *ValueManager::getVal(StringRef var, bool top_only, bool include_globals)
+{
+	if(!funcstack.empty()) {
+		Value *res = funcstack.back().getVal(var, top_only);
+		if(res || top_only) return res;
+	}
+	Value *res = layers.getVal(var, top_only);
+	if(res || top_only || !include_globals) return res;
+	auto gres = globals.find(var);
+	if(gres != globals.end()) return gres->second.val;
+	return nullptr;
 }
 StmtVar *ValueManager::getDecl(StringRef var, bool top_only, bool include_globals)
 {
@@ -129,15 +167,27 @@ StmtVar *ValueManager::getDecl(StringRef var, bool top_only, bool include_global
 	if(gres != globals.end()) return gres->second.decl;
 	return nullptr;
 }
-uint64_t ValueManager::getTypeFn(Type *ty, StringRef name)
+VarDecl *ValueManager::getAll(StringRef var, bool top_only, bool include_globals)
 {
-	uint64_t id = ty->getID();
+	if(!funcstack.empty()) {
+		VarDecl *res = funcstack.back().getAll(var, top_only);
+		if(res || top_only) return res;
+	}
+	VarDecl *res = layers.getAll(var, top_only);
+	if(res || top_only || !include_globals) return res;
+	auto gres = globals.find(var);
+	if(gres != globals.end()) return &gres->second;
+	return nullptr;
+}
+FuncVal *ValueManager::getTyFn(Type *ty, StringRef name)
+{
+	uint32_t id = ty->getID();
 	if(typefuncs.find(id) == typefuncs.end()) {
 		typefuncs[id] = {};
 	}
 	auto &funcmap = typefuncs[id];
 	auto found    = funcmap.find(name);
-	if(found == funcmap.end()) return 0;
+	if(found == funcmap.end()) return nullptr;
 	return found->second;
 }
 } // namespace sc

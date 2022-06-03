@@ -20,9 +20,9 @@
 
 #define GetType(i) args[i]->getType()
 
-#define GetIntVal(i) as<IntVal>(args[i]->getValue())->getVal()
+#define GetIntVal(i) as<IntVal>(args[i]->getVal())->getVal()
 #define CreateIntVal(v) IntVal::create(c, v)
-#define GetFltVal(i) as<FltVal>(args[i]->getValue())->getVal()
+#define GetFltVal(i) as<FltVal>(args[i]->getVal())->getVal()
 #define CreateFltVal(v) FltVal::create(c, v)
 
 namespace sc
@@ -34,19 +34,19 @@ static size_t SizeOf(Type *ty);
 INTRINSIC(compilerid)
 {
 	static StringRef id = GetCompilerID(c);
-	VecVal *res	    = VecVal::createStr(c, id, CDPERMA);
-	stmt->createAndSetValue(res);
+	VecVal *res	    = VecVal::createStr(c, CDPERMA, id);
+	stmt->setVal(res);
 	stmt->setConst();
 	return true;
 }
 
 INTRINSIC(import)
 {
-	if(!args[0]->getValue()->hasData() || !args[0]->getValue()->isStrLiteral()) {
+	if(!args[0]->getTy()->isStrLiteral() || !args[0]->getVal() || !args[0]->getVal()->isVec()) {
 		err::out(stmt, {"import must be a compile time computable string"});
 		return false;
 	}
-	String modname = as<VecVal>(args[0]->getValue())->getAsString();
+	String modname = as<VecVal>(args[0]->getVal())->getAsString();
 	if(modname.empty()) {
 		err::out(stmt, {"invalid comptime value for module string"});
 		return false;
@@ -76,157 +76,173 @@ INTRINSIC(import)
 	topblk = as<StmtBlock>(topmod->getParseTree());
 
 gen_import:
-	stmt->createAndSetValue(NamespaceVal::create(c, mod->getID()));
+	stmt->setTyVal(PtrTy::getStr(c), NamespaceVal::create(c, mod->getID()));
 	return true;
 }
 INTRINSIC(ismainsrc)
 {
 	bool ismm = stmt->getMod()->isMainModule();
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDTRUE, ismm));
+	stmt->setVal(IntVal::create(c, CDPERMA, ismm));
 	return true;
 }
 INTRINSIC(isprimitive)
 {
-	bool is_prim = args[0]->getValueTy()->isPrimitive();
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_prim));
+	bool is_prim = args[0]->getTy()->isPrimitive();
+	stmt->setVal(IntVal::create(c, CDPERMA, is_prim));
 	return true;
 }
 INTRINSIC(isptr)
 {
-	bool is_ptr = args[0]->getValueTy()->isPtr();
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_ptr));
+	bool is_ptr = args[0]->getTy()->isPtr();
+	stmt->setVal(IntVal::create(c, CDPERMA, is_ptr));
 	return true;
 }
 INTRINSIC(isprimitiveorptr)
 {
-	bool is_prim_or_ptr = args[0]->getValueTy()->isPrimitiveOrPtr();
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_prim_or_ptr));
+	bool is_prim_or_ptr = args[0]->getTy()->isPrimitiveOrPtr();
+	stmt->setVal(IntVal::create(c, CDPERMA, is_prim_or_ptr));
 	return true;
 }
 INTRINSIC(isint)
 {
-	bool is_int = args[0]->getValueTy()->isInt();
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_int));
+	bool is_int = args[0]->getTy()->isInt();
+	stmt->setVal(IntVal::create(c, CDPERMA, is_int));
 	return true;
 }
 INTRINSIC(isintsigned)
 {
-	bool is_signed = args[0]->getValueTy()->isInt();
-	if(is_signed) is_signed = as<IntTy>(args[0]->getValueTy())->isSigned();
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_signed));
+	bool is_signed = args[0]->getTy()->isInt();
+	if(is_signed) is_signed = as<IntTy>(args[0]->getTy())->isSigned();
+	stmt->setVal(IntVal::create(c, CDPERMA, is_signed));
 	return true;
 }
 INTRINSIC(isflt)
 {
-	bool is_flt = args[0]->getValueTy()->isFlt();
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_flt));
+	bool is_flt = args[0]->getTy()->isFlt();
+	stmt->setVal(IntVal::create(c, CDPERMA, is_flt));
 	return true;
 }
 INTRINSIC(iscchar)
 {
-	bool is_cchar = args[0]->getValueTy()->isInt();
+	bool is_cchar = args[0]->getTy()->isInt();
 	if(is_cchar) {
-		IntTy *t = as<IntTy>(args[0]->getValueTy());
+		IntTy *t = as<IntTy>(args[0]->getTy());
 		is_cchar &= t->getBits() == 8;
 		is_cchar &= t->isSigned();
 	}
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_cchar));
+	stmt->setVal(IntVal::create(c, CDPERMA, is_cchar));
 	return true;
 }
 INTRINSIC(iscstring)
 {
-	bool is_cstr = args[0]->getValue()->isStrLiteral();
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_cstr));
+	bool is_cstr = args[0]->getTy()->isStrLiteral();
+	stmt->setVal(IntVal::create(c, CDPERMA, is_cstr));
 	return true;
 }
 INTRINSIC(isequalty)
 {
-	bool is_same_ty = args[0]->getValueTy()->getID() == args[1]->getValueTy()->getID();
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 1, true), CDPERMA, is_same_ty));
+	bool is_same_ty = args[0]->getTy()->getID() == args[1]->getTy()->getID();
+	stmt->setVal(IntVal::create(c, CDPERMA, is_same_ty));
 	return true;
 }
 INTRINSIC(szof)
 {
-	int64_t sz = SizeOf(args[0]->getValueTy());
+	int64_t sz = SizeOf(args[0]->getTy());
 	if(!sz) {
 		err::out(args[0], {"invalid type info, received size 0"});
 		return false;
 	}
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 64, false), CDPERMA, sz));
+	stmt->setVal(IntVal::create(c, CDPERMA, sz));
 	return true;
 }
 INTRINSIC(as)
 {
 	// args[0] must have a value of type TypeVal
-	args[1]->castTo(as<TypeVal>(args[0]->getValue())->getVal(), args[0]->getStmtMask());
+	if(!args[0]->getVal() || !args[0]->getVal()->isType()) {
+		err::out(args[0], {"expected a type for the first argument to @as()"});
+		return false;
+	}
+	args[1]->castTo(as<TypeVal>(args[0]->getVal())->getVal(), args[0]->getStmtMask());
 	*source = args[1];
 	return true;
 }
 INTRINSIC(typeof)
 {
-	stmt->createAndSetValue(TypeVal::create(c, args[0]->getValueTy()));
+	stmt->setTypeVal(c, args[0]->getTy());
 	return true;
 }
 INTRINSIC(ptr)
 {
 	// args[0] should be a TypeVal
-	Type *res = as<TypeVal>(args[0]->getValue())->getVal()->specialize(c);
-	res	  = PtrTy::get(c, res, 0, false);
-	stmt->createAndSetValue(TypeVal::create(c, res));
+	if(!args[0]->getVal() || (!args[0]->getVal()->isType() && !args[0]->getVal()->isVoid())) {
+		err::out(args[0], {"expected a type for the first argument to @ptr()"});
+		return false;
+	}
+	Type *res = nullptr;
+	if(args[0]->getVal()->isVoid()) res = VoidTy::get(c);
+	else res = as<TypeVal>(args[0]->getVal())->getVal()->specialize(c);
+	res = PtrTy::get(c, res, 0, false);
+	stmt->setTypeVal(c, res);
 	return true;
 }
 INTRINSIC(valen)
 {
-	if(stmt->getValue()->hasData()) return true;
 	TypeAssignPass *ta = c.getPass<TypeAssignPass>();
 	if(!ta->isFnVALen()) {
 		err::out(stmt, {"this is not a variadic function"});
 		return false;
 	}
 	size_t vasz = ta->getFnVALen();
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 64, false), CDPERMA, vasz));
+	stmt->setVal(IntVal::create(c, CDPERMA, vasz));
 	return true;
 }
 INTRINSIC(array)
 {
+	if(!args[0]->getVal() || !args[0]->getVal()->isType()) {
+		err::out(args[0], {"expected array type for the first argument"});
+		return false;
+	}
 	Vector<int64_t> counts;
-	Type *resty = as<TypeVal>(args[0]->getValue())->getVal();
+	Type *resty = as<TypeVal>(args[0]->getVal())->getVal();
 
 	for(size_t i = 1; i < args.size(); ++i) {
-		counts.insert(counts.begin(), as<IntVal>(args[i]->getValue())->getVal());
+		counts.insert(counts.begin(), as<IntVal>(args[i]->getVal())->getVal());
 	}
 	for(auto &count : counts) {
 		resty = PtrTy::get(c, resty, count, false);
+		if(!resty) {
+			err::out(stmt, {"failed to create array - 0 count provided"});
+			return false;
+		}
 	}
 	Value *res = resty->toDefaultValue(c, stmt->getLoc(), CDPERMA);
 	if(!res) {
 		err::out(stmt, {"failed to get default value from array's type"});
 		return false;
 	}
-	stmt->createAndSetValue(res);
+	stmt->setTyVal(resty, res);
 	return true;
 }
 INTRINSIC(enumtagty)
 {
-	Value *v = args[0]->getValue();
-	if(!v->isNamespace()) {
-		err::out(stmt, {"expected enum, found: ", v->getType()->toStr()});
+	if(!args[0]->getVal() || !args[0]->getVal()->isNamespace()) {
+		err::out(args[0], {"expected an enum for the first argument"});
 		return false;
 	}
+	Value *v	   = args[0]->getVal();
 	TypeAssignPass *ta = c.getPass<TypeAssignPass>();
 	Type *ty	   = ta->getEnumTagTy(as<NamespaceVal>(v)->getVal());
 	if(!ty) {
 		err::out(stmt, {"invalid enum encountered: ", as<NamespaceVal>(v)->getVal()});
 		return false;
 	}
-	stmt->createAndSetValue(TypeVal::create(c, ty));
+	stmt->setTypeVal(c, ty);
 	return true;
 }
 INTRINSIC(assn_ptr)
 {
-	args[0]->updateValue(c, args[1]->getValue());
-	stmt->updateValue(c, args[0]->getValue());
-	return true;
+	err::out(stmt, {"assn pointer intrinsic does not work on values"});
+	return false;
 }
 // enum is:
 //   Unknown = 0
@@ -258,23 +274,22 @@ INTRINSIC(getosid)
 #elif defined(__DragonFly__)
 	res = 8;
 #endif
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 8, true), CDPERMA, res));
+	stmt->setVal(IntVal::create(c, CDPERMA, res));
 	return true;
 }
 INTRINSIC(syspathmax)
 {
-	stmt->createAndSetValue(IntVal::create(c, IntTy::get(c, 32, true), CDPERMA, PATH_MAX));
+	stmt->setVal(IntVal::create(c, CDPERMA, PATH_MAX));
 	return true;
 }
 INTRINSIC(compileerror)
 {
 	String e;
 	for(auto &a : args) {
-		if(a->getValue()->isVec() && a->getValue()->hasData() &&
-		   a->getValue()->isStrLiteral()) {
-			e += as<VecVal>(a->getValue())->getAsString();
+		if(a->getTy()->isStrLiteral() && a->getVal() && a->getVal()->isVec()) {
+			e += as<VecVal>(a->getVal())->getAsString();
 		} else {
-			e += a->getValue()->toStr();
+			e += a->getVal()->toStr();
 		}
 	}
 	err::out(stmt, {e});

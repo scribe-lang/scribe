@@ -46,10 +46,9 @@ class Value
 protected:
 	Values vty;
 	ContainsData has_data;
-	Type *ty;
 
 public:
-	Value(const Values &vty, Type *ty, ContainsData has_data);
+	Value(const Values &vty, ContainsData has_data);
 	virtual ~Value();
 
 	virtual String toStr()			       = 0;
@@ -71,19 +70,9 @@ public:
 	IsVal(Namespace, NAMESPACE);
 	IsVal(Ref, REF);
 
-	bool isStrLiteral();
-
-	inline void setType(Type *t)
-	{
-		ty = t;
-	}
 	inline Values getValType()
 	{
 		return vty;
-	}
-	inline Type *&getType()
-	{
-		return ty;
 	}
 	virtual ContainsData getHasData();
 	virtual void setHasData(ContainsData cd);
@@ -117,13 +106,13 @@ class IntVal : public Value
 	int64_t data;
 
 public:
-	IntVal(Context &c, Type *ty, ContainsData has_data, int64_t data);
+	IntVal(Context &c, ContainsData has_data, int64_t data);
 
 	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
-	static IntVal *create(Context &c, Type *ty, ContainsData has_data, int64_t val);
+	static IntVal *create(Context &c, ContainsData has_data, int64_t val);
 
 	inline int64_t &getVal()
 	{
@@ -136,13 +125,13 @@ class FltVal : public Value
 	long double data;
 
 public:
-	FltVal(Context &c, Type *ty, ContainsData has_data, const long double &data);
+	FltVal(Context &c, ContainsData has_data, const long double &data);
 
 	String toStr();
 	Value *clone(Context &c);
 	bool updateValue(Context &c, Value *v);
 
-	static FltVal *create(Context &c, Type *ty, ContainsData has_data, const long double &val);
+	static FltVal *create(Context &c, ContainsData has_data, const long double &val);
 
 	inline long double &getVal()
 	{
@@ -155,15 +144,14 @@ class VecVal : public Value
 	Vector<Value *> data;
 
 public:
-	VecVal(Context &c, Type *ty, ContainsData has_data, const Vector<Value *> &data);
+	VecVal(Context &c, ContainsData has_data, const Vector<Value *> &data);
 
-	String toStr();
-	Value *clone(Context &c);
-	bool updateValue(Context &c, Value *v);
+	String toStr() override;
+	Value *clone(Context &c) override;
+	bool updateValue(Context &c, Value *v) override;
 
-	static VecVal *create(Context &c, Type *ty, ContainsData has_data,
-			      const Vector<Value *> &val);
-	static VecVal *createStr(Context &c, StringRef val, ContainsData has_data);
+	static VecVal *create(Context &c, ContainsData has_data, const Vector<Value *> &val);
+	static VecVal *createStr(Context &c, ContainsData has_data, StringRef val);
 
 	inline void insertVal(Value *v)
 	{
@@ -185,13 +173,13 @@ class StructVal : public Value
 	Map<StringRef, Value *> data;
 
 public:
-	StructVal(Context &c, Type *ty, ContainsData has_data, const Map<StringRef, Value *> &data);
+	StructVal(Context &c, ContainsData has_data, const Map<StringRef, Value *> &data);
 
-	String toStr();
-	Value *clone(Context &c);
-	bool updateValue(Context &c, Value *v);
+	String toStr() override;
+	Value *clone(Context &c) override;
+	bool updateValue(Context &c, Value *v) override;
 
-	static StructVal *create(Context &c, Type *ty, ContainsData has_data,
+	static StructVal *create(Context &c, ContainsData has_data,
 				 const Map<StringRef, Value *> &val);
 
 	inline Map<StringRef, Value *> &getVal()
@@ -208,6 +196,8 @@ public:
 
 class FuncVal : public Value
 {
+	FuncTy *ty;
+
 public:
 	FuncVal(Context &c, FuncTy *val);
 
@@ -225,6 +215,8 @@ public:
 
 class TypeVal : public Value
 {
+	Type *ty;
+
 public:
 	TypeVal(Context &c, Type *val);
 
@@ -261,36 +253,6 @@ public:
 	{
 		return val;
 	}
-};
-
-// refers to other values, generally used for updating types but work with same value
-// for example - address of and dereference operators
-class RefVal : public Value
-{
-	Value *to;
-
-public:
-	RefVal(Context &c, Type *ty, Value *to);
-
-	String toStr();
-	Value *clone(Context &c);
-	bool updateValue(Context &c, Value *v);
-
-	static RefVal *create(Context &c, Type *ty, Value *to);
-
-	inline Value *&getVal()
-	{
-		return to;
-	}
-
-	ContainsData getHasData();
-	void setHasData(ContainsData cd);
-	void setContainsData();
-	void setContainsPermaData();
-	void unsetContainsPermaData();
-	bool hasData();
-	bool hasPermaData();
-	void clearHasData();
 };
 } // namespace sc
 

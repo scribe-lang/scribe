@@ -17,19 +17,8 @@
 
 namespace sc
 {
-Value::Value(const Values &vty, Type *ty, ContainsData has_data)
-	: vty(vty), has_data(has_data), ty(ty)
-{}
+Value::Value(const Values &vty, ContainsData has_data) : vty(vty), has_data(has_data) {}
 Value::~Value() {}
-bool Value::isStrLiteral()
-{
-	if(!ty->isPtr()) return false;
-	Type *inner = as<PtrTy>(ty)->getTo();
-	if(!inner->isInt()) return false;
-	IntTy *i = as<IntTy>(inner);
-	if(i->getBits() != 8 || !i->isSigned()) return false;
-	return true;
-}
 ContainsData Value::getHasData()
 {
 	return has_data;
@@ -66,7 +55,7 @@ void Value::clearHasData()
 	has_data = CDFALSE;
 }
 
-VoidVal::VoidVal(Context &c) : Value(VVOID, VoidTy::get(c), CDTRUE) {}
+VoidVal::VoidVal(Context &c) : Value(VVOID, CDPERMA) {}
 
 String VoidVal::toStr()
 {
@@ -87,8 +76,7 @@ VoidVal *VoidVal::create(Context &c)
 	return vv;
 }
 
-IntVal::IntVal(Context &c, Type *ty, ContainsData has_data, int64_t data)
-	: Value(VINT, ty, has_data), data(data)
+IntVal::IntVal(Context &c, ContainsData has_data, int64_t data) : Value(VINT, has_data), data(data)
 {}
 
 String IntVal::toStr()
@@ -97,7 +85,7 @@ String IntVal::toStr()
 }
 Value *IntVal::clone(Context &c)
 {
-	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, data);
+	return create(c, has_data == CDPERMA ? CDTRUE : has_data, data);
 }
 bool IntVal::updateValue(Context &c, Value *v)
 {
@@ -107,13 +95,13 @@ bool IntVal::updateValue(Context &c, Value *v)
 	return true;
 }
 
-IntVal *IntVal::create(Context &c, Type *ty, ContainsData has_data, int64_t val)
+IntVal *IntVal::create(Context &c, ContainsData has_data, int64_t val)
 {
-	return c.allocVal<IntVal>(ty, has_data, val);
+	return c.allocVal<IntVal>(has_data, val);
 }
 
-FltVal::FltVal(Context &c, Type *ty, ContainsData has_data, const long double &data)
-	: Value(VFLT, ty, has_data), data(data)
+FltVal::FltVal(Context &c, ContainsData has_data, const long double &data)
+	: Value(VFLT, has_data), data(data)
 {}
 
 String FltVal::toStr()
@@ -122,7 +110,7 @@ String FltVal::toStr()
 }
 Value *FltVal::clone(Context &c)
 {
-	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, data);
+	return create(c, has_data, data);
 }
 bool FltVal::updateValue(Context &c, Value *v)
 {
@@ -132,13 +120,13 @@ bool FltVal::updateValue(Context &c, Value *v)
 	return true;
 }
 
-FltVal *FltVal::create(Context &c, Type *ty, ContainsData has_data, const long double &val)
+FltVal *FltVal::create(Context &c, ContainsData has_data, const long double &val)
 {
-	return c.allocVal<FltVal>(ty, has_data, val);
+	return c.allocVal<FltVal>(has_data, val);
 }
 
-VecVal::VecVal(Context &c, Type *ty, ContainsData has_data, const Vector<Value *> &data)
-	: Value(VVEC, ty, has_data), data(data)
+VecVal::VecVal(Context &c, ContainsData has_data, const Vector<Value *> &data)
+	: Value(VVEC, has_data), data(data)
 {}
 
 String VecVal::toStr()
@@ -157,18 +145,12 @@ Value *VecVal::clone(Context &c)
 	for(auto &d : data) {
 		newdata.push_back(d->clone(c));
 	}
-	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, newdata);
+	return create(c, has_data == CDPERMA ? CDTRUE : has_data, newdata);
 }
 bool VecVal::updateValue(Context &c, Value *v)
 {
 	if(!v->isVec()) return false;
 	VecVal *vv = as<VecVal>(v);
-	if(ty->isPtr() && !as<PtrTy>(ty)->getCount()) {
-		data.clear();
-		// only valid for pointers of unknown size
-		for(auto &d : vv->getVal()) data.push_back(d->clone(c));
-		goto end;
-	}
 	if(data.size() != vv->getVal().size()) return false;
 	for(size_t i = 0; i < data.size(); ++i) {
 		if(!data[i]->updateValue(c, vv->getValAt(i))) return false;
@@ -178,36 +160,29 @@ end:
 	return true;
 }
 
-VecVal *VecVal::create(Context &c, Type *ty, ContainsData has_data, const Vector<Value *> &val)
+VecVal *VecVal::create(Context &c, ContainsData has_data, const Vector<Value *> &val)
 {
-	return c.allocVal<VecVal>(ty, has_data, val);
+	return c.allocVal<VecVal>(has_data, val);
 }
-VecVal *VecVal::createStr(Context &c, StringRef val, ContainsData has_data)
+VecVal *VecVal::createStr(Context &c, ContainsData has_data, StringRef val)
 {
 	Vector<Value *> chars;
-	Type *ty = IntTy::get(c, 8, true);
 	for(auto &ch : val) {
-		chars.push_back(IntVal::create(c, ty, has_data, ch));
+		chars.push_back(IntVal::create(c, has_data, ch));
 	}
-	ty = PtrTy::get(c, ty, 0, false);
-	return c.allocVal<VecVal>(ty, has_data, chars);
+	return c.allocVal<VecVal>(has_data, chars);
 }
-
 String VecVal::getAsString()
 {
 	String res;
 	for(auto &ch : data) {
-		if(!ch->getType()->isInt()) return "";
-		if(as<IntTy>(ch->getType())->getBits() != 8) return "";
-		if(!as<IntTy>(ch->getType())->isSigned()) return "";
 		res.push_back(as<IntVal>(ch)->getVal());
 	}
 	return res;
 }
 
-StructVal::StructVal(Context &c, Type *ty, ContainsData has_data,
-		     const Map<StringRef, Value *> &data)
-	: Value(VSTRUCT, ty, has_data), data(data)
+StructVal::StructVal(Context &c, ContainsData has_data, const Map<StringRef, Value *> &data)
+	: Value(VSTRUCT, has_data), data(data)
 {}
 
 String StructVal::toStr()
@@ -229,7 +204,7 @@ Value *StructVal::clone(Context &c)
 	for(auto &d : data) {
 		newdata[d.first] = d.second->clone(c);
 	}
-	return create(c, ty, has_data == CDPERMA ? CDTRUE : has_data, newdata);
+	return create(c, has_data == CDPERMA ? CDTRUE : has_data, newdata);
 }
 bool StructVal::updateValue(Context &c, Value *v)
 {
@@ -242,14 +217,12 @@ bool StructVal::updateValue(Context &c, Value *v)
 	has_data = v->getHasData() == CDTRUE || v->getHasData() == CDPERMA ? CDTRUE : CDFALSE;
 	return true;
 }
-
-StructVal *StructVal::create(Context &c, Type *ty, ContainsData has_data,
-			     const Map<StringRef, Value *> &val)
+StructVal *StructVal::create(Context &c, ContainsData has_data, const Map<StringRef, Value *> &val)
 {
-	return c.allocVal<StructVal>(ty, has_data, val);
+	return c.allocVal<StructVal>(has_data, val);
 }
 
-FuncVal::FuncVal(Context &c, FuncTy *val) : Value(VFUNC, val, CDTRUE) {}
+FuncVal::FuncVal(Context &c, FuncTy *val) : Value(VFUNC, CDPERMA), ty(val) {}
 
 String FuncVal::toStr()
 {
@@ -269,7 +242,7 @@ FuncVal *FuncVal::create(Context &c, FuncTy *val)
 	return c.allocVal<FuncVal>(val);
 }
 
-TypeVal::TypeVal(Context &c, Type *val) : Value(VTYPE, val, CDPERMA) {}
+TypeVal::TypeVal(Context &c, Type *val) : Value(VTYPE, CDPERMA), ty(val) {}
 
 String TypeVal::toStr()
 {
@@ -289,9 +262,7 @@ TypeVal *TypeVal::create(Context &c, Type *val)
 	return c.allocVal<TypeVal>(val);
 }
 
-NamespaceVal::NamespaceVal(Context &c, StringRef val)
-	: Value(VNAMESPACE, PtrTy::getStr(c), CDTRUE), val(val)
-{}
+NamespaceVal::NamespaceVal(Context &c, StringRef val) : Value(VNAMESPACE, CDPERMA), val(val) {}
 
 String NamespaceVal::toStr()
 {
@@ -312,60 +283,5 @@ bool NamespaceVal::updateValue(Context &c, Value *v)
 NamespaceVal *NamespaceVal::create(Context &c, StringRef val)
 {
 	return c.allocVal<NamespaceVal>(val);
-}
-
-RefVal::RefVal(Context &c, Type *ty, Value *to) : Value(VREF, ty, CDTRUE), to(to) {}
-
-String RefVal::toStr()
-{
-	return "ref<" + to->toStr() + ">";
-}
-Value *RefVal::clone(Context &c)
-{
-	return create(c, ty, to->clone(c));
-}
-bool RefVal::updateValue(Context &c, Value *v)
-{
-	if(!v->isRef()) return false;
-	to->setHasData(v->getHasData());
-	return to->updateValue(c, as<RefVal>(v)->getVal());
-}
-
-RefVal *RefVal::create(Context &c, Type *ty, Value *to)
-{
-	return c.allocVal<RefVal>(ty, to);
-}
-
-ContainsData RefVal::getHasData()
-{
-	return to->getHasData();
-}
-void RefVal::setHasData(ContainsData cd)
-{
-	to->setHasData(cd);
-}
-void RefVal::setContainsData()
-{
-	to->setContainsData();
-}
-void RefVal::setContainsPermaData()
-{
-	to->setContainsPermaData();
-}
-void RefVal::unsetContainsPermaData()
-{
-	to->unsetContainsPermaData();
-}
-bool RefVal::hasData()
-{
-	return to->hasData();
-}
-bool RefVal::hasPermaData()
-{
-	return to->hasPermaData();
-}
-void RefVal::clearHasData()
-{
-	to->clearHasData();
 }
 } // namespace sc

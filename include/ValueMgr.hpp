@@ -20,35 +20,44 @@
 
 namespace sc
 {
-struct ValDecl
+struct VarDecl
 {
-	uint64_t valueid;
+	Type *ty;
+	Value *val;
 	StmtVar *decl;
 };
 class Layer
 {
-	Map<StringRef, ValDecl> items;
+	Map<StringRef, VarDecl> items;
 
 public:
-	inline bool add(StringRef name, uint64_t vid, StmtVar *decl)
+	inline bool add(StringRef name, Type *ty, Value *val, StmtVar *decl)
 	{
 		if(exists(name)) return false;
-		items[name] = {vid, decl};
+		items[name] = {ty, val, decl};
 		return true;
 	}
 	inline bool exists(StringRef name)
 	{
 		return items.find(name) != items.end();
 	}
-	inline uint64_t getVal(StringRef name)
+	inline Type *getTy(StringRef name)
 	{
-		return items.find(name) == items.end() ? 0 : items[name].valueid;
+		return items.find(name) == items.end() ? 0 : items[name].ty;
+	}
+	inline Value *getVal(StringRef name)
+	{
+		return items.find(name) == items.end() ? 0 : items[name].val;
 	}
 	inline StmtVar *getDecl(StringRef name)
 	{
 		return items.find(name) == items.end() ? nullptr : items[name].decl;
 	}
-	inline Map<StringRef, ValDecl> &getItems()
+	inline VarDecl *getAll(StringRef name)
+	{
+		return items.find(name) == items.end() ? nullptr : &items[name];
+	}
+	inline Map<StringRef, VarDecl> &getItems()
 	{
 		return items;
 	}
@@ -70,13 +79,15 @@ public:
 	{
 		return layers.size();
 	}
-	inline bool add(StringRef name, uint64_t vid, StmtVar *decl)
+	inline bool add(StringRef name, Type *ty, Value *val, StmtVar *decl)
 	{
-		return layers.back().add(name, vid, decl);
+		return layers.back().add(name, ty, val, decl);
 	}
 	bool exists(StringRef name, bool top_only);
-	uint64_t getVal(StringRef name, bool top_only);
+	Type *getTy(StringRef name, bool top_only);
+	Value *getVal(StringRef name, bool top_only);
 	StmtVar *getDecl(StringRef name, bool top_only);
+	VarDecl *getAll(StringRef name, bool top_only);
 };
 class Function : public LayerStack
 {
@@ -89,15 +100,15 @@ public:
 	{
 		fty = ty;
 	}
-	inline FuncTy *getTagTy()
+	inline FuncTy *getFuncTy()
 	{
 		return fty;
 	}
 };
 class ValueManager
 {
-	Map<uint64_t, Map<StringRef, uint64_t>> typefuncs;
-	Map<StringRef, ValDecl> globals;
+	Map<uint32_t, Map<StringRef, FuncVal *>> typefuncs;
+	Map<StringRef, VarDecl> globals;
 	LayerStack layers; // outside function
 	Vector<Function> funcstack;
 
@@ -139,14 +150,16 @@ public:
 	{
 		return funcstack.empty() && layers.size() == 1;
 	}
-	bool addVar(StringRef var, uint64_t vid, StmtVar *decl, bool global = false);
-	bool addTypeFn(Type *ty, StringRef name, uint64_t fn);
-	bool addTypeFn(uint64_t id, StringRef name, uint64_t fn);
+	bool addVar(StringRef var, Type *ty, Value *val, StmtVar *decl, bool global = false);
+	bool addTypeFn(Type *ty, StringRef name, FuncVal *fn);
+	bool addTypeFn(uint32_t id, StringRef name, FuncVal *fn);
 	bool exists(StringRef var, bool top_only, bool include_globals);
 	bool existsTypeFn(Type *ty, StringRef name);
-	uint64_t getVar(StringRef var, bool top_only, bool include_globals);
+	Type *getTy(StringRef var, bool top_only, bool include_globals);
+	Value *getVal(StringRef var, bool top_only, bool include_globals);
 	StmtVar *getDecl(StringRef var, bool top_only, bool include_globals);
-	uint64_t getTypeFn(Type *ty, StringRef name);
+	VarDecl *getAll(StringRef name, bool top_only, bool include_globals);
+	FuncVal *getTyFn(Type *ty, StringRef name);
 };
 } // namespace sc
 
