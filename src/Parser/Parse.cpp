@@ -1243,6 +1243,7 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd, bool allowed_templs)
 	Vector<lex::Lexeme> templates;
 	StmtVar *field = nullptr;
 	Set<StringRef> fieldnames;
+	bool is_decl	   = false;
 	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::STRUCT)) {
@@ -1269,9 +1270,8 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd, bool allowed_templs)
 	}
 
 	if(!p.acceptn(lex::LBRACE)) {
-		err::out(p.peek(), {"expected opening braces for struct definition, found: ",
-				    p.peek().getTok().cStr()});
-		return false;
+		is_decl = true;
+		goto done;
 	}
 
 	while(p.accept(lex::IDEN, lex::COMPTIME)) {
@@ -1294,7 +1294,7 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd, bool allowed_templs)
 	}
 
 done:
-	sd = StmtStruct::create(ctx, start.getLoc(), fields, templates);
+	sd = StmtStruct::create(ctx, start.getLoc(), fields, templates, is_decl);
 	return true;
 }
 

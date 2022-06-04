@@ -241,7 +241,7 @@ public:
 	{
 		return loc->getMod();
 	}
-	Type *getTy(bool exact = false);
+	Type *&getTy(bool exact = false);
 	inline Value *getVal()
 	{
 		return val;
@@ -896,15 +896,16 @@ class StmtStruct : public Stmt
 {
 	Vector<StmtVar *> fields;
 	Vector<lex::Lexeme> templates;
+	bool is_decl;
 	bool is_externed; // required for setting up partial types correctly
 
 public:
 	StmtStruct(const ModuleLoc *loc, const Vector<StmtVar *> &fields,
-		   const Vector<lex::Lexeme> &templates);
+		   const Vector<lex::Lexeme> &templates, bool is_decl);
 	~StmtStruct();
 	// StmtVar contains only type here, no val
 	static StmtStruct *create(Context &c, const ModuleLoc *loc, const Vector<StmtVar *> &fields,
-				  const Vector<lex::Lexeme> &templates);
+				  const Vector<lex::Lexeme> &templates, bool is_decl);
 
 	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
@@ -912,6 +913,10 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
+	inline void setDecl(bool decl)
+	{
+		is_decl = decl;
+	}
 	inline void setExterned(bool externed)
 	{
 		is_externed = externed;
@@ -927,6 +932,10 @@ public:
 	inline const Vector<lex::Lexeme> &getTemplates()
 	{
 		return templates;
+	}
+	inline bool isDecl()
+	{
+		return is_decl;
 	}
 	inline bool isExterned()
 	{

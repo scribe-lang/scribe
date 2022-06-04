@@ -199,7 +199,7 @@ Stmt *StmtStruct::clone(Context &ctx)
 	for(auto &f : fields) {
 		newfields.push_back(as<StmtVar>(f->clone(ctx)));
 	}
-	Stmt *res = StmtStruct::create(ctx, getLoc(), newfields, templates);
+	Stmt *res = StmtStruct::create(ctx, getLoc(), newfields, templates, is_decl);
 	res->appendStmtMask(getStmtMask());
 	res->castTo(getCast(), this->getCastStmtMask());
 	return res;

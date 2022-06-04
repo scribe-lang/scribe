@@ -253,7 +253,7 @@ public:
 	{
 		is_weak = weak;
 	}
-	inline Type *getTo()
+	inline Type *&getTo()
 	{
 		return to;
 	}
@@ -314,11 +314,19 @@ public:
 			     const Vector<TypeTy *> &_templates, bool _externed);
 	Type *specialize(Context &c, const size_t &weak_depth = 0);
 
+	inline void setDecl(StmtStruct *_decl)
+	{
+		decl = _decl;
+	}
 	inline void insertField(StringRef name, Type *ty)
 	{
 		fieldpos[name] = fields.size();
 		fieldnames.push_back(name);
 		fields.push_back(ty);
+	}
+	inline void setTemplates(const Vector<TypeTy *> &templs)
+	{
+		templates = templs;
 	}
 	inline void setExterned(bool ext)
 	{
