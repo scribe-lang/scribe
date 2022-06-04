@@ -1,4 +1,4 @@
-let cmake = 'cmake ..';
+let cmake = 'cmake -DDISABLE_INSTALL_MSG=true ..';
 let make = 'make -j install';
 let test = 'feral testdir ../examples';
 let codecov = 'make scribe_cov';
