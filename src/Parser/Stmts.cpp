@@ -92,15 +92,17 @@ String Stmt::getTypeString()
 	if(getVal() && getVal()->hasData()) res += " ==> " + getVal()->toStr();
 	return res;
 }
-Type *Stmt::getTy(bool exact)
+Type *&Stmt::getTy(bool exact)
 {
-	if(cast_to && !exact) return cast_to;
+	if(exact) return ty;
+	if(cast_to) return cast_to;
+	if(!derefcount) return ty;
 	uint16_t tmp = derefcount;
 	Type *t	     = ty;
-	while(!exact && tmp-- > 0) {
+	while(tmp-- > 1) {
 		t = as<PtrTy>(t)->getTo();
 	}
-	return t;
+	return as<PtrTy>(t)->getTo();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -604,14 +606,15 @@ bool StmtEnum::requiresTemplateInit()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtStruct::StmtStruct(const ModuleLoc *loc, const Vector<StmtVar *> &fields,
-		       const Vector<lex::Lexeme> &templates)
-	: Stmt(STRUCTDEF, loc), fields(fields), templates(templates), is_externed(false)
+		       const Vector<lex::Lexeme> &templates, bool is_decl)
+	: Stmt(STRUCTDEF, loc), fields(fields), templates(templates), is_decl(is_decl),
+	  is_externed(false)
 {}
 StmtStruct::~StmtStruct() {}
 StmtStruct *StmtStruct::create(Context &c, const ModuleLoc *loc, const Vector<StmtVar *> &fields,
-			       const Vector<lex::Lexeme> &templates)
+			       const Vector<lex::Lexeme> &templates, bool is_decl)
 {
-	return c.allocStmt<StmtStruct>(loc, fields, templates);
+	return c.allocStmt<StmtStruct>(loc, fields, templates, is_decl);
 }
 
 void StmtStruct::disp(bool has_next)
@@ -629,7 +632,8 @@ void StmtStruct::disp(bool has_next)
 	}
 
 	tio::taba(has_next);
-	tio::print(has_next, {"Struct", templatestr, " ", getTypeString(), "\n"});
+	tio::print(has_next,
+		   {"Struct", templatestr, is_decl ? " (decl) " : " ", getTypeString(), "\n"});
 
 	if(!fields.empty()) {
 		tio::taba(false);

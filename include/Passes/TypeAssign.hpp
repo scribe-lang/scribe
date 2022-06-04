@@ -14,6 +14,7 @@
 #ifndef PASSES_TYPE_ASSIGN_HPP
 #define PASSES_TYPE_ASSIGN_HPP
 
+#include "DeferredSpecialize.hpp"
 #include "DeferStack.hpp"
 #include "Passes/Base.hpp"
 #include "Passes/ValueAssign.hpp"
@@ -26,6 +27,8 @@ class TypeAssignPass : public Pass
 	ValueManager vmgr;
 	ValueAssignPass vpass;
 	DeferStack deferstack;
+	// for cross-referencing structs
+	DeferredSpecialize deferredspecialize;
 	// each enum's (tag) type - used by @enumTy()
 	Map<StringRef, Type *> enumtagtys;
 	// vars created during type assign - enums, specialized funcs

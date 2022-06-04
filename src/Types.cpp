@@ -514,6 +514,7 @@ StructTy::~StructTy() {}
 
 Type *StructTy::specialize(Context &c, const size_t &weak_depth)
 {
+	if(templates.empty()) return this;
 	Vector<Type *> newfields;
 	newfields.reserve(fields.size());
 	Vector<TypeTy *> newtemplates;

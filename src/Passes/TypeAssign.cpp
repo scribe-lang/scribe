@@ -60,6 +60,17 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 	if(!res) return false;
 	if(!source || !*source) return res;
 	stmt = *source;
+	if(stmt->getTy() && stmt->getTy()->isStruct() &&
+	   as<StructTy>(stmt->getTy())->getDecl()->isDecl()) {
+		deferredspecialize.pushDataInternal(stmt->getTy()->getID(), &stmt->getTy());
+	}
+	if(stmt->getVal() && stmt->getVal()->isType() &&
+	   as<TypeVal>(stmt->getVal())->getVal()->isStruct() &&
+	   as<StructTy>(as<TypeVal>(stmt->getVal())->getVal())->getDecl()->isDecl())
+	{
+		Type *&t = as<TypeVal>(stmt->getVal())->getVal();
+		deferredspecialize.pushDataInternal(t->getID(), &t);
+	}
 	if(stmt->isComptime() && !stmt->getTy()->isTemplate()) {
 		if(!vpass.visit(stmt, source)) {
 			err::out(stmt, {"failed to get value for a comptime type"});
@@ -146,11 +157,20 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 		is_self = true;
 	}
 	Type *res = stmt->getExpr()->getTy();
-	if(!is_self) res = res->specialize(ctx);
+	// for cross-referencing structs
+	bool is_struct_decl = res->isStruct() && as<StructTy>(res)->getDecl()->isDecl();
+	if(!is_self && !is_struct_decl) {
+		res = res->specialize(ctx);
+	}
 	// generate ptrs
 	for(size_t i = 0; i < stmt->getPtrCount(); ++i) {
 		res = PtrTy::get(ctx, res, 0, false);
-		if(is_self && i == stmt->getPtrCount() - 1) {
+		if(i == 0 && is_struct_decl) {
+			deferredspecialize.pushDataInternal(as<PtrTy>(res)->getTo()->getID(),
+							    &as<PtrTy>(res)->getTo());
+		}
+		// self referencing or cross-referencing structs must be made as weak pointers
+		if((is_self || is_struct_decl) && i == stmt->getPtrCount() - 1) {
 			as<PtrTy>(res)->setWeak(true);
 		}
 	}
@@ -454,12 +474,20 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			for(auto &a : args) {
 				argtypes.push_back(a->getTy());
 			}
-			StructTy *resst = st->applyTemplates(ctx, stmt->getLoc(), argtypes);
-			if(!resst) {
-				err::out(stmt, {"failed to specialize struct"});
-				return false;
+			// definition doesn't exist yet
+			if(st->getDecl()->isDecl()) {
+				lhs->setTypeVal(ctx, st);
+				deferredspecialize.pushData(st->getID(), &lhs->getTy(), argtypes);
+				deferredspecialize.pushData(
+				st->getID(), &as<TypeVal>(lhs->getVal())->getVal(), argtypes);
+			} else {
+				StructTy *resst = st->applyTemplates(ctx, stmt->getLoc(), argtypes);
+				if(!resst) {
+					err::out(stmt, {"failed to specialize struct"});
+					return false;
+				}
+				lhs->setTyVal(resst, TypeVal::create(ctx, resst));
 			}
-			lhs->setTyVal(resst, TypeVal::create(ctx, resst));
 			*source = lhs;
 			return true;
 		}
@@ -760,9 +788,13 @@ post_mangling:
 		}
 	}
 	if(!stmt->isIn() && vmgr.exists(stmt->getName().getDataStr(), true, false)) {
-		err::out(stmt->getName(),
-			 {"variable '", stmt->getName().getDataStr(), "' already exists in scope"});
-		return false;
+		VarDecl *d = vmgr.getAll(stmt->getName().getDataStr(), true, false);
+		if(!d->val || !d->val->isType() || !d->ty->isStruct() ||
+		   !as<StructTy>(d->ty)->getDecl()->isDecl()) {
+			err::out(stmt->getName(), {"variable '", stmt->getName().getDataStr(),
+						   "' already exists in scope"});
+			return false;
+		}
 	}
 	if(val && !skip_val && val->getTy()->isVoid()) {
 		err::out(stmt,
@@ -824,6 +856,23 @@ post_mangling:
 		if(!ty->getSig() && s && s->isFnSig()) {
 			ty->setSig(as<StmtFnSig>(s));
 		}
+	}
+	if(!stmt->isIn() && vmgr.exists(stmt->getName().getDataStr(), true, false)) {
+		Type *t		 = vmgr.getTy(stmt->getName().getDataStr(), true, false);
+		StructTy *destst = as<StructTy>(t);
+		StructTy *srcst	 = as<StructTy>(stmt->getTy());
+		if(destst->getTemplateNames() != srcst->getTemplateNames()) {
+			err::out(stmt->getName(),
+				 {"struct declaration templates don't match the definition"});
+			return false;
+		}
+		for(size_t i = 0; i < srcst->getFields().size(); ++i) {
+			destst->insertField(srcst->getFieldName(i), srcst->getField(i));
+		}
+		destst->setTemplates(srcst->getTemplates());
+		destst->setDecl(srcst->getDecl());
+		return deferredspecialize.specialize(destst->getID(), ctx,
+						     stmt->getName().getLoc());
 	}
 	if(stmt->isIn()) {
 		if(!stmt->getVal()) {
