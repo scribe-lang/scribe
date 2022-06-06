@@ -128,7 +128,7 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 
 	lex::Lexeme &start = p.peek();
 
-	if(p.accept(lex::COMPTIME, lex::FN)) {
+	if(p.accept(lex::FN)) {
 		if(!parse_fnsig(p, expr)) return false;
 		type = StmtType::create(ctx, start.getLoc(), 0, false, expr);
 		return true;
@@ -964,7 +964,7 @@ val:
 		if(!parse_enum(p, val)) return false;
 	} else if(p.accept(lex::STRUCT)) {
 		if(!parse_struct(p, val, true)) return false;
-	} else if(p.accept(lex::FN)) {
+	} else if(p.accept(lex::INLINE, lex::FN)) {
 		if(!parse_fndef(p, val)) return false;
 	} else if(p.accept(lex::EXTERN)) {
 		if(!parse_extern(p, val)) return false;
@@ -1013,8 +1013,8 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 	Vector<StmtVar *> args;
 	StmtVar *var = nullptr;
 	Set<StringRef> argnames;
-	bool found_va	   = false;
 	StmtType *rettype  = nullptr;
+	bool found_va	   = false;
 	lex::Lexeme &start = p.peek();
 
 	if(!p.acceptn(lex::FN)) {
@@ -1082,12 +1082,15 @@ bool Parsing::parse_fndef(ParseHelper &p, Stmt *&fndef)
 
 	Stmt *sig	   = nullptr;
 	StmtBlock *blk	   = nullptr;
+	bool is_inline	   = false;
 	lex::Lexeme &start = p.peek();
+
+	if(p.acceptn(lex::INLINE)) is_inline = true;
 
 	if(!parse_fnsig(p, sig)) return false;
 	if(!parse_block(p, blk)) return false;
 
-	fndef = StmtFnDef::create(ctx, start.getLoc(), (StmtFnSig *)sig, blk);
+	fndef = StmtFnDef::create(ctx, start.getLoc(), (StmtFnSig *)sig, blk, is_inline);
 	return true;
 }
 

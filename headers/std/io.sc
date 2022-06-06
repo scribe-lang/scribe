@@ -36,13 +36,13 @@ let fprintf = fn(f: *c.FILE, fmt: *const i8, data: ...&const any): i32 {
 	return c.fprintf(f, fmt, data);
 };
 
-let fprintln = fn(f: *c.FILE, data: ...&const any): i32 {
+let fprintln = inline fn(f: *c.FILE, data: ...&const any): i32 {
 	return fprint(f, data, '\n');
 };
-let print = fn(data: ...&const any): i32 {
+let print = inline fn(data: ...&const any): i32 {
 	return fprint(c.stdout, data);
 };
-let println = fn(data: ...&const any): i32 {
+let println = inline fn(data: ...&const any): i32 {
 	return print(data, '\n');
 };
 
@@ -56,10 +56,10 @@ let flush in c.FILE = fn(): i32 { return c.fflush(&self); };
 let print in c.FILE = fn(data: ...&const any): i32 {
 	return fprint(&self, data);
 };
-let println in c.FILE = fn(data: ...&const any): i32 {
+let println in c.FILE = inline fn(data: ...&const any): i32 {
 	return fprintln(&self, data);
 };
-let printf in c.FILE = fn(fmt: *const i8, data: ...&const any): i32 {
+let printf in c.FILE = inline fn(fmt: *const i8, data: ...&const any): i32 {
 	return fprintf(&self, fmt, data);
 };
 let read in c.FILE = fn(buf: &string.String): i64 {

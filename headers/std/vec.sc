@@ -20,7 +20,7 @@ let deinit in Vec = fn() {
 };
 
 // a function with a comptime argument is guaranteed to be specialized
-let new = fn(comptime T: type, managed: i1): Vec(T) {
+let new = inline fn(comptime T: type, managed: i1): Vec(T) {
 	return Vec(T){0, 0, nil, managed};
 };
 
@@ -39,7 +39,7 @@ let push in Vec = fn(d: &const self.T): self {
 	return self;
 };
 
-let pushVal in Vec = fn(d: self.T): self {
+let pushVal in Vec = inline fn(d: self.T): self {
 	return self.push(d);
 };
 
@@ -58,7 +58,7 @@ let insert in Vec = fn(d: &const self.T, idx: u64): self {
 	return self;
 };
 
-let insertVal in Vec = fn(d: self.T, idx: u64): self {
+let insertVal in Vec = inline fn(d: self.T, idx: u64): self {
 	return self.insert(d, idx);
 };
 
@@ -101,32 +101,32 @@ let __assn__ in Vec = fn(other: &const self): &self {
 	return self;
 };
 
-let __subscr__ in Vec = fn(idx: u64): &self.T {
+let __subscr__ in Vec = inline fn(idx: u64): &self.T {
 	return self.data[idx];
 };
 
 // returns a non reference copy of the data
-let getByVal in Vec = fn(idx: u64): self.T {
+let getByVal in Vec = inline fn(idx: u64): self.T {
 	return self.data[idx];
 };
 
-let back in Vec = fn(): &self.T {
+let back in Vec = inline fn(): &self.T {
 	return self.data[self.length - 1];
 };
 
-let backByVal in Vec = fn(): self.T {
+let backByVal in Vec = inline fn(): self.T {
 	return self.data[self.length - 1];
 };
 
-let len in Vec = fn(): u64 {
+let len in Vec = inline fn(): u64 {
 	return self.length;
 };
 
-let cap in Vec = fn(): u64 {
+let cap in Vec = inline fn(): u64 {
 	return self.capacity;
 };
 
-let isEmpty in Vec = fn(): i1 {
+let isEmpty in Vec = inline fn(): i1 {
 	return self.length == 0;
 };
 
@@ -134,15 +134,15 @@ let isEmpty in Vec = fn(): i1 {
 // Iteration Utils
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-let at in Vec = fn(idx: u64): &self.T {
+let at in Vec = inline fn(idx: u64): &self.T {
 	return self.data[idx];
 };
 
-let each in Vec = fn(): iter.Iter(self, u64) {
+let each in Vec = inline fn(): iter.Iter(self, u64) {
 	return iter.Iter(self, u64){self, 0, self.length, 1};
 };
 
-let eachRev in Vec = fn(): iter.Iter(self, u64) {
+let eachRev in Vec = inline fn(): iter.Iter(self, u64) {
 	return iter.Iter(self, u64){self, self.length - 1, -1, -1};
 };
 

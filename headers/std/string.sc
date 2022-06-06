@@ -13,11 +13,11 @@ let NPOS: const u64 = -1;
 
 let float_precision = 3;
 
-let setPrecision = fn(digits: const i32) {
+let setPrecision = inline fn(digits: const i32) {
 	float_precision = digits;
 };
 
-let getPrecision = fn(): i32 {
+let getPrecision = inline fn(): i32 {
 	return float_precision;
 };
 
@@ -30,38 +30,38 @@ let StringRef = struct {
 	count: u64;
 };
 
-let deinit in StringRef = fn() {};
+let deinit in StringRef = inline fn() {};
 
 let subRefCStr = fn(data: *const i8, start: u64, count: u64): StringRef {
 	if count == 0 { count = c.strlen(&data[start]); }
 	return StringRef{&data[start], count};
 };
 
-let getRefCStr = fn(data: *const i8): StringRef {
+let getRefCStr = inline fn(data: *const i8): StringRef {
 	return subRefCStr(data, 0, 0);
 };
 
-let global ref = fn(data: *const i8): StringRef {
+let global ref = inline fn(data: *const i8): StringRef {
 	return getRefCStr(data);
 };
 
-let getRef in const i8 = fn(): StringRef {
+let getRef in const i8 = inline fn(): StringRef {
 	return subRefCStr(&self, 0, 1);
 };
 
-let isEmpty in const StringRef = fn(): i1 {
+let isEmpty in const StringRef = inline fn(): i1 {
 	return @as(u64, self.start) == nil || self.count == 0;
 };
 
-let data in const StringRef = fn(): *const i8 {
+let data in const StringRef = inline fn(): *const i8 {
 	return self.start;
 };
 
-let len in const StringRef = fn(): u64 {
+let len in const StringRef = inline fn(): u64 {
 	return self.count;
 };
 
-let hash in const StringRef = fn(): u64 {
+let hash in const StringRef = inline fn(): u64 {
 	return hashing.cStr(self.start, self.count);
 };
 
@@ -71,7 +71,7 @@ let __assn__ in StringRef = fn(other: StringRef): &self {
 	return self;
 };
 
-let __subscr__ in StringRef = fn(idx: u64): &const i8 {
+let __subscr__ in StringRef = inline fn(idx: u64): &const i8 {
 	return self.start[idx];
 };
 
@@ -81,7 +81,7 @@ let __eq__ in const StringRef = fn(other: StringRef): i1 {
 	return c.strncmp(self.start, other.start, self.count) == 0;
 };
 
-let __ne__ in const StringRef = fn(other: StringRef): i1 {
+let __ne__ in const StringRef = inline fn(other: StringRef): i1 {
 	return !(self == other);
 };
 
@@ -158,7 +158,7 @@ let deinit in String = fn() {
 	self.data = nil;
 };
 
-let new = fn(): String {
+let new = inline fn(): String {
 	return String{nil, 0, 0};
 };
 
@@ -194,11 +194,11 @@ let fromSubCStr = fn(data: *const i8, count: u64): String {
 	return res;
 };
 
-let fromStringRef = fn(data: &const StringRef): String {
+let fromStringRef = inline fn(data: &const StringRef): String {
 	return fromSubCStr(data.start, data.count);
 };
 
-let from = fn(data: &const any): String {
+let from = inline fn(data: &const any): String {
 	inline if @isCString(data) {
 		return fromCStr(data);
 	} elif @isEqualTy(data, StringRef) {
@@ -212,7 +212,7 @@ let from = fn(data: &const any): String {
 	return new();
 };
 
-let global s = fn(data: *const i8): String {
+let global s = inline fn(data: *const i8): String {
 	return fromCStr(data);
 };
 
@@ -220,11 +220,11 @@ let global s = fn(data: *const i8): String {
 // Core Utility Functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-let getBuf in String = fn(): *&i8 {
+let getBuf in String = inline fn(): *&i8 {
 	return self.data;
 };
 
-let setLen in String = fn(len: u64) {
+let setLen in String = inline fn(len: u64) {
 	self.length = len;
 };
 
@@ -233,15 +233,15 @@ let cStr in const String = fn(): *const i8 {
 	return self.data;
 };
 
-let len in const String = fn(): u64 {
+let len in const String = inline fn(): u64 {
 	return self.length;
 };
 
-let cap in const String = fn(): u64 {
+let cap in const String = inline fn(): u64 {
 	return self.capacity;
 };
 
-let isEmpty in const String = fn(): i1 {
+let isEmpty in const String = inline fn(): i1 {
 	return self.length == 0;
 };
 
@@ -251,11 +251,11 @@ let clear in String = fn() {
 	self.length = 0;
 };
 
-let copy in const String = fn(): String {
+let copy in const String = inline fn(): String {
 	return from(self.data);
 };
 
-let hash in const String = fn(): u64 {
+let hash in const String = inline fn(): u64 {
 	return hashing.cStr(self.data, self.length);
 };
 
@@ -266,7 +266,7 @@ let subString in const String = fn(start: u64, count: u64): String {
 
 // StringRef related functions
 
-let getRef in const String = fn(): StringRef {
+let getRef in const String = inline fn(): StringRef {
 	return StringRef{self.data, self.length};
 };
 
@@ -277,7 +277,7 @@ let subRef in const String = fn(start: u64, count: u64): StringRef {
 	return StringRef{&self.data[start], count};
 };
 
-let isSpace in const i8 = fn(): i1 {
+let isSpace in const i8 = inline fn(): i1 {
 	return c.isspace(self);
 };
 
@@ -315,7 +315,7 @@ let appendCStr in String = fn(other: *const i8, count: u64): &String {
 	return self;
 };
 
-let appendRef in String = fn(other: StringRef): &String {
+let appendRef in String = inline fn(other: StringRef): &String {
 	return self.appendCStr(other.start, other.count);
 };
 
@@ -420,11 +420,11 @@ let __add__ in const String = fn(other: &const String): String {
 	return res;
 };
 
-let __add_assn__ in String = fn(other: &const any): &String {
+let __add_assn__ in String = inline fn(other: &const any): &String {
 	return self.append(other);
 };
 
-let __subscr__ in String = fn(idx: u64): &i8 {
+let __subscr__ in String = inline fn(idx: u64): &i8 {
 	return self.data[idx];
 };
 
@@ -433,7 +433,7 @@ let __eq__ in const String = fn(other: &const String): i1 {
 	return false;
 };
 
-let __ne__ in const String = fn(other: &const String): i1 {
+let __ne__ in const String = inline fn(other: &const String): i1 {
 	return !(self == other);
 };
 
@@ -554,18 +554,18 @@ let str in const i1 = fn(): String {
 	if self == true { return from("true"); }
 	return from("false");
 };
-let str in const i8 = fn(): String { return iToStr(i8, self); };
-let str in const i16 = fn(): String { return iToStr(i16, self); };
-let str in const i32 = fn(): String { return iToStr(i32, self); };
-let str in const i64 = fn(): String { return iToStr(i64, self); };
+let str in const i8 = inline fn(): String { return iToStr(i8, self); };
+let str in const i16 = inline fn(): String { return iToStr(i16, self); };
+let str in const i32 = inline fn(): String { return iToStr(i32, self); };
+let str in const i64 = inline fn(): String { return iToStr(i64, self); };
 
-let str in const u8 = fn(): String { return uToStr(u8, self); };
-let str in const u16 = fn(): String { return uToStr(u16, self); };
-let str in const u32 = fn(): String { return uToStr(u32, self); };
-let str in const u64 = fn(): String { return uToStr(u64, self); };
+let str in const u8 = inline fn(): String { return uToStr(u8, self); };
+let str in const u16 = inline fn(): String { return uToStr(u16, self); };
+let str in const u32 = inline fn(): String { return uToStr(u32, self); };
+let str in const u64 = inline fn(): String { return uToStr(u64, self); };
 
-let str in const f32 = fn(): String { return fToStr(f32, self); };
-let str in const f64 = fn(): String { return fToStr(f64, self); };
+let str in const f32 = inline fn(): String { return fToStr(f32, self); };
+let str in const f64 = inline fn(): String { return fToStr(f64, self); };
 
 let str in const vec.Vec = fn(): String {
 	let res = from("[");

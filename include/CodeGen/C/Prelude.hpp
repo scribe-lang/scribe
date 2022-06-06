@@ -31,7 +31,10 @@ static const StringRef default_macro_magic = "#if defined(_SYS_STAT_H) && define
 #define st_atimensec st_atim.tv_nsec\n\
 #define st_mtimensec st_mtim.tv_nsec\n\
 #define st_ctimensec st_ctim.tv_nsec\n\
-#endif";
+#endif\n\
+\n\
+#define _SC_INLINE_ __attribute__((always_inline)) inline\
+";
 
 } // namespace sc
 

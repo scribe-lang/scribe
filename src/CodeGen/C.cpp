@@ -582,6 +582,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		String spacevarname = " ";
 		spacevarname += varname;
 		tmp.insertAfter(retcty.size(), spacevarname);
+		if(fn->isInline()) tmp.writeBefore("_SC_INLINE_ ");
 		writer.append(tmp);
 		// no semicolon after fndef
 
@@ -592,6 +593,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 			return false;
 		}
 		decl.insertAfter(retcty.size(), spacevarname);
+		if(fn->isInline()) decl.writeBefore("_SC_INLINE_ ");
 		decl.write(";");
 		funcdecls.push_back(ctx.moveStr(std::move(decl.getData())));
 		return true;

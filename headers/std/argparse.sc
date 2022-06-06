@@ -61,31 +61,31 @@ let setVal in Arg = fn(data: string.StringRef): &self {
 	return self;
 };
 
-let getLong in Arg = fn(): &string.StringRef {
+let getLong in Arg = inline fn(): &string.StringRef {
 	return self.lng;
 };
 
-let getShort in Arg = fn(): &string.StringRef {
+let getShort in Arg = inline fn(): &string.StringRef {
 	return self.shrt;
 };
 
-let getVal in Arg = fn(): &string.StringRef {
+let getVal in Arg = inline fn(): &string.StringRef {
 	return self.val;
 };
 
-let getHelp in Arg = fn(): &string.StringRef {
+let getHelp in Arg = inline fn(): &string.StringRef {
 	return self.help;
 };
 
-let isReqd in Arg = fn(): i1 {
+let isReqd in Arg = inline fn(): i1 {
 	return self.reqd;
 };
 
-let isValReqd in Arg = fn(): i1 {
+let isValReqd in Arg = inline fn(): i1 {
 	return self.val_reqd;
 };
 
-let isPresent in Arg = fn(): i1 {
+let isPresent in Arg = inline fn(): i1 {
 	return self.is_present;
 };
 
