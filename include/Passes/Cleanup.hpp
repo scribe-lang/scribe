@@ -21,9 +21,6 @@ namespace sc
 // Cleans up unused functions
 class CleanupPass : public Pass
 {
-	// maintained to prevent generation of duplicate functions (template functions)
-	Set<StringRef> funcs;
-
 public:
 	CleanupPass(Context &ctx);
 	~CleanupPass() override;

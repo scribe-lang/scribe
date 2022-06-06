@@ -726,13 +726,19 @@ uint32_t FuncTy::getSignatureID()
 	res += ret->getUniqID();
 	return res * 7;
 }
-uint32_t FuncTy::getNonUniqID()
+uint32_t FuncTy::getUniqID()
 {
-	uint32_t res = id;
-	for(auto &a : args) {
-		res += a->getID();
+	uint32_t res   = uniqid;
+	uint32_t tmpid = id;
+	while(tmpid) {
+		res *= 10;
+		tmpid /= 10;
 	}
-	res += ret->getID();
+	res += id;
+	for(auto &a : args) {
+		res += a->getUniqID();
+	}
+	res += ret->getUniqID();
 	return res * 7;
 }
 uint32_t FuncTy::getID()

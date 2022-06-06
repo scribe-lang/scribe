@@ -4,6 +4,7 @@
 // All objects inserted into the map are managed by it - both key and value
 
 let c = @import("std/c");
+let mem = @import("std/mem");
 let vec = @import("std/vec");
 let hashing = @import("std/hashing");
 
@@ -24,17 +25,17 @@ let hash = fn(of: &const any, args: ...&const any): u64 {
 let setData = fn(comptime T: type, to: &T, from: &const T) {
 	inline if @isCString(T) {
 		let len = c.strlen(from) + 1;
-		to = c.malloc(i8, len);
-		c.memcpy(@as(@ptr(void), to), @as(@ptr(void), from), len);
+		to = mem.alloc(i8, len);
+		mem.cpy(to, from, len);
 	} else {
 		let comptime sz = @sizeOf(T);
-		c.memcpy(@as(@ptr(void), &to), @as(@ptr(void), &from), sz);
+		mem.cpy(&to, &from, sz);
 	}
 };
 
 let deleteData = fn(comptime T: type, d: &T) {
 	inline if @isCString(T) {
-		c.free(i8, d);
+		mem.free(i8, d);
 	} elif @isPrimitive(T) {
 		// do nothing
 	} else {
@@ -67,7 +68,7 @@ let Dict = struct<K, V> {
 };
 
 let newKeyNode = fn(comptime K: type, comptime V: type, k: &const K, v: &const V): *KeyNode(K, V) {
-	let node = c.calloc(KeyNode(K, V), 1);
+	let node = mem.calloc(KeyNode(K, V), 1);
 	node.next = nil;
 	// no need to zero the key/val as calloc takes care of that
 	setData(K, node.key, k);
@@ -81,14 +82,14 @@ let deleteKeyNode = fn(comptime K: type, comptime V: type, node: *KeyNode(K, V))
 	}
 	deleteData(K, node.key);
 	deleteData(V, node.value);
-	c.free(KeyNode(K, V), node);
+	mem.free(KeyNode(K, V), node);
 };
 
 let new = fn(comptime K: type, comptime V: type): Dict(K, V) {
-	let table = c.calloc(@ptr(KeyNode(K, V)), INIT_CAPACITY);
+	let table = mem.calloc(@ptr(KeyNode(K, V)), INIT_CAPACITY);
 	let emptyval: V;
 	let comptime sz = @sizeOf(V);
-	c.memset(@as(@ptr(void), &emptyval), 0, sz);
+	mem.set(&emptyval, 0, sz);
 	return Dict(K, V){table, 0, INIT_CAPACITY, 2.0, 10, nil, emptyval};
 };
 
@@ -98,7 +99,7 @@ let deinit in Dict = fn() {
 			deleteKeyNode(self.K, self.V, self.table[i]);
 		}
 	}
-	c.free(@ptr(KeyNode(self.K, self.V)), self.table);
+	mem.free(@ptr(KeyNode(self.K, self.V)), self.table);
 	self.table = nil;
 	self.capacity = 0;
 };
@@ -106,7 +107,7 @@ let deinit in Dict = fn() {
 let clear in Dict = fn() {
 	self.deinit();
 	self.capacity = 1024;
-	self.table = c.calloc(@ptr(KeyNode(self.K, self.V)), self.capacity);
+	self.table = mem.calloc(@ptr(KeyNode(self.K, self.V)), self.capacity);
 };
 
 let reinsertWhenResizing in Dict = fn(k2: *KeyNode(self.K, self.V)) {
@@ -125,7 +126,7 @@ let reinsertWhenResizing in Dict = fn(k2: *KeyNode(self.K, self.V)) {
 let resize in Dict = fn(newsz: u64) {
 	let o = self.capacity;
 	let old = self.table;
-	self.table = c.calloc(@ptr(KeyNode(self.K, self.V)), newsz);
+	self.table = mem.calloc(@ptr(KeyNode(self.K, self.V)), newsz);
 	self.capacity = newsz;
 	for let i = 0; i < 0; ++i {
 		let k = old[i];
@@ -136,7 +137,7 @@ let resize in Dict = fn(newsz: u64) {
 			k = next;
 		}
 	}
-	c.free(@ptr(KeyNode(self.K, self.V)), old);
+	mem.free(@ptr(KeyNode(self.K, self.V)), old);
 };
 
 let add in Dict = fn(key: &const self.K, val: &const self.V): i32 {
