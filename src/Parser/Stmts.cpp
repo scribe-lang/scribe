@@ -426,20 +426,22 @@ bool StmtFnSig::requiresTemplateInit()
 //////////////////////////////////////////// StmtFnDef ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtFnDef::StmtFnDef(const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk)
-	: Stmt(FNDEF, loc), sig(sig), blk(blk), parentvar(nullptr), used(0)
+StmtFnDef::StmtFnDef(const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk, bool is_inline)
+	: Stmt(FNDEF, loc), sig(sig), blk(blk), parentvar(nullptr), used(0), is_inline(is_inline)
 {}
 StmtFnDef::~StmtFnDef() {}
-StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk)
+StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk,
+			     bool is_inline)
 {
-	return c.allocStmt<StmtFnDef>(loc, sig, blk);
+	return c.allocStmt<StmtFnDef>(loc, sig, blk, is_inline);
 }
 
 void StmtFnDef::disp(bool has_next)
 {
 	tio::taba(has_next);
-	tio::print(has_next, {"Function definition [has parent: ", parentvar ? "yes" : "no", "]",
-			      getTypeString(), "\n"});
+	tio::print(has_next,
+		   {"Function definition [is inline: ", is_inline ? "yes" : "no",
+		    "] [has parent: ", parentvar ? "yes" : "no", "]", getTypeString(), "\n"});
 	tio::taba(true);
 	tio::print(true, {"Function Signature:\n"});
 	sig->disp(false);

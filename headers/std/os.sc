@@ -23,7 +23,7 @@ let getEnv = fn(key: *const i8): string.String {
 	res.append(val);
 	return res;
 };
-let setEnv = fn(key: *const i8, val: *const i8, overwrite: i1): i32 {
+let setEnv = inline fn(key: *const i8, val: *const i8, overwrite: i1): i32 {
 	return c.setenv(key, val, overwrite);
 };
 

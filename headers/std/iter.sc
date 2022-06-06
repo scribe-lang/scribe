@@ -9,18 +9,18 @@ let Iter = struct<T, E> {
 	incr: E;
 };
 
-let begin in Iter = fn(): self.E {
+let begin in Iter = inline fn(): self.E {
 	return self.from;
 };
 
-let end in Iter = fn(): self.E {
+let end in Iter = inline fn(): self.E {
 	return self.to;
 };
 
-let next in Iter = fn(e: self.E): self.E {
+let next in Iter = inline fn(e: self.E): self.E {
 	return e + self.incr;
 };
 
-let at in Iter = fn(idx: self.E): any {
+let at in Iter = inline fn(idx: self.E): any {
 	return self.of.at(idx);
 };

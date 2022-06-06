@@ -130,7 +130,7 @@ Stmt *StmtFnDef::clone(Context &ctx)
 {
 	StmtFnSig *newsig = as<StmtFnSig>(sig->clone(ctx));
 	StmtBlock *newblk = blk ? as<StmtBlock>(blk->clone(ctx)) : nullptr;
-	Stmt *res	  = StmtFnDef::create(ctx, getLoc(), newsig, newblk);
+	Stmt *res	  = StmtFnDef::create(ctx, getLoc(), newsig, newblk, is_inline);
 	res->appendStmtMask(getStmtMask());
 	res->castTo(getCast(), this->getCastStmtMask());
 	return res;

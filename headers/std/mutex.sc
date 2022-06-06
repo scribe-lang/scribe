@@ -11,19 +11,19 @@ let new = fn(): Mutex {
 	return mtx;
 };
 
-let init in Mutex = fn(): i1 {
+let init in Mutex = inline fn(): i1 {
 	return mutex_init(&self, nil) == 0;
 };
 
-let lock in Mutex = fn(): i1 {
+let lock in Mutex = inline fn(): i1 {
 	return mutex_lock(&self) == 0;
 };
 
-let unlock in Mutex = fn(): i1 {
+let unlock in Mutex = inline fn(): i1 {
 	return mutex_unlock(&self) == 0;
 };
 
-let deinit in Mutex = fn(): i1 {
+let deinit in Mutex = inline fn(): i1 {
 	return mutex_destroy(&self) == 0;
 };
 

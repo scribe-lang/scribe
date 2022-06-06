@@ -210,7 +210,7 @@ let getKeys in Dict = fn(): vec.Vec(self.K) {
 	return keys;
 };
 
-let len in Dict = fn(): u64 {
+let len in Dict = inline fn(): u64 {
 	return self.length;
 };
 

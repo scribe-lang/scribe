@@ -8,7 +8,7 @@ let pthread_join = extern[pthread_join, "<pthread.h>", "-pthread"] fn(id: pthrea
 
 let getSelf = extern[pthread_self, "<pthread.h>", "-pthread"] fn(): pthread_t;
 
-let getConcurrency = fn(): i64 {
+let getConcurrency = inline fn(): i64 {
 	return unistd.sysconf(unistd._SC_NPROCESSORS_ONLN);
 };
 
@@ -16,19 +16,19 @@ let Thread = struct {
 	threadid: pthread_t;
 };
 
-let new = fn(): Thread {
+let new = inline fn(): Thread {
 	return Thread{0};
 };
 
-let getID in Thread = fn(): pthread_t {
+let getID in Thread = inline fn(): pthread_t {
 	return self.threadid;
 };
 
-let run in Thread = fn(routine: fn(data: *void): *void, arg: *void): i32 {
+let run in Thread = inline fn(routine: fn(data: *void): *void, arg: *void): i32 {
 	return pthread_create(&self.threadid, nil, routine, arg);
 };
 
-let join in Thread = fn(): i32 {
+let join in Thread = inline fn(): i32 {
 	return pthread_join(self.threadid, nil);
 };
 

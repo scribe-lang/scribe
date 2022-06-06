@@ -41,7 +41,7 @@ let strerror = extern[strerror, "<string.h>"] fn(errnum: i32): *const i8;
 let dirname = extern[dirname, "<libgen.h>"] fn(path: *i8): *i8;
 let basename = extern[basename, "<libgen.h>"] fn(path: *i8): *i8;
 
-let getTypeSpecifier = fn(comptime ty: type): *const i8 {
+let getTypeSpecifier = inline fn(comptime ty: type): *const i8 {
 	inline if @isEqualTy(ty, i1) || @isEqualTy(ty, i16) || @isEqualTy(ty, i32) {
 		return "%d";
 	} elif @isEqualTy(ty, u8) || @isEqualTy(ty, u16) || @isEqualTy(ty, u32) {

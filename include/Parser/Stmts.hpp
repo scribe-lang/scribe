@@ -694,11 +694,13 @@ class StmtFnDef : public Stmt
 	StmtBlock *blk;
 	StmtVar *parentvar;
 	int64_t used; // if unused (false), will be deleted in SimplifyPass
+	bool is_inline;
 
 public:
-	StmtFnDef(const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk);
+	StmtFnDef(const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk, bool is_inline);
 	~StmtFnDef();
-	static StmtFnDef *create(Context &c, const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk);
+	static StmtFnDef *create(Context &c, const ModuleLoc *loc, StmtFnSig *sig, StmtBlock *blk,
+				 bool is_inline);
 
 	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
@@ -761,6 +763,10 @@ public:
 	inline int64_t getUsed()
 	{
 		return used;
+	}
+	inline bool isInline()
+	{
+		return is_inline;
 	}
 };
 
