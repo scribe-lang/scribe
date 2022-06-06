@@ -90,14 +90,12 @@ bool CleanupPass::visit(StmtExpr *stmt, Stmt **source)
 }
 bool CleanupPass::visit(StmtVar *stmt, Stmt **source)
 {
-	StringRef id	  = ctx.strFrom(stmt->getTy(true)->getID());
-	StringRef varname = ctx.strFrom({stmt->getName().getDataStr(), id});
-	if(stmt->getVVal() && stmt->getVVal()->isFnDef()) {
-		if(funcs.find(varname) != funcs.end()) {
-			*source = nullptr;
-			return true;
-		}
-	}
+	// As such, a function will never be non-unique in signature.
+	// This is because functions can have same signature and name,
+	// and still be different.
+	// (say, a function with single 'type' parameter, returning void)
+	// Therefore, there is no point in checking function's uniqueness
+	// based on its name and/or ID.
 
 	bool had_val = stmt->getVVal();
 	if(stmt->getVVal() && !visit(stmt->getVVal(), &stmt->getVVal())) {
@@ -109,9 +107,6 @@ bool CleanupPass::visit(StmtVar *stmt, Stmt **source)
 		return true;
 	}
 
-	if(stmt->getVVal() && stmt->getVVal()->isFnDef()) {
-		funcs.insert(varname);
-	}
 	return true;
 }
 bool CleanupPass::visit(StmtFnSig *stmt, Stmt **source)

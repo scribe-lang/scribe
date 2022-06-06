@@ -4,6 +4,7 @@
  */
 
 let c = @import("std/c");
+let mem = @import("std/mem");
 let vec = @import("std/vec"); // required for vec.str() and str.delim()
 let utils = @import("std/utils");
 let hashing = @import("std/hashing");
@@ -151,7 +152,7 @@ let String = struct {
 
 let deinit in String = fn() {
 	if @as(u64, self.data) == nil { return; }
-	c.free(i8, self.data);
+	mem.free(i8, self.data);
 	self.length = 0;
 	self.capacity = 0;
 	self.data = nil;
@@ -165,16 +166,16 @@ let withCap = fn(capacity: u64): String {
 	let res = String{nil, 0, capacity};
 	if capacity < 1 { return res; }
 	res.capacity = capacity + 1; // for null terminator
-	res.data = c.malloc(i8, res.capacity);
-	c.memset(@as(@ptr(void), res.data), 0, res.capacity);
+	res.data = mem.alloc(i8, res.capacity);
+	mem.set(res.data, 0, res.capacity);
 	return res;
 };
 
 let fromCStr = fn(data: *const i8): String {
 	let count = c.strlen(data) + 1; // + 1 for null terminator
 	let res = new();
-	res.data = c.malloc(i8, count);
-	c.memcpy(@as(@ptr(void), res.data), @as(@ptr(void), data), count);
+	res.data = mem.alloc(i8, count);
+	mem.cpy(res.data, data, count);
 	res.data[count - 1] = 0;
 	res.length = count - 1;
 	res.capacity = count;
@@ -185,8 +186,8 @@ let fromCStr = fn(data: *const i8): String {
 let fromSubCStr = fn(data: *const i8, count: u64): String {
 	count = count + 1; // + 1 for null terminator
 	let res = new();
-	res.data = c.malloc(i8, count);
-	c.memcpy(@as(@ptr(void), res.data), @as(@ptr(void), data), count);
+	res.data = mem.alloc(i8, count);
+	mem.cpy(res.data, data, count);
 	res.data[count - 1] = 0; // set null terminator at the end
 	res.length = count - 1;
 	res.capacity = count;
@@ -246,7 +247,7 @@ let isEmpty in const String = fn(): i1 {
 
 let clear in String = fn() {
 	if self.length == 0 { return; }
-	c.memset(@as(@ptr(void), self.data), 0, self.length);
+	mem.set(self.data, 0, self.length);
 	self.length = 0;
 };
 
@@ -287,10 +288,10 @@ let isSpace in const i8 = fn(): i1 {
 let appendChar in String = fn(ch: i8): &String {
 	if self.capacity == 0 {
 		self.capacity = 2;
-		self.data = c.malloc(i8, self.capacity);
+		self.data = mem.alloc(i8, self.capacity);
 	} elif self.capacity < self.length + 2 {
 		self.capacity = self.capacity * 2;
-		self.data = c.realloc(i8, self.data, self.capacity);
+		self.data = mem.realloc(i8, self.data, self.capacity);
 	}
 	self.data[self.length++] = ch;
 	self.data[self.length] = 0;
@@ -303,12 +304,12 @@ let appendCStr in String = fn(other: *const i8, count: u64): &String {
 	if !count { return self; }
 	if self.capacity == 0 {
 		self.capacity = count + 1;
-		self.data = c.malloc(i8, self.capacity);
+		self.data = mem.alloc(i8, self.capacity);
 	} elif self.capacity < self.length + count + 1 {
 		self.capacity = self.length + count + 1;
-		self.data = c.realloc(i8, self.data, self.capacity);
+		self.data = mem.realloc(i8, self.data, self.capacity);
 	}
-	c.memcpy(@as(@ptr(void), &self.data[self.length]), @as(@ptr(void), other), count);
+	mem.cpy(&self.data[self.length], other, count);
 	self.length += count;
 	self.data[self.length] = 0;
 	return self;
@@ -322,10 +323,10 @@ let appendInt in String = fn(data: i64): &String {
 	let otherlen = utils.countIntDigits(data);
 	if self.capacity == 0 {
 		self.capacity = otherlen + 1;
-		self.data = c.malloc(i8, self.capacity);
+		self.data = mem.alloc(i8, self.capacity);
 	} elif self.capacity < self.length + otherlen + 1 {
 		self.capacity = self.length + otherlen + 1;
-		self.data = c.realloc(i8, self.data, self.capacity);
+		self.data = mem.realloc(i8, self.data, self.capacity);
 	}
 	c.snprintf(&self.data[self.length], otherlen + 1, "%lld", data);
 	self.length += otherlen;
@@ -337,10 +338,10 @@ let appendUInt in String = fn(data: u64): &String {
 	let otherlen = utils.countUIntDigits(data);
 	if self.capacity == 0 {
 		self.capacity = otherlen + 1;
-		self.data = c.malloc(i8, self.capacity);
+		self.data = mem.alloc(i8, self.capacity);
 	} elif self.capacity < self.length + otherlen + 1 {
 		self.capacity = self.length + otherlen + 1;
-		self.data = c.realloc(i8, self.data, self.capacity);
+		self.data = mem.realloc(i8, self.data, self.capacity);
 	}
 	c.snprintf(&self.data[self.length], otherlen + 1, "%llu", data);
 	self.length += otherlen;
@@ -352,10 +353,10 @@ let appendFlt in String = fn(data: f64): &String {
 	let otherlen = utils.countIntDigits(data) + getPrecision() + 1;
 	if self.capacity == 0 {
 		self.capacity = otherlen + 1;
-		self.data = c.malloc(i8, self.capacity);
+		self.data = mem.alloc(i8, self.capacity);
 	} elif self.capacity < self.length + otherlen + 1 {
 		self.capacity = self.length + otherlen + 1;
-		self.data = c.realloc(i8, self.data, self.capacity);
+		self.data = mem.realloc(i8, self.data, self.capacity);
 	}
 	c.snprintf(&self.data[self.length], otherlen + 1, "%.*lf", getPrecision(), data);
 	self.length += otherlen;
@@ -408,11 +409,11 @@ let __assn__ in String = fn(other: &const any): &String {
 let __add__ in const String = fn(other: &const String): String {
 	let res = withCap(self.length + other.length);
 	if self.length > 0 {
-		c.memcpy(@as(@ptr(void), res.data), @as(@ptr(void), self.data), self.length);
+		mem.cpy(res.data, self.data, self.length);
 		res.length = self.length;
 	}
 	if other.length > 0 {
-		c.memcpy(@as(@ptr(void), &res.data[res.length]), @as(@ptr(void), other.data), other.length);
+		mem.cpy(&res.data[res.length], other.data, other.length);
 		res.length += other.length;
 	}
 	res.data[res.length] = 0;

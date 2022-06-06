@@ -1,4 +1,5 @@
 let c = @import("std/c");
+let mem = @import("std/mem");
 let string = @import("std/string");
 
 let Node = struct {
@@ -7,7 +8,7 @@ let Node = struct {
 };
 
 let newNode = fn(data: i32): *Node {
-	let res = c.malloc(Node, 1);
+	let res = mem.alloc(Node, 1);
 	res.data = data;
 	res.next = nil;
 	return res;
@@ -43,14 +44,14 @@ let pop in LinkedList = fn() {
 	let end = self.start;
 	if @as(u64, end) == nil { return; }
 	if @as(u64, end.next) == nil {
-		c.free(Node, self.start);
+		mem.free(Node, self.start);
 		self.start = nil;
 		return;
 	}
 	while @as(u64, end.next.next) != nil {
 		end = end.next;
 	}
-	c.free(Node, end.next);
+	mem.free(Node, end.next);
 	end.next = nil;
 };
 
@@ -67,7 +68,7 @@ let deinit in LinkedList = fn() {
 	while @as(u64, current) != nil {
 		let tmp = current;
 		current = tmp.next;
-		c.free(Node, tmp);
+		mem.free(Node, tmp);
 	}
 };
 

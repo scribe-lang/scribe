@@ -1,4 +1,5 @@
 let c = @import("std/c");
+let mem = @import("std/mem");
 let iter = @import("std/iter");
 
 let Vec = struct<T> {
@@ -9,7 +10,7 @@ let Vec = struct<T> {
 };
 
 let deinit in Vec = fn() {
-	defer c.free(self.T, self.data);
+	defer mem.free(self.T, self.data);
 	if !self.managed || @isPrimitive(self.T) { return; }
 	for let i: u64 = 0; i < self.length; ++i {
 		inline if !@isPrimitiveOrPtr(self.T) {
@@ -29,12 +30,12 @@ let push in Vec = fn(d: &const self.T): self {
 	let comptime sz = @sizeOf(self.T);
 	if self.capacity == 0 {
 		self.capacity = 1;
-		self.data = c.malloc(self.T, 1);
+		self.data = mem.alloc(self.T, 1);
 	} elif self.length >= self.capacity {
 		self.capacity *= 2;
-		self.data = c.realloc(self.T, self.data, self.capacity);
+		self.data = mem.realloc(self.T, self.data, self.capacity);
 	}
-	c.memcpy(@as(@ptr(void), &self.data[self.length++]), @as(@ptr(void), &d), sz);
+	mem.cpy(&self.data[self.length++], &d, sz);
 	return self;
 };
 
@@ -46,13 +47,13 @@ let insert in Vec = fn(d: &const self.T, idx: u64): self {
 	if idx >= self.length { return self.push(d); }
 	if self.length >= self.capacity {
 		self.capacity *= 2;
-		self.data = c.realloc(self.T, self.data, self.capacity);
+		self.data = mem.realloc(self.T, self.data, self.capacity);
 	}
 	let comptime sz = @sizeOf(self.T);
 	for let i: u64 = self.length; i > idx; --i {
-		c.memcpy(@as(@ptr(void), &self.data[i]), @as(@ptr(void), &self.data[i - 1]), sz);
+		mem.cpy(&self.data[i], &self.data[i - 1], sz);
 	}
-	c.memcpy(@as(@ptr(void), &self.data[idx]), @as(@ptr(void), &d), sz);
+	mem.cpy(&self.data[idx], &d, sz);
 	++self.length;
 	return self;
 };
@@ -79,7 +80,7 @@ let clear in Vec = fn() {
 	let l = self.length;
 	self.length = 0;
 	if !self.managed || @isPrimitive(self.T) {
-		c.memset(@as(@ptr(void), self.data), 0, @sizeOf(self.T) * self.capacity);
+		mem.set(self.data, 0, @sizeOf(self.T) * self.capacity);
 		return;
 	}
 	for let i: u64 = 0; i < l; ++i {
@@ -87,7 +88,7 @@ let clear in Vec = fn() {
 			self.data[i].deinit();
 		}
 	}
-	c.memset(@as(@ptr(void), self.data), 0, @sizeOf(self.T) * self.capacity);
+	mem.set(self.data, 0, @sizeOf(self.T) * self.capacity);
 };
 
 let setManaged in Vec = fn(managed: i1): self {
@@ -96,7 +97,7 @@ let setManaged in Vec = fn(managed: i1): self {
 };
 
 let __assn__ in Vec = fn(other: &const self): &self {
-	c.memcpy(@as(@ptr(void), &self), @as(@ptr(void), &other), @sizeOf(self));
+	mem.cpy(&self, &other, @sizeOf(self));
 	return self;
 };
 
@@ -180,9 +181,9 @@ let cycle = fn(width: u64, ar: **u8, n: i32) {
 	while width {
 		if sztmp < width { l = sztmp; }
 		else { l = width; }
-		c.memcpy(@as(@ptr(void), ar[n]), @as(@ptr(void), ar[0]), l);
+		mem.cpy(ar[n], ar[0], l);
 		for let i = 0; i < n; ++i {
-			c.memcpy(@as(@ptr(void), ar[i]), @as(@ptr(void), ar[i + 1]), l);
+			mem.cpy(ar[i], ar[i + 1], l);
 			ar[i] = @as(u64, ar[i]) + l;
 		}
 		width -= l;
