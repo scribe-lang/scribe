@@ -198,19 +198,7 @@ let fromStringRef = inline fn(data: &const StringRef): String {
 	return fromSubCStr(data.start, data.count);
 };
 
-let from = inline fn(data: &const any): String {
-	inline if @isCString(data) {
-		return fromCStr(data);
-	} elif @isEqualTy(data, StringRef) {
-		return fromStringRef(data);
-	} elif @isEqualTy(data, String) {
-		return fromCStr(data.data);
-	} else {
-		return data.str();
-	}
-	// unreachable
-	return new();
-};
+// from() is implemented later with the Utility Functions
 
 let global s = inline fn(data: *const i8): String {
 	return fromCStr(data);
@@ -252,7 +240,7 @@ let clear in String = fn() {
 };
 
 let copy in const String = inline fn(): String {
-	return from(self.data);
+	return fromCStr(self.data);
 };
 
 let hash in const String = inline fn(): u64 {
@@ -364,30 +352,42 @@ let appendFlt in String = fn(data: f64): &String {
 	return self;
 };
 
-let append in String = fn(data: &const any): &String {
-	inline if @isEqualTy(data, i8) {
-		return self.appendChar(data);
-	} elif @isCString(data) {
-		return self.appendCStr(data, 0);
-	} elif @isEqualTy(data, StringRef) {
-		return self.appendRef(data);
-	} elif @isInt(data) {
-		inline if @isIntSigned(data) {
-			return self.appendInt(data);
-		} else {
-			return self.appendUInt(data);
+let append in String = fn(data: ...&const any): &String {
+	let comptime len = @valen();
+	inline for let comptime i = 0; i < len; ++i {
+		inline if @isEqualTy(data[i], i8) {
+			self.appendChar(data[i]);
+		} elif @isCString(data[i]) {
+			self.appendCStr(data[i], 0);
+		} elif @isEqualTy(data[i], StringRef) {
+			self.appendRef(data[i]);
+		} elif @isInt(data[i]) {
+			inline if @isIntSigned(data[i]) {
+				self.appendInt(data[i]);
+			} else {
+				self.appendUInt(data[i]);
+			}
+		} elif @isFlt(data[i]) {
+			self.appendFlt(data[i]);
+		} elif @isEqualTy(data[i], String) {
+			self.appendCStr(data[i].data, data[i].length);
+		} else { // just attempt to convert the data to string and append that
+			let s = data[i].str();
+			defer s.deinit();
+			self.appendCStr(s.data, s.length);
 		}
-	} elif @isFlt(data) {
-		self.appendFlt(data);
-	} elif @isEqualTy(data, String) {
-		return self.appendCStr(data.data, data.length);
-	} else { // just attempt to convert the data to string and append that
-		let s = data.str();
-		defer s.deinit();
-		return self.appendCStr(s.data, s.length);
 	}
-	// unreachable
 	return self; // this exists only to avoid warning by C compiler about non-void return
+};
+
+// Generic, variadic argument based creation function
+let from = inline fn(data: ...&const any): String {
+	let comptime len = @valen();
+	let res = new();
+	inline for let comptime i = 0; i < len; ++i {
+		res.append(data[i]);
+	}
+	return res;
 };
 
 let erase in String = fn(idx: u64): i1 {
