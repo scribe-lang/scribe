@@ -18,6 +18,8 @@ let stderr: *FILE = extern[stderr, "<stdio.h>"];
 
 let errno: i32 = extern[errno, "<errno.h>"];
 
+let popen = extern[popen, "<stdio.h>"] fn(cmd: *const i8, mode: *const i8): *FILE;
+let pclose = extern[pclose, "<stdio.h>"] fn(file: *FILE): i32;
 let fopen = extern[fopen, "<stdio.h>"] fn(name: *const i8, mode: *const i8): *FILE;
 let fclose = extern[fclose, "<stdio.h>"] fn(file: *FILE): i32;
 let fflush = extern[fflush, "<stdio.h>"] fn(file: *FILE): i32;
@@ -40,6 +42,7 @@ let isspace = extern[isspace, "<ctype.h>"] fn(ch: i32): i32;
 let strerror = extern[strerror, "<string.h>"] fn(errnum: i32): *const i8;
 let dirname = extern[dirname, "<libgen.h>"] fn(path: *i8): *i8;
 let basename = extern[basename, "<libgen.h>"] fn(path: *i8): *i8;
+let _wexitstatus = extern[WEXITSTATUS, "<stdlib.h>"] fn(status: i32): i32;
 
 let getTypeSpecifier = inline fn(comptime ty: type): *const i8 {
 	inline if @isEqualTy(ty, i1) || @isEqualTy(ty, i16) || @isEqualTy(ty, i32) {
@@ -62,6 +65,10 @@ let getTypeSpecifier = inline fn(comptime ty: type): *const i8 {
 		return "%p";
 	}
 	return nil;
+};
+
+let wexitstatus = inline fn(status: i32): i32 {
+	return _wexitstatus(status);
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

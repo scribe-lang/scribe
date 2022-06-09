@@ -12,6 +12,7 @@
 #include <limits.h>
 
 #include "Config.hpp"
+#include "Env.hpp"
 #include "FS.hpp"
 #include "Intrinsics.hpp"
 #include "Parser.hpp"
@@ -35,6 +36,14 @@ INTRINSIC(compilerid)
 {
 	static StringRef id = GetCompilerID(c);
 	VecVal *res	    = VecVal::createStr(c, CDPERMA, id);
+	stmt->setVal(res);
+	stmt->setConst();
+	return true;
+}
+INTRINSIC(compilerpath)
+{
+	static String path = env::getProcPath();
+	VecVal *res	   = VecVal::createStr(c, CDPERMA, path);
 	stmt->setVal(res);
 	stmt->setConst();
 	return true;
