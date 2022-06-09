@@ -80,6 +80,8 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 
 	ADDFN("compilerID", createFnVal(c, {}, cstr, intrinsic_compilerid, IPARSE));
 
+	ADDFN("compilerPath", createFnVal(c, {}, cstr, intrinsic_compilerpath, IPARSE));
+
 	g = TypeTy::get(c);
 	ADDFN("import", createComptimeFnVal(c, {cstr}, g, {true}, intrinsic_import, IPARSE));
 

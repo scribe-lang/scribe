@@ -1,6 +1,9 @@
 let c = @import("std/c");
 let fs = @import("std/fs");
+let err = @import("std/err");
+let mem = @import("std/mem");
 let core = @import("std/core");
+let mutex = @import("std/mutex");
 let string = @import("std/string");
 
 let system = c.system;
@@ -66,4 +69,69 @@ let getExePath = fn(exe: *const i8): string.String {
 		res.clear();
 	}
 	return res;
+};
+
+let exec = fn(command: ...&const any): i32 {
+	let cmd = string.from(command);
+	defer cmd.deinit();
+	let pipe = c.popen(cmd.cStr(), "r");
+	if !@as(u64, pipe) {
+		err.push(-1, "failed to execute popen()");
+		return -1;
+	}
+	let line: *i8 = nil;
+	let len: u64 = 0;
+	let nread: i64;
+	while (nread = c.getline(&line, &len, pipe)) != -1 {
+		c.fprintf(c.stdout, "%s", line);
+	}
+	mem.free(i8, line);
+	return c.wexitstatus(c.pclose(pipe));
+};
+
+// Multithreaded os.exec()
+
+let MultiThreadedExec = struct {
+	mtx: mutex.Mutex;
+};
+
+let newMTExec = fn(): MultiThreadedExec {
+	let mtx: mutex.Mutex;
+	return MultiThreadedExec{mtx};
+};
+let init in MultiThreadedExec = fn(): i1 {
+	if !self.mtx.init() {
+		err.push(-1, "MultiThreadedExec.init() failure");
+		return false;
+	}
+	return true;
+};
+let deinit in MultiThreadedExec = fn(): i1 {
+	if !self.mtx.deinit() {
+		err.push(-1, "MultiThreadedExec.deinit() failure");
+		return false;
+	}
+	return true;
+};
+let exec in MultiThreadedExec = fn(command: ...&const any): i32 {
+	let cmd = string.from(command);
+	defer cmd.deinit();
+	self.mtx.lock();
+	let pipe = c.popen(cmd.cStr(), "r");
+	self.mtx.unlock();
+	if !@as(u64, pipe) {
+		err.push(-1, "failed to execute popen()");
+		return -1;
+	}
+	let line: *i8 = nil;
+	let len: u64 = 0;
+	let nread: i64;
+	while (nread = c.getline(&line, &len, pipe)) != -1 {
+		c.fprintf(c.stdout, "%s", line);
+	}
+	mem.free(i8, line);
+	self.mtx.lock();
+	let res = c.pclose(pipe);
+	self.mtx.unlock();
+	return c.wexitstatus(res);
 };

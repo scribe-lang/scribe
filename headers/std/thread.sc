@@ -1,4 +1,4 @@
-let unistd = @import("std/unistd");
+let unistd = @import("std/c/unistd");
 
 let pthread_t: u64 = extern[pthread_t, "<pthread.h>", "-pthread"];
 let pthread_attr_t = extern[pthread_attr_t, "<pthread.h>", "-pthread"] struct {};
@@ -19,6 +19,7 @@ let Thread = struct {
 let new = inline fn(): Thread {
 	return Thread{0};
 };
+let deinit in Thread = inline fn() {};
 
 let getID in Thread = inline fn(): pthread_t {
 	return self.threadid;

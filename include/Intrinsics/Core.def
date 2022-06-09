@@ -1,4 +1,5 @@
 INTRINSIC(compilerid);
+INTRINSIC(compilerpath);
 INTRINSIC(import);
 INTRINSIC(ismainsrc);
 INTRINSIC(isprimitive);
