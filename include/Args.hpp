@@ -94,6 +94,10 @@ public:
 	{
 		return idx >= args.size() ? "" : args[idx];
 	}
+	inline const Vector<StringRef> &getArgv() const
+	{
+		return argv;
+	}
 };
 } // namespace args
 } // namespace sc

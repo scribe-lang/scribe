@@ -72,13 +72,14 @@ class RAIIParser
 
 	Map<StringRef, Module *> modules;
 
-	Module *addModule(StringRef path, bool main_module);
+	Module *addModule(StringRef path, bool main_module, StringRef code);
 
 public:
 	RAIIParser(args::ArgParser &args);
 	~RAIIParser();
 
-	bool parse(const String &_path, bool main_module = false);
+	// if code is not empty, file won't be read/checked
+	bool parse(const String &_path, bool main_module = false, StringRef code = "");
 	void combineAllModules();
 
 	bool hasModule(StringRef path);
