@@ -31,27 +31,27 @@ class ArgInfo
 public:
 	ArgInfo();
 
-	inline ArgInfo &set_short(StringRef name)
+	inline ArgInfo &setShort(StringRef name)
 	{
 		shrt = name;
 		return *this;
 	}
-	inline ArgInfo &set_long(StringRef name)
+	inline ArgInfo &setLong(StringRef name)
 	{
 		lng = name;
 		return *this;
 	}
-	inline ArgInfo &set_help(StringRef val)
+	inline ArgInfo &setHelp(StringRef val)
 	{
 		help = val;
 		return *this;
 	}
-	inline ArgInfo &set_reqd(bool req)
+	inline ArgInfo &setReqd(bool req)
 	{
 		reqd = req;
 		return *this;
 	}
-	inline ArgInfo &set_val_reqd(bool req)
+	inline ArgInfo &setValReqd(bool req)
 	{
 		val_reqd = req;
 		return *this;
@@ -72,7 +72,7 @@ public:
 
 	ArgInfo &add(StringRef argname);
 	void parse();
-	void print_help(FILE *file);
+	void printHelp(FILE *file);
 	inline void clear()
 	{
 		arg_defs.clear();
