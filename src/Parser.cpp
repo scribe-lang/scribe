@@ -126,17 +126,19 @@ void RAIIParser::combineAllModules()
 		modulestack.pop_back();
 	}
 }
-Module *RAIIParser::addModule(StringRef path, bool main_module)
+Module *RAIIParser::addModule(StringRef path, bool main_module, StringRef code)
 {
 	auto res = modules.find(path);
 	if(res != modules.end()) return res->second;
 
-	String _code;
-	if(!fs::read(String(path), _code)) {
-		return nullptr;
+	if(code.empty()) {
+		String _code;
+		if(!fs::read(String(path), _code)) {
+			return nullptr;
+		}
+		code = ctx.moveStr(std::move(_code));
 	}
-	StringRef id   = ctx.strFrom(modulestack.size());
-	StringRef code = ctx.moveStr(std::move(_code));
+	StringRef id = ctx.strFrom(modulestack.size());
 
 	Module *mod = new Module(ctx, id, path, code, main_module);
 	Pointer<Module> mptr(mod);
@@ -152,7 +154,7 @@ Module *RAIIParser::addModule(StringRef path, bool main_module)
 	modules[path] = mod;
 	return mod;
 }
-bool RAIIParser::parse(const String &_path, bool main_module)
+bool RAIIParser::parse(const String &_path, bool main_module, StringRef code)
 {
 	if(hasModule(_path)) {
 		std::cerr << "cannot parse an existing source: " << _path << "\n";
@@ -163,7 +165,7 @@ bool RAIIParser::parse(const String &_path, bool main_module)
 	fs::setCWD(fs::parentDir(_path));
 	size_t src_id  = 0;
 	StringRef path = ctx.strFrom(_path);
-	if(!addModule(path, main_module)) return false;
+	if(!addModule(path, main_module, code)) return false;
 	bool res = modules[path]->executePasses(defaultpmpermodule);
 	fs::setCWD(wd);
 	if(!res) goto end;

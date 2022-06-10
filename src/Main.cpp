@@ -15,11 +15,12 @@
 	// for basename() on macOS
 	#include <libgen.h>
 #endif // __APPLE__
-#include <cstdio>
 #include <cstring>
+#include <iostream>
 #include <stdexcept>
 
 #include "Args.hpp"
+#include "Builder.hpp"
 #include "CodeGen/C.hpp"
 #include "Config.hpp"
 #include "Error.hpp"
@@ -27,9 +28,13 @@
 #include "Lex.hpp"
 #include "Parser.hpp"
 
+using namespace sc;
+
+int BuildRunProj(args::ArgParser &args, bool buildonly);
+int CompileFile(args::ArgParser &args, String &file);
+
 int main(int argc, char **argv)
 {
-	using namespace sc;
 	args::ArgParser args(argc, (const char **)argv);
 	args.add("version").set_short("v").set_help("prints program version");
 	args.add("tokens").set_short("t").set_help("shows lexical tokens");
@@ -40,7 +45,6 @@ int main(int argc, char **argv)
 	args.add("opt").set_short("O").set_val_reqd(true).set_help("set optimization level");
 	args.add("std").set_short("std").set_val_reqd(true).set_help("set C standard");
 	args.add("llir").set_short("llir").set_help("emit LLVM IR (C backend)");
-
 	args.parse();
 
 	if(args.has("help")) {
@@ -56,12 +60,48 @@ int main(int argc, char **argv)
 	}
 	String file = String(args.get(1));
 	if(file.empty()) {
-		fprintf(stderr, "Error: no source provided to read from\n");
+		std::cerr << "Error: no source provided to read from\n";
 		return 1;
 	}
 
+	if(file == "build" || file == "run") {
+		return BuildRunProj(args, file == "build");
+	}
+	return CompileFile(args, file);
+}
+
+int BuildRunProj(args::ArgParser &args, bool buildonly)
+{
+	int res = std::system("mkdir -p build");
+	res	= WEXITSTATUS(res);
+	if(res) return res;
+
+	String file = "<build>";
+	RAIIParser parser(args);
+	if(!parser.parse(file, true, buildcode)) return 1;
+	parser.dumpTokens(false);
+	parser.dumpParseTree(false);
+	if(args.has("nofile")) return 0;
+
+	CDriver cdriver(parser);
+	StringRef outfile = "./build/builder";
+	if(!cdriver.compile(outfile)) return 1;
+	String cmd = "./build/builder .";
+	auto argv  = args.getArgv();
+	// append everything to cmd after build/run
+	for(int i = 1; i < argv.size(); ++i) {
+		cmd += " ";
+		cmd += argv[i];
+	}
+	res = std::system(cmd.c_str());
+	res = WEXITSTATUS(res);
+	return res;
+}
+
+int CompileFile(args::ArgParser &args, String &file)
+{
 	if(!fs::exists(file)) {
-		fprintf(stderr, "Error: file %s does not exist\n", file.c_str());
+		std::cerr << "Error: file " << file << " does not exist\n";
 		return 1;
 	}
 	file = fs::absPath(file);
