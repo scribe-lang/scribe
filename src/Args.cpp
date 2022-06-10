@@ -28,7 +28,7 @@ ArgParser::ArgParser(const int &argc, const char **argv)
 {
 	for(int i = 0; i < argc; ++i) this->argv.push_back(argv[i]);
 
-	arg_defs["help"].set_long("help").set_short("h").set_help(
+	arg_defs["help"].setLong("help").setShort("h").setHelp(
 	"prints help information for program");
 }
 
@@ -92,7 +92,7 @@ void ArgParser::parse()
 	return;
 }
 
-void ArgParser::print_help(FILE *file)
+void ArgParser::printHelp(FILE *file)
 {
 	std::cout << PROJECT_NAME << " compiler " << COMPILER_MAJOR << "." << COMPILER_MINOR << "."
 		  << COMPILER_PATCH << "\n";

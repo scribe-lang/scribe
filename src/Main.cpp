@@ -36,19 +36,19 @@ int CompileFile(args::ArgParser &args, String &file);
 int main(int argc, char **argv)
 {
 	args::ArgParser args(argc, (const char **)argv);
-	args.add("version").set_short("v").set_help("prints program version");
-	args.add("tokens").set_short("t").set_help("shows lexical tokens");
-	args.add("parse").set_short("p").set_help("shows AST");
-	args.add("semantic").set_short("s").set_help("shows Semantic Tree");
-	args.add("ir").set_short("i").set_help("shows codegen IR");
-	args.add("nofile").set_short("n").set_help("disables output to a file");
-	args.add("opt").set_short("O").set_val_reqd(true).set_help("set optimization level");
-	args.add("std").set_short("std").set_val_reqd(true).set_help("set C standard");
-	args.add("llir").set_short("llir").set_help("emit LLVM IR (C backend)");
+	args.add("version").setShort("v").setHelp("prints program version");
+	args.add("tokens").setShort("t").setHelp("shows lexical tokens");
+	args.add("parse").setShort("p").setHelp("shows AST");
+	args.add("semantic").setShort("s").setHelp("shows Semantic Tree");
+	args.add("ir").setShort("i").setHelp("shows codegen IR");
+	args.add("nofile").setShort("n").setHelp("disables output to a file");
+	args.add("opt").setShort("O").setValReqd(true).setHelp("set optimization level");
+	args.add("std").setShort("std").setValReqd(true).setHelp("set C standard");
+	args.add("llir").setShort("llir").setHelp("emit LLVM IR (C backend)");
 	args.parse();
 
 	if(args.has("help")) {
-		args.print_help(stdout);
+		args.printHelp(stdout);
 		return 0;
 	}
 
