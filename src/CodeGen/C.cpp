@@ -48,18 +48,20 @@ CTy &CTy::operator+=(const CTy &other)
 
 String CTy::toStr(StringRef *varname)
 {
-	String res;
+	static String res;
+	res.clear();
 	if(isstatic) res += "static ";
 	if(isvolatile) res += "volatile ";
 	if(isconst) res += "const ";
-	res += base + " ";
+	res += base;
+	res += " ";
 	if(ptrs - ptrsin) {
-		res += String(ptrs - ptrsin, '*');
+		res.append(ptrs - ptrsin, '*');
 	}
 	if(!arr.empty() && (ptrsin || isref)) {
 		res += "(";
 	}
-	res += String(ptrsin, '*');
+	res.append(ptrsin, '*');
 	if(isref) res += "*";
 	if(varname) res += *varname;
 	if(!arr.empty() && (ptrsin || isref)) {
@@ -154,8 +156,8 @@ bool CDriver::compile(StringRef outfile)
 	finalmod.append(mainwriter);
 
 	args::ArgParser &cliargs = parser.getCommandArgs();
-	String opt		 = "0";
-	String std		 = "11";
+	StringRef opt		 = "0";
+	StringRef std		 = "11";
 	bool ir_only		 = cliargs.has("ir");
 	bool llir		 = cliargs.has("llir");
 	if(cliargs.has("opt")) {
@@ -211,8 +213,13 @@ bool CDriver::compile(StringRef outfile)
 
 	StringRef compiler = getSystemCompiler();
 	String cmd;
+	cmd.reserve(128);
 	cmd += compiler;
-	cmd += " -std=c" + std + " -O" + opt + " ";
+	cmd += " -std=c";
+	cmd += std;
+	cmd += " -O";
+	cmd += opt;
+	cmd += " ";
 	if(opt == "0") cmd += "-g ";
 	for(auto &h : headerflags) {
 		cmd += h;
@@ -372,7 +379,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 		StmtSimple *rsim = as<StmtSimple>(rhs);
 		if(lhs->getDerefCount()) {
 			writer.write("(");
-			writer.write(String(lhs->getDerefCount(), '*'));
+			writer.write(lhs->getDerefCount(), '*');
 		}
 		writer.append(l);
 		if(lhs->getDerefCount()) {
@@ -385,14 +392,18 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 	case lex::FNCALL: {
 		StringRef fname	     = as<StmtSimple>(lhs)->getLexValue().getDataStr();
 		Vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
-		writer.write({fname, ctx.strFrom(lhs->getTy()->getUniqID()), "("});
+		writer.write(fname);
+		writer.write(lhs->getTy()->getUniqID());
+		writer.write("(");
 		if(!writeCallArgs(stmt->getLoc(), args, lhs->getTy(), writer)) return false;
 		writer.write(")");
 		break;
 	}
 	case lex::STCALL: {
 		Vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
-		writer.write({"(struct_", ctx.strFrom(lhs->getTy()->getUniqID()), "){"});
+		writer.write("(struct_");
+		writer.write(lhs->getTy()->getUniqID());
+		writer.write("){");
 		if(!writeCallArgs(stmt->getLoc(), args, lhs->getTy(), writer)) return false;
 		writer.write("}");
 		break;
@@ -533,7 +544,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		if(!ent) {
 			macros.push_back(ctx.strFrom({"#define ", varname, " ", extname}));
 		} else if(ent->isStructDef()) {
-			StringRef uniqid = ctx.strFrom(ent->getTy()->getUniqID());
+			String uniqid = std::to_string(ent->getTy()->getUniqID());
 			StringRef res = ctx.strFrom({"typedef ", extname, " struct_", uniqid, ";"});
 			typedefs.push_back(res);
 		} else if(ent->isFnSig()) {
@@ -550,9 +561,12 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 				argstr.pop_back();
 				argstr.pop_back();
 			}
-			macro += argstr + ") ";
+			macro += argstr;
+			macro += ") ";
 			macro += extname;
-			macro += "(" + argstr + ")";
+			macro += "(";
+			macro += argstr;
+			macro += ")";
 			macros.push_back(ctx.moveStr(std::move(macro)));
 		}
 		if(!visit(stmt->getVVal(), writer, false)) {
@@ -579,9 +593,8 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		retcty.setConst(sigret->isConst());
 		retcty.setRef(sigret->isRef());
 
-		String spacevarname = " ";
-		spacevarname += varname;
-		tmp.insertAfter(retcty.size(), spacevarname);
+		tmp.insertAfter(retcty.size(), varname);
+		tmp.insertAfter(retcty.size() + varname.size(), " ");
 		if(fn->isInline()) tmp.writeBefore("_SC_INLINE_ ");
 		writer.append(tmp);
 		// no semicolon after fndef
@@ -592,7 +605,8 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 			err::out(stmt, {"failed to generate C code for function def"});
 			return false;
 		}
-		decl.insertAfter(retcty.size(), spacevarname);
+		decl.insertAfter(retcty.size(), varname);
+		decl.insertAfter(retcty.size() + varname.size(), " ");
 		if(fn->isInline()) decl.writeBefore("_SC_INLINE_ ");
 		decl.write(";");
 		funcdecls.push_back(ctx.moveStr(std::move(decl.getData())));
@@ -921,41 +935,50 @@ StringRef CDriver::getConstantDataVar(const lex::Lexeme &val, Type *ty)
 	switch(val.getTokVal()) {
 	case lex::TRUE:
 		value = "1";
-		key   = value + "i1";
-		type  = "const i1";
+		key += value;
+		key += "i1";
+		type = "const i1";
 		break;
-	case lex::FALSE:
-		value = "0";
-		key   = value + "i1";
-		type  = "const i1";
-		break;
+	case lex::FALSE: // fallthrough
 	case lex::NIL:
 		value = "0";
-		key   = value + "i1";
-		type  = "const i1";
+		key += value;
+		key += "i1";
+		type = "const i1";
 		break;
 	case lex::INT:
 		value	= std::to_string(val.getDataInt());
 		bits	= std::to_string(as<IntTy>(ty)->getBits());
 		is_sign = as<IntTy>(ty)->isSigned() ? "i" : "u";
-		key	= value + is_sign + bits;
-		type	= "const " + is_sign + bits;
+		key += value;
+		key += as<IntTy>(ty)->isSigned() ? "i" : "u";
+		key += bits;
+		type += "const ";
+		type += as<IntTy>(ty)->isSigned() ? "i" : "u";
+		type += bits;
 		break;
 	case lex::FLT:
 		value = std::to_string(val.getDataFlt());
 		bits  = std::to_string(as<FltTy>(ty)->getBits());
-		key   = value + "f" + bits;
-		type  = "const f" + bits;
+		key += value;
+		key += "f";
+		key += bits;
+		type += "const f";
+		type += bits;
 		break;
 	case lex::CHAR:
-		value = '\'' + getRawString(val.getDataStr()) + '\'';
-		key   = value;
-		type  = "const i8";
+		value += '\'';
+		appendRawString(value, val.getDataStr());
+		value += '\'';
+		key  = value;
+		type = "const i8";
 		break;
 	case lex::STR:
-		value = '"' + getRawString(val.getDataStr()) + '"';
-		key   = value;
-		type  = "const i8*";
+		value += '"';
+		appendRawString(value, val.getDataStr());
+		value += '"';
+		key  = value;
+		type = "const i8*";
 		break;
 	default: break;
 	}
@@ -1017,7 +1040,8 @@ bool CDriver::getCType(CTy &cty, Stmt *stmt, Type *ty)
 
 	if(cty.isWeak()) {
 		if(cty.isDecl()) cty.base = "struct ";
-		cty.base += "struct_" + std::to_string(ty->getUniqID());
+		cty.base += "struct_";
+		cty.base += std::to_string(ty->getUniqID());
 		return true;
 	}
 
@@ -1035,14 +1059,13 @@ bool CDriver::getCType(CTy &cty, Stmt *stmt, Type *ty)
 		return true;
 	}
 	if(ty->isInt()) {
-		bool is_signed = as<IntTy>(ty)->isSigned();
-		String bits    = std::to_string(as<IntTy>(ty)->getBits());
-		cty.base       = (is_signed ? "i" : "u") + bits;
+		cty.base = (as<IntTy>(ty)->isSigned() ? "i" : "u");
+		cty.base += std::to_string(as<IntTy>(ty)->getBits());
 		return true;
 	}
 	if(ty->isFlt()) {
-		String bits = std::to_string(as<FltTy>(ty)->getBits());
-		cty.base    = "f" + bits;
+		cty.base = "f";
+		cty.base += std::to_string(as<FltTy>(ty)->getBits());
 		return true;
 	}
 	if(ty->isPtr()) {
@@ -1065,7 +1088,8 @@ bool CDriver::getCType(CTy &cty, Stmt *stmt, Type *ty)
 			err::out(stmt, {"failed to add struct def '", s->toStr(), "' in C code"});
 			return false;
 		}
-		cty.base = "struct_" + std::to_string(s->getUniqID());
+		cty.base = "struct_";
+		cty.base += std::to_string(s->getUniqID());
 		return true;
 	}
 	err::out(stmt, {"invalid scribe type encountered: ", ty->toStr()});
@@ -1080,9 +1104,13 @@ bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool 
 		   as<IntVal>(value)->getVal() > 31) {
 			if(as<IntVal>(value)->getVal() == '\'' ||
 			   as<IntVal>(value)->getVal() == '\\') {
-				res = "'\\" + String(1, as<IntVal>(value)->getVal()) + "'";
+				res = "'\\";
+				res.append(1, as<IntVal>(value)->getVal());
+				res += "'";
 			} else {
-				res = "'" + String(1, as<IntVal>(value)->getVal()) + "'";
+				res = "'";
+				res.append(1, as<IntVal>(value)->getVal());
+				res += "'";
 			}
 			return true;
 		}
@@ -1099,7 +1127,9 @@ bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool 
 			if(as<PtrTy>(type)->isArrayPtr()) is_str = false;
 		}
 		if(is_str) {
-			res = "\"" + as<VecVal>(value)->getAsString() + "\"";
+			res = "\"";
+			res += as<VecVal>(value)->getAsString();
+			res += "\"";
 			return true;
 		}
 		res	 = "{";
@@ -1111,7 +1141,8 @@ bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool 
 						e->toStr()});
 				return false;
 			}
-			res += cval + ", ";
+			res += cval;
+			res += ", ";
 		}
 		if(as<VecVal>(value)->getVal().size() > 0) {
 			res.pop_back();
@@ -1132,7 +1163,8 @@ bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool 
 						fv->toStr()});
 				return false;
 			}
-			res += cval + ", ";
+			res += cval;
+			res += ", ";
 		}
 		if(st->getFields().size() > 0) {
 			res.pop_back();
@@ -1158,7 +1190,8 @@ bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 	}
 	StmtStruct *stdecl = sty->getDecl();
 	Writer st;
-	st.write({"struct struct_", ctx.strFrom(sty->getUniqID()), " {"});
+	String uniqid = std::to_string(sty->getUniqID());
+	st.write({"struct struct_", uniqid, " {"});
 	if(!sty->getFields().empty()) {
 		st.addIndent();
 		st.newLine();
@@ -1186,7 +1219,7 @@ bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 	st.write("};");
 	structdecls.push_back(ctx.moveStr(std::move(st.getData())));
 	Writer tydef;
-	StringRef uid = ctx.strFrom(sty->getUniqID());
+	String uid = std::to_string(sty->getUniqID());
 	tydef.write({"typedef struct struct_", uid, " struct_", uid, ";"});
 	structdecls.push_back(ctx.moveStr(std::move(tydef.getData())));
 	declaredstructs.insert(sty->getUniqID());
@@ -1239,7 +1272,10 @@ bool CDriver::writeCallArgs(const ModuleLoc *loc, const Vector<Stmt *> &args, Ty
 		}
 		a->castTo(cast, castmask);
 		if(a->getDerefCount()) {
-			tmp.writeBefore("(" + String(a->getDerefCount(), '*'));
+			// equivalent to ( *... )
+			// writeBefore must be used in reverse order of actual sequence
+			tmp.writeBefore(a->getDerefCount(), '*');
+			tmp.writeBefore("(");
 			tmp.write(")");
 		}
 		if(fn && fn->getSig() && fn->getSig()->getArg(i)->isRef()) {
@@ -1254,7 +1290,8 @@ bool CDriver::writeCallArgs(const ModuleLoc *loc, const Vector<Stmt *> &args, Ty
 bool CDriver::getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt)
 {
 	static Set<uint64_t> funcids;
-	res.base = "func_" + std::to_string(f->getUniqID());
+	res.base = "func_";
+	res.base += std::to_string(f->getUniqID());
 	if(funcids.find(f->getUniqID()) != funcids.end()) return true;
 
 	String decl = "typedef ";
@@ -1269,7 +1306,10 @@ bool CDriver::getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt)
 	}
 	cty.setConst(f->getSig() && f->getSig()->getRetType()->isConst());
 	cty.setRef(f->getSig() && f->getSig()->getRetType()->isRef());
-	decl += cty.toStr(nullptr) + " (*" + res.base + ")(";
+	decl += cty.toStr(nullptr);
+	decl += " (*";
+	decl += res.base;
+	decl += ")(";
 	for(size_t i = 0; i < f->getArgs().size(); ++i) {
 		Type *t	     = f->getArg(i);
 		StmtVar *arg = f->getSig() ? f->getSig()->getArg(i) : nullptr;
@@ -1281,7 +1321,8 @@ bool CDriver::getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt)
 		}
 		cty.setConst(arg && arg->isConst());
 		cty.setRef(arg && arg->isRef());
-		decl += cty.toStr(nullptr) + ", ";
+		decl += cty.toStr(nullptr);
+		decl += ", ";
 	}
 	if(f->getArgs().size() > 0) {
 		decl.pop_back();
@@ -1303,8 +1344,10 @@ StringRef CDriver::getArrCount(Type *t, size_t &ptrsin)
 			continue;
 		}
 		enable_ptrsin = false;
-		res	      = res + "[" + std::to_string(as<PtrTy>(t)->getCount()) + "]";
-		t	      = as<PtrTy>(t)->getTo();
+		res += "[";
+		res += std::to_string(as<PtrTy>(t)->getCount());
+		res += "]";
+		t = as<PtrTy>(t)->getTo();
 	}
 	return ctx.moveStr(std::move(res));
 }

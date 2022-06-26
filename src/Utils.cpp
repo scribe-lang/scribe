@@ -36,10 +36,10 @@ Vector<StringRef> stringDelim(StringRef str, StringRef delim)
 	return res;
 }
 
-String getRawString(StringRef data)
+void appendRawString(String &res, StringRef from)
 {
-	String res;
-	for(auto &e : data) {
+	res.reserve(res.size() + from.size());
+	for(auto &e : from) {
 		if(e == '\t') {
 			res.push_back('\\');
 			res.push_back('t');
@@ -50,6 +50,5 @@ String getRawString(StringRef data)
 			res.push_back(e);
 		}
 	}
-	return res;
 }
 } // namespace sc

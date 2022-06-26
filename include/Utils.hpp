@@ -48,7 +48,7 @@ inline bool startsWith(StringRef src, StringRef term)
 Vector<StringRef> stringDelim(StringRef str, StringRef delim);
 
 // Convert special characters in string (\n, \t, ...) to raw (\\n, \\t, ...)
-String getRawString(StringRef data);
+void appendRawString(String &res, StringRef from);
 } // namespace sc
 
 #endif // UTILS_HPP

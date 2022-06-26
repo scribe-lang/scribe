@@ -33,11 +33,14 @@ public:
 	void append(Writer &other);
 
 	void write(StringRef data);
+	void write(uint32_t data);
 	void write(int64_t data);
 	void write(const double &data);
+	void write(size_t count, char data);
 	void writeConstChar(const int64_t data);
 	void writeConstString(StringRef data);
 	void writeBefore(StringRef data);
+	void writeBefore(size_t count, char data);
 	void insertAfter(const size_t &pos, StringRef data);
 
 	inline void write(InitList<StringRef> data)
