@@ -147,17 +147,10 @@ class CDriver : public CodeGenDriver
 	StringRef getArrCount(Type *t, size_t &ptrsin);
 	StringRef getSystemCompiler();
 
+	StringRef getMangledName(StringRef name, Type *ty);
 	inline StringRef getMangledName(StringRef name, Stmt *stmt)
 	{
-		String res = std::to_string(stmt->getTy(true)->getUniqID());
-		res.insert(res.begin(), name.begin(), name.end());
-		return ctx.moveStr(std::move(res));
-	}
-	inline StringRef getMangledName(StringRef name, Type *ty)
-	{
-		String res = std::to_string(ty->getUniqID());
-		res.insert(res.begin(), name.begin(), name.end());
-		return ctx.moveStr(std::move(res));
+		return getMangledName(name, stmt->getTy(true));
 	}
 
 public:
