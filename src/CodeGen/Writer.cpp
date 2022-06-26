@@ -45,6 +45,10 @@ void Writer::write(StringRef data)
 {
 	dest += data;
 }
+void Writer::write(uint32_t data)
+{
+	dest += std::to_string(data);
+}
 void Writer::write(int64_t data)
 {
 	dest += std::to_string(data);
@@ -53,18 +57,30 @@ void Writer::write(const double &data)
 {
 	dest += std::to_string(data);
 }
+void Writer::write(size_t count, char data)
+{
+	dest.append(count, data);
+}
 void Writer::writeConstChar(const int64_t data)
 {
-	dest += "'" + getRawString(String(1, data)) + "'";
+	dest += "'";
+	dest.append(1, data);
+	dest += "'";
 }
 void Writer::writeConstString(StringRef data)
 {
-	dest += "\"" + getRawString(data) + "\"";
+	dest += "\"";
+	appendRawString(dest, data);
+	dest += "\"";
 }
 
 void Writer::writeBefore(StringRef data)
 {
 	dest.insert(dest.begin(), data.begin(), data.end());
+}
+void Writer::writeBefore(size_t count, char data)
+{
+	dest.insert(dest.begin(), count, data);
 }
 void Writer::insertAfter(const size_t &pos, StringRef data)
 {
