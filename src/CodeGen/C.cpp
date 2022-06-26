@@ -1326,4 +1326,10 @@ StringRef CDriver::getSystemCompiler()
 	}
 	return ctx.moveStr(std::move(compiler));
 }
+StringRef CDriver::getMangledName(StringRef name, Type *ty)
+{
+	String res = std::to_string(ty->getUniqID());
+	res.insert(res.begin(), name.begin(), name.end());
+	return ctx.moveStr(std::move(res));
+}
 } // namespace sc
