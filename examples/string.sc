@@ -38,6 +38,12 @@ let main = fn(): i32 {
 	defer b.deinit();
 	io.println(b);
 
+	// reserve test
+	let c = string.withCap(10);
+	defer c.deinit();
+	c += "Hello";
+	io.println(c);
+
 	// StringRef test
 	let r1 = b.subRef(1, 2);
 	let r2 = b.subRef(1, 1);

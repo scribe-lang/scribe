@@ -24,6 +24,17 @@ let new = inline fn(comptime T: type, managed: i1): Vec(T) {
 	return Vec(T){0, 0, nil, managed};
 };
 
+let reserve in Vec = fn(sz: u64): self {
+	if self.capacity >= sz { return self; }
+	if self.capacity == 0 {
+		self.data = mem.alloc(self.T, sz);
+	} else {
+		self.data = mem.realloc(self.T, self.data, sz);
+	}
+	self.capacity = sz;
+	return self;
+};
+
 // a function inside a struct which has at least one field of type 'type' has to be specialized (generic)
 // in return type, since Vec(self.T) would be self referencing, it must not be used
 let push in Vec = fn(d: &const self.T): self {
