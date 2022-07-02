@@ -162,13 +162,21 @@ let new = inline fn(): String {
 	return String{nil, 0, 0};
 };
 
+let reserve in String = fn(sz: u64): self {
+	if self.capacity >= sz { return self; }
+	if self.capacity == 0 {
+		self.data = mem.alloc(i8, sz + 1);
+	} else {
+		self.data = mem.realloc(i8, self.data, sz + 1);
+	}
+	self.capacity = sz + 1; // for null terminator
+	mem.set(self.data, 0, self.capacity);
+	return self;
+};
+
 let withCap = fn(capacity: u64): String {
-	let res = String{nil, 0, capacity};
-	if capacity < 1 { return res; }
-	res.capacity = capacity + 1; // for null terminator
-	res.data = mem.alloc(i8, res.capacity);
-	mem.set(res.data, 0, res.capacity);
-	return res;
+	let res = String{nil, 0, 0};
+	return res.reserve(capacity);
 };
 
 let fromCStr = fn(data: *const i8): String {

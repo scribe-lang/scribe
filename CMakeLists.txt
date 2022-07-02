@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(${DISABLE_INSTALL_MSG} STREQUAL "true")
+if("${DISABLE_INSTALL_MSG}" STREQUAL "true")
 	message("-- Install messages are now lazily shown")
 	set(CMAKE_INSTALL_MESSAGE LAZY)
 endif()
