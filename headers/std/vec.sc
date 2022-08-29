@@ -9,6 +9,12 @@ let Vec = struct<T> {
 	managed: i1;
 };
 
+let init in Vec = fn(managed: i1) {
+	self.capacity = 0;
+	self.length = 0;
+	self.data = nil;
+	self.managed = managed;
+};
 let deinit in Vec = fn() {
 	defer mem.free(self.T, self.data);
 	if !self.managed || @isPrimitive(self.T) { return; }

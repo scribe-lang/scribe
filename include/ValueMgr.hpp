@@ -37,10 +37,7 @@ public:
 		items[name] = {ty, val, decl};
 		return true;
 	}
-	inline bool exists(StringRef name)
-	{
-		return items.find(name) != items.end();
-	}
+	inline bool exists(StringRef name) { return items.find(name) != items.end(); }
 	inline Type *getTy(StringRef name)
 	{
 		return items.find(name) == items.end() ? 0 : items[name].ty;
@@ -57,28 +54,16 @@ public:
 	{
 		return items.find(name) == items.end() ? nullptr : &items[name];
 	}
-	inline Map<StringRef, VarDecl> &getItems()
-	{
-		return items;
-	}
+	inline Map<StringRef, VarDecl> &getItems() { return items; }
 };
 class LayerStack
 {
 	Vector<Layer> layers;
 
 public:
-	inline void pushLayer()
-	{
-		layers.emplace_back();
-	}
-	inline void popLayer()
-	{
-		layers.pop_back();
-	}
-	inline size_t size()
-	{
-		return layers.size();
-	}
+	inline void pushLayer() { layers.emplace_back(); }
+	inline void popLayer() { layers.pop_back(); }
+	inline size_t size() { return layers.size(); }
 	inline bool add(StringRef name, Type *ty, Value *val, StmtVar *decl)
 	{
 		return layers.back().add(name, ty, val, decl);
@@ -96,14 +81,8 @@ class Function : public LayerStack
 public:
 	Function(FuncTy *ty);
 
-	inline void setTy(FuncTy *ty)
-	{
-		fty = ty;
-	}
-	inline FuncTy *getFuncTy()
-	{
-		return fty;
-	}
+	inline void setTy(FuncTy *ty) { fty = ty; }
+	inline FuncTy *getFuncTy() { return fty; }
 };
 class ValueManager
 {
@@ -130,26 +109,11 @@ public:
 			funcstack.back().popLayer();
 		}
 	}
-	inline void pushFunc(FuncTy *fn)
-	{
-		funcstack.emplace_back(fn);
-	}
-	inline void popFunc()
-	{
-		funcstack.pop_back();
-	}
-	inline Function &getTopFunc()
-	{
-		return funcstack.back();
-	}
-	inline bool hasFunc()
-	{
-		return !funcstack.empty();
-	}
-	inline bool isTop()
-	{
-		return funcstack.empty() && layers.size() == 1;
-	}
+	inline void pushFunc(FuncTy *fn) { funcstack.emplace_back(fn); }
+	inline void popFunc() { funcstack.pop_back(); }
+	inline Function &getTopFunc() { return funcstack.back(); }
+	inline bool hasFunc() { return !funcstack.empty(); }
+	inline bool isTop() { return funcstack.empty() && layers.size() == 1; }
 	bool addVar(StringRef var, Type *ty, Value *val, StmtVar *decl, bool global = false);
 	bool addTypeFn(Type *ty, StringRef name, FuncVal *fn);
 	bool addTypeFn(uint32_t id, StringRef name, FuncVal *fn);

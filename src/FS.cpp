@@ -14,6 +14,7 @@
 #include "../include/FS.hpp"
 
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -24,10 +25,11 @@ namespace sc
 {
 namespace fs
 {
-bool exists(const String &loc)
-{
-	return access(loc.c_str(), F_OK) != -1;
-}
+bool exists(const String &loc) { return access(loc.c_str(), F_OK) != -1; }
+
+static int total_lines = 0;
+
+int getTotalLines() { return total_lines; }
 
 bool read(const String &file, String &data)
 {
@@ -44,6 +46,7 @@ bool read(const String &file, String &data)
 
 	while((read = getline(&line, &len, fp)) != -1) {
 		data += line;
+		if(read > 1 || (read == 1 && line[0] == '\n')) ++total_lines;
 	}
 
 	fclose(fp);
@@ -74,15 +77,9 @@ String getCWD()
 	return "";
 }
 
-bool setCWD(const String &path)
-{
-	return chdir(path.c_str()) != 0;
-}
+bool setCWD(const String &path) { return chdir(path.c_str()) != 0; }
 
-String parentDir(const String &path)
-{
-	return path.substr(0, path.find_last_of("/\\"));
-}
+String parentDir(const String &path) { return path.substr(0, path.find_last_of("/\\")); }
 
 String home()
 {

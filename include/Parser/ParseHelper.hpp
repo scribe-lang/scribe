@@ -46,10 +46,7 @@ public:
 		if(idx < toks.size()) toks[idx].getTok().setVal(type);
 	}
 
-	inline bool accept(const lex::TokType type)
-	{
-		return peekt() == type;
-	}
+	inline bool accept(const lex::TokType type) { return peekt() == type; }
 	inline bool accept(const lex::TokType t1, const lex::TokType t2)
 	{
 		const lex::TokType t = peekt();
@@ -86,36 +83,18 @@ public:
 		return false;
 	}
 
-	inline bool acceptd()
-	{
-		return peek().getTok().isData();
-	}
+	inline bool acceptd() { return peek().getTok().isData(); }
 
-	inline bool isValid()
-	{
-		return !accept(lex::INVALID, lex::FEOF);
-	}
+	inline bool isValid() { return !accept(lex::INVALID, lex::FEOF); }
 
 	const lex::Lexeme *at(const size_t &idx) const;
 
-	inline Module *getModule()
-	{
-		return mod;
-	}
+	inline Module *getModule() { return mod; }
 
-	inline bool hasNext() const
-	{
-		return idx + 1 < toks.size();
-	}
+	inline bool hasNext() const { return idx + 1 < toks.size(); }
 
-	inline void setPos(const size_t &idx)
-	{
-		this->idx = idx;
-	}
-	inline size_t getPos() const
-	{
-		return idx;
-	}
+	inline void setPos(const size_t &idx) { this->idx = idx; }
+	inline size_t getPos() const { return idx; }
 };
 } // namespace sc
 

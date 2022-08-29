@@ -47,17 +47,11 @@ public:
 	size_t size();
 	void clear();
 
-#define SetX(name, var)                 \
-	inline void set##name(bool val) \
-	{                               \
-		var = val;              \
-	}
+#define SetX(name, var) \
+	inline void set##name(bool val) { var = val; }
 
-#define IsX(name, var)         \
-	inline bool is##name() \
-	{                      \
-		return var;    \
-	}
+#define IsX(name, var) \
+	inline bool is##name() { return var; }
 
 	SetX(Static, isstatic);
 	SetX(Volatile, isvolatile);
@@ -75,42 +69,18 @@ public:
 	IsX(Decl, isdecl);
 	IsX(Weak, isweak);
 
-	inline void clearArray()
-	{
-		arr.clear();
-	}
-	inline bool isArray()
-	{
-		return !arr.empty();
-	}
+	inline void clearArray() { arr.clear(); }
+	inline bool isArray() { return !arr.empty(); }
 
-	inline void incRecurse()
-	{
-		++recurse;
-	}
-	inline bool isTop()
-	{
-		return recurse == 0;
-	}
+	inline void incRecurse() { ++recurse; }
+	inline bool isTop() { return recurse == 0; }
 
-	inline void incPtrs()
-	{
-		++ptrs;
-	}
+	inline void incPtrs() { ++ptrs; }
 
-	inline size_t getPtrs()
-	{
-		return ptrs;
-	}
+	inline size_t getPtrs() { return ptrs; }
 
-	inline void setPtrsIn(size_t _ptrsin)
-	{
-		ptrsin = _ptrsin;
-	}
-	inline size_t getPtrsIn()
-	{
-		return ptrsin;
-	}
+	inline void setPtrsIn(size_t _ptrsin) { ptrsin = _ptrsin; }
+	inline size_t getPtrsIn() { return ptrsin; }
 };
 
 class CDriver : public CodeGenDriver

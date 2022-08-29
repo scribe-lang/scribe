@@ -86,6 +86,14 @@ if(NOT DEFINED DISABLE_MARCH_NATIVE_FLAG)
 	endif()
 endif()
 
+# Force DWARF4 as valgrind does not support anything newer (clang-14 defaults to DWARF5).
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+	check_cxx_compiler_flag(-gdwarf-4 COMPILER_SUPPORTS_GDWARF4)
+	if(COMPILER_SUPPORTS_GDWARF4)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf-4")
+	endif()
+endif()
+
 # Because Android has issues with dlopen()'s RTLD_GLOBAL; See:
 # https://android.googlesource.com/platform/bionic/+/master/android-changes-for-ndk-developers.md#changes-to-library-search-order
 # https://android.googlesource.com/platform/bionic/+/30b17e32f0b403a97cef7c4d1fcab471fa316340/linker/linker_namespaces.cpp#100

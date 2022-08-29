@@ -84,10 +84,7 @@ VarDecl *LayerStack::getAll(StringRef name, bool top_only)
 
 Function::Function(FuncTy *ty) : fty(ty) {}
 
-ValueManager::ValueManager(Context &c)
-{
-	AddPrimitiveFuncs(c, *this);
-}
+ValueManager::ValueManager(Context &c) { AddPrimitiveFuncs(c, *this); }
 bool ValueManager::addVar(StringRef var, Type *ty, Value *val, StmtVar *decl, bool global)
 {
 	if(global) {

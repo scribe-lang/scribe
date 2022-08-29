@@ -183,10 +183,7 @@ public:
 		return val == INT || val == FLT || val == CHAR || val == STR;
 	}
 
-	inline bool isOper() const
-	{
-		return val >= ASSN && val <= RBRACK;
-	}
+	inline bool isOper() const { return val >= ASSN && val <= RBRACK; }
 
 	inline bool isUnaryPre() const
 	{
@@ -194,10 +191,7 @@ public:
 		       val == DECX || val == LNOT || val == BNOT;
 	}
 
-	inline bool isUnaryPost() const
-	{
-		return val == XINC || val == XDEC;
-	}
+	inline bool isUnaryPost() const { return val == XINC || val == XDEC; }
 
 	inline bool isComparison() const
 	{
@@ -212,42 +206,21 @@ public:
 			val == RSHIFT_ASSN);
 	}
 
-	inline bool isValid() const
-	{
-		return val != INVALID && val != FEOF;
-	}
+	inline bool isValid() const { return val != INVALID && val != FEOF; }
 
-	inline const char *cStr() const
-	{
-		return TokStrs[val];
-	}
-	inline String str() const
-	{
-		return TokStrs[val];
-	}
+	inline const char *cStr() const { return TokStrs[val]; }
+	inline String str() const { return TokStrs[val]; }
 
 	const char *getOperCStr() const;
 	const char *getUnaryNoCharCStr() const;
 
-	inline bool operator==(const Tok &other) const
-	{
-		return val == other.val;
-	}
+	inline bool operator==(const Tok &other) const { return val == other.val; }
 
-	inline TokType getVal() const
-	{
-		return val;
-	}
+	inline TokType getVal() const { return val; }
 
-	inline void setVal(const TokType &v)
-	{
-		val = v;
-	}
+	inline void setVal(const TokType &v) { val = v; }
 
-	inline bool isType(const TokType &other) const
-	{
-		return val == other;
-	}
+	inline bool isType(const TokType &other) const { return val == other; }
 };
 
 struct Data
@@ -278,53 +251,20 @@ public:
 	{
 		return tok == other.tok && data.cmp(other.data, tok.getVal());
 	}
-	inline bool operator!=(const Lexeme &other) const
-	{
-		return *this == other ? false : true;
-	}
+	inline bool operator!=(const Lexeme &other) const { return *this == other ? false : true; }
 
-	inline void setDataStr(StringRef str)
-	{
-		data.s = str;
-	}
-	inline void setDataInt(int64_t i)
-	{
-		data.i = i;
-	}
-	inline void setDataFlt(const long double &f)
-	{
-		data.f = f;
-	}
+	inline void setDataStr(StringRef str) { data.s = str; }
+	inline void setDataInt(int64_t i) { data.i = i; }
+	inline void setDataFlt(const long double &f) { data.f = f; }
 
-	inline StringRef getDataStr() const
-	{
-		return data.s;
-	}
-	inline int64_t getDataInt() const
-	{
-		return data.i;
-	}
-	inline const long double &getDataFlt() const
-	{
-		return data.f;
-	}
+	inline StringRef getDataStr() const { return data.s; }
+	inline int64_t getDataInt() const { return data.i; }
+	inline const long double &getDataFlt() const { return data.f; }
 
-	inline Tok &getTok()
-	{
-		return tok;
-	}
-	inline const Tok &getTok() const
-	{
-		return tok;
-	}
-	inline TokType getTokVal() const
-	{
-		return tok.getVal();
-	}
-	inline const ModuleLoc *getLoc() const
-	{
-		return loc;
-	}
+	inline Tok &getTok() { return tok; }
+	inline const Tok &getTok() const { return tok; }
+	inline TokType getTokVal() const { return tok.getVal(); }
+	inline const ModuleLoc *getLoc() const { return loc; }
 };
 
 class Tokenizer

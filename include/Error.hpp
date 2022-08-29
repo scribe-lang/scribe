@@ -35,18 +35,9 @@ public:
 	ModuleLoc(Module *mod, const size_t &line, const size_t &col);
 
 	String getLocStr() const;
-	inline Module *getMod() const
-	{
-		return mod;
-	}
-	inline size_t getLine() const
-	{
-		return line;
-	}
-	inline size_t getCol() const
-	{
-		return col;
-	}
+	inline Module *getMod() const { return mod; }
+	inline size_t getLine() const { return line; }
+	inline size_t getCol() const { return col; }
 };
 
 namespace err

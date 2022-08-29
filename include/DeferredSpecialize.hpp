@@ -40,10 +40,7 @@ public:
 	{
 		list.push_back({id, loc, actualtypes});
 	}
-	inline void pushDataInternal(uint32_t id, Type **loc)
-	{
-		listinternal.push_back({id, loc});
-	}
+	inline void pushDataInternal(uint32_t id, Type **loc) { listinternal.push_back({id, loc}); }
 	bool specialize(uint32_t id, Context &c, const ModuleLoc *loc);
 };
 } // namespace sc

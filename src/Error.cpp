@@ -33,39 +33,18 @@ namespace err
 
 static size_t max_errs = 10;
 
-void setMaxErrs(size_t max_err)
-{
-	max_errs = max_err;
-}
+void setMaxErrs(size_t max_err) { max_errs = max_err; }
 
 void outCommon(const ModuleLoc &loc, InitList<StringRef> err, bool is_warn);
 
-void out(Stmt *stmt, InitList<StringRef> err)
-{
-	out(stmt->getLoc(), err);
-}
-void out(const lex::Lexeme &tok, InitList<StringRef> err)
-{
-	out(*tok.getLoc(), err);
-}
-void out(const ModuleLoc &loc, InitList<StringRef> err)
-{
-	outCommon(loc, err, false);
-}
+void out(Stmt *stmt, InitList<StringRef> err) { out(stmt->getLoc(), err); }
+void out(const lex::Lexeme &tok, InitList<StringRef> err) { out(*tok.getLoc(), err); }
+void out(const ModuleLoc &loc, InitList<StringRef> err) { outCommon(loc, err, false); }
 
 // equivalent to out(), but for warnings
-void outw(Stmt *stmt, InitList<StringRef> err)
-{
-	outw(stmt->getLoc(), err);
-}
-void outw(const lex::Lexeme &tok, InitList<StringRef> err)
-{
-	outw(*tok.getLoc(), err);
-}
-void outw(const ModuleLoc &loc, InitList<StringRef> err)
-{
-	outCommon(loc, err, true);
-}
+void outw(Stmt *stmt, InitList<StringRef> err) { outw(stmt->getLoc(), err); }
+void outw(const lex::Lexeme &tok, InitList<StringRef> err) { outw(*tok.getLoc(), err); }
+void outw(const ModuleLoc &loc, InitList<StringRef> err) { outCommon(loc, err, true); }
 
 void outCommon(const ModuleLoc &loc, InitList<StringRef> err, bool is_warn)
 {

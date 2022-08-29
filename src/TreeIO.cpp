@@ -36,10 +36,7 @@ static void _tab_apply(const bool has_next)
 	}
 }
 
-void taba(const bool show)
-{
-	_tab().push_back(show);
-}
+void taba(const bool show) { _tab().push_back(show); }
 
 void tabr(const size_t num)
 {

@@ -20,14 +20,8 @@ namespace sc
 Writer::Writer() : indent(0) {}
 Writer::Writer(Writer &other) : indent(other.indent) {}
 
-void Writer::addIndent(const size_t &count)
-{
-	indent += count;
-}
-void Writer::remIndent(const size_t &count)
-{
-	indent -= count;
-}
+void Writer::addIndent(const size_t &count) { indent += count; }
+void Writer::remIndent(const size_t &count) { indent -= count; }
 
 // adds '\n' and appends indentation
 void Writer::newLine()
@@ -36,31 +30,13 @@ void Writer::newLine()
 	dest += String(indent, '\t');
 }
 
-void Writer::append(Writer &other)
-{
-	dest += other.getData();
-}
+void Writer::append(Writer &other) { dest += other.getData(); }
 
-void Writer::write(StringRef data)
-{
-	dest += data;
-}
-void Writer::write(uint32_t data)
-{
-	dest += std::to_string(data);
-}
-void Writer::write(int64_t data)
-{
-	dest += std::to_string(data);
-}
-void Writer::write(const double &data)
-{
-	dest += std::to_string(data);
-}
-void Writer::write(size_t count, char data)
-{
-	dest.append(count, data);
-}
+void Writer::write(StringRef data) { dest += data; }
+void Writer::write(uint32_t data) { dest += std::to_string(data); }
+void Writer::write(int64_t data) { dest += std::to_string(data); }
+void Writer::write(const double &data) { dest += std::to_string(data); }
+void Writer::write(size_t count, char data) { dest.append(count, data); }
 void Writer::writeConstChar(const int64_t data)
 {
 	dest += "'";
@@ -74,40 +50,19 @@ void Writer::writeConstString(StringRef data)
 	dest += "\"";
 }
 
-void Writer::writeBefore(StringRef data)
-{
-	dest.insert(dest.begin(), data.begin(), data.end());
-}
-void Writer::writeBefore(size_t count, char data)
-{
-	dest.insert(dest.begin(), count, data);
-}
-void Writer::insertAfter(const size_t &pos, StringRef data)
-{
-	dest.insert(pos, data);
-}
+void Writer::writeBefore(StringRef data) { dest.insert(dest.begin(), data.begin(), data.end()); }
+void Writer::writeBefore(size_t count, char data) { dest.insert(dest.begin(), count, data); }
+void Writer::insertAfter(const size_t &pos, StringRef data) { dest.insert(pos, data); }
 
 void Writer::reset(Writer &other)
 {
 	dest.clear();
 	indent = other.indent;
 }
-void Writer::clear()
-{
-	dest.clear();
-}
-bool Writer::empty()
-{
-	return dest.empty();
-}
+void Writer::clear() { dest.clear(); }
+bool Writer::empty() { return dest.empty(); }
 
-String &Writer::getData()
-{
-	return dest;
-}
+String &Writer::getData() { return dest; }
 
-const size_t &Writer::getIndent()
-{
-	return indent;
-}
+const size_t &Writer::getIndent() { return indent; }
 } // namespace sc

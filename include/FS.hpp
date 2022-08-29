@@ -24,6 +24,8 @@ namespace fs
 {
 bool exists(const String &loc);
 
+int getTotalLines();
+
 bool read(const String &file, String &data);
 
 String absPath(const String &loc);

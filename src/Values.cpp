@@ -19,10 +19,7 @@ namespace sc
 {
 Value::Value(const Values &vty, ContainsData has_data) : vty(vty), has_data(has_data) {}
 Value::~Value() {}
-ContainsData Value::getHasData()
-{
-	return has_data;
-}
+ContainsData Value::getHasData() { return has_data; }
 void Value::setHasData(ContainsData cd)
 {
 	if(has_data == CDPERMA) return;
@@ -33,22 +30,13 @@ void Value::setContainsData()
 	if(has_data == CDPERMA) return;
 	has_data = CDTRUE;
 }
-void Value::setContainsPermaData()
-{
-	has_data = CDPERMA;
-}
+void Value::setContainsPermaData() { has_data = CDPERMA; }
 void Value::unsetContainsPermaData()
 {
 	if(has_data == CDPERMA) has_data = CDTRUE;
 }
-bool Value::hasData()
-{
-	return has_data == CDTRUE || has_data == CDPERMA;
-}
-bool Value::hasPermaData()
-{
-	return has_data == CDPERMA;
-}
+bool Value::hasData() { return has_data == CDTRUE || has_data == CDPERMA; }
+bool Value::hasPermaData() { return has_data == CDPERMA; }
 void Value::clearHasData()
 {
 	if(has_data == CDPERMA) return;
@@ -58,10 +46,7 @@ void Value::clearHasData()
 IntVal::IntVal(Context &c, ContainsData has_data, int64_t data) : Value(VINT, has_data), data(data)
 {}
 
-String IntVal::toStr()
-{
-	return std::to_string(data);
-}
+String IntVal::toStr() { return std::to_string(data); }
 Value *IntVal::clone(Context &c)
 {
 	return create(c, has_data == CDPERMA ? CDTRUE : has_data, data);
@@ -83,14 +68,8 @@ FltVal::FltVal(Context &c, ContainsData has_data, const long double &data)
 	: Value(VFLT, has_data), data(data)
 {}
 
-String FltVal::toStr()
-{
-	return std::to_string(data);
-}
-Value *FltVal::clone(Context &c)
-{
-	return create(c, has_data, data);
-}
+String FltVal::toStr() { return std::to_string(data); }
+Value *FltVal::clone(Context &c) { return create(c, has_data, data); }
 bool FltVal::updateValue(Context &c, Value *v)
 {
 	if(!v->isFlt()) return false;
@@ -203,54 +182,24 @@ StructVal *StructVal::create(Context &c, ContainsData has_data, const Map<String
 
 FuncVal::FuncVal(Context &c, FuncTy *val) : Value(VFUNC, CDPERMA), ty(val) {}
 
-String FuncVal::toStr()
-{
-	return "func<" + ty->toStr() + ">";
-}
-Value *FuncVal::clone(Context &c)
-{
-	return create(c, as<FuncTy>(ty));
-}
-bool FuncVal::updateValue(Context &c, Value *v)
-{
-	return true;
-}
+String FuncVal::toStr() { return "func<" + ty->toStr() + ">"; }
+Value *FuncVal::clone(Context &c) { return create(c, as<FuncTy>(ty)); }
+bool FuncVal::updateValue(Context &c, Value *v) { return true; }
 
-FuncVal *FuncVal::create(Context &c, FuncTy *val)
-{
-	return c.allocVal<FuncVal>(val);
-}
+FuncVal *FuncVal::create(Context &c, FuncTy *val) { return c.allocVal<FuncVal>(val); }
 
 TypeVal::TypeVal(Context &c, Type *val) : Value(VTYPE, CDPERMA), ty(val) {}
 
-String TypeVal::toStr()
-{
-	return "typeval<" + ty->toStr() + ">";
-}
-Value *TypeVal::clone(Context &c)
-{
-	return create(c, ty);
-}
-bool TypeVal::updateValue(Context &c, Value *v)
-{
-	return true;
-}
+String TypeVal::toStr() { return "typeval<" + ty->toStr() + ">"; }
+Value *TypeVal::clone(Context &c) { return create(c, ty); }
+bool TypeVal::updateValue(Context &c, Value *v) { return true; }
 
-TypeVal *TypeVal::create(Context &c, Type *val)
-{
-	return c.allocVal<TypeVal>(val);
-}
+TypeVal *TypeVal::create(Context &c, Type *val) { return c.allocVal<TypeVal>(val); }
 
 NamespaceVal::NamespaceVal(Context &c, StringRef val) : Value(VNAMESPACE, CDPERMA), val(val) {}
 
-String NamespaceVal::toStr()
-{
-	return String(val);
-}
-Value *NamespaceVal::clone(Context &c)
-{
-	return create(c, val);
-}
+String NamespaceVal::toStr() { return String(val); }
+Value *NamespaceVal::clone(Context &c) { return create(c, val); }
 bool NamespaceVal::updateValue(Context &c, Value *v)
 {
 	if(!v->isNamespace()) return false;

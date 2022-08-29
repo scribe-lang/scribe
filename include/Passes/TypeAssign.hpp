@@ -75,24 +75,15 @@ public:
 	bool visit(StmtBreak *stmt, Stmt **source) override;
 	bool visit(StmtDefer *stmt, Stmt **source) override;
 
-	inline void addEnumTagTy(StringRef name, Type *ty)
-	{
-		enumtagtys[name] = ty;
-	}
+	inline void addEnumTagTy(StringRef name, Type *ty) { enumtagtys[name] = ty; }
 	inline Type *getEnumTagTy(StringRef name) const
 	{
 		auto found = enumtagtys.find(name);
 		if(found == enumtagtys.end()) return nullptr;
 		return found->second;
 	}
-	inline size_t getFnVALen() const
-	{
-		return valen.size() > 0 ? valen.back() : 0;
-	}
-	inline bool isFnVALen() const
-	{
-		return is_fn_va.size() > 0 ? is_fn_va.back() : false;
-	}
+	inline size_t getFnVALen() const { return valen.size() > 0 ? valen.back() : 0; }
+	inline bool isFnVALen() const { return is_fn_va.size() > 0 ? is_fn_va.back() : false; }
 };
 } // namespace sc
 
