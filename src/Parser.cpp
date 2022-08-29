@@ -47,34 +47,13 @@ bool Module::parseTokens()
 	Parsing parsing(ctx);
 	return parsing.parse_block(p, (StmtBlock *&)ptree, false);
 }
-bool Module::executePasses(PassManager &pm)
-{
-	return pm.visit(ptree);
-}
-StringRef Module::getID() const
-{
-	return id;
-}
-StringRef Module::getPath() const
-{
-	return path;
-}
-StringRef Module::getCode() const
-{
-	return code;
-}
-const Vector<lex::Lexeme> &Module::getTokens() const
-{
-	return tokens;
-}
-Stmt *&Module::getParseTree()
-{
-	return ptree;
-}
-bool Module::isMainModule() const
-{
-	return is_main_module;
-}
+bool Module::executePasses(PassManager &pm) { return pm.visit(ptree); }
+StringRef Module::getID() const { return id; }
+StringRef Module::getPath() const { return path; }
+StringRef Module::getCode() const { return code; }
+const Vector<lex::Lexeme> &Module::getTokens() const { return tokens; }
+Stmt *&Module::getParseTree() { return ptree; }
+bool Module::isMainModule() const { return is_main_module; }
 void Module::dumpTokens() const
 {
 	std::cout << "Source: " << path << "\n";
@@ -178,28 +157,16 @@ bool RAIIParser::parse(const String &_path, bool main_module, StringRef code)
 end:
 	return res;
 }
-bool RAIIParser::hasModule(StringRef path)
-{
-	return modules.find(path) != modules.end();
-}
+bool RAIIParser::hasModule(StringRef path) { return modules.find(path) != modules.end(); }
 Module *RAIIParser::getModule(StringRef path)
 {
 	auto res = modules.find(path);
 	if(res != modules.end()) return res->second;
 	return nullptr;
 }
-const Vector<StringRef> &RAIIParser::getModuleStack()
-{
-	return modulestack;
-}
-args::ArgParser &RAIIParser::getCommandArgs()
-{
-	return args;
-}
-Context &RAIIParser::getContext()
-{
-	return ctx;
-}
+const Vector<StringRef> &RAIIParser::getModuleStack() { return modulestack; }
+args::ArgParser &RAIIParser::getCommandArgs() { return args; }
+Context &RAIIParser::getContext() { return ctx; }
 void RAIIParser::dumpTokens(bool force)
 {
 	if(!args.has("tokens") && !force) return;

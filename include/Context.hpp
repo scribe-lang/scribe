@@ -79,10 +79,7 @@ public:
 		return static_cast<T *>(getPass(T::template genPassID<T>()));
 	}
 
-	inline RAIIParser *getParser()
-	{
-		return parser;
-	}
+	inline RAIIParser *getParser() { return parser; }
 };
 } // namespace sc
 

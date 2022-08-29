@@ -950,14 +950,8 @@ end:
 	popFunc();
 	return true;
 }
-bool TypeAssignPass::visit(StmtHeader *stmt, Stmt **source)
-{
-	return true;
-}
-bool TypeAssignPass::visit(StmtLib *stmt, Stmt **source)
-{
-	return true;
-}
+bool TypeAssignPass::visit(StmtHeader *stmt, Stmt **source) { return true; }
+bool TypeAssignPass::visit(StmtLib *stmt, Stmt **source) { return true; }
 bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 {
 	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
@@ -1245,14 +1239,8 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 	}
 	return true;
 }
-bool TypeAssignPass::visit(StmtContinue *stmt, Stmt **source)
-{
-	return true;
-}
-bool TypeAssignPass::visit(StmtBreak *stmt, Stmt **source)
-{
-	return true;
-}
+bool TypeAssignPass::visit(StmtContinue *stmt, Stmt **source) { return true; }
+bool TypeAssignPass::visit(StmtBreak *stmt, Stmt **source) { return true; }
 bool TypeAssignPass::visit(StmtDefer *stmt, Stmt **source)
 {
 	deferstack.addStmt(stmt->getDeferVal());

@@ -66,10 +66,7 @@ bool ValueAssignPass::visit(StmtBlock *stmt, Stmt **source)
 	}
 	return true;
 }
-bool ValueAssignPass::visit(StmtType *stmt, Stmt **source)
-{
-	return true;
-}
+bool ValueAssignPass::visit(StmtType *stmt, Stmt **source) { return true; }
 bool ValueAssignPass::visit(StmtSimple *stmt, Stmt **source)
 {
 	lex::Lexeme &tok = stmt->getLexValue();
@@ -402,26 +399,11 @@ bool ValueAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 	stmt->setUpdateVal(ctx, blk->getVal());
 	return true;
 }
-bool ValueAssignPass::visit(StmtHeader *stmt, Stmt **source)
-{
-	return true;
-}
-bool ValueAssignPass::visit(StmtLib *stmt, Stmt **source)
-{
-	return true;
-}
-bool ValueAssignPass::visit(StmtExtern *stmt, Stmt **source)
-{
-	return true;
-}
-bool ValueAssignPass::visit(StmtEnum *stmt, Stmt **source)
-{
-	return true;
-}
-bool ValueAssignPass::visit(StmtStruct *stmt, Stmt **source)
-{
-	return true;
-}
+bool ValueAssignPass::visit(StmtHeader *stmt, Stmt **source) { return true; }
+bool ValueAssignPass::visit(StmtLib *stmt, Stmt **source) { return true; }
+bool ValueAssignPass::visit(StmtExtern *stmt, Stmt **source) { return true; }
+bool ValueAssignPass::visit(StmtEnum *stmt, Stmt **source) { return true; }
+bool ValueAssignPass::visit(StmtStruct *stmt, Stmt **source) { return true; }
 bool ValueAssignPass::visit(StmtVarDecl *stmt, Stmt **source)
 {
 	for(auto &d : stmt->getDecls()) {
@@ -546,8 +528,5 @@ bool ValueAssignPass::visit(StmtBreak *stmt, Stmt **source)
 	break_stmt = true;
 	return true;
 }
-bool ValueAssignPass::visit(StmtDefer *stmt, Stmt **source)
-{
-	return true;
-}
+bool ValueAssignPass::visit(StmtDefer *stmt, Stmt **source) { return true; }
 } // namespace sc

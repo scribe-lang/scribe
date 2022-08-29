@@ -89,14 +89,8 @@ bool SimplifyPass::visit(StmtBlock *stmt, Stmt **source)
 	intermediates.pop_back();
 	return true;
 }
-bool SimplifyPass::visit(StmtType *stmt, Stmt **source)
-{
-	return true;
-}
-bool SimplifyPass::visit(StmtSimple *stmt, Stmt **source)
-{
-	return true;
-}
+bool SimplifyPass::visit(StmtType *stmt, Stmt **source) { return true; }
+bool SimplifyPass::visit(StmtSimple *stmt, Stmt **source) { return true; }
 bool SimplifyPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 {
 	auto &args = stmt->getArgs();
@@ -241,14 +235,8 @@ bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
 	}
 	return true;
 }
-bool SimplifyPass::visit(StmtHeader *stmt, Stmt **source)
-{
-	return true;
-}
-bool SimplifyPass::visit(StmtLib *stmt, Stmt **source)
-{
-	return true;
-}
+bool SimplifyPass::visit(StmtHeader *stmt, Stmt **source) { return true; }
+bool SimplifyPass::visit(StmtLib *stmt, Stmt **source) { return true; }
 bool SimplifyPass::visit(StmtExtern *stmt, Stmt **source)
 {
 	if(!stmt->getEntity()) return true;
@@ -270,10 +258,7 @@ bool SimplifyPass::visit(StmtExtern *stmt, Stmt **source)
 	}
 	return true;
 }
-bool SimplifyPass::visit(StmtEnum *stmt, Stmt **source)
-{
-	return true;
-}
+bool SimplifyPass::visit(StmtEnum *stmt, Stmt **source) { return true; }
 bool SimplifyPass::visit(StmtStruct *stmt, Stmt **source)
 {
 	// structs are not defined by themselves
@@ -341,18 +326,9 @@ bool SimplifyPass::visit(StmtRet *stmt, Stmt **source)
 	}
 	return true;
 }
-bool SimplifyPass::visit(StmtContinue *stmt, Stmt **source)
-{
-	return true;
-}
-bool SimplifyPass::visit(StmtBreak *stmt, Stmt **source)
-{
-	return true;
-}
-bool SimplifyPass::visit(StmtDefer *stmt, Stmt **source)
-{
-	return true;
-}
+bool SimplifyPass::visit(StmtContinue *stmt, Stmt **source) { return true; }
+bool SimplifyPass::visit(StmtBreak *stmt, Stmt **source) { return true; }
+bool SimplifyPass::visit(StmtDefer *stmt, Stmt **source) { return true; }
 
 bool SimplifyPass::trySetMainFunction(StmtVar *var, StringRef varname)
 {

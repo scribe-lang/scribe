@@ -110,10 +110,7 @@ ModuleLoc *Context::allocModuleLoc(Module *mod, size_t line, size_t col)
 	return &modlocmem.front();
 }
 
-void Context::addPass(const size_t &id, Pass *pass)
-{
-	passes[id] = pass;
-}
+void Context::addPass(const size_t &id, Pass *pass) { passes[id] = pass; }
 void Context::remPass(const size_t &id)
 {
 	auto loc = passes.find(id);

@@ -83,11 +83,8 @@ public:
 	const char *getStmtTypeCString() const;
 	String getTypeString();
 
-#define isStmtX(X, ENUMVAL)              \
-	inline bool is##X()              \
-	{                                \
-		return stype == ENUMVAL; \
-	}
+#define isStmtX(X, ENUMVAL) \
+	inline bool is##X() { return stype == ENUMVAL; }
 	isStmtX(Block, BLOCK);
 	isStmtX(Type, TYPE);
 	isStmtX(Simple, SIMPLE);
@@ -109,61 +106,43 @@ public:
 	isStmtX(Break, BREAK);
 	isStmtX(Defer, DEFER);
 
-#define SetModifierX(Fn, Mod)                       \
-	inline void set##Fn()                       \
-	{                                           \
-		stmtmask |= (uint8_t)StmtMask::Mod; \
-	}
+#define SetModifierX(Fn, Mod) \
+	inline void set##Fn() { stmtmask |= (uint8_t)StmtMask::Mod; }
 	SetModifierX(Ref, REF);
 	SetModifierX(Const, CONST);
 	SetModifierX(Comptime, COMPTIME);
 #undef SetModifierX
 
-#define UnsetModifierX(Fn, Mod)                      \
-	inline void unset##Fn()                      \
-	{                                            \
-		stmtmask &= ~(uint8_t)StmtMask::Mod; \
-	}
+#define UnsetModifierX(Fn, Mod) \
+	inline void unset##Fn() { stmtmask &= ~(uint8_t)StmtMask::Mod; }
 	UnsetModifierX(Ref, REF);
 	UnsetModifierX(Const, CONST);
 	UnsetModifierX(Comptime, COMPTIME);
 #undef UnsetModifierX
 
-#define IsModifierX(Fn, Mod)                              \
-	inline bool is##Fn() const                        \
-	{                                                 \
-		return stmtmask & (uint8_t)StmtMask::Mod; \
-	}
+#define IsModifierX(Fn, Mod) \
+	inline bool is##Fn() const { return stmtmask & (uint8_t)StmtMask::Mod; }
 	IsModifierX(Ref, REF);
 	IsModifierX(Const, CONST);
 	IsModifierX(Comptime, COMPTIME);
 #undef IsModifierX
 
-#define SetCastModifierX(Fn, Mod)                   \
-	inline void setCast##Fn()                   \
-	{                                           \
-		castmask |= (uint8_t)StmtMask::Mod; \
-	}
+#define SetCastModifierX(Fn, Mod) \
+	inline void setCast##Fn() { castmask |= (uint8_t)StmtMask::Mod; }
 	SetCastModifierX(Ref, REF);
 	SetCastModifierX(Const, CONST);
 	SetCastModifierX(Comptime, COMPTIME);
 #undef SetCastModifierX
 
-#define UnsetCastModifierX(Fn, Mod)                  \
-	inline void unsetCast##Fn()                  \
-	{                                            \
-		castmask &= ~(uint8_t)StmtMask::Mod; \
-	}
+#define UnsetCastModifierX(Fn, Mod) \
+	inline void unsetCast##Fn() { castmask &= ~(uint8_t)StmtMask::Mod; }
 	UnsetCastModifierX(Ref, REF);
 	UnsetCastModifierX(Const, CONST);
 	UnsetCastModifierX(Comptime, COMPTIME);
 #undef UnsetCastModifierX
 
-#define IsCastModifierX(Fn, Mod)                          \
-	inline bool isCast##Fn() const                    \
-	{                                                 \
-		return castmask & (uint8_t)StmtMask::Mod; \
-	}
+#define IsCastModifierX(Fn, Mod) \
+	inline bool isCast##Fn() const { return castmask & (uint8_t)StmtMask::Mod; }
 	IsCastModifierX(Ref, REF);
 	IsCastModifierX(Const, CONST);
 	IsCastModifierX(Comptime, COMPTIME);
@@ -179,14 +158,8 @@ public:
 		ty  = s->ty;
 		val = s->val;
 	}
-	inline void setTy(Type *t)
-	{
-		ty = t;
-	}
-	inline void setVal(Value *v)
-	{
-		val = v;
-	}
+	inline void setTy(Type *t) { ty = t; }
+	inline void setVal(Value *v) { val = v; }
 	inline void setUpdateVal(Context &c, Value *v)
 	{
 		if(val) val->updateValue(c, v);
@@ -198,54 +171,21 @@ public:
 		ty  = t;
 		val = TypeVal::create(c, ty);
 	}
-	inline void setStmtMask(uint8_t mask)
-	{
-		stmtmask = mask;
-	}
-	inline void appendStmtMask(uint8_t mask)
-	{
-		stmtmask |= mask;
-	}
-	inline uint8_t getStmtMask()
-	{
-		return stmtmask;
-	}
+	inline void setStmtMask(uint8_t mask) { stmtmask = mask; }
+	inline void appendStmtMask(uint8_t mask) { stmtmask |= mask; }
+	inline uint8_t getStmtMask() { return stmtmask; }
 
-	inline void setCastStmtMask(uint8_t mask)
-	{
-		castmask = mask;
-	}
-	inline void appendCastStmtMask(uint8_t mask)
-	{
-		castmask |= mask;
-	}
-	inline uint8_t getCastStmtMask()
-	{
-		return castmask;
-	}
+	inline void setCastStmtMask(uint8_t mask) { castmask = mask; }
+	inline void appendCastStmtMask(uint8_t mask) { castmask |= mask; }
+	inline uint8_t getCastStmtMask() { return castmask; }
 
-	inline const Stmts &getStmtType() const
-	{
-		return stype;
-	}
-	inline StringRef getStmtTypeString() const
-	{
-		return getStmtTypeCString();
-	}
+	inline const Stmts &getStmtType() const { return stype; }
+	inline StringRef getStmtTypeString() const { return getStmtTypeCString(); }
 
-	inline const ModuleLoc *getLoc()
-	{
-		return loc;
-	}
-	inline Module *getMod() const
-	{
-		return loc->getMod();
-	}
+	inline const ModuleLoc *getLoc() { return loc; }
+	inline Module *getMod() const { return loc->getMod(); }
 	Type *&getTy(bool exact = false);
-	inline Value *getVal()
-	{
-		return val;
-	}
+	inline Value *getVal() { return val; }
 	inline bool updateValue(Context &c, Value *v)
 	{
 		if(!val) return false;
@@ -257,30 +197,15 @@ public:
 		cast_to = t;
 		appendCastStmtMask(maskfrom);
 	}
-	inline void setDerefCount(uint16_t count)
-	{
-		derefcount = count;
-	}
+	inline void setDerefCount(uint16_t count) { derefcount = count; }
 
-	inline Type *getCast()
-	{
-		return cast_to;
-	}
-	inline uint16_t getDerefCount()
-	{
-		return derefcount;
-	}
+	inline Type *getCast() { return cast_to; }
+	inline uint16_t getDerefCount() { return derefcount; }
 };
 
-template<typename T> T *as(Stmt *data)
-{
-	return static_cast<T *>(data);
-}
+template<typename T> T *as(Stmt *data) { return static_cast<T *>(data); }
 
-template<typename T> Stmt **asStmt(T **data)
-{
-	return (Stmt **)(data);
-}
+template<typename T> Stmt **asStmt(T **data) { return (Stmt **)(data); }
 
 class StmtBlock : public Stmt
 {
@@ -301,23 +226,11 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void disableLayering()
-	{
-		disable_layering = true;
-	}
+	inline void disableLayering() { disable_layering = true; }
 
-	inline Vector<Stmt *> &getStmts()
-	{
-		return stmts;
-	}
-	inline bool isTop() const
-	{
-		return is_top;
-	}
-	inline bool isLayeringDisabled() const
-	{
-		return disable_layering;
-	}
+	inline Vector<Stmt *> &getStmts() { return stmts; }
+	inline bool isTop() const { return is_top; }
+	inline bool isLayeringDisabled() const { return disable_layering; }
 };
 
 class StmtType : public Stmt
@@ -339,36 +252,18 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void setVariadic()
-	{
-		variadic = true;
-	}
-	inline void unsetVariadic()
-	{
-		variadic = false;
-	}
+	inline void setVariadic() { variadic = true; }
+	inline void unsetVariadic() { variadic = false; }
 
-	inline const size_t &getPtrCount() const
-	{
-		return ptr;
-	}
+	inline const size_t &getPtrCount() const { return ptr; }
 
-	inline bool isVariadic() const
-	{
-		return variadic;
-	}
+	inline bool isVariadic() const { return variadic; }
 
-	inline Stmt *&getExpr()
-	{
-		return expr;
-	}
+	inline Stmt *&getExpr() { return expr; }
 
 	String getStringName();
 
-	inline bool isFunc() const
-	{
-		return expr && expr->getStmtType() == FNSIG;
-	}
+	inline bool isFunc() const { return expr && expr->getStmtType() == FNSIG; }
 
 	bool isMetaType() const;
 };
@@ -393,38 +288,14 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void setDecl(StmtVar *d)
-	{
-		decl = d;
-	}
-	inline void updateLexDataStr(StringRef newdata)
-	{
-		val.setDataStr(newdata);
-	}
-	inline void setSelf(Stmt *s)
-	{
-		self = s;
-	}
-	inline void setAppliedModuleID(bool apply)
-	{
-		applied_module_id = apply;
-	}
-	inline StmtVar *&getDecl()
-	{
-		return decl;
-	}
-	inline lex::Lexeme &getLexValue()
-	{
-		return val;
-	}
-	inline Stmt *&getSelf()
-	{
-		return self;
-	}
-	inline bool isAppliedModuleID() const
-	{
-		return applied_module_id;
-	}
+	inline void setDecl(StmtVar *d) { decl = d; }
+	inline void updateLexDataStr(StringRef newdata) { val.setDataStr(newdata); }
+	inline void setSelf(Stmt *s) { self = s; }
+	inline void setAppliedModuleID(bool apply) { applied_module_id = apply; }
+	inline StmtVar *&getDecl() { return decl; }
+	inline lex::Lexeme &getLexValue() { return val; }
+	inline Stmt *&getSelf() { return self; }
+	inline bool isAppliedModuleID() const { return applied_module_id; }
 };
 
 class StmtFnCallInfo : public Stmt
@@ -442,18 +313,9 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void setArg(const size_t &idx, Stmt *a)
-	{
-		args[idx] = a;
-	}
-	inline Vector<Stmt *> &getArgs()
-	{
-		return args;
-	}
-	inline Stmt *getArg(const size_t &idx)
-	{
-		return args[idx];
-	}
+	inline void setArg(const size_t &idx, Stmt *a) { args[idx] = a; }
+	inline Vector<Stmt *> &getArgs() { return args; }
+	inline Stmt *getArg(const size_t &idx) { return args[idx]; }
 };
 
 class StmtExpr : public Stmt
@@ -481,52 +343,22 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void setCommas(const size_t &c)
-	{
-		commas = c;
-	}
+	inline void setCommas(const size_t &c) { commas = c; }
 	inline void setOr(StmtBlock *blk, const lex::Lexeme &blk_var)
 	{
 		or_blk	   = blk;
 		or_blk_var = blk_var;
 	}
-	inline void setCalledFnTy(FuncTy *calledty)
-	{
-		calledfn = calledty;
-	}
+	inline void setCalledFnTy(FuncTy *calledty) { calledfn = calledty; }
 
-	inline const size_t &getCommas() const
-	{
-		return commas;
-	}
-	inline Stmt *&getLHS()
-	{
-		return lhs;
-	}
-	inline Stmt *&getRHS()
-	{
-		return rhs;
-	}
-	inline lex::Lexeme &getOper()
-	{
-		return oper;
-	}
-	inline StmtBlock *&getOrBlk()
-	{
-		return or_blk;
-	}
-	inline lex::Lexeme &getOrBlkVar()
-	{
-		return or_blk_var;
-	}
-	inline bool isIntrinsicCall() const
-	{
-		return is_intrinsic_call;
-	}
-	inline FuncTy *getCalledFn()
-	{
-		return calledfn;
-	}
+	inline const size_t &getCommas() const { return commas; }
+	inline Stmt *&getLHS() { return lhs; }
+	inline Stmt *&getRHS() { return rhs; }
+	inline lex::Lexeme &getOper() { return oper; }
+	inline StmtBlock *&getOrBlk() { return or_blk; }
+	inline lex::Lexeme &getOrBlkVar() { return or_blk_var; }
+	inline bool isIntrinsicCall() const { return is_intrinsic_call; }
+	inline FuncTy *getCalledFn() { return calledfn; }
 };
 
 enum class VarMask : uint8_t
@@ -560,72 +392,39 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-#define SetModifierX(Fn, Mod)                     \
-	inline void set##Fn()                     \
-	{                                         \
-		varmask |= (uint8_t)VarMask::Mod; \
-	}
+#define SetModifierX(Fn, Mod) \
+	inline void set##Fn() { varmask |= (uint8_t)VarMask::Mod; }
 	SetModifierX(Static, STATIC);
 	SetModifierX(Volatile, VOLATILE);
 	SetModifierX(In, IN);
 	SetModifierX(Global, GLOBAL);
 #undef SetModifierX
 
-#define UnsetModifierX(Fn, Mod)                    \
-	inline void unset##Fn()                    \
-	{                                          \
-		varmask &= ~(uint8_t)VarMask::Mod; \
-	}
+#define UnsetModifierX(Fn, Mod) \
+	inline void unset##Fn() { varmask &= ~(uint8_t)VarMask::Mod; }
 	UnsetModifierX(Static, STATIC);
 	UnsetModifierX(Volatile, VOLATILE);
 	UnsetModifierX(In, IN);
 	UnsetModifierX(Global, GLOBAL);
 #undef UnsetModifierX
 
-#define IsModifierX(Fn, Mod)                            \
-	inline bool is##Fn() const                      \
-	{                                               \
-		return varmask & (uint8_t)VarMask::Mod; \
-	}
+#define IsModifierX(Fn, Mod) \
+	inline bool is##Fn() const { return varmask & (uint8_t)VarMask::Mod; }
 	IsModifierX(Static, STATIC);
 	IsModifierX(Volatile, VOLATILE);
 	IsModifierX(In, IN);
 	IsModifierX(Global, GLOBAL);
 #undef IsModifierX
 
-	inline void setVVal(Stmt *val)
-	{
-		vval = val;
-	}
-	inline void setCodeGenMangle(bool cgmangle)
-	{
-		applied_codegen_mangle = cgmangle;
-	}
+	inline void setVVal(Stmt *val) { vval = val; }
+	inline void setCodeGenMangle(bool cgmangle) { applied_codegen_mangle = cgmangle; }
 
-	inline lex::Lexeme &getName()
-	{
-		return name;
-	}
-	inline StmtType *&getVType()
-	{
-		return vtype;
-	}
-	inline Stmt *&getVVal()
-	{
-		return vval;
-	}
-	inline void setAppliedModuleID(bool apply)
-	{
-		applied_module_id = apply;
-	}
-	inline bool isAppliedModuleID() const
-	{
-		return applied_module_id;
-	}
-	inline bool isCodeGenMangled()
-	{
-		return applied_codegen_mangle;
-	}
+	inline lex::Lexeme &getName() { return name; }
+	inline StmtType *&getVType() { return vtype; }
+	inline Stmt *&getVVal() { return vval; }
+	inline void setAppliedModuleID(bool apply) { applied_module_id = apply; }
+	inline bool isAppliedModuleID() const { return applied_module_id; }
+	inline bool isCodeGenMangled() { return applied_codegen_mangle; }
 };
 
 class StmtFnSig : public Stmt
@@ -649,43 +448,19 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void insertArg(StmtVar *arg)
-	{
-		args.push_back(arg);
-	}
+	inline void insertArg(StmtVar *arg) { args.push_back(arg); }
 	inline void insertArg(const size_t &pos, StmtVar *arg)
 	{
 		args.insert(args.begin() + pos, arg);
 	}
-	inline void disableTemplates()
-	{
-		disable_template = true;
-	}
-	inline void setVariadic(bool va)
-	{
-		has_variadic = va;
-	}
+	inline void disableTemplates() { disable_template = true; }
+	inline void setVariadic(bool va) { has_variadic = va; }
 
-	inline StmtVar *&getArg(const size_t &idx)
-	{
-		return args[idx];
-	}
-	inline Vector<StmtVar *> &getArgs()
-	{
-		return args;
-	}
-	inline StmtType *&getRetType()
-	{
-		return rettype;
-	}
-	inline bool hasTemplatesDisabled()
-	{
-		return disable_template;
-	}
-	inline bool hasVariadic() const
-	{
-		return has_variadic;
-	}
+	inline StmtVar *&getArg(const size_t &idx) { return args[idx]; }
+	inline Vector<StmtVar *> &getArgs() { return args; }
+	inline StmtType *&getRetType() { return rettype; }
+	inline bool hasTemplatesDisabled() { return disable_template; }
+	inline bool hasVariadic() const { return has_variadic; }
 };
 
 class StmtFnDef : public Stmt
@@ -708,15 +483,9 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void setBlk(StmtBlock *_blk)
-	{
-		blk = _blk;
-	}
+	inline void setBlk(StmtBlock *_blk) { blk = _blk; }
 
-	inline void setParentVar(StmtVar *pvar)
-	{
-		parentvar = pvar;
-	}
+	inline void setParentVar(StmtVar *pvar) { parentvar = pvar; }
 	inline void incUsed()
 	{
 		Set<Stmt *> done;
@@ -727,47 +496,17 @@ public:
 		Set<Stmt *> done;
 		_setFuncUsed(false, done);
 	}
-	inline StmtFnSig *&getSig()
-	{
-		return sig;
-	}
-	inline StmtBlock *&getBlk()
-	{
-		return blk;
-	}
-	inline StmtVar *&getParentVar()
-	{
-		return parentvar;
-	}
+	inline StmtFnSig *&getSig() { return sig; }
+	inline StmtBlock *&getBlk() { return blk; }
+	inline StmtVar *&getParentVar() { return parentvar; }
 
-	inline StmtVar *&getSigArg(const size_t &idx)
-	{
-		return sig->getArg(idx);
-	}
-	inline const Vector<StmtVar *> &getSigArgs() const
-	{
-		return sig->getArgs();
-	}
-	inline StmtType *&getSigRetType()
-	{
-		return sig->getRetType();
-	}
-	inline bool hasSigVariadic() const
-	{
-		return sig->hasVariadic();
-	}
-	inline bool isUsed()
-	{
-		return used > 0;
-	}
-	inline int64_t getUsed()
-	{
-		return used;
-	}
-	inline bool isInline()
-	{
-		return is_inline;
-	}
+	inline StmtVar *&getSigArg(const size_t &idx) { return sig->getArg(idx); }
+	inline const Vector<StmtVar *> &getSigArgs() const { return sig->getArgs(); }
+	inline StmtType *&getSigRetType() { return sig->getRetType(); }
+	inline bool hasSigVariadic() const { return sig->hasVariadic(); }
+	inline bool isUsed() { return used > 0; }
+	inline int64_t getUsed() { return used; }
+	inline bool isInline() { return is_inline; }
 };
 
 class StmtHeader : public Stmt
@@ -787,14 +526,8 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline const lex::Lexeme &getNames() const
-	{
-		return names;
-	}
-	inline const lex::Lexeme &getFlags() const
-	{
-		return flags;
-	}
+	inline const lex::Lexeme &getNames() const { return names; }
+	inline const lex::Lexeme &getFlags() const { return flags; }
 };
 
 class StmtLib : public Stmt
@@ -812,10 +545,7 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline const lex::Lexeme &getFlags() const
-	{
-		return flags;
-	}
+	inline const lex::Lexeme &getFlags() const { return flags; }
 };
 
 class StmtExtern : public Stmt
@@ -840,34 +570,16 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void setParentVar(StmtVar *var)
-	{
-		parentvar = var;
-	}
+	inline void setParentVar(StmtVar *var) { parentvar = var; }
 
-	inline const lex::Lexeme &getName() const
-	{
-		return fname;
-	}
+	inline const lex::Lexeme &getName() const { return fname; }
 
-	inline StmtHeader *&getHeaders()
-	{
-		return headers;
-	}
+	inline StmtHeader *&getHeaders() { return headers; }
 
-	inline StmtLib *&getLibs()
-	{
-		return libs;
-	}
+	inline StmtLib *&getLibs() { return libs; }
 
-	inline Stmt *&getEntity()
-	{
-		return entity;
-	}
-	inline StmtVar *&getParentVar()
-	{
-		return parentvar;
-	}
+	inline Stmt *&getEntity() { return entity; }
+	inline StmtVar *&getParentVar() { return parentvar; }
 };
 
 class StmtEnum : public Stmt
@@ -887,14 +599,8 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline Vector<lex::Lexeme> &getItems()
-	{
-		return items;
-	}
-	inline StmtType *&getTagTy()
-	{
-		return tagty;
-	}
+	inline Vector<lex::Lexeme> &getItems() { return items; }
+	inline StmtType *&getTagTy() { return tagty; }
 };
 
 // both declaration and definition
@@ -919,34 +625,13 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void setDecl(bool decl)
-	{
-		is_decl = decl;
-	}
-	inline void setExterned(bool externed)
-	{
-		is_externed = externed;
-	}
-	inline Vector<StmtVar *> &getFields()
-	{
-		return fields;
-	}
-	inline StmtVar *getField(size_t idx)
-	{
-		return fields[idx];
-	}
-	inline const Vector<lex::Lexeme> &getTemplates()
-	{
-		return templates;
-	}
-	inline bool isDecl()
-	{
-		return is_decl;
-	}
-	inline bool isExterned()
-	{
-		return is_externed;
-	}
+	inline void setDecl(bool decl) { is_decl = decl; }
+	inline void setExterned(bool externed) { is_externed = externed; }
+	inline Vector<StmtVar *> &getFields() { return fields; }
+	inline StmtVar *getField(size_t idx) { return fields[idx]; }
+	inline const Vector<lex::Lexeme> &getTemplates() { return templates; }
+	inline bool isDecl() { return is_decl; }
+	inline bool isExterned() { return is_externed; }
 
 	Vector<StringRef> getTemplateNames();
 };
@@ -968,10 +653,7 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline Vector<StmtVar *> &getDecls()
-	{
-		return decls;
-	}
+	inline Vector<StmtVar *> &getDecls() { return decls; }
 };
 
 class Conditional
@@ -989,22 +671,10 @@ public:
 		blk  = nullptr;
 	}
 
-	inline Stmt *&getCond()
-	{
-		return cond;
-	}
-	inline StmtBlock *&getBlk()
-	{
-		return blk;
-	}
-	inline const Stmt *getCond() const
-	{
-		return cond;
-	}
-	inline const StmtBlock *getBlk() const
-	{
-		return blk;
-	}
+	inline Stmt *&getCond() { return cond; }
+	inline StmtBlock *&getBlk() { return blk; }
+	inline const Stmt *getCond() const { return cond; }
+	inline const StmtBlock *getBlk() const { return blk; }
 };
 
 class StmtCond : public Stmt
@@ -1024,14 +694,8 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline Vector<Conditional> &getConditionals()
-	{
-		return conds;
-	}
-	inline bool isInline() const
-	{
-		return is_inline;
-	}
+	inline Vector<Conditional> &getConditionals() { return conds; }
+	inline bool isInline() const { return is_inline; }
 };
 
 class StmtFor : public Stmt
@@ -1056,26 +720,11 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline Stmt *&getInit()
-	{
-		return init;
-	}
-	inline Stmt *&getCond()
-	{
-		return cond;
-	}
-	inline Stmt *&getIncr()
-	{
-		return incr;
-	}
-	inline StmtBlock *&getBlk()
-	{
-		return blk;
-	}
-	inline bool isInline() const
-	{
-		return is_inline;
-	}
+	inline Stmt *&getInit() { return init; }
+	inline Stmt *&getCond() { return cond; }
+	inline Stmt *&getIncr() { return incr; }
+	inline StmtBlock *&getBlk() { return blk; }
+	inline bool isInline() const { return is_inline; }
 };
 
 class StmtRet : public Stmt
@@ -1094,19 +743,10 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void setFnBlk(StmtBlock *blk)
-	{
-		fnblk = blk;
-	}
+	inline void setFnBlk(StmtBlock *blk) { fnblk = blk; }
 
-	inline Stmt *&getRetVal()
-	{
-		return val;
-	}
-	inline StmtBlock *&getFnBlk()
-	{
-		return fnblk;
-	}
+	inline Stmt *&getRetVal() { return val; }
+	inline StmtBlock *&getFnBlk() { return fnblk; }
 };
 
 class StmtContinue : public Stmt
@@ -1150,10 +790,7 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline Stmt *&getDeferVal()
-	{
-		return val;
-	}
+	inline Stmt *&getDeferVal() { return val; }
 };
 } // namespace sc
 

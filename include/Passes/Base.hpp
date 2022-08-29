@@ -71,16 +71,10 @@ public:
 	virtual bool visit(StmtBreak *stmt, Stmt **source)	= 0;
 	virtual bool visit(StmtDefer *stmt, Stmt **source)	= 0;
 
-	inline const size_t &getPassID()
-	{
-		return passid;
-	}
+	inline const size_t &getPassID() { return passid; }
 };
 
-template<typename T> T *as(Pass *t)
-{
-	return static_cast<T *>(t);
-}
+template<typename T> T *as(Pass *t) { return static_cast<T *>(t); }
 
 class PassManager
 {

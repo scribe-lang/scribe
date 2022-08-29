@@ -54,11 +54,8 @@ public:
 	virtual Value *clone(Context &c)	       = 0;
 	virtual bool updateValue(Context &c, Value *v) = 0;
 
-#define IsVal(ty, vt)                \
-	inline bool is##ty()         \
-	{                            \
-		return vty == V##vt; \
-	}
+#define IsVal(ty, vt) \
+	inline bool is##ty() { return vty == V##vt; }
 	IsVal(Int, INT);
 	IsVal(Flt, FLT);
 	IsVal(Vec, VEC);
@@ -68,10 +65,7 @@ public:
 	IsVal(Namespace, NAMESPACE);
 	IsVal(Ref, REF);
 
-	inline Values getValType()
-	{
-		return vty;
-	}
+	inline Values getValType() { return vty; }
 	virtual ContainsData getHasData();
 	virtual void setHasData(ContainsData cd);
 	virtual void setContainsData();
@@ -82,10 +76,7 @@ public:
 	virtual void clearHasData();
 };
 
-template<typename T> T *as(Value *v)
-{
-	return static_cast<T *>(v);
-}
+template<typename T> T *as(Value *v) { return static_cast<T *>(v); }
 
 class IntVal : public Value
 {
@@ -100,10 +91,7 @@ public:
 
 	static IntVal *create(Context &c, ContainsData has_data, int64_t val);
 
-	inline int64_t &getVal()
-	{
-		return data;
-	}
+	inline int64_t &getVal() { return data; }
 };
 
 class FltVal : public Value
@@ -119,10 +107,7 @@ public:
 
 	static FltVal *create(Context &c, ContainsData has_data, const long double &val);
 
-	inline long double &getVal()
-	{
-		return data;
-	}
+	inline long double &getVal() { return data; }
 };
 
 class VecVal : public Value
@@ -139,18 +124,9 @@ public:
 	static VecVal *create(Context &c, ContainsData has_data, const Vector<Value *> &val);
 	static VecVal *createStr(Context &c, ContainsData has_data, StringRef val);
 
-	inline void insertVal(Value *v)
-	{
-		data.push_back(v);
-	}
-	inline Vector<Value *> &getVal()
-	{
-		return data;
-	}
-	inline Value *&getValAt(const size_t &idx)
-	{
-		return data[idx];
-	}
+	inline void insertVal(Value *v) { data.push_back(v); }
+	inline Vector<Value *> &getVal() { return data; }
+	inline Value *&getValAt(const size_t &idx) { return data[idx]; }
 	String getAsString();
 };
 
@@ -168,10 +144,7 @@ public:
 	static StructVal *create(Context &c, ContainsData has_data,
 				 const Map<StringRef, Value *> &val);
 
-	inline Map<StringRef, Value *> &getVal()
-	{
-		return data;
-	}
+	inline Map<StringRef, Value *> &getVal() { return data; }
 
 	inline Value *getField(StringRef key)
 	{
@@ -193,10 +166,7 @@ public:
 
 	static FuncVal *create(Context &c, FuncTy *val);
 
-	inline FuncTy *getVal()
-	{
-		return (FuncTy *)ty;
-	}
+	inline FuncTy *getVal() { return (FuncTy *)ty; }
 };
 
 class TypeVal : public Value
@@ -212,14 +182,8 @@ public:
 
 	static TypeVal *create(Context &c, Type *val);
 
-	inline void setVal(Type *v)
-	{
-		ty = v;
-	}
-	inline Type *&getVal()
-	{
-		return ty;
-	}
+	inline void setVal(Type *v) { ty = v; }
+	inline Type *&getVal() { return ty; }
 };
 
 class NamespaceVal : public Value
@@ -235,10 +199,7 @@ public:
 
 	static NamespaceVal *create(Context &c, StringRef val);
 
-	inline StringRef getVal()
-	{
-		return val;
-	}
+	inline StringRef getVal() { return val; }
 };
 } // namespace sc
 

@@ -19,10 +19,7 @@ Pass::Pass(const size_t &passid, Context &ctx) : passid(passid), ctx(ctx)
 {
 	ctx.addPass(passid, this);
 }
-Pass::~Pass()
-{
-	ctx.remPass(passid);
-}
+Pass::~Pass() { ctx.remPass(passid); }
 
 PassManager::PassManager(Context &ctx) : ctx(ctx) {}
 PassManager::~PassManager()

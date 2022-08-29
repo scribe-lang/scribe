@@ -72,32 +72,17 @@ public:
 	virtual bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
 	virtual Type *specialize(Context &c, const size_t &weak_depth = 0) = 0;
 
-	inline bool isPrimitive() const
-	{
-		return isInt() || isFlt();
-	}
-	inline bool isPrimitiveOrPtr() const
-	{
-		return isInt() || isFlt() || isPtr();
-	}
-	inline bool isIntegral() const
-	{
-		return isInt();
-	}
-	inline bool isFloat() const
-	{
-		return isFlt();
-	}
+	inline bool isPrimitive() const { return isInt() || isFlt(); }
+	inline bool isPrimitiveOrPtr() const { return isInt() || isFlt() || isPtr(); }
+	inline bool isIntegral() const { return isInt(); }
+	inline bool isFloat() const { return isFlt(); }
 	bool isStrLiteral();
 
 	virtual Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 				      const size_t &weak_depth = 0);
 
-#define IsTyX(Fn, Ty)                 \
-	inline bool is##Fn() const    \
-	{                             \
-		return type == T##Ty; \
-	}
+#define IsTyX(Fn, Ty) \
+	inline bool is##Fn() const { return type == T##Ty; }
 	IsTyX(Void, VOID);
 	IsTyX(TypeTy, TYPE);
 	IsTyX(Any, ANY);
@@ -109,16 +94,10 @@ public:
 	IsTyX(Variadic, VARIADIC);
 #undef IsTyX
 
-	inline uint32_t getBaseID() const
-	{
-		return type;
-	}
+	inline uint32_t getBaseID() const { return type; }
 };
 
-template<typename T> T *as(Type *t)
-{
-	return static_cast<T *>(t);
-}
+template<typename T> T *as(Type *t) { return static_cast<T *>(t); }
 
 class VoidTy : public Type
 {
@@ -164,14 +143,8 @@ public:
 	static IntTy *get(Context &c, uint16_t _bits, bool _sign);
 	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
 
-	inline uint16_t getBits() const
-	{
-		return bits;
-	}
-	inline bool isSigned() const
-	{
-		return sign;
-	}
+	inline uint16_t getBits() const { return bits; }
+	inline bool isSigned() const { return sign; }
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0) override;
@@ -191,10 +164,7 @@ public:
 	static FltTy *get(Context &c, uint16_t _bits);
 	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
 
-	inline uint16_t getBits() const
-	{
-		return bits;
-	}
+	inline uint16_t getBits() const { return bits; }
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0) override;
@@ -249,26 +219,11 @@ public:
 	static PtrTy *getStr(Context &c, size_t count);
 	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
 
-	inline void setWeak(bool weak)
-	{
-		is_weak = weak;
-	}
-	inline Type *&getTo()
-	{
-		return to;
-	}
-	inline uint64_t getCount()
-	{
-		return count;
-	}
-	inline bool isWeak()
-	{
-		return is_weak;
-	}
-	inline bool isArrayPtr()
-	{
-		return count > 0;
-	}
+	inline void setWeak(bool weak) { is_weak = weak; }
+	inline Type *&getTo() { return to; }
+	inline uint64_t getCount() { return count; }
+	inline bool isWeak() { return is_weak; }
+	inline bool isArrayPtr() { return count > 0; }
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0) override;
@@ -314,56 +269,23 @@ public:
 			     const Vector<TypeTy *> &_templates, bool _externed);
 	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
 
-	inline void setDecl(StmtStruct *_decl)
-	{
-		decl = _decl;
-	}
+	inline void setDecl(StmtStruct *_decl) { decl = _decl; }
 	inline void insertField(StringRef name, Type *ty)
 	{
 		fieldpos[name] = fields.size();
 		fieldnames.push_back(name);
 		fields.push_back(ty);
 	}
-	inline void setTemplates(const Vector<TypeTy *> &templs)
-	{
-		templates = templs;
-	}
-	inline void setExterned(bool ext)
-	{
-		externed = ext;
-	}
-	inline StmtStruct *getDecl()
-	{
-		return decl;
-	}
-	inline StringRef getFieldName(const size_t &idx)
-	{
-		return fieldnames[idx];
-	}
-	inline Vector<Type *> &getFields()
-	{
-		return fields;
-	}
-	inline const Vector<TypeTy *> &getTemplates()
-	{
-		return templates;
-	}
-	inline const Vector<StringRef> &getTemplateNames()
-	{
-		return templatenames;
-	}
-	inline void clearTemplates()
-	{
-		templates.clear();
-	}
-	inline void setTemplate(bool has_templ)
-	{
-		has_template = has_templ;
-	}
-	inline bool isExtern()
-	{
-		return externed;
-	}
+	inline void setTemplates(const Vector<TypeTy *> &templs) { templates = templs; }
+	inline void setExterned(bool ext) { externed = ext; }
+	inline StmtStruct *getDecl() { return decl; }
+	inline StringRef getFieldName(const size_t &idx) { return fieldnames[idx]; }
+	inline Vector<Type *> &getFields() { return fields; }
+	inline const Vector<TypeTy *> &getTemplates() { return templates; }
+	inline const Vector<StringRef> &getTemplateNames() { return templatenames; }
+	inline void clearTemplates() { templates.clear(); }
+	inline void setTemplate(bool has_templ) { has_template = has_templ; }
+	inline bool isExtern() { return externed; }
 	inline bool isTemplateField(StringRef name)
 	{
 		return templatepos.find(name) != templatepos.end();
@@ -435,83 +357,32 @@ public:
 		var = v;
 		setSigFromVar();
 	}
-	inline void setSig(StmtFnSig *s)
-	{
-		sig = s;
-	}
+	inline void setSig(StmtFnSig *s) { sig = s; }
 	void setSigFromVar();
-	inline void setArg(const size_t &idx, Type *arg)
-	{
-		args[idx] = arg;
-	}
-	inline void setRet(Type *retty)
-	{
-		ret = retty;
-	}
-	inline void insertArg(Type *arg)
-	{
-		args.push_back(arg);
-	}
+	inline void setArg(const size_t &idx, Type *arg) { args[idx] = arg; }
+	inline void setRet(Type *retty) { ret = retty; }
+	inline void insertArg(Type *arg) { args.push_back(arg); }
 	inline void insertArg(const size_t &idx, Type *arg)
 	{
 		args.insert(args.begin() + idx, arg);
 	}
-	inline void eraseArg(const size_t &idx)
-	{
-		args.erase(args.begin() + idx);
-	}
-	inline void setExterned(bool ext)
-	{
-		externed = ext;
-	}
-	inline void setVariadic(bool va)
-	{
-		variadic = va;
-	}
-	inline StmtVar *&getVar()
-	{
-		return var;
-	}
-	inline StmtFnSig *getSig()
-	{
-		return sig;
-	}
-	inline Vector<Type *> &getArgs()
-	{
-		return args;
-	}
-	inline Type *getArg(const size_t &idx)
-	{
-		return args.size() > idx ? args[idx] : nullptr;
-	}
-	inline Type *getRet()
-	{
-		return ret;
-	}
+	inline void eraseArg(const size_t &idx) { args.erase(args.begin() + idx); }
+	inline void setExterned(bool ext) { externed = ext; }
+	inline void setVariadic(bool va) { variadic = va; }
+	inline StmtVar *&getVar() { return var; }
+	inline StmtFnSig *getSig() { return sig; }
+	inline Vector<Type *> &getArgs() { return args; }
+	inline Type *getArg(const size_t &idx) { return args.size() > idx ? args[idx] : nullptr; }
+	inline Type *getRet() { return ret; }
 	inline bool isArgComptime(size_t idx)
 	{
 		return args.size() > idx ? argcomptime[idx] : false;
 	}
-	inline bool isIntrinsic()
-	{
-		return intrin != nullptr;
-	}
-	inline bool isParseIntrinsic()
-	{
-		return inty == IPARSE;
-	}
-	inline bool isExtern()
-	{
-		return externed;
-	}
-	inline bool isVariadic()
-	{
-		return variadic;
-	}
-	inline IntrinsicFn getIntrinsicFn()
-	{
-		return intrin;
-	}
+	inline bool isIntrinsic() { return intrin != nullptr; }
+	inline bool isParseIntrinsic() { return inty == IPARSE; }
+	inline bool isExtern() { return externed; }
+	inline bool isVariadic() { return variadic; }
+	inline IntrinsicFn getIntrinsicFn() { return intrin; }
 	void updateUniqID();
 	bool callIntrinsic(Context &c, StmtExpr *stmt, Stmt **source, Vector<Stmt *> &callargs);
 
@@ -536,18 +407,9 @@ public:
 	static VariadicTy *get(Context &c, const Vector<Type *> &_args);
 	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
 
-	inline void addArg(Type *ty)
-	{
-		args.push_back(ty);
-	}
-	inline Vector<Type *> &getArgs()
-	{
-		return args;
-	}
-	inline Type *getArg(const size_t &idx)
-	{
-		return args.size() > idx ? args[idx] : nullptr;
-	}
+	inline void addArg(Type *ty) { args.push_back(ty); }
+	inline Vector<Type *> &getArgs() { return args; }
+	inline Type *getArg(const size_t &idx) { return args.size() > idx ? args[idx] : nullptr; }
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 			      const size_t &weak_depth = 0) override;

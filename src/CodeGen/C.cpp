@@ -220,7 +220,7 @@ bool CDriver::compile(StringRef outfile)
 	cmd += " -O";
 	cmd += opt;
 	cmd += " ";
-	if(opt == "0") cmd += "-g ";
+	if(opt == "0") cmd += "-gdwarf-4 ";
 	for(auto &h : headerflags) {
 		cmd += h;
 		cmd += " ";
@@ -340,10 +340,7 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, bool semicol)
 	writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
 	return true;
 }
-bool CDriver::visit(StmtFnCallInfo *stmt, Writer &writer, bool semicol)
-{
-	return true;
-}
+bool CDriver::visit(StmtFnCallInfo *stmt, Writer &writer, bool semicol) { return true; }
 bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 {
 	writer.clear();

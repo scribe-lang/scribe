@@ -29,20 +29,11 @@ public:
 	{
 		if(data) delete data;
 	}
-	void set(T *dat)
-	{
-		data = dat;
-	}
-	void unset()
-	{
-		data = nullptr;
-	}
+	void set(T *dat) { data = dat; }
+	void unset() { data = nullptr; }
 };
 
-inline bool startsWith(StringRef src, StringRef term)
-{
-	return src.rfind(term, 0) == 0;
-}
+inline bool startsWith(StringRef src, StringRef term) { return src.rfind(term, 0) == 0; }
 
 // Also trims the spaces for each split
 Vector<StringRef> stringDelim(StringRef str, StringRef delim);

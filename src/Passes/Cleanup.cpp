@@ -65,14 +65,8 @@ bool CleanupPass::visit(StmtBlock *stmt, Stmt **source)
 	}
 	return true;
 }
-bool CleanupPass::visit(StmtType *stmt, Stmt **source)
-{
-	return true;
-}
-bool CleanupPass::visit(StmtSimple *stmt, Stmt **source)
-{
-	return true;
-}
+bool CleanupPass::visit(StmtType *stmt, Stmt **source) { return true; }
+bool CleanupPass::visit(StmtSimple *stmt, Stmt **source) { return true; }
 bool CleanupPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 {
 	auto &args = stmt->getArgs();
@@ -84,10 +78,7 @@ bool CleanupPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 	}
 	return true;
 }
-bool CleanupPass::visit(StmtExpr *stmt, Stmt **source)
-{
-	return true;
-}
+bool CleanupPass::visit(StmtExpr *stmt, Stmt **source) { return true; }
 bool CleanupPass::visit(StmtVar *stmt, Stmt **source)
 {
 	// As such, a function will never be non-unique in signature.
@@ -109,10 +100,7 @@ bool CleanupPass::visit(StmtVar *stmt, Stmt **source)
 
 	return true;
 }
-bool CleanupPass::visit(StmtFnSig *stmt, Stmt **source)
-{
-	return true;
-}
+bool CleanupPass::visit(StmtFnSig *stmt, Stmt **source) { return true; }
 bool CleanupPass::visit(StmtFnDef *stmt, Stmt **source)
 {
 	if(!stmt->isUsed()) {
@@ -121,26 +109,11 @@ bool CleanupPass::visit(StmtFnDef *stmt, Stmt **source)
 	}
 	return true;
 }
-bool CleanupPass::visit(StmtHeader *stmt, Stmt **source)
-{
-	return true;
-}
-bool CleanupPass::visit(StmtLib *stmt, Stmt **source)
-{
-	return true;
-}
-bool CleanupPass::visit(StmtExtern *stmt, Stmt **source)
-{
-	return true;
-}
-bool CleanupPass::visit(StmtEnum *stmt, Stmt **source)
-{
-	return true;
-}
-bool CleanupPass::visit(StmtStruct *stmt, Stmt **source)
-{
-	return true;
-}
+bool CleanupPass::visit(StmtHeader *stmt, Stmt **source) { return true; }
+bool CleanupPass::visit(StmtLib *stmt, Stmt **source) { return true; }
+bool CleanupPass::visit(StmtExtern *stmt, Stmt **source) { return true; }
+bool CleanupPass::visit(StmtEnum *stmt, Stmt **source) { return true; }
+bool CleanupPass::visit(StmtStruct *stmt, Stmt **source) { return true; }
 bool CleanupPass::visit(StmtVarDecl *stmt, Stmt **source)
 {
 	for(size_t i = 0; i < stmt->getDecls().size(); ++i) {
@@ -160,28 +133,10 @@ bool CleanupPass::visit(StmtVarDecl *stmt, Stmt **source)
 	}
 	return true;
 }
-bool CleanupPass::visit(StmtCond *stmt, Stmt **source)
-{
-	return true;
-}
-bool CleanupPass::visit(StmtFor *stmt, Stmt **source)
-{
-	return true;
-}
-bool CleanupPass::visit(StmtRet *stmt, Stmt **source)
-{
-	return true;
-}
-bool CleanupPass::visit(StmtContinue *stmt, Stmt **source)
-{
-	return true;
-}
-bool CleanupPass::visit(StmtBreak *stmt, Stmt **source)
-{
-	return true;
-}
-bool CleanupPass::visit(StmtDefer *stmt, Stmt **source)
-{
-	return true;
-}
+bool CleanupPass::visit(StmtCond *stmt, Stmt **source) { return true; }
+bool CleanupPass::visit(StmtFor *stmt, Stmt **source) { return true; }
+bool CleanupPass::visit(StmtRet *stmt, Stmt **source) { return true; }
+bool CleanupPass::visit(StmtContinue *stmt, Stmt **source) { return true; }
+bool CleanupPass::visit(StmtBreak *stmt, Stmt **source) { return true; }
+bool CleanupPass::visit(StmtDefer *stmt, Stmt **source) { return true; }
 } // namespace sc

@@ -81,23 +81,14 @@ public:
 	}
 
 	// retrieve info
-	inline bool has(StringRef argname)
-	{
-		return opts.find(argname) != opts.end();
-	}
+	inline bool has(StringRef argname) { return opts.find(argname) != opts.end(); }
 	StringRef val(StringRef argname)
 	{
 		if(has(argname)) return opts[argname];
 		return "";
 	}
-	inline StringRef get(const size_t &idx)
-	{
-		return idx >= args.size() ? "" : args[idx];
-	}
-	inline const Vector<StringRef> &getArgv() const
-	{
-		return argv;
-	}
+	inline StringRef get(const size_t &idx) { return idx >= args.size() ? "" : args[idx]; }
+	inline const Vector<StringRef> &getArgv() const { return argv; }
 };
 } // namespace args
 } // namespace sc
