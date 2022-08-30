@@ -17,7 +17,6 @@ else()
 	set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.scribe")
 endif()
 set(CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX};${CMAKE_BINARY_DIR}")
-include_directories(${PROJECT_SOURCE_DIR}/include)
 add_definitions(-DINSTALL_PREFIX=${CMAKE_INSTALL_PREFIX})
 message("-- Using PREFIX = ${CMAKE_INSTALL_PREFIX}")
 
@@ -139,6 +138,7 @@ file(GLOB_RECURSE SRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/*.cpp")
 list(REMOVE_ITEM SRCS "src/Main.cpp")
 
 add_executable(scribe "${PROJECT_SOURCE_DIR}/src/Main.cpp" ${SRCS} ${INCS})
+target_include_directories(scribe PRIVATE ${PROJECT_SOURCE_DIR}/include)
 # Link against LLVM libraries
 # target_link_libraries(scribe ${llvm_libs})
 set_target_properties(scribe
