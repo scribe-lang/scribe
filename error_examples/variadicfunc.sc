@@ -1,12 +1,10 @@
 let sum = fn(args: ...any): i32 {
 	let comptime len = @valen();
+	let sum: i64 = 0;
 	inline for let comptime i = 0; i < len; ++i {
 		inline if !@isEqualTy(args[i], i32) && !@isEqualTy(args[i], i64) {
 			@compileError("Expected argument type to be either i32 or i64, found: ", @typeOf(args[i]));
 		}
-	}
-	let sum: i64 = 0;
-	inline for let comptime i = 0; i < len; ++i {
 		sum += args[i];
 	}
 	return sum;
