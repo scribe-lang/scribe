@@ -169,13 +169,19 @@ skip_rhs_val:
 		StmtFnCallInfo *callinfo = as<StmtFnCallInfo>(rhs);
 		bool has_va		 = false;
 		Vector<Stmt *> &callargs = callinfo->getArgs();
-		for(auto &a : callargs) {
-			if(!visit(a, &a)) {
-				err::out(stmt, {"failed to determine value of arg in struct call"});
-				return false;
+		FuncTy *fn		 = as<FuncVal>(lhs->getVal())->getVal();
+		// no need to calculate values for function args when it's a parse intrinsic
+		// as that is done within the type assign pass itself,
+		// using FuncTy::isArgComptime()
+		if(!fn->isParseIntrinsic()) {
+			for(auto &a : callargs) {
+				if(!visit(a, &a)) {
+					err::out(stmt, {"failed to determine value"
+							" of arg in struct call"});
+					return false;
+				}
 			}
 		}
-		FuncTy *fn = as<FuncVal>(lhs->getVal())->getVal();
 		if(fn->isIntrinsic()) {
 			if(!fn->isParseIntrinsic() &&
 			   !fn->callIntrinsic(ctx, stmt, source, callargs))
@@ -367,12 +373,7 @@ skip_rhs_val:
 bool ValueAssignPass::visit(StmtVar *stmt, Stmt **source)
 {
 	Stmt *&val = stmt->getVVal();
-	if(!val) {
-		if(stmt->getVType()) {
-			Value *res = stmt->getTy()->toDefaultValue(ctx, stmt->getLoc(), CDFALSE);
-		}
-		return true;
-	}
+	if(!val) return true;
 	if(val->isFnDef()) return true;
 
 	if(!visit(val, &val) || !val->getVal()) {

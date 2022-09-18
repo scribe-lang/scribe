@@ -20,7 +20,11 @@ let fprint = fn(f: *c.FILE, data: ...&const any): i32 {
 		} else {
 			let s = data[i].str();
 			defer s.deinit();
-			sum += c.fputs(s.cStr(), f);
+			inline if @isEqualTy(s, string.StringRef) {
+				sum += c.fprintf(f, "%.*s", s.len(), s.data());
+			} else {
+				sum += c.fputs(s.cStr(), f);
+			}
 		}
 	}
 	return sum;
