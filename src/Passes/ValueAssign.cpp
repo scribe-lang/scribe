@@ -178,7 +178,8 @@ skip_rhs_val:
 		FuncTy *fn = as<FuncVal>(lhs->getVal())->getVal();
 		if(fn->isIntrinsic()) {
 			if(!fn->isParseIntrinsic() &&
-			   !fn->callIntrinsic(ctx, stmt, source, callargs)) {
+			   !fn->callIntrinsic(ctx, stmt, source, callargs))
+			{
 				err::out(stmt, {"failed to call value intrinsic"});
 				return false;
 			}
@@ -250,7 +251,8 @@ skip_rhs_val:
 	case lex::SUBS: {
 		if(!lhs->getTy()->isPtr()) goto applyoperfn;
 		if(!as<PtrTy>(lhs->getTy())->isArrayPtr() &&
-		   !(lhs->getVal() && lhs->getVal()->isVec())) {
+		   !(lhs->getVal() && lhs->getVal()->isVec()))
+		{
 			err::out(lhs, {"cannot evaluate subscript on a non array pointer"});
 			return false;
 		}
