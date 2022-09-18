@@ -61,7 +61,8 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 	if(!source || !*source) return res;
 	stmt = *source;
 	if(stmt->getTy() && stmt->getTy()->isStruct() &&
-	   as<StructTy>(stmt->getTy())->getDecl()->isDecl()) {
+	   as<StructTy>(stmt->getTy())->getDecl()->isDecl())
+	{
 		deferredspecialize.pushDataInternal(stmt->getTy()->getID(), &stmt->getTy());
 	}
 	if(stmt->getVal() && stmt->getVal()->isType() &&
@@ -429,7 +430,8 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				}
 				// type cast for const pointers
 				if(fnarg && arg->isConst() != fnargconst && coerced_to->isPtr() &&
-				   arg->getTy()->isPtr()) {
+				   arg->getTy()->isPtr())
+				{
 					arg->castTo(coerced_to, fnarg->getStmtMask());
 				}
 				if(!arg->getCast()) applyPrimitiveTypeCoercion(coerced_to, arg);
@@ -448,7 +450,8 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 					return false;
 				}
 				if(fn->isParseIntrinsic() &&
-				   !fn->callIntrinsic(ctx, stmt, source, args)) {
+				   !fn->callIntrinsic(ctx, stmt, source, args))
+				{
 					err::out(stmt, {"call to parse intrinsic failed"});
 					return false;
 				}
@@ -643,7 +646,8 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			return false;
 		}
 		if(optok.isAssign() && (lhs->isConst() || lhs->isCastConst()) &&
-		   !lhs->getTy()->isPtr()) {
+		   !lhs->getTy()->isPtr())
+		{
 			err::out(stmt, {"cannot perform assignment (like)"
 					" operations on const data"});
 			return false;
@@ -690,7 +694,8 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			bool fnrhsconst =
 			fn->getSig() ? fn->getSig()->getArg(1)->isConst() : rhs->isConst();
 			if(rhs && rhs->isConst() != fnrhsconst && fn->getArg(1)->isPtr() &&
-			   rhsty->isPtr()) {
+			   rhsty->isPtr())
+			{
 				uint8_t rhsmask =
 				fn->getSig() ? fn->getSig()->getArg(1)->getStmtMask() : 0;
 				rhs->castTo(fn->getArg(1), rhsmask);
@@ -790,7 +795,8 @@ post_mangling:
 	if(!stmt->isIn() && vmgr.exists(stmt->getName().getDataStr(), true, false)) {
 		VarDecl *d = vmgr.getAll(stmt->getName().getDataStr(), true, false);
 		if(!d->val || !d->val->isType() || !d->ty->isStruct() ||
-		   !as<StructTy>(d->ty)->getDecl()->isDecl()) {
+		   !as<StructTy>(d->ty)->getDecl()->isDecl())
+		{
 			err::out(stmt->getName(), {"variable '", stmt->getName().getDataStr(),
 						   "' already exists in scope"});
 			return false;
@@ -802,7 +808,8 @@ post_mangling:
 		return false;
 	}
 	if(vtype && val && !skip_val &&
-	   !vtype->getTy()->isCompatible(ctx, val->getTy(), stmt->getLoc())) {
+	   !vtype->getTy()->isCompatible(ctx, val->getTy(), stmt->getLoc()))
+	{
 		err::out(stmt, {"incompatible given type and value of the variable decl"});
 		return false;
 	}

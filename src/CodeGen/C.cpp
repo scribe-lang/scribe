@@ -674,7 +674,8 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 	if(stmt->getVVal() && stmt->getVVal()->isSimple()) {
 		StmtSimple *sim = as<StmtSimple>(stmt->getVVal());
 		if(sim->getDecl() && sim->getDecl()->getVVal() &&
-		   sim->getDecl()->getVVal()->isExtern()) {
+		   sim->getDecl()->getVVal()->isExtern())
+		{
 			macros.push_back(ctx.strFrom({"#define ", varname, " ", tmp.getData()}));
 			return true;
 		}
@@ -1098,9 +1099,11 @@ bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool 
 	case VINT: {
 		IntTy *t = as<IntTy>(type);
 		if(i8_to_char && t->getBits() == 8 && t->isSigned() &&
-		   as<IntVal>(value)->getVal() > 31) {
+		   as<IntVal>(value)->getVal() > 31)
+		{
 			if(as<IntVal>(value)->getVal() == '\'' ||
-			   as<IntVal>(value)->getVal() == '\\') {
+			   as<IntVal>(value)->getVal() == '\\')
+			{
 				res = "'\\";
 				res.append(1, as<IntVal>(value)->getVal());
 				res += "'";

@@ -778,7 +778,8 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 		Stmt *ciarg   = callargs[j];
 		bool variadic = false;
 		if(sig && ciarg->isConst() && !sig->getArg(i)->isConst() &&
-		   (isPtr() || sig->getArg(i)->isRef())) {
+		   (isPtr() || sig->getArg(i)->isRef()))
+		{
 			err::out(loc, {"losing constness for argument index ", std::to_string(i),
 				       ", cannot continue"});
 			is_arg_compatible = false;
