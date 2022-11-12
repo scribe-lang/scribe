@@ -23,7 +23,7 @@ Parsing::Parsing(Context &ctx) : ctx(ctx) {}
 
 // on successful parse, returns true, and tree is allocated
 // if with_brace is true, it will attempt to find the beginning and ending brace for each block
-bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, bool with_brace)
+bool Parsing::parseBlock(ParseHelper &p, StmtBlock *&tree, bool with_brace)
 {
 	tree = nullptr;
 
@@ -49,19 +49,19 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, bool with_brace)
 		bool skip_cols = false;
 		// logic
 		if(p.accept(lex::LET)) {
-			if(!parse_vardecl(p, stmt)) return false;
+			if(!parseVarDecl(p, stmt)) return false;
 		} else if(p.accept(lex::IF)) {
-			if(!parse_conds(p, stmt)) return false;
+			if(!parseConds(p, stmt)) return false;
 			skip_cols = true;
 		} else if(p.accept(lex::INLINE)) {
 			if(p.peekt(1) == lex::FOR) {
-				if(!parse_for(p, stmt)) return false;
+				if(!parseFor(p, stmt)) return false;
 				skip_cols = true;
 			} else if(p.peekt(1) == lex::WHILE) {
-				if(!parse_while(p, stmt)) return false;
+				if(!parseWhile(p, stmt)) return false;
 				skip_cols = true;
 			} else if(p.peekt(1) == lex::IF) {
-				if(!parse_conds(p, stmt)) return false;
+				if(!parseConds(p, stmt)) return false;
 				skip_cols = true;
 			} else {
 				err::out(p.peek(1), {"'inline' is not applicable on '",
@@ -70,26 +70,26 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, bool with_brace)
 			}
 		} else if(p.accept(lex::FOR)) {
 			if(p.peekt(1) == lex::IDEN && p.peekt(2) == lex::IN) {
-				if(!parse_forin(p, stmt)) return false;
+				if(!parseForIn(p, stmt)) return false;
 			} else {
-				if(!parse_for(p, stmt)) return false;
+				if(!parseFor(p, stmt)) return false;
 			}
 			skip_cols = true;
 		} else if(p.accept(lex::WHILE)) {
-			if(!parse_while(p, stmt)) return false;
+			if(!parseWhile(p, stmt)) return false;
 			skip_cols = true;
 		} else if(p.accept(lex::RETURN)) {
-			if(!parse_ret(p, stmt)) return false;
+			if(!parseReturn(p, stmt)) return false;
 		} else if(p.accept(lex::CONTINUE)) {
-			if(!parse_continue(p, stmt)) return false;
+			if(!parseContinue(p, stmt)) return false;
 		} else if(p.accept(lex::BREAK)) {
-			if(!parse_break(p, stmt)) return false;
+			if(!parseBreak(p, stmt)) return false;
 		} else if(p.accept(lex::DEFER)) {
-			if(!parse_defer(p, stmt)) return false;
+			if(!parseDefer(p, stmt)) return false;
 		} else if(p.accept(lex::LBRACE)) {
-			if(!parse_block(p, (StmtBlock *&)stmt)) return false;
+			if(!parseBlock(p, (StmtBlock *&)stmt)) return false;
 			skip_cols = true;
-		} else if(!parse_expr(p, stmt, false)) {
+		} else if(!parseExpr(p, stmt, false)) {
 			return false;
 		}
 
@@ -115,7 +115,7 @@ bool Parsing::parse_block(ParseHelper &p, StmtBlock *&tree, bool with_brace)
 	return true;
 }
 
-bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
+bool Parsing::parseType(ParseHelper &p, StmtType *&type)
 {
 	type = nullptr;
 
@@ -129,7 +129,7 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 	lex::Lexeme &start = p.peek();
 
 	if(p.accept(lex::FN)) {
-		if(!parse_fnsig(p, expr)) return false;
+		if(!parseFnSig(p, expr)) return false;
 		type = StmtType::create(ctx, start.getLoc(), 0, false, expr);
 		return true;
 	}
@@ -141,7 +141,7 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 	if(p.acceptn(lex::BAND)) stmtmask |= (uint8_t)StmtMask::REF;
 	if(p.acceptn(lex::CONST)) stmtmask |= (uint8_t)StmtMask::CONST;
 
-	if(!parse_expr_01(p, expr, true)) {
+	if(!parseExpr01(p, expr, true)) {
 		err::out(p.peek(), {"failed to parse type expression"});
 		return false;
 	}
@@ -156,7 +156,7 @@ bool Parsing::parse_type(ParseHelper &p, StmtType *&type)
 	return true;
 }
 
-bool Parsing::parse_simple(ParseHelper &p, Stmt *&data)
+bool Parsing::parseSimple(ParseHelper &p, Stmt *&data)
 {
 	data = nullptr;
 
@@ -192,14 +192,14 @@ bool Parsing::parsePrefixedSuffixedLiteral(ParseHelper &p, Stmt *&expr)
 	return true;
 }
 
-bool Parsing::parse_expr(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
-	return parse_expr_17(p, expr, disable_brace_after_iden);
+	return parseExpr17(p, expr, disable_brace_after_iden);
 }
 
 // Left Associative
 // ,
-bool Parsing::parse_expr_17(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr17(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -212,7 +212,7 @@ bool Parsing::parse_expr_17(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	size_t commas = 0;
 
-	if(!parse_expr_16(p, rhs, disable_brace_after_iden)) {
+	if(!parseExpr16(p, rhs, disable_brace_after_iden)) {
 		return false;
 	}
 
@@ -220,7 +220,7 @@ bool Parsing::parse_expr_17(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 		++commas;
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_16(p, lhs, disable_brace_after_iden)) {
+		if(!parseExpr16(p, lhs, disable_brace_after_iden)) {
 			return false;
 		}
 		rhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -236,7 +236,7 @@ bool Parsing::parse_expr_17(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 }
 // Left Associative
 // ?:
-bool Parsing::parse_expr_16(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr16(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -249,7 +249,7 @@ bool Parsing::parse_expr_16(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_15(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr15(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 	if(!p.accept(lex::QUEST)) {
@@ -261,7 +261,7 @@ bool Parsing::parse_expr_16(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 	p.next();
 	lex::Lexeme oper_inside;
 
-	if(!parse_expr_15(p, lhs_lhs, disable_brace_after_iden)) {
+	if(!parseExpr15(p, lhs_lhs, disable_brace_after_iden)) {
 		return false;
 	}
 	if(!p.accept(lex::COL)) {
@@ -271,7 +271,7 @@ bool Parsing::parse_expr_16(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 	}
 	oper_inside = p.peek();
 	p.next();
-	if(!parse_expr_15(p, lhs_rhs, disable_brace_after_iden)) {
+	if(!parseExpr15(p, lhs_rhs, disable_brace_after_iden)) {
 		return false;
 	}
 	rhs = StmtExpr::create(ctx, oper.getLoc(), 0, lhs_lhs, oper_inside, lhs_rhs, false);
@@ -283,7 +283,7 @@ after_quest:
 }
 // Right Associative
 // =
-bool Parsing::parse_expr_15(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr15(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -294,14 +294,14 @@ bool Parsing::parse_expr_15(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_14(p, rhs, disable_brace_after_iden)) {
+	if(!parseExpr14(p, rhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::ASSN)) {
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_14(p, lhs, disable_brace_after_iden)) {
+		if(!parseExpr14(p, lhs, disable_brace_after_iden)) {
 			return false;
 		}
 		rhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -317,7 +317,7 @@ bool Parsing::parse_expr_15(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 // <<= >>=
 // &= |= ^=
 // or-block
-bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr14(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -330,7 +330,7 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_13(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr13(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
@@ -341,7 +341,7 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 	{
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_13(p, rhs, disable_brace_after_iden)) {
+		if(!parseExpr13(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -357,7 +357,7 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 		p.next();
 	}
 
-	if(!parse_block(p, or_blk)) {
+	if(!parseBlock(p, or_blk)) {
 		return false;
 	}
 	if(expr->getStmtType() != EXPR) {
@@ -368,7 +368,7 @@ bool Parsing::parse_expr_14(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 }
 // Left Associative
 // ||
-bool Parsing::parse_expr_13(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr13(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -379,14 +379,14 @@ bool Parsing::parse_expr_13(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_12(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr12(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::LOR)) {
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_12(p, rhs, disable_brace_after_iden)) {
+		if(!parseExpr12(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -398,7 +398,7 @@ bool Parsing::parse_expr_13(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 }
 // Left Associative
 // &&
-bool Parsing::parse_expr_12(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr12(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -409,14 +409,14 @@ bool Parsing::parse_expr_12(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_11(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr11(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::LAND)) {
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_11(p, rhs, disable_brace_after_iden)) {
+		if(!parseExpr11(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -428,7 +428,7 @@ bool Parsing::parse_expr_12(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 }
 // Left Associative
 // |
-bool Parsing::parse_expr_11(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr11(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -439,14 +439,14 @@ bool Parsing::parse_expr_11(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_10(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr10(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::BOR)) {
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_10(p, rhs, disable_brace_after_iden)) {
+		if(!parseExpr10(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -458,7 +458,7 @@ bool Parsing::parse_expr_11(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 }
 // Left Associative
 // ^
-bool Parsing::parse_expr_10(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr10(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -469,14 +469,14 @@ bool Parsing::parse_expr_10(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_09(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr09(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::BXOR)) {
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_09(p, rhs, disable_brace_after_iden)) {
+		if(!parseExpr09(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -488,7 +488,7 @@ bool Parsing::parse_expr_10(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 }
 // Left Associative
 // &
-bool Parsing::parse_expr_09(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr09(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -499,14 +499,14 @@ bool Parsing::parse_expr_09(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_08(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr08(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::BAND)) {
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_08(p, rhs, disable_brace_after_iden)) {
+		if(!parseExpr08(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -518,7 +518,7 @@ bool Parsing::parse_expr_09(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 }
 // Left Associative
 // == !=
-bool Parsing::parse_expr_08(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr08(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -529,14 +529,14 @@ bool Parsing::parse_expr_08(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_07(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr07(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::EQ, lex::NE)) {
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_07(p, rhs, disable_brace_after_iden)) {
+		if(!parseExpr07(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -549,7 +549,7 @@ bool Parsing::parse_expr_08(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 // Left Associative
 // < <=
 // > >=
-bool Parsing::parse_expr_07(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr07(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -560,14 +560,14 @@ bool Parsing::parse_expr_07(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_06(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr06(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::LT, lex::LE) || p.accept(lex::GT, lex::GE)) {
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_06(p, rhs, disable_brace_after_iden)) {
+		if(!parseExpr06(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -579,7 +579,7 @@ bool Parsing::parse_expr_07(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 }
 // Left Associative
 // << >>
-bool Parsing::parse_expr_06(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr06(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -590,14 +590,14 @@ bool Parsing::parse_expr_06(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_05(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr05(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::LSHIFT, lex::RSHIFT)) {
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_05(p, rhs, disable_brace_after_iden)) {
+		if(!parseExpr05(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -609,7 +609,7 @@ bool Parsing::parse_expr_06(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 }
 // Left Associative
 // + -
-bool Parsing::parse_expr_05(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr05(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -620,14 +620,14 @@ bool Parsing::parse_expr_05(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_04(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr04(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::ADD, lex::SUB)) {
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_04(p, rhs, disable_brace_after_iden)) {
+		if(!parseExpr04(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -639,7 +639,7 @@ bool Parsing::parse_expr_05(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 }
 // Left Associative
 // * / %
-bool Parsing::parse_expr_04(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr04(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -650,14 +650,14 @@ bool Parsing::parse_expr_04(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_03(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr03(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
 	while(p.accept(lex::MUL, lex::DIV, lex::MOD)) {
 		oper = p.peek();
 		p.next();
-		if(!parse_expr_03(p, rhs, disable_brace_after_iden)) {
+		if(!parseExpr03(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
 		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
@@ -672,7 +672,7 @@ bool Parsing::parse_expr_04(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 // + - (unary)
 // * & (deref, addrof)
 // ! ~ (log/bit)
-bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr03(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -695,7 +695,7 @@ bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 		p.next();
 	}
 
-	if(!parse_expr_02(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr02(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
@@ -731,7 +731,7 @@ bool Parsing::parse_expr_03(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 // Left Associative
 // ++ -- (post)
 // ... (postva)
-bool Parsing::parse_expr_02(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr02(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -741,7 +741,7 @@ bool Parsing::parse_expr_02(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 	lex::Lexeme &start = p.peek();
 
-	if(!parse_expr_01(p, lhs, disable_brace_after_iden)) {
+	if(!parseExpr01(p, lhs, disable_brace_after_iden)) {
 		return false;
 	}
 
@@ -754,7 +754,7 @@ bool Parsing::parse_expr_02(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 	expr = lhs;
 	return true;
 }
-bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
+bool Parsing::parseExpr01(ParseHelper &p, Stmt *&expr, bool disable_brace_after_iden)
 {
 	expr = nullptr;
 
@@ -775,7 +775,7 @@ bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 	}
 
 	if(p.acceptn(lex::LPAREN)) {
-		if(!parse_expr(p, lhs, disable_brace_after_iden)) {
+		if(!parseExpr(p, lhs, disable_brace_after_iden)) {
 			return false;
 		}
 		if(!p.acceptn(lex::RPAREN)) {
@@ -788,11 +788,11 @@ bool Parsing::parse_expr_01(ParseHelper &p, Stmt *&expr, bool disable_brace_afte
 
 begin:
 	if(p.acceptn(lex::AT)) is_intrinsic = true;
-	if(p.acceptd() && !parse_simple(p, lhs)) return false;
+	if(p.acceptd() && !parseSimple(p, lhs)) return false;
 	goto begin_brack;
 
 after_dot:
-	if(!p.acceptd() || !parse_simple(p, rhs)) return false;
+	if(!p.acceptd() || !parseSimple(p, rhs)) return false;
 	if(lhs && rhs) {
 		lhs = StmtExpr::create(ctx, dot.getLoc(), 0, lhs, dot, rhs, false);
 		rhs = nullptr;
@@ -809,7 +809,7 @@ begin_brack:
 					    " attempted subscript here"});
 			return false;
 		}
-		if(!parse_expr_16(p, rhs, false)) {
+		if(!parseExpr16(p, rhs, false)) {
 			err::out(oper, {"failed to parse expression for subscript"});
 			return false;
 		}
@@ -841,7 +841,7 @@ begin_brack:
 		}
 		// parse arguments
 		while(true) {
-			if(!parse_expr_16(p, arg, false)) return false;
+			if(!parseExpr16(p, arg, false)) return false;
 			args.push_back(arg);
 			arg = nullptr;
 			if(!p.acceptn(lex::COMMA)) break;
@@ -882,8 +882,8 @@ done:
 	return true;
 }
 
-bool Parsing::parse_var(ParseHelper &p, StmtVar *&var, const Occurs &intype, const Occurs &otype,
-			const Occurs &oval)
+bool Parsing::parseVar(ParseHelper &p, StmtVar *&var, const Occurs &intype, const Occurs &otype,
+		       const Occurs &oval)
 {
 	var = nullptr;
 
@@ -925,7 +925,7 @@ in:
 				    " can be used only for data variables"});
 		return false;
 	}
-	if(!parse_type(p, in)) {
+	if(!parseType(p, in)) {
 		err::out(p.peek(), {"failed to parse in-type for variable: ", name.getDataStr()});
 		return false;
 	}
@@ -939,7 +939,7 @@ type:
 	if(!p.acceptn(lex::COL)) {
 		goto val;
 	}
-	if(!parse_type(p, type)) {
+	if(!parseType(p, type)) {
 		err::out(p.peek(), {"failed to parse type for variable: ", name.getDataStr()});
 		return false;
 	}
@@ -961,18 +961,18 @@ val:
 		return false;
 	}
 	if(p.accept(lex::ENUM)) {
-		if(!parse_enum(p, val)) return false;
+		if(!parseEnum(p, val)) return false;
 	} else if(p.accept(lex::STRUCT)) {
-		if(!parse_struct(p, val, true)) return false;
+		if(!parseStruct(p, val, true)) return false;
 	} else if(p.accept(lex::INLINE, lex::FN)) {
-		if(!parse_fndef(p, val)) return false;
+		if(!parseFnDef(p, val)) return false;
 	} else if(p.accept(lex::EXTERN)) {
-		if(!parse_extern(p, val)) return false;
+		if(!parseExtern(p, val)) return false;
 		if(!as<StmtExtern>(val)->getEntity() && !type) {
 			err::out(name, {"variable extern must have a type"});
 			return false;
 		}
-	} else if(!parse_expr_16(p, val, false)) {
+	} else if(!parseExpr16(p, val, false)) {
 		return false;
 	}
 
@@ -1006,7 +1006,7 @@ done:
 	return true;
 }
 
-bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
+bool Parsing::parseFnSig(ParseHelper &p, Stmt *&fsig)
 {
 	fsig = nullptr;
 
@@ -1040,7 +1040,7 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 		}
 		argnames.insert(p.peek().getDataStr());
 		if(is_comptime) p.setPos(p.getPos() - 1);
-		if(!parse_var(p, var, Occurs::NO, Occurs::YES, Occurs::NO)) {
+		if(!parseVar(p, var, Occurs::NO, Occurs::YES, Occurs::NO)) {
 			return false;
 		}
 		if(var->getVType()->isVariadic()) {
@@ -1063,7 +1063,7 @@ bool Parsing::parse_fnsig(ParseHelper &p, Stmt *&fsig)
 	}
 
 post_args:
-	if(p.acceptn(lex::COL) && !parse_type(p, rettype)) {
+	if(p.acceptn(lex::COL) && !parseType(p, rettype)) {
 		err::out(p.peek(), {"failed to parse return type for function"});
 		return false;
 	}
@@ -1076,7 +1076,7 @@ post_args:
 	fsig = StmtFnSig::create(ctx, start.getLoc(), args, rettype, found_va);
 	return true;
 }
-bool Parsing::parse_fndef(ParseHelper &p, Stmt *&fndef)
+bool Parsing::parseFnDef(ParseHelper &p, Stmt *&fndef)
 {
 	fndef = nullptr;
 
@@ -1087,14 +1087,14 @@ bool Parsing::parse_fndef(ParseHelper &p, Stmt *&fndef)
 
 	if(p.acceptn(lex::INLINE)) is_inline = true;
 
-	if(!parse_fnsig(p, sig)) return false;
-	if(!parse_block(p, blk)) return false;
+	if(!parseFnSig(p, sig)) return false;
+	if(!parseBlock(p, blk)) return false;
 
 	fndef = StmtFnDef::create(ctx, start.getLoc(), (StmtFnSig *)sig, blk, is_inline);
 	return true;
 }
 
-bool Parsing::parse_header(ParseHelper &p, StmtHeader *&header)
+bool Parsing::parseHeader(ParseHelper &p, StmtHeader *&header)
 {
 	header = nullptr;
 
@@ -1122,7 +1122,7 @@ done:
 	header = StmtHeader::create(ctx, names.getLoc(), names, flags);
 	return true;
 }
-bool Parsing::parse_lib(ParseHelper &p, StmtLib *&lib)
+bool Parsing::parseLib(ParseHelper &p, StmtLib *&lib)
 {
 	lib = nullptr;
 
@@ -1139,7 +1139,7 @@ bool Parsing::parse_lib(ParseHelper &p, StmtLib *&lib)
 	lib = StmtLib::create(ctx, flags.getLoc(), flags);
 	return true;
 }
-bool Parsing::parse_extern(ParseHelper &p, Stmt *&ext)
+bool Parsing::parseExtern(ParseHelper &p, Stmt *&ext)
 {
 	ext = nullptr;
 
@@ -1176,9 +1176,9 @@ bool Parsing::parse_extern(ParseHelper &p, Stmt *&ext)
 
 	if(!p.acceptn(lex::COMMA)) goto endinfo;
 
-	if(!parse_header(p, headers)) return false;
+	if(!parseHeader(p, headers)) return false;
 	if(!p.acceptn(lex::COMMA)) goto endinfo;
-	if(!parse_lib(p, libs)) return false;
+	if(!parseLib(p, libs)) return false;
 
 endinfo:
 	if(!p.acceptn(lex::RBRACK)) {
@@ -1188,9 +1188,9 @@ endinfo:
 	}
 
 	if(p.accept(lex::FN)) {
-		if(!parse_fnsig(p, entity)) return false;
+		if(!parseFnSig(p, entity)) return false;
 	} else if(p.accept(lex::STRUCT)) {
-		if(!parse_struct(p, entity, false)) return false;
+		if(!parseStruct(p, entity, false)) return false;
 	}
 
 end:
@@ -1198,7 +1198,7 @@ end:
 	return true;
 }
 
-bool Parsing::parse_enum(ParseHelper &p, Stmt *&ed)
+bool Parsing::parseEnum(ParseHelper &p, Stmt *&ed)
 {
 	Vector<lex::Lexeme> enumvars;
 	StmtType *tagty = nullptr;
@@ -1210,7 +1210,7 @@ bool Parsing::parse_enum(ParseHelper &p, Stmt *&ed)
 			 {"expected 'enum' keyword here, found: ", p.peek().getTok().cStr()});
 		return false;
 	}
-	if(p.acceptn(lex::COL) && !parse_type(p, tagty)) {
+	if(p.acceptn(lex::COL) && !parseType(p, tagty)) {
 		err::out(p.peek(),
 			 {"expected tag type for enum, found: ", p.peek().getTok().cStr()});
 		return false;
@@ -1238,7 +1238,7 @@ bool Parsing::parse_enum(ParseHelper &p, Stmt *&ed)
 	return true;
 }
 
-bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd, bool allowed_templs)
+bool Parsing::parseStruct(ParseHelper &p, Stmt *&sd, bool allowed_templs)
 {
 	sd = nullptr;
 
@@ -1278,7 +1278,7 @@ bool Parsing::parse_struct(ParseHelper &p, Stmt *&sd, bool allowed_templs)
 	}
 
 	while(p.accept(lex::IDEN, lex::COMPTIME)) {
-		if(!parse_var(p, field, Occurs::NO, Occurs::YES, Occurs::NO)) return false;
+		if(!parseVar(p, field, Occurs::NO, Occurs::YES, Occurs::NO)) return false;
 		if(fieldnames.find(field->getName().getDataStr()) != fieldnames.end()) {
 			err::out(p.peek(), {"this field name is already used "
 					    "before in this same structure"});
@@ -1301,7 +1301,7 @@ done:
 	return true;
 }
 
-bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
+bool Parsing::parseVarDecl(ParseHelper &p, Stmt *&vd)
 {
 	vd = nullptr;
 
@@ -1318,7 +1318,7 @@ bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
 	while(p.accept(lex::IDEN, lex::COMPTIME, lex::GLOBAL) ||
 	      p.accept(lex::CONST, lex::STATIC, lex::VOLATILE))
 	{
-		if(!parse_var(p, decl, Occurs::MAYBE, Occurs::MAYBE, Occurs::MAYBE)) return false;
+		if(!parseVar(p, decl, Occurs::MAYBE, Occurs::MAYBE, Occurs::MAYBE)) return false;
 		decls.push_back(decl);
 		decl = nullptr;
 		if(!p.acceptn(lex::COMMA)) break;
@@ -1328,7 +1328,7 @@ bool Parsing::parse_vardecl(ParseHelper &p, Stmt *&vd)
 	return true;
 }
 
-bool Parsing::parse_conds(ParseHelper &p, Stmt *&conds)
+bool Parsing::parseConds(ParseHelper &p, Stmt *&conds)
 {
 	conds = nullptr;
 
@@ -1346,13 +1346,13 @@ cond:
 		return false;
 	}
 
-	if(!parse_expr_15(p, c.getCond(), true)) {
+	if(!parseExpr15(p, c.getCond(), true)) {
 		err::out(p.peek(), {"failed to parse condition for if/else if statement"});
 		return false;
 	}
 
 blk:
-	if(!parse_block(p, c.getBlk())) {
+	if(!parseBlock(p, c.getBlk())) {
 		err::out(p.peek(), {"failed to parse block for conditional"});
 		return false;
 	}
@@ -1381,7 +1381,7 @@ blk:
 // 	...
 // }
 // }
-bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
+bool Parsing::parseForIn(ParseHelper &p, Stmt *&fin)
 {
 	fin = nullptr;
 
@@ -1408,7 +1408,7 @@ bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 		return false;
 	}
 
-	if(!parse_expr_01(p, in, true)) {
+	if(!parseExpr01(p, in, true)) {
 		err::out(p.peek(), {"failed to parse expression for 'in'"});
 		return false;
 	}
@@ -1419,7 +1419,7 @@ bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 		return false;
 	}
 
-	if(!parse_block(p, blk)) {
+	if(!parseBlock(p, blk)) {
 		err::out(p.peek(), {"failed to parse block for for-in construct"});
 		return false;
 	}
@@ -1504,7 +1504,7 @@ bool Parsing::parse_forin(ParseHelper &p, Stmt *&fin)
 	fin = StmtBlock::create(ctx, start.getLoc(), outerblkstmts, false, false);
 	return true;
 }
-bool Parsing::parse_for(ParseHelper &p, Stmt *&f)
+bool Parsing::parseFor(ParseHelper &p, Stmt *&f)
 {
 	f = nullptr;
 
@@ -1526,9 +1526,9 @@ init:
 	if(p.acceptn(lex::COLS)) goto cond;
 
 	if(p.accept(lex::LET)) {
-		if(!parse_vardecl(p, init)) return false;
+		if(!parseVarDecl(p, init)) return false;
 	} else {
-		if(!parse_expr(p, init, false)) return false;
+		if(!parseExpr(p, init, false)) return false;
 	}
 	if(!p.acceptn(lex::COLS)) {
 		err::out(p.peek(), {"expected semicolon here, found: ", p.peek().getTok().cStr()});
@@ -1538,7 +1538,7 @@ init:
 cond:
 	if(p.acceptn(lex::COLS)) goto incr;
 
-	if(!parse_expr_16(p, cond, false)) return false;
+	if(!parseExpr16(p, cond, false)) return false;
 	if(!p.acceptn(lex::COLS)) {
 		err::out(p.peek(), {"expected semicolon here, found: ", p.peek().getTok().cStr()});
 		return false;
@@ -1547,7 +1547,7 @@ cond:
 incr:
 	if(p.accept(lex::LBRACE)) goto body;
 
-	if(!parse_expr(p, incr, true)) return false;
+	if(!parseExpr(p, incr, true)) return false;
 	if(!p.accept(lex::LBRACE)) {
 		err::out(p.peek(),
 			 {"expected braces for body here, found: ", p.peek().getTok().cStr()});
@@ -1555,7 +1555,7 @@ incr:
 	}
 
 body:
-	if(!parse_block(p, blk)) {
+	if(!parseBlock(p, blk)) {
 		err::out(p.peek(), {"failed to parse block for 'for' construct"});
 		return false;
 	}
@@ -1563,7 +1563,7 @@ body:
 	f = StmtFor::create(ctx, start.getLoc(), init, cond, incr, blk, is_inline);
 	return true;
 }
-bool Parsing::parse_while(ParseHelper &p, Stmt *&w)
+bool Parsing::parseWhile(ParseHelper &p, Stmt *&w)
 {
 	w = nullptr;
 
@@ -1579,9 +1579,9 @@ bool Parsing::parse_while(ParseHelper &p, Stmt *&w)
 		return false;
 	}
 
-	if(!parse_expr_16(p, cond, true)) return false;
+	if(!parseExpr16(p, cond, true)) return false;
 
-	if(!parse_block(p, blk)) {
+	if(!parseBlock(p, blk)) {
 		err::out(p.peek(), {"failed to parse block for 'for' construct"});
 		return false;
 	}
@@ -1589,7 +1589,7 @@ bool Parsing::parse_while(ParseHelper &p, Stmt *&w)
 	w = StmtFor::create(ctx, start.getLoc(), nullptr, cond, nullptr, blk, is_inline);
 	return true;
 }
-bool Parsing::parse_ret(ParseHelper &p, Stmt *&ret)
+bool Parsing::parseReturn(ParseHelper &p, Stmt *&ret)
 {
 	ret = nullptr;
 
@@ -1603,7 +1603,7 @@ bool Parsing::parse_ret(ParseHelper &p, Stmt *&ret)
 
 	if(p.accept(lex::COLS)) goto done;
 
-	if(!parse_expr_16(p, val, false)) {
+	if(!parseExpr16(p, val, false)) {
 		err::out(p.peek(), {"failed to parse expression for return value"});
 		return false;
 	}
@@ -1612,7 +1612,7 @@ done:
 	ret = StmtRet::create(ctx, start.getLoc(), val);
 	return true;
 }
-bool Parsing::parse_continue(ParseHelper &p, Stmt *&cont)
+bool Parsing::parseContinue(ParseHelper &p, Stmt *&cont)
 {
 	cont = nullptr;
 
@@ -1626,7 +1626,7 @@ bool Parsing::parse_continue(ParseHelper &p, Stmt *&cont)
 	cont = StmtContinue::create(ctx, start.getLoc());
 	return true;
 }
-bool Parsing::parse_break(ParseHelper &p, Stmt *&brk)
+bool Parsing::parseBreak(ParseHelper &p, Stmt *&brk)
 {
 	brk = nullptr;
 
@@ -1640,7 +1640,7 @@ bool Parsing::parse_break(ParseHelper &p, Stmt *&brk)
 	brk = StmtBreak::create(ctx, start.getLoc());
 	return true;
 }
-bool Parsing::parse_defer(ParseHelper &p, Stmt *&defer)
+bool Parsing::parseDefer(ParseHelper &p, Stmt *&defer)
 {
 	defer = nullptr;
 
@@ -1652,7 +1652,7 @@ bool Parsing::parse_defer(ParseHelper &p, Stmt *&defer)
 		return false;
 	}
 
-	if(!parse_expr_16(p, val, false)) {
+	if(!parseExpr16(p, val, false)) {
 		err::out(p.peek(), {"failed to parse expression for return value"});
 		return false;
 	}
