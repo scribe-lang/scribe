@@ -45,7 +45,7 @@ bool Module::parseTokens()
 {
 	ParseHelper p(ctx, this, tokens);
 	Parsing parsing(ctx);
-	return parsing.parse_block(p, (StmtBlock *&)ptree, false);
+	return parsing.parseBlock(p, (StmtBlock *&)ptree, false);
 }
 bool Module::executePasses(PassManager &pm) { return pm.visit(ptree); }
 StringRef Module::getID() const { return id; }
