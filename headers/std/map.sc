@@ -124,11 +124,11 @@ let reinsertWhenResizing in Dict = fn(k2: *KeyNode(self.K, self.V)) {
 };
 
 let resize in Dict = fn(newsz: u64) {
-	let o = self.capacity;
+	let ocap = self.capacity;
 	let old = self.table;
 	self.table = mem.calloc(@ptr(KeyNode(self.K, self.V)), newsz);
 	self.capacity = newsz;
-	for let i = 0; i < 0; ++i {
+	for let i = 0; i < ocap; ++i {
 		let k = old[i];
 		while @as(u64, k) {
 			let next = k.next;
