@@ -47,11 +47,17 @@ public:
 	size_t size();
 	void clear();
 
-#define SetX(name, var) \
-	inline void set##name(bool val) { var = val; }
+#define SetX(name, var)                 \
+	inline void set##name(bool val) \
+	{                               \
+		var = val;              \
+	}
 
-#define IsX(name, var) \
-	inline bool is##name() { return var; }
+#define IsX(name, var)         \
+	inline bool is##name() \
+	{                      \
+		return var;    \
+	}
 
 	SetX(Static, isstatic);
 	SetX(Volatile, isvolatile);

@@ -54,8 +54,11 @@ public:
 	virtual Value *clone(Context &c)	       = 0;
 	virtual bool updateValue(Context &c, Value *v) = 0;
 
-#define IsVal(ty, vt) \
-	inline bool is##ty() { return vty == V##vt; }
+#define IsVal(ty, vt)                \
+	inline bool is##ty()         \
+	{                            \
+		return vty == V##vt; \
+	}
 	IsVal(Int, INT);
 	IsVal(Flt, FLT);
 	IsVal(Vec, VEC);
