@@ -60,13 +60,14 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 	if(!res) return false;
 	if(!source || !*source) return res;
 	stmt = *source;
-	if(stmt->getTy() && stmt->getTy()->isStruct() &&
+	if(stmt->getTy() && stmt->getTy()->isStruct() && as<StructTy>(stmt->getTy())->getDecl() &&
 	   as<StructTy>(stmt->getTy())->getDecl()->isDecl())
 	{
 		deferredspecialize.pushDataInternal(stmt->getTy()->getID(), &stmt->getTy());
 	}
 	if(stmt->getVal() && stmt->getVal()->isType() &&
 	   as<TypeVal>(stmt->getVal())->getVal()->isStruct() &&
+	   as<StructTy>(as<TypeVal>(stmt->getVal())->getVal())->getDecl() &&
 	   as<StructTy>(as<TypeVal>(stmt->getVal())->getVal())->getDecl()->isDecl())
 	{
 		Type *&t = as<TypeVal>(stmt->getVal())->getVal();
@@ -159,7 +160,8 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 	}
 	Type *res = stmt->getExpr()->getTy();
 	// for cross-referencing structs
-	bool is_struct_decl = res->isStruct() && as<StructTy>(res)->getDecl()->isDecl();
+	bool is_struct_decl =
+	res->isStruct() && as<StructTy>(res)->getDecl() && as<StructTy>(res)->getDecl()->isDecl();
 	if(!is_self && !is_struct_decl) {
 		res = res->specialize(ctx);
 	}

@@ -83,8 +83,11 @@ public:
 	const char *getStmtTypeCString() const;
 	String getTypeString();
 
-#define isStmtX(X, ENUMVAL) \
-	inline bool is##X() { return stype == ENUMVAL; }
+#define isStmtX(X, ENUMVAL)              \
+	inline bool is##X()              \
+	{                                \
+		return stype == ENUMVAL; \
+	}
 	isStmtX(Block, BLOCK);
 	isStmtX(Type, TYPE);
 	isStmtX(Simple, SIMPLE);
@@ -106,43 +109,61 @@ public:
 	isStmtX(Break, BREAK);
 	isStmtX(Defer, DEFER);
 
-#define SetModifierX(Fn, Mod) \
-	inline void set##Fn() { stmtmask |= (uint8_t)StmtMask::Mod; }
+#define SetModifierX(Fn, Mod)                       \
+	inline void set##Fn()                       \
+	{                                           \
+		stmtmask |= (uint8_t)StmtMask::Mod; \
+	}
 	SetModifierX(Ref, REF);
 	SetModifierX(Const, CONST);
 	SetModifierX(Comptime, COMPTIME);
 #undef SetModifierX
 
-#define UnsetModifierX(Fn, Mod) \
-	inline void unset##Fn() { stmtmask &= ~(uint8_t)StmtMask::Mod; }
+#define UnsetModifierX(Fn, Mod)                      \
+	inline void unset##Fn()                      \
+	{                                            \
+		stmtmask &= ~(uint8_t)StmtMask::Mod; \
+	}
 	UnsetModifierX(Ref, REF);
 	UnsetModifierX(Const, CONST);
 	UnsetModifierX(Comptime, COMPTIME);
 #undef UnsetModifierX
 
-#define IsModifierX(Fn, Mod) \
-	inline bool is##Fn() const { return stmtmask & (uint8_t)StmtMask::Mod; }
+#define IsModifierX(Fn, Mod)                              \
+	inline bool is##Fn() const                        \
+	{                                                 \
+		return stmtmask & (uint8_t)StmtMask::Mod; \
+	}
 	IsModifierX(Ref, REF);
 	IsModifierX(Const, CONST);
 	IsModifierX(Comptime, COMPTIME);
 #undef IsModifierX
 
-#define SetCastModifierX(Fn, Mod) \
-	inline void setCast##Fn() { castmask |= (uint8_t)StmtMask::Mod; }
+#define SetCastModifierX(Fn, Mod)                   \
+	inline void setCast##Fn()                   \
+	{                                           \
+		castmask |= (uint8_t)StmtMask::Mod; \
+	}
 	SetCastModifierX(Ref, REF);
 	SetCastModifierX(Const, CONST);
 	SetCastModifierX(Comptime, COMPTIME);
 #undef SetCastModifierX
 
-#define UnsetCastModifierX(Fn, Mod) \
-	inline void unsetCast##Fn() { castmask &= ~(uint8_t)StmtMask::Mod; }
+#define UnsetCastModifierX(Fn, Mod)                  \
+	inline void unsetCast##Fn()                  \
+	{                                            \
+		castmask &= ~(uint8_t)StmtMask::Mod; \
+	}
 	UnsetCastModifierX(Ref, REF);
 	UnsetCastModifierX(Const, CONST);
 	UnsetCastModifierX(Comptime, COMPTIME);
 #undef UnsetCastModifierX
 
-#define IsCastModifierX(Fn, Mod) \
-	inline bool isCast##Fn() const { return castmask & (uint8_t)StmtMask::Mod; }
+#define IsCastModifierX(Fn, Mod)                          \
+	inline bool isCast##Fn() const                    \
+	{                                                 \
+		return castmask & (uint8_t)StmtMask::Mod; \
+	}
 	IsCastModifierX(Ref, REF);
 	IsCastModifierX(Const, CONST);
 	IsCastModifierX(Comptime, COMPTIME);
@@ -392,24 +413,33 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-#define SetModifierX(Fn, Mod) \
-	inline void set##Fn() { varmask |= (uint8_t)VarMask::Mod; }
+#define SetModifierX(Fn, Mod)                     \
+	inline void set##Fn()                     \
+	{                                         \
+		varmask |= (uint8_t)VarMask::Mod; \
+	}
 	SetModifierX(Static, STATIC);
 	SetModifierX(Volatile, VOLATILE);
 	SetModifierX(In, IN);
 	SetModifierX(Global, GLOBAL);
 #undef SetModifierX
 
-#define UnsetModifierX(Fn, Mod) \
-	inline void unset##Fn() { varmask &= ~(uint8_t)VarMask::Mod; }
+#define UnsetModifierX(Fn, Mod)                    \
+	inline void unset##Fn()                    \
+	{                                          \
+		varmask &= ~(uint8_t)VarMask::Mod; \
+	}
 	UnsetModifierX(Static, STATIC);
 	UnsetModifierX(Volatile, VOLATILE);
 	UnsetModifierX(In, IN);
 	UnsetModifierX(Global, GLOBAL);
 #undef UnsetModifierX
 
-#define IsModifierX(Fn, Mod) \
-	inline bool is##Fn() const { return varmask & (uint8_t)VarMask::Mod; }
+#define IsModifierX(Fn, Mod)                            \
+	inline bool is##Fn() const                      \
+	{                                               \
+		return varmask & (uint8_t)VarMask::Mod; \
+	}
 	IsModifierX(Static, STATIC);
 	IsModifierX(Volatile, VOLATILE);
 	IsModifierX(In, IN);

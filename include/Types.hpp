@@ -81,8 +81,11 @@ public:
 	virtual Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 				      const size_t &weak_depth = 0);
 
-#define IsTyX(Fn, Ty) \
-	inline bool is##Fn() const { return type == T##Ty; }
+#define IsTyX(Fn, Ty)                 \
+	inline bool is##Fn() const    \
+	{                             \
+		return type == T##Ty; \
+	}
 	IsTyX(Void, VOID);
 	IsTyX(TypeTy, TYPE);
 	IsTyX(Any, ANY);
