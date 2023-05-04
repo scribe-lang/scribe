@@ -197,7 +197,7 @@ let get in Dict = fn(key: &const self.K): &self.V {
 	return self.emptyvalue;
 };
 
-let getKeys in Dict = fn(): vec.Vec(self.K) {
+let getKeys in const Dict = fn(): vec.Vec(self.K) {
 	let keys = vec.new(self.K, true);
 	for let i: u64 = 0; i < self.capacity; ++i {
 		if @as(u64, self.table[i]) == 0 { continue; }
@@ -210,7 +210,7 @@ let getKeys in Dict = fn(): vec.Vec(self.K) {
 	return keys;
 };
 
-let len in Dict = inline fn(): u64 {
+let len in const Dict = inline fn(): u64 {
 	return self.length;
 };
 

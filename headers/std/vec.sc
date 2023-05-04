@@ -123,7 +123,7 @@ let __subscr__ in Vec = inline fn(idx: u64): &self.T {
 };
 
 // returns a non reference copy of the data
-let getByVal in Vec = inline fn(idx: u64): self.T {
+let getByVal in const Vec = inline fn(idx: u64): self.T {
 	return self.data[idx];
 };
 
@@ -131,19 +131,19 @@ let back in Vec = inline fn(): &self.T {
 	return self.data[self.length - 1];
 };
 
-let backByVal in Vec = inline fn(): self.T {
+let backByVal in const Vec = inline fn(): self.T {
 	return self.data[self.length - 1];
 };
 
-let len in Vec = inline fn(): u64 {
+let len in const Vec = inline fn(): u64 {
 	return self.length;
 };
 
-let cap in Vec = inline fn(): u64 {
+let cap in const Vec = inline fn(): u64 {
 	return self.capacity;
 };
 
-let isEmpty in Vec = inline fn(): i1 {
+let isEmpty in const Vec = inline fn(): i1 {
 	return self.length == 0;
 };
 

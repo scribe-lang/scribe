@@ -77,9 +77,9 @@ let log = fn(lvl: i32, args: ...&const any) {
 
 	for d in targets.each() {
 		if d.with_col {
-			io.fprintf(d.f, "%s %s%-5s\\033[0m: ", timebuf, lvlColStr(lvl), lvlStr(lvl));
+			io.fprintf(d.f, "%s %s%+5s\\033[0m: ", timebuf, lvlColStr(lvl), lvlStr(lvl));
 		} else {
-			io.fprintf(d.f, "%s %-5s: ", timebuf, lvlStr(lvl));
+			io.fprintf(d.f, "%s %+5s: ", timebuf, lvlStr(lvl));
 		}
 		io.fprintln(d.f, args);
 	}

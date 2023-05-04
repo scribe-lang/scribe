@@ -3,9 +3,8 @@
 // without using return values or args
 
 let vec = @import("std/vec");
+let list = @import("std/list");
 let string = @import("std/string");
-
-let static inited = false;
 
 let Error = struct {
 	code: i32;
@@ -25,26 +24,21 @@ let str in const Error = fn(): string.String {
 	return s;
 };
 
-let getStack = fn(): &vec.Vec(Error) {
-	let static errstack: vec.Vec(Error);
-	return errstack;
-};
-
-let getStrStack = fn(): &vec.Vec(string.String) {
-	let static strstack: vec.Vec(string.String);
-	return strstack;
-};
+let static inited = false;
+let static errstack: vec.Vec(Error);
+let static strlist: list.List(string.String);
 
 let init = fn() {
 	if inited { return; }
-	getStack() = vec.new(Error, true);
-	getStrStack() = vec.new(string.String, true);
+	errstack.init(true);
+	strlist.init(true);
 	inited = true;
 };
 
 let deinit = fn() {
-	getStack().deinit();
-	getStrStack().deinit();
+	if !inited { return; }
+	errstack.deinit();
+	strlist.deinit();
 	inited = false;
 };
 
@@ -52,51 +46,50 @@ let allToRef = fn(data: ...&const any): string.StringRef {
 	let comptime len = @valen();
 	inline if len == 1 && @isCString(data[0]) {
 		return string.getRefCStr(data[0]);
-	}
-	inline if len == 1 && @isEqualTy(data[0], string.String) {
+	} elif len == 1 && @isEqualTy(data[0], string.String) {
 		return data[0].getRef();
-	}
-	inline if len == 1 && @isEqualTy(data[0], string.StringRef) {
+	} elif len == 1 && @isEqualTy(data[0], string.StringRef) {
 		return data[0];
+	} else {
+		let errstr = string.new();
+		inline for let comptime i = 0; i < len; ++i {
+			errstr.append(data[i]); // String.append() is a generic function
+		}
+		strlist.push(errstr);
+		return strlist.back().getRef();
 	}
-	let errstr = string.new();
-	inline for let comptime i = 0; i < len; ++i {
-		errstr.append(data[i]); // String.append() is a generic function
-	}
-	getStrStack().push(errstr);
-	return errstr.getRef();
 };
 
 let push = fn(code: i32, data: ...&const any) {
 	if !inited { return; }
 	let e = Error{code, allToRef(data)};
-	getStack().push(e);
+	errstack.push(e);
 };
 
 let present = fn(): i1 {
 	if !inited { return false; }
-	return !getStack().isEmpty();
+	return !errstack.isEmpty();
 };
 
 let getCode = fn(): i32 {
 	if !inited { return -1; }
-	if getStack().isEmpty() { return -1; }
-	return getStack().back().code;
+	if errstack.isEmpty() { return -1; }
+	return errstack.back().code;
 };
 
 let getMsg = fn(): string.StringRef {
 	if !inited { return ref"err system uninitialized"; }
-	if getStack().isEmpty() {
+	if errstack.isEmpty() {
 		return ref"no error present in stack";
 	}
-	return getStack().back().msg;
+	return errstack.back().msg;
 };
 
 let pop = fn(): Error {
 	if !inited { return Error{-1, ref"err system uninitialized"}; }
-	if !getStack().isEmpty() {
-		let res = getStack().backByVal();
-		getStack().pop();
+	if !errstack.isEmpty() {
+		let res = errstack.backByVal();
+		errstack.pop();
 		return res;
 	}
 	return Error{-1, ref"invalid error pop"};

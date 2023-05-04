@@ -63,6 +63,35 @@ bool CleanupPass::visit(StmtBlock *stmt, Stmt **source)
 			continue;
 		}
 	}
+	// move all top level normal (value = expr/simple/none) variable declarations
+	// at the top of the block to prevent a possible function specialization from
+	// coming before them
+	if(stmt->isTop()) {
+		Vector<Stmt *> tomove;
+		for(size_t i = 0; i < stmts.size(); ++i) {
+			if(!stmts[i]->isVarDecl() && !stmts[i]->isVar()) continue;
+			if(stmts[i]->isVarDecl() &&
+			   as<StmtVarDecl>(stmts[i])->getDecls().size() > 1)
+			{
+				tomove.push_back(stmts[i]);
+				stmts.erase(stmts.begin() + i);
+				--i;
+				continue;
+			}
+			StmtVar *var = nullptr;
+			if(stmts[i]->isVarDecl()) var = as<StmtVarDecl>(stmts[i])->getDecls()[0];
+			else var = as<StmtVar>(stmts[i]);
+			if(var->getVVal() && !var->getVVal()->isExpr() &&
+			   !var->getVVal()->isSimple())
+				continue;
+			tomove.push_back(stmts[i]);
+			stmts.erase(stmts.begin() + i);
+			--i;
+		}
+		for(auto it = tomove.rbegin(); it != tomove.rend(); ++it) {
+			stmts.insert(stmts.begin(), *it);
+		}
+	}
 	return true;
 }
 bool CleanupPass::visit(StmtType *stmt, Stmt **source) { return true; }
