@@ -91,6 +91,14 @@ let setManaged in List = fn(managed: i1): self {
 	return self;
 };
 
+let doEach in List = fn(cb: any, args: ...&any) {
+	let it = self.start;
+	while @as(u64, it) != nil {
+		cb(it.data, args);
+		it = it.next;
+	}
+};
+
 let front in List = inline fn(): &self.T { return self.start.data; };
 let frontByVal in const List = inline fn(): self.T { return self.start.data; };
 let back in List = inline fn(): &self.T { return self.end.data; };
