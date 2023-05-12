@@ -122,6 +122,12 @@ let __subscr__ in Vec = inline fn(idx: u64): &self.T {
 	return self.data[idx];
 };
 
+let doEach in Vec = fn(cb: any, args: ...&any) {
+	for let i: u64 = 0; i < self.length; ++i {
+		cb(self.data[i], args);
+	}
+};
+
 // returns a non reference copy of the data
 let getByVal in const Vec = inline fn(idx: u64): self.T {
 	return self.data[idx];
