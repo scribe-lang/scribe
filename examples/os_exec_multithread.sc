@@ -7,7 +7,7 @@ let mtrun: os.MultiThreadedExec;
 
 let func = fn(data: *void): *void {
 	let tid = *@as(@ptr(i32), data);
-	mtrun.exec("echo ", tid);
+	mtrun.exec("echo 'current thread: ", thread.getSelfId(), " with data: ", tid, "'");
 	return nil;
 };
 

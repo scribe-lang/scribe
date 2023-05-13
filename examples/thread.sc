@@ -7,7 +7,7 @@ let mtx: mutex.Mutex;
 let func = fn(data: *void): *void {
 	let tid = @as(@ptr(u64), data);
 	mtx.lock();
-	io.println("Hello world from thread ", thread.getSelf(), " with data: ", *tid);
+	io.println("Hello world from thread ", thread.getSelfId(), " with data: ", *tid);
 	mtx.unlock();
 	return nil;
 };
