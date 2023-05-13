@@ -6,7 +6,7 @@ let pthread_attr_t = extern[pthread_attr_t, "<pthread.h>", "-pthread"] struct {}
 let pthread_create = extern[pthread_create, "<pthread.h>", "-pthread"] fn(id: *pthread_t, attr: *const pthread_attr_t, start_routine: fn(data: *void): *void, arg: *void): i32;
 let pthread_join = extern[pthread_join, "<pthread.h>", "-pthread"] fn(id: pthread_t, value_ptr: **void): i32;
 
-let getSelf = extern[pthread_self, "<pthread.h>", "-pthread"] fn(): pthread_t;
+let getSelfId = extern[pthread_self, "<pthread.h>", "-pthread"] fn(): pthread_t;
 
 let getConcurrency = inline fn(): i64 {
 	return unistd.sysconf(unistd._SC_NPROCESSORS_ONLN);
@@ -21,7 +21,7 @@ let new = inline fn(): Thread {
 };
 let deinit in Thread = inline fn() {};
 
-let getID in Thread = inline fn(): pthread_t {
+let getId in Thread = inline fn(): pthread_t {
 	return self.threadid;
 };
 
@@ -33,6 +33,10 @@ let join in Thread = inline fn(): i32 {
 	return pthread_join(self.threadid, nil);
 };
 
+let getCurrent = inline fn(): Thread {
+	return Thread{getSelfId()};
+};
+
 // usage
 inline if @isMainSrc() {
 
@@ -40,7 +44,7 @@ let io = @import("std/io");
 
 let func = fn(data: *void): *void {
 	let tid = @as(u64, data);
-	io.println("Hello world from thread ", getSelf(), " with data: ", tid);
+	io.println("Hello world from thread ", getSelfId(), " with data: ", tid);
 	return nil;
 };
 
