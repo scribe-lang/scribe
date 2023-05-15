@@ -14,6 +14,7 @@
 #ifndef CORE_HPP
 #define CORE_HPP
 
+#include <cstdint>
 #include <forward_list>
 #include <initializer_list>
 #include <string>
