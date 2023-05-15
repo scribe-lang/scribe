@@ -20,4 +20,6 @@
 
 #define INSTALL_DIR "@CMAKE_INSTALL_PREFIX@"
 
+#define SCRIBE_PATH_MAX 4096
+
 #endif // CONFIG_HPP

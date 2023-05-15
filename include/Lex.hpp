@@ -275,15 +275,15 @@ class Tokenizer
 	ModuleLoc *locAlloc(const size_t &line, const size_t &col);
 	ModuleLoc loc(const size_t &line, const size_t &col);
 
-	StringRef get_name(StringRef data, size_t &i);
-	TokType classify_str(StringRef str);
-	StringRef get_num(StringRef data, size_t &i, size_t &line, size_t &line_start,
-			  TokType &num_type, int &base);
-	bool get_const_str(StringRef data, char &quote_type, size_t &i, size_t &line,
-			   size_t &line_start, String &buf);
-	TokType get_operator(StringRef data, size_t &i, const size_t &line,
-			     const size_t &line_start);
-	void remove_back_slash(String &s);
+	StringRef getName(StringRef data, size_t &i);
+	TokType classifyStr(StringRef str);
+	StringRef getNum(StringRef data, size_t &i, size_t &line, size_t &line_start,
+			 TokType &num_type, int &base);
+	bool getConstStr(StringRef data, char &quote_type, size_t &i, size_t &line,
+			 size_t &line_start, String &buf);
+	TokType getOperator(StringRef data, size_t &i, const size_t &line,
+			    const size_t &line_start);
+	void removeBackSlash(String &s);
 
 public:
 	Tokenizer(Context &ctx, Module *m);

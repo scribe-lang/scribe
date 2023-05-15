@@ -232,8 +232,7 @@ bool CDriver::compile(StringRef outfile)
 	cmd += tmpfile + " -o ";
 	cmd += outfile;
 	if(llir) cmd += ".ll -S -emit-llvm";
-	int res = std::system(cmd.c_str());
-	res	= WEXITSTATUS(res);
+	int res = env::exec(cmd);
 	if(res) {
 		StringRef resref = ctx.strFrom((int64_t)res);
 		err::out(mainmod->getParseTree(),

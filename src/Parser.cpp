@@ -14,7 +14,6 @@
 #include "Parser.hpp"
 
 #include <iostream>
-#include <unistd.h>
 
 #include "Error.hpp"
 #include "FS.hpp"

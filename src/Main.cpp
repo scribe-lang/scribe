@@ -11,10 +11,6 @@
 	furnished to do so.
 */
 
-#ifdef __APPLE__
-	// for basename() on macOS
-	#include <libgen.h>
-#endif // __APPLE__
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
@@ -23,6 +19,7 @@
 #include "Builder.hpp"
 #include "CodeGen/C.hpp"
 #include "Config.hpp"
+#include "Env.hpp"
 #include "Error.hpp"
 #include "FS.hpp"
 #include "Lex.hpp"
@@ -73,8 +70,7 @@ int main(int argc, char **argv)
 
 int BuildRunProj(args::ArgParser &args, bool buildonly)
 {
-	int res = std::system("mkdir -p build");
-	res	= WEXITSTATUS(res);
+	int res = fs::mkdir("build");
 	if(res) return res;
 
 	String file = "<build>";
@@ -94,8 +90,7 @@ int BuildRunProj(args::ArgParser &args, bool buildonly)
 		cmd += " ";
 		cmd += argv[i];
 	}
-	res = std::system(cmd.c_str());
-	res = WEXITSTATUS(res);
+	res = env::exec(cmd);
 	return res;
 }
 
@@ -114,14 +109,15 @@ int CompileFile(args::ArgParser &args, String &file)
 	if(args.has("nofile")) return 0;
 
 	// TODO: make proper log system
-	if(args.has("verbose")) std::cout << "total read lines: " << fs::getTotalLines() << "\n";
+	if(args.has("verbose"))
+		std::cout << "total read lines: " << fs::getLastTotalLines() << "\n";
 
 	CDriver cdriver(parser);
 	String outfile = String(args.get(2));
 	if(outfile.empty()) {
 		char f[2048] = {0};
 		strcpy(f, file.c_str());
-		outfile = basename(f);
+		outfile = fs::baseName(f);
 	}
 	auto ext = outfile.find_last_of('.');
 	if(ext != String::npos) outfile = outfile.substr(0, ext);
