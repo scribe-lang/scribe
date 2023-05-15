@@ -147,7 +147,7 @@ const char *TokStrs[_LAST] = {
 "<INVALID>",
 };
 
-String view_backslash(StringRef data);
+String viewBackSlash(StringRef data);
 
 Tok::Tok(const int &tok) : val((TokType)tok) {}
 
@@ -264,7 +264,7 @@ String Lexeme::str(int64_t pad) const
 	for(int64_t i = 0; i < pad - len; ++i) res += " ";
 	if(pad == 0) res += " ";
 	if(tok.getVal() == CHAR || tok.getVal() == STR || tok.getVal() == IDEN) {
-		res += view_backslash(data.s);
+		res += viewBackSlash(data.s);
 	} else if(tok.getVal() == INT) {
 		res += std::to_string(data.i);
 	} else if(tok.getVal() == FLT) {
@@ -345,9 +345,9 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 		    PREV != '_' && PREV != ')' && PREV != ']' && PREV != '\'' && PREV != '"') ||
 		   isalpha(CURR) || CURR == '_')
 		{
-			StringRef str = get_name(data, i);
+			StringRef str = getName(data, i);
 			// check if string is a keyword
-			TokType str_class = classify_str(str);
+			TokType str_class = classifyStr(str);
 			if(str[0] == '.') str = str.substr(0, 1);
 			if(str_class == STR || str_class == IDEN)
 			{ // place either the data itself (type = STR, IDEN)
@@ -364,7 +364,7 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 		if(isdigit(CURR)) {
 			TokType num_type = INT;
 			int base	 = 10;
-			StringRef num	 = get_num(data, i, line, line_start, num_type, base);
+			StringRef num	 = getNum(data, i, line, line_start, num_type, base);
 			if(num.empty()) return false;
 			if(num_type == FLT) {
 				long double fltval;
@@ -388,7 +388,7 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 		if(CURR == '\"' || CURR == '\'' || CURR == '`') {
 			String str;
 			char quote_type = 0;
-			if(!get_const_str(data, quote_type, i, line, line_start, str)) return false;
+			if(!getConstStr(data, quote_type, i, line, line_start, str)) return false;
 			StringRef strref = ctx.moveStr(std::move(str));
 			toks.emplace_back(locAlloc(line, i - line_start - str.size()),
 					  quote_type == '\'' ? CHAR : STR, strref);
@@ -397,14 +397,14 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 
 		// operators
 		size_t begin	= i;
-		TokType op_type = get_operator(data, i, line, line_start);
+		TokType op_type = getOperator(data, i, line, line_start);
 		if(op_type == INVALID) return false;
 		toks.emplace_back(locAlloc(line, begin - line_start), op_type);
 	}
 	return true;
 }
 
-StringRef Tokenizer::get_name(StringRef data, size_t &i)
+StringRef Tokenizer::getName(StringRef data, size_t &i)
 {
 	size_t len   = data.size();
 	size_t start = i;
@@ -417,7 +417,7 @@ StringRef Tokenizer::get_name(StringRef data, size_t &i)
 	return StringRef(data).substr(start, i - start);
 }
 
-TokType Tokenizer::classify_str(StringRef str)
+TokType Tokenizer::classifyStr(StringRef str)
 {
 	if(str == TokStrs[GLOBAL]) return GLOBAL;
 	if(str == TokStrs[LET]) return LET;
@@ -463,8 +463,8 @@ TokType Tokenizer::classify_str(StringRef str)
 	return str[0] == '.' ? STR : IDEN;
 }
 
-StringRef Tokenizer::get_num(StringRef data, size_t &i, size_t &line, size_t &line_start,
-			     TokType &num_type, int &base)
+StringRef Tokenizer::getNum(StringRef data, size_t &i, size_t &line, size_t &line_start,
+			    TokType &num_type, int &base)
 {
 	size_t len = data.size();
 	String buf;
@@ -566,8 +566,8 @@ end:
 	return ctx.moveStr(std::move(buf));
 }
 
-bool Tokenizer::get_const_str(StringRef data, char &quote_type, size_t &i, size_t &line,
-			      size_t &line_start, String &buf)
+bool Tokenizer::getConstStr(StringRef data, char &quote_type, size_t &i, size_t &line,
+			    size_t &line_start, String &buf)
 {
 	size_t len = data.size();
 	buf.clear();
@@ -606,12 +606,12 @@ bool Tokenizer::get_const_str(StringRef data, char &quote_type, size_t &i, size_
 	}
 	// omit ending quote
 	++i;
-	remove_back_slash(buf);
+	removeBackSlash(buf);
 	return true;
 }
 
-TokType Tokenizer::get_operator(StringRef data, size_t &i, const size_t &line,
-				const size_t &line_start)
+TokType Tokenizer::getOperator(StringRef data, size_t &i, const size_t &line,
+			       const size_t &line_start)
 {
 	size_t len	   = data.size();
 	TokType op_type	   = INVALID;
@@ -792,7 +792,7 @@ TokType Tokenizer::get_operator(StringRef data, size_t &i, const size_t &line,
 	return op_type;
 }
 
-void Tokenizer::remove_back_slash(String &s)
+void Tokenizer::removeBackSlash(String &s)
 {
 	for(auto it = s.begin(); it != s.end(); ++it) {
 		if(*it == '\\') {
@@ -801,7 +801,9 @@ void Tokenizer::remove_back_slash(String &s)
 			if(*it == '0') *it = '\0';
 			else if(*it == 'a') *it = '\a';
 			else if(*it == 'b') *it = '\b';
+#if !defined(OS_WINDOWS)
 			else if(*it == 'e') *it = '\e';
+#endif
 			else if(*it == 'f') *it = '\f';
 			else if(*it == 'n') *it = '\n';
 			else if(*it == 'r') *it = '\r';
@@ -811,7 +813,7 @@ void Tokenizer::remove_back_slash(String &s)
 	}
 }
 
-String view_backslash(StringRef data)
+String viewBackSlash(StringRef data)
 {
 	String res(data);
 	for(auto it = res.begin(); it != res.end(); ++it) {
@@ -830,11 +832,13 @@ String view_backslash(StringRef data)
 			res.insert(it - res.begin(), "\\b");
 			continue;
 		}
+#if !defined(OS_WINDOWS)
 		if(*it == '\e') {
 			it = res.erase(it);
 			res.insert(it - res.begin(), "\\e");
 			continue;
 		}
+#endif
 		if(*it == '\f') {
 			it = res.erase(it);
 			res.insert(it - res.begin(), "\\f");

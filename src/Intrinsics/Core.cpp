@@ -9,8 +9,6 @@
 	furnished to do so.
 */
 
-#include <limits.h>
-
 #include "Config.hpp"
 #include "Env.hpp"
 #include "FS.hpp"
@@ -264,21 +262,21 @@ INTRINSIC(assn_ptr)
 INTRINSIC(getosid)
 {
 	int res = 0;
-#if defined(__linux__)
+#if defined(OS_LINUX)
 	res = 1;
-#elif defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#elif defined(OS_WINDOWS)
 	res = 2;
-#elif defined(__APPLE__)
+#elif defined(OS_APPLE)
 	res = 3;
-#elif defined(__ANDROID__)
+#elif defined(OS_ANDROID)
 	res = 4;
-#elif defined(__FreeBSD__)
+#elif defined(OS_FREEBSD)
 	res = 5;
-#elif defined(__NetBSD__)
+#elif defined(OS_NETBSD)
 	res = 6;
-#elif defined(__OpenBSD__)
+#elif defined(OS_OPENBSD)
 	res = 7;
-#elif defined(__DragonFly__)
+#elif defined(OS_DRAGONFLYBSD)
 	res = 8;
 #endif
 	stmt->setVal(IntVal::create(c, CDPERMA, res));
@@ -286,7 +284,7 @@ INTRINSIC(getosid)
 }
 INTRINSIC(syspathmax)
 {
-	stmt->setVal(IntVal::create(c, CDPERMA, PATH_MAX));
+	stmt->setVal(IntVal::create(c, CDPERMA, SCRIBE_PATH_MAX));
 	return true;
 }
 INTRINSIC(compileerror)
