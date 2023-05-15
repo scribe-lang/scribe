@@ -108,6 +108,7 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 		if(!stmts[i]) {
 			stmts.erase(stmts.begin() + i);
 			--i;
+			continue;
 		}
 		// remove blocks at top level (also helps with conditional imports)
 		if(stmt->isTop() && stmts[i]->isBlock()) {

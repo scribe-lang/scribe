@@ -140,6 +140,9 @@ void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 
 	ADDFN("compileError", createFnVal(c, {a}, v, intrinsic_compileerror, IPARSE, true));
 
+	ADDFN("setMaxCompilerErrors",
+	      createFnVal(c, {u64}, v, intrinsic_setmaxcompilererr, IPARSE));
+
 	g  = TypeTy::get(c);
 	g2 = TypeTy::get(c);
 	ADDFN("array", createComptimeFnVal(c, {g, i32, i32}, g2, {true, true, true},
