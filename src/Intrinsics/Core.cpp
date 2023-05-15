@@ -300,6 +300,13 @@ INTRINSIC(compileerror)
 	err::out(stmt, {e});
 	return false;
 }
+INTRINSIC(setmaxcompilererr)
+{
+	size_t maxerr = as<IntVal>(args[0]->getVal())->getVal();
+	err::setMaxErrs(maxerr);
+	*source = nullptr;
+	return true;
+}
 
 static StringRef GetCompilerID(Context &c)
 {

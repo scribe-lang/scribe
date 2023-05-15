@@ -1,3 +1,5 @@
+@setMaxCompilerErrors(20);
+
 let c = @import("std/c");
 let io = @import("std/io");
 let string = @import("std/string");

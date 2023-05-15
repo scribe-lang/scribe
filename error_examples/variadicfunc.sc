@@ -1,3 +1,5 @@
+@setMaxCompilerErrors(20);
+
 let sum = fn(args: ...any): i32 {
 	let comptime len = @valen();
 	let sum: i64 = 0;
