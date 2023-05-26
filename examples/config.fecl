@@ -1,4 +1,4 @@
-file_pattern = '(.*)\.sc';
-exec_cmd = 'scribe $p';
-#exec_cmd = 'valgrind scribe $p --log-fd=1 2>/dev/null';
-clean_cmd = 'rm -f $f';
+FilePattern = '(.*)\.sc';
+ExecCmd = 'scribe $p';
+#ExecCmd = 'valgrind scribe $p --log-fd=1 2>/dev/null';
+CleanCmd = 'rm -f $f';
