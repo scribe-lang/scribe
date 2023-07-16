@@ -1,16 +1,3 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
 #include "Passes/TypeAssign.hpp"
 
 #include <climits>
@@ -1469,7 +1456,7 @@ end:
 	return true;
 }
 
-void TypeAssignPass::pushFunc(FuncVal *fn, bool is_va, const size_t &va_len)
+void TypeAssignPass::pushFunc(FuncVal *fn, bool is_va, size_t va_len)
 {
 	vmgr.pushFunc(fn ? fn->getVal() : nullptr);
 	vmgr.pushLayer();
@@ -1477,7 +1464,7 @@ void TypeAssignPass::pushFunc(FuncVal *fn, bool is_va, const size_t &va_len)
 	is_fn_va.push_back(is_va);
 	valen.push_back(va_len);
 }
-void TypeAssignPass::updateLastFunc(FuncVal *fn, bool is_va, const size_t &va_len)
+void TypeAssignPass::updateLastFunc(FuncVal *fn, bool is_va, size_t va_len)
 {
 	vmgr.getTopFunc().setTy(fn->getVal());
 	is_fn_va.back() = is_va;

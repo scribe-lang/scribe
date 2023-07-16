@@ -1,21 +1,9 @@
-/*
-	MIT License
-	Copyright (c) 2022 Scribe Language Repositories
-	Permission is hereby granted, free of charge, to any person obtaining a
-	copy of this software and associated documentation files (the "Software"), to
-	deal in the Software without restriction, including without limitation the
-	rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-	sell copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
 #include "Config.hpp"
 #include "Env.hpp"
 #include "FS.hpp"
 #include "Intrinsics.hpp"
 #include "Parser.hpp"
 #include "Passes/TypeAssign.hpp"
-#include "ValueMgr.hpp"
 
 #define GetType(i) args[i]->getType()
 
@@ -342,7 +330,7 @@ static bool IsValidSource(String &modname)
 
 static size_t SizeOf(Type *ty)
 {
-	static const size_t szvoidp = sizeof(void *);
+	static constexpr size_t szvoidp = sizeof(void *);
 
 	if(ty->isPtr()) {
 		uint16_t count = as<PtrTy>(ty)->getCount();

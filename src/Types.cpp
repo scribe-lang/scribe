@@ -1,16 +1,3 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a
-	copy of this software and associated documentation files (the "Software"), to
-	deal in the Software without restriction, including without limitation the
-	rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-	sell copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
 #include "Types.hpp"
 
 #include "Parser/Stmts.hpp"
@@ -139,14 +126,14 @@ bool Type::requiresCast(Type *other)
 }
 uint32_t Type::getUniqID() { return getID(); }
 uint32_t Type::getID() { return getBaseID(); }
-bool Type::isTemplate(const size_t &weak_depth) { return false; }
-String Type::toStr(const size_t &weak_depth) { return baseToStr(); }
+bool Type::isTemplate(size_t weak_depth) { return false; }
+String Type::toStr(size_t weak_depth) { return baseToStr(); }
 bool Type::isCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 {
 	return isBaseCompatible(c, rhs, loc);
 }
-bool Type::mergeTemplatesFrom(Type *ty, const size_t &weak_depth) { return false; }
-void Type::unmergeTemplates(const size_t &weak_depth) {}
+bool Type::mergeTemplatesFrom(Type *ty, size_t weak_depth) { return false; }
+void Type::unmergeTemplates(size_t weak_depth) {}
 
 bool Type::isStrLiteral()
 {
@@ -158,8 +145,7 @@ bool Type::isStrLiteral()
 	return true;
 }
 
-Value *Type::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			    const size_t &weak_depth)
+Value *Type::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd, size_t weak_depth)
 {
 	err::out(loc, {"invalid type for toDefaultValue(): ", toStr()});
 	return nullptr;
@@ -171,15 +157,14 @@ Value *Type::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 
 VoidTy::VoidTy() : Type(TVOID) {}
 VoidTy::~VoidTy() {}
-Type *VoidTy::specialize(Context &c, const size_t &weak_depth) { return this; }
-String VoidTy::toStr(const size_t &weak_depth) { return "void"; }
+Type *VoidTy::specialize(Context &c, size_t weak_depth) { return this; }
+String VoidTy::toStr(size_t weak_depth) { return "void"; }
 VoidTy *VoidTy::get(Context &c)
 {
 	static VoidTy *res = c.allocType<VoidTy>();
 	return res;
 }
-Value *VoidTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth)
+Value *VoidTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd, size_t weak_depth)
 {
 	err::out(loc, {"void type has no value"});
 	return nullptr;
@@ -191,16 +176,15 @@ Value *VoidTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 
 AnyTy::AnyTy() : Type(TANY) {}
 AnyTy::~AnyTy() {}
-Type *AnyTy::specialize(Context &c, const size_t &weak_depth) { return this; }
-String AnyTy::toStr(const size_t &weak_depth) { return "any"; }
+Type *AnyTy::specialize(Context &c, size_t weak_depth) { return this; }
+String AnyTy::toStr(size_t weak_depth) { return "any"; }
 AnyTy *AnyTy::get(Context &c)
 {
 	static AnyTy *res = c.allocType<AnyTy>();
 	return res;
 }
 
-Value *AnyTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			     const size_t &weak_depth)
+Value *AnyTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd, size_t weak_depth)
 {
 	return TypeVal::create(c, this);
 }
@@ -212,9 +196,9 @@ Value *AnyTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 IntTy::IntTy(uint16_t bits, bool sign) : Type(TINT), bits(bits), sign(sign) {}
 IntTy::~IntTy() {}
 
-Type *IntTy::specialize(Context &c, const size_t &weak_depth) { return this; }
+Type *IntTy::specialize(Context &c, size_t weak_depth) { return this; }
 uint32_t IntTy::getID() { return getBaseID() + bits + (sign * 2); }
-String IntTy::toStr(const size_t &weak_depth) { return (sign ? "i" : "u") + std::to_string(bits); }
+String IntTy::toStr(size_t weak_depth) { return (sign ? "i" : "u") + std::to_string(bits); }
 
 IntTy *IntTy::get(Context &c, uint16_t _bits, bool _sign)
 {
@@ -226,8 +210,7 @@ IntTy *IntTy::get(Context &c, uint16_t _bits, bool _sign)
 	return res;
 }
 
-Value *IntTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			     const size_t &weak_depth)
+Value *IntTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd, size_t weak_depth)
 {
 	return IntVal::create(c, cd, 0);
 }
@@ -239,12 +222,12 @@ Value *IntTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 FltTy::FltTy(uint16_t bits) : Type(TFLT), bits(bits) {}
 FltTy::~FltTy() {}
 
-Type *FltTy::specialize(Context &c, const size_t &weak_depth) { return this; }
+Type *FltTy::specialize(Context &c, size_t weak_depth) { return this; }
 uint32_t FltTy::getID()
 {
 	return getBaseID() + (bits * 3); // * 3 to prevent clash between int and flt
 }
-String FltTy::toStr(const size_t &weak_depth) { return "f" + std::to_string(bits); }
+String FltTy::toStr(size_t weak_depth) { return "f" + std::to_string(bits); }
 
 FltTy *FltTy::get(Context &c, uint16_t _bits)
 {
@@ -256,8 +239,7 @@ FltTy *FltTy::get(Context &c, uint16_t _bits)
 	return res;
 }
 
-Value *FltTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			     const size_t &weak_depth)
+Value *FltTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd, size_t weak_depth)
 {
 	return FltVal::create(c, cd, 0.0);
 }
@@ -270,7 +252,7 @@ TypeTy::TypeTy() : Type(TTYPE), containedtyid(genContainedTypeID()) {}
 TypeTy::TypeTy(uint32_t containedtyid) : Type(TTYPE), containedtyid(containedtyid) {}
 TypeTy::~TypeTy() {}
 
-Type *TypeTy::specialize(Context &c, const size_t &weak_depth)
+Type *TypeTy::specialize(Context &c, size_t weak_depth)
 {
 	if(getContainedTy()) {
 		return getContainedTy()->specialize(c, weak_depth);
@@ -283,14 +265,14 @@ uint32_t TypeTy::getUniqID()
 	return getID();
 }
 uint32_t TypeTy::getID() { return getBaseID(); }
-bool TypeTy::isTemplate(const size_t &weak_depth) { return !getContainedTy(); }
-String TypeTy::toStr(const size_t &weak_depth)
+bool TypeTy::isTemplate(size_t weak_depth) { return !getContainedTy(); }
+String TypeTy::toStr(size_t weak_depth)
 {
 	Type *ct = getContainedTy();
 	return "typety<" +
 	       (ct ? ct->toStr(weak_depth) : "(none:" + std::to_string(containedtyid) + ")") + ">";
 }
-bool TypeTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
+bool TypeTy::mergeTemplatesFrom(Type *ty, size_t weak_depth)
 {
 	if(getContainedTy()) return true;
 	if(!ty->isTypeTy()) {
@@ -301,7 +283,7 @@ bool TypeTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 	setContainedTy(as<TypeTy>(ty)->getContainedTy());
 	return true;
 }
-void TypeTy::unmergeTemplates(const size_t &weak_depth) { clearContainedTy(); }
+void TypeTy::unmergeTemplates(size_t weak_depth) { clearContainedTy(); }
 
 TypeTy *TypeTy::get(Context &c) { return c.allocType<TypeTy>(); }
 
@@ -322,8 +304,7 @@ Type *TypeTy::getContainedTy()
 	return loc->second;
 }
 
-Value *TypeTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth)
+Value *TypeTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd, size_t weak_depth)
 {
 	if(!getContainedTy()) {
 		return TypeVal::create(c, this);
@@ -340,7 +321,7 @@ PtrTy::PtrTy(Type *to, uint64_t count, bool is_weak)
 {}
 PtrTy::~PtrTy() {}
 
-Type *PtrTy::specialize(Context &c, const size_t &weak_depth)
+Type *PtrTy::specialize(Context &c, size_t weak_depth)
 {
 	bool valid_depth = weak_depth < MAX_WEAKPTR_DEPTH;
 	Type *res	 = valid_depth ? to->specialize(c, weak_depth + is_weak) : to;
@@ -353,11 +334,11 @@ uint32_t PtrTy::getUniqID()
 	return getID();
 }
 uint32_t PtrTy::getID() { return getBaseID() + count * 17; }
-bool PtrTy::isTemplate(const size_t &weak_depth)
+bool PtrTy::isTemplate(size_t weak_depth)
 {
 	return weak_depth >= MAX_WEAKPTR_DEPTH ? false : to->isTemplate(weak_depth + is_weak);
 }
-String PtrTy::toStr(const size_t &weak_depth)
+String PtrTy::toStr(size_t weak_depth)
 {
 	String extradata;
 	if(count) extradata = "[" + std::to_string(count) + "] ";
@@ -369,13 +350,13 @@ String PtrTy::toStr(const size_t &weak_depth)
 	}
 	return res;
 }
-bool PtrTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
+bool PtrTy::mergeTemplatesFrom(Type *ty, size_t weak_depth)
 {
 	if(weak_depth >= MAX_WEAKPTR_DEPTH) return false;
 	if(!ty->isPtr()) return false;
 	return to->mergeTemplatesFrom(as<PtrTy>(ty)->getTo(), weak_depth + is_weak);
 }
-void PtrTy::unmergeTemplates(const size_t &weak_depth)
+void PtrTy::unmergeTemplates(size_t weak_depth)
 {
 	if(weak_depth >= MAX_WEAKPTR_DEPTH) return;
 	to->unmergeTemplates(weak_depth + is_weak);
@@ -400,8 +381,7 @@ PtrTy *PtrTy::getStr(Context &c, size_t count)
 	return res;
 }
 
-Value *PtrTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			     const size_t &weak_depth)
+Value *PtrTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd, size_t weak_depth)
 {
 	if(!count) return IntVal::create(c, cd, 0);
 	Vector<Value *> vec;
@@ -449,7 +429,7 @@ StructTy::StructTy(uint32_t id, StmtStruct *decl, const Vector<StringRef> &field
 {}
 StructTy::~StructTy() {}
 
-Type *StructTy::specialize(Context &c, const size_t &weak_depth)
+Type *StructTy::specialize(Context &c, size_t weak_depth)
 {
 	if(templates.empty()) return this;
 	Vector<Type *> newfields;
@@ -480,14 +460,14 @@ uint32_t StructTy::getUniqID()
 	return getID() * multiplier + res;
 }
 uint32_t StructTy::getID() { return id; }
-bool StructTy::isTemplate(const size_t &weak_depth)
+bool StructTy::isTemplate(size_t weak_depth)
 {
 	for(auto &f : fields) {
 		if(f->isTemplate(weak_depth)) return true;
 	}
 	return false;
 }
-String StructTy::toStr(const size_t &weak_depth)
+String StructTy::toStr(size_t weak_depth)
 {
 	String res = "struct<" + std::to_string(getID()) + ">{";
 	for(auto &f : fields) {
@@ -500,7 +480,7 @@ String StructTy::toStr(const size_t &weak_depth)
 	res += "}";
 	return res;
 }
-bool StructTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
+bool StructTy::mergeTemplatesFrom(Type *ty, size_t weak_depth)
 {
 	if(!ty->isStruct()) return false;
 	StructTy *other = as<StructTy>(ty);
@@ -511,7 +491,7 @@ bool StructTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 	}
 	return has_templ;
 }
-void StructTy::unmergeTemplates(const size_t &weak_depth)
+void StructTy::unmergeTemplates(size_t weak_depth)
 {
 	for(auto &f : fields) f->unmergeTemplates(weak_depth);
 }
@@ -583,7 +563,7 @@ Type *StructTy::getField(StringRef name)
 	if(found == fieldpos.end()) return nullptr;
 	return fields[found->second];
 }
-Type *StructTy::getField(const size_t &pos)
+Type *StructTy::getField(size_t pos)
 {
 	if(pos >= fields.size()) return nullptr;
 	return fields[pos];
@@ -598,7 +578,7 @@ bool StructTy::hasTemplate()
 }
 
 Value *StructTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-				const size_t &weak_depth)
+				size_t weak_depth)
 {
 	Map<StringRef, Value *> st;
 	for(auto &f : fieldpos) {
@@ -620,8 +600,8 @@ Value *StructTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData c
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 FuncTy::FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
-	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
-	       bool externed, bool variadic)
+	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, IntrinType inty, bool externed,
+	       bool variadic)
 	: Type(TFUNC), id(genTypeID()), var(var), sig(nullptr), args(args), ret(ret),
 	  argcomptime(_argcomptime), intrin(intrin), inty(inty),
 	  uniqid(!externed ? genFuncUniqID() : 0), externed(externed), variadic(variadic)
@@ -632,7 +612,7 @@ FuncTy::FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
 	}
 }
 FuncTy::FuncTy(uint32_t id, StmtVar *var, StmtFnSig *sig, const Vector<Type *> &args, Type *ret,
-	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
+	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, IntrinType inty,
 	       uint32_t uniqid, bool externed, bool variadic)
 	: Type(TFUNC), id(id), var(var), sig(sig), args(args), ret(ret), argcomptime(_argcomptime),
 	  intrin(intrin), inty(inty), uniqid(uniqid), externed(externed), variadic(variadic)
@@ -643,7 +623,7 @@ FuncTy::FuncTy(uint32_t id, StmtVar *var, StmtFnSig *sig, const Vector<Type *> &
 }
 FuncTy::~FuncTy() {}
 
-Type *FuncTy::specialize(Context &c, const size_t &weak_depth)
+Type *FuncTy::specialize(Context &c, size_t weak_depth)
 {
 	Vector<Type *> newargs;
 	newargs.reserve(args.size());
@@ -690,14 +670,14 @@ uint32_t FuncTy::getID()
 	res += ret->getID();
 	return res;
 }
-bool FuncTy::isTemplate(const size_t &weak_depth)
+bool FuncTy::isTemplate(size_t weak_depth)
 {
 	for(auto &a : args) {
 		if(a->isTemplate(weak_depth)) return true;
 	}
 	return ret->isTemplate(weak_depth);
 }
-String FuncTy::toStr(const size_t &weak_depth)
+String FuncTy::toStr(size_t weak_depth)
 {
 	String res = "function<" + std::to_string(getID());
 	if(intrin || externed) res += ", ";
@@ -718,7 +698,7 @@ String FuncTy::toStr(const size_t &weak_depth)
 	res += "): " + ret->toStr(weak_depth);
 	return res;
 }
-bool FuncTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
+bool FuncTy::mergeTemplatesFrom(Type *ty, size_t weak_depth)
 {
 	if(!ty->isFunc()) return false;
 	FuncTy *other = as<FuncTy>(ty);
@@ -730,7 +710,7 @@ bool FuncTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 	has_templ |= ret->mergeTemplatesFrom(other->ret, weak_depth);
 	return has_templ;
 }
-void FuncTy::unmergeTemplates(const size_t &weak_depth)
+void FuncTy::unmergeTemplates(size_t weak_depth)
 {
 	for(auto &a : args) a->unmergeTemplates(weak_depth);
 	ret->unmergeTemplates(weak_depth);
@@ -834,7 +814,7 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 	return res;
 }
 FuncTy *FuncTy::get(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
-		    const Vector<bool> &_argcomptime, IntrinsicFn _intrin, const IntrinType &_inty,
+		    const Vector<bool> &_argcomptime, IntrinsicFn _intrin, IntrinType _inty,
 		    bool _externed, bool _variadic)
 {
 	return c.allocType<FuncTy>(_var, _args, _ret, _argcomptime, _intrin, _inty, _externed,
@@ -854,8 +834,7 @@ bool FuncTy::callIntrinsic(Context &c, StmtExpr *stmt, Stmt **source, Vector<Stm
 {
 	return intrin(c, stmt, source, callargs);
 }
-Value *FuncTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth)
+Value *FuncTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd, size_t weak_depth)
 {
 	return FuncVal::create(c, this);
 }
@@ -867,21 +846,21 @@ Value *FuncTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 VariadicTy::VariadicTy(const Vector<Type *> &args) : Type(TVARIADIC), args(args) {}
 VariadicTy::~VariadicTy() {}
 
-Type *VariadicTy::specialize(Context &c, const size_t &weak_depth)
+Type *VariadicTy::specialize(Context &c, size_t weak_depth)
 {
 	Vector<Type *> newargs;
 	newargs.reserve(args.size());
 	for(auto &arg : args) newargs.push_back(arg->specialize(c, weak_depth));
 	return c.allocType<VariadicTy>(newargs);
 }
-bool VariadicTy::isTemplate(const size_t &weak_depth)
+bool VariadicTy::isTemplate(size_t weak_depth)
 {
 	for(auto &a : args) {
 		if(a->isTemplate(weak_depth)) return true;
 	}
 	return false;
 }
-String VariadicTy::toStr(const size_t &weak_depth)
+String VariadicTy::toStr(size_t weak_depth)
 {
 	String res = "variadic<";
 	for(auto &a : args) {
@@ -894,7 +873,7 @@ String VariadicTy::toStr(const size_t &weak_depth)
 	res += ">";
 	return res;
 }
-bool VariadicTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
+bool VariadicTy::mergeTemplatesFrom(Type *ty, size_t weak_depth)
 {
 	if(!ty->isVariadic()) return false;
 	VariadicTy *other = as<VariadicTy>(ty);
@@ -905,7 +884,7 @@ bool VariadicTy::mergeTemplatesFrom(Type *ty, const size_t &weak_depth)
 	}
 	return has_templ;
 }
-void VariadicTy::unmergeTemplates(const size_t &weak_depth)
+void VariadicTy::unmergeTemplates(size_t weak_depth)
 {
 	for(auto &a : args) a->unmergeTemplates(weak_depth);
 }
@@ -924,7 +903,7 @@ VariadicTy *VariadicTy::get(Context &c, const Vector<Type *> &_args)
 	return c.allocType<VariadicTy>(_args);
 }
 Value *VariadicTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-				  const size_t &weak_depth)
+				  size_t weak_depth)
 {
 	Vector<Value *> vec;
 	vec.reserve(args.size());

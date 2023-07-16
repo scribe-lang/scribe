@@ -1,16 +1,3 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a
-	copy of this software and associated documentation files (the "Software"), to
-	deal in the Software without restriction, including without limitation the
-	rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-	sell copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
 #include "Error.hpp"
 
 #include <iostream>
@@ -19,9 +6,7 @@
 
 namespace sc
 {
-ModuleLoc::ModuleLoc(Module *mod, const size_t &line, const size_t &col)
-	: mod(mod), line(line), col(col)
-{}
+ModuleLoc::ModuleLoc(Module *mod, size_t line, size_t col) : mod(mod), line(line), col(col) {}
 
 String ModuleLoc::getLocStr() const
 {
@@ -52,9 +37,9 @@ void outCommon(const ModuleLoc &loc, InitList<StringRef> err, bool is_warn)
 
 	if(errcount >= max_errs) return;
 
-	Module *mod	   = loc.getMod();
-	const size_t &line = loc.getLine();
-	const size_t &col  = loc.getCol();
+	Module *mod = loc.getMod();
+	size_t line = loc.getLine();
+	size_t col  = loc.getCol();
 
 	size_t linectr = 0;
 	size_t idx     = 0;

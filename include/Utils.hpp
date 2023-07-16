@@ -1,18 +1,4 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a
-	copy of this software and associated documentation files (the "Software"), to
-	deal in the Software without restriction, including without limitation the
-	rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-	sell copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
-#ifndef UTILS_HPP
-#define UTILS_HPP
+#pragma once
 
 #include "Core.hpp"
 
@@ -41,5 +27,3 @@ Vector<StringRef> stringDelim(StringRef str, StringRef delim);
 // Convert special characters in string (\n, \t, ...) to raw (\\n, \\t, ...)
 void appendRawString(String &res, StringRef from);
 } // namespace sc
-
-#endif // UTILS_HPP

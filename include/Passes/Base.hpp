@@ -1,18 +1,4 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
-#ifndef PASSES_BASE_HPP
-#define PASSES_BASE_HPP
+#pragma once
 
 #include "Context.hpp"
 #include "Parser/Stmts.hpp"
@@ -33,7 +19,7 @@ protected:
 	}
 
 public:
-	Pass(const size_t &passid, Context &ctx);
+	Pass(size_t passid, Context &ctx);
 	virtual ~Pass();
 
 	template<typename T>
@@ -71,7 +57,7 @@ public:
 	virtual bool visit(StmtBreak *stmt, Stmt **source)	= 0;
 	virtual bool visit(StmtDefer *stmt, Stmt **source)	= 0;
 
-	inline const size_t &getPassID() { return passid; }
+	inline size_t getPassID() { return passid; }
 };
 
 template<typename T> T *as(Pass *t) { return static_cast<T *>(t); }
@@ -93,5 +79,3 @@ public:
 	bool visit(Stmt *&ptree);
 };
 } // namespace sc
-
-#endif // PASSES_BASE_HPP

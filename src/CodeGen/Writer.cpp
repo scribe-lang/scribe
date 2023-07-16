@@ -1,14 +1,3 @@
-/*
-	MIT License
-	Copyright (c) 2022 Scribe Language Repositories
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
 #include "CodeGen/Writer.hpp"
 
 #include <cstring>
@@ -20,8 +9,8 @@ namespace sc
 Writer::Writer() : indent(0) {}
 Writer::Writer(Writer &other) : indent(other.indent) {}
 
-void Writer::addIndent(const size_t &count) { indent += count; }
-void Writer::remIndent(const size_t &count) { indent -= count; }
+void Writer::addIndent(size_t count) { indent += count; }
+void Writer::remIndent(size_t count) { indent -= count; }
 
 // adds '\n' and appends indentation
 void Writer::newLine()
@@ -37,7 +26,7 @@ void Writer::write(uint32_t data) { dest += std::to_string(data); }
 void Writer::write(int64_t data) { dest += std::to_string(data); }
 void Writer::write(const double &data) { dest += std::to_string(data); }
 void Writer::write(size_t count, char data) { dest.append(count, data); }
-void Writer::writeConstChar(const int64_t data)
+void Writer::writeConstChar(int64_t data)
 {
 	dest += "'";
 	dest.append(1, data);
@@ -52,7 +41,7 @@ void Writer::writeConstString(StringRef data)
 
 void Writer::writeBefore(StringRef data) { dest.insert(dest.begin(), data.begin(), data.end()); }
 void Writer::writeBefore(size_t count, char data) { dest.insert(dest.begin(), count, data); }
-void Writer::insertAfter(const size_t &pos, StringRef data) { dest.insert(pos, data); }
+void Writer::insertAfter(size_t pos, StringRef data) { dest.insert(pos, data); }
 
 void Writer::reset(Writer &other)
 {
@@ -64,5 +53,5 @@ bool Writer::empty() { return dest.empty(); }
 
 String &Writer::getData() { return dest; }
 
-const size_t &Writer::getIndent() { return indent; }
+size_t Writer::getIndent() { return indent; }
 } // namespace sc

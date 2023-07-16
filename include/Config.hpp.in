@@ -1,5 +1,4 @@
-#ifndef CONFIG_HPP
-#define CONFIG_HPP
+#pragma once
 
 #define PROJECT_NAME "@PROJECT_NAME@"
 // clang-format off
@@ -21,5 +20,3 @@
 #define INSTALL_DIR "@CMAKE_INSTALL_PREFIX@"
 
 #define SCRIBE_PATH_MAX 4096
-
-#endif // CONFIG_HPP

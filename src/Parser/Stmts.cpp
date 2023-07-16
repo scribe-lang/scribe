@@ -1,16 +1,3 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a
-	copy of this software and associated documentation files (the "Software"), to
-	deal in the Software without restriction, including without limitation the
-	rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-	sell copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
 #include "Parser/Stmts.hpp"
 
 #include "TreeIO.hpp"
@@ -149,12 +136,11 @@ bool StmtBlock::requiresTemplateInit()
 //////////////////////////////////////////// StmtType /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtType::StmtType(const ModuleLoc *loc, const size_t &ptr, bool variadic, Stmt *expr)
+StmtType::StmtType(const ModuleLoc *loc, size_t ptr, bool variadic, Stmt *expr)
 	: Stmt(TYPE, loc), ptr(ptr), variadic(variadic), expr(expr)
 {}
 StmtType::~StmtType() {}
-StmtType *StmtType::create(Context &c, const ModuleLoc *loc, const size_t &ptr, bool variadic,
-			   Stmt *expr)
+StmtType *StmtType::create(Context &c, const ModuleLoc *loc, size_t ptr, bool variadic, Stmt *expr)
 {
 	return c.allocStmt<StmtType>(loc, ptr, variadic, expr);
 }
@@ -263,13 +249,13 @@ bool StmtFnCallInfo::requiresTemplateInit()
 //////////////////////////////////////////// StmtExpr /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtExpr::StmtExpr(const ModuleLoc *loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
+StmtExpr::StmtExpr(const ModuleLoc *loc, size_t commas, Stmt *lhs, const lex::Lexeme &oper,
 		   Stmt *rhs, bool is_intrinsic_call)
 	: Stmt(EXPR, loc), commas(commas), lhs(lhs), oper(oper), rhs(rhs), or_blk(nullptr),
 	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call), calledfn(nullptr)
 {}
 StmtExpr::~StmtExpr() {}
-StmtExpr *StmtExpr::create(Context &c, const ModuleLoc *loc, const size_t &commas, Stmt *lhs,
+StmtExpr *StmtExpr::create(Context &c, const ModuleLoc *loc, size_t commas, Stmt *lhs,
 			   const lex::Lexeme &oper, Stmt *rhs, bool is_intrinsic_call)
 {
 	return c.allocStmt<StmtExpr>(loc, commas, lhs, oper, rhs, is_intrinsic_call);

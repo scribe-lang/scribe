@@ -1,18 +1,4 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a
-	copy of this software and associated documentation files (the "Software"), to
-	deal in the Software without restriction, including without limitation the
-	rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-	sell copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
-#ifndef PARSER_STMTS_HPP
-#define PARSER_STMTS_HPP
+#pragma once
 
 #include <cassert>
 
@@ -83,11 +69,8 @@ public:
 	const char *getStmtTypeCString() const;
 	String getTypeString();
 
-#define isStmtX(X, ENUMVAL)              \
-	inline bool is##X()              \
-	{                                \
-		return stype == ENUMVAL; \
-	}
+#define isStmtX(X, ENUMVAL) \
+	inline bool is##X() { return stype == ENUMVAL; }
 	isStmtX(Block, BLOCK);
 	isStmtX(Type, TYPE);
 	isStmtX(Simple, SIMPLE);
@@ -109,61 +92,43 @@ public:
 	isStmtX(Break, BREAK);
 	isStmtX(Defer, DEFER);
 
-#define SetModifierX(Fn, Mod)                       \
-	inline void set##Fn()                       \
-	{                                           \
-		stmtmask |= (uint8_t)StmtMask::Mod; \
-	}
+#define SetModifierX(Fn, Mod) \
+	inline void set##Fn() { stmtmask |= (uint8_t)StmtMask::Mod; }
 	SetModifierX(Ref, REF);
 	SetModifierX(Const, CONST);
 	SetModifierX(Comptime, COMPTIME);
 #undef SetModifierX
 
-#define UnsetModifierX(Fn, Mod)                      \
-	inline void unset##Fn()                      \
-	{                                            \
-		stmtmask &= ~(uint8_t)StmtMask::Mod; \
-	}
+#define UnsetModifierX(Fn, Mod) \
+	inline void unset##Fn() { stmtmask &= ~(uint8_t)StmtMask::Mod; }
 	UnsetModifierX(Ref, REF);
 	UnsetModifierX(Const, CONST);
 	UnsetModifierX(Comptime, COMPTIME);
 #undef UnsetModifierX
 
-#define IsModifierX(Fn, Mod)                              \
-	inline bool is##Fn() const                        \
-	{                                                 \
-		return stmtmask & (uint8_t)StmtMask::Mod; \
-	}
+#define IsModifierX(Fn, Mod) \
+	inline bool is##Fn() const { return stmtmask & (uint8_t)StmtMask::Mod; }
 	IsModifierX(Ref, REF);
 	IsModifierX(Const, CONST);
 	IsModifierX(Comptime, COMPTIME);
 #undef IsModifierX
 
-#define SetCastModifierX(Fn, Mod)                   \
-	inline void setCast##Fn()                   \
-	{                                           \
-		castmask |= (uint8_t)StmtMask::Mod; \
-	}
+#define SetCastModifierX(Fn, Mod) \
+	inline void setCast##Fn() { castmask |= (uint8_t)StmtMask::Mod; }
 	SetCastModifierX(Ref, REF);
 	SetCastModifierX(Const, CONST);
 	SetCastModifierX(Comptime, COMPTIME);
 #undef SetCastModifierX
 
-#define UnsetCastModifierX(Fn, Mod)                  \
-	inline void unsetCast##Fn()                  \
-	{                                            \
-		castmask &= ~(uint8_t)StmtMask::Mod; \
-	}
+#define UnsetCastModifierX(Fn, Mod) \
+	inline void unsetCast##Fn() { castmask &= ~(uint8_t)StmtMask::Mod; }
 	UnsetCastModifierX(Ref, REF);
 	UnsetCastModifierX(Const, CONST);
 	UnsetCastModifierX(Comptime, COMPTIME);
 #undef UnsetCastModifierX
 
-#define IsCastModifierX(Fn, Mod)                          \
-	inline bool isCast##Fn() const                    \
-	{                                                 \
-		return castmask & (uint8_t)StmtMask::Mod; \
-	}
+#define IsCastModifierX(Fn, Mod) \
+	inline bool isCast##Fn() const { return castmask & (uint8_t)StmtMask::Mod; }
 	IsCastModifierX(Ref, REF);
 	IsCastModifierX(Const, CONST);
 	IsCastModifierX(Comptime, COMPTIME);
@@ -262,9 +227,9 @@ class StmtType : public Stmt
 	Stmt *expr; // can be func, func call, name, name.x, ... (expr1)
 
 public:
-	StmtType(const ModuleLoc *loc, const size_t &ptr, bool variadic, Stmt *expr);
+	StmtType(const ModuleLoc *loc, size_t ptr, bool variadic, Stmt *expr);
 	~StmtType();
-	static StmtType *create(Context &c, const ModuleLoc *loc, const size_t &ptr, bool variadic,
+	static StmtType *create(Context &c, const ModuleLoc *loc, size_t ptr, bool variadic,
 				Stmt *expr);
 
 	void disp(bool has_next);
@@ -276,7 +241,7 @@ public:
 	inline void setVariadic() { variadic = true; }
 	inline void unsetVariadic() { variadic = false; }
 
-	inline const size_t &getPtrCount() const { return ptr; }
+	inline size_t getPtrCount() const { return ptr; }
 
 	inline bool isVariadic() const { return variadic; }
 
@@ -334,9 +299,9 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void setArg(const size_t &idx, Stmt *a) { args[idx] = a; }
+	inline void setArg(size_t idx, Stmt *a) { args[idx] = a; }
 	inline Vector<Stmt *> &getArgs() { return args; }
-	inline Stmt *getArg(const size_t &idx) { return args[idx]; }
+	inline Stmt *getArg(size_t idx) { return args[idx]; }
 };
 
 class StmtExpr : public Stmt
@@ -351,11 +316,11 @@ class StmtExpr : public Stmt
 	FuncTy *calledfn;
 
 public:
-	StmtExpr(const ModuleLoc *loc, const size_t &commas, Stmt *lhs, const lex::Lexeme &oper,
-		 Stmt *rhs, bool is_intrinsic_call);
+	StmtExpr(const ModuleLoc *loc, size_t commas, Stmt *lhs, const lex::Lexeme &oper, Stmt *rhs,
+		 bool is_intrinsic_call);
 	~StmtExpr();
 	// or_blk and or_blk_var can be set separately - nullptr/INVALID by default
-	static StmtExpr *create(Context &c, const ModuleLoc *loc, const size_t &commas, Stmt *lhs,
+	static StmtExpr *create(Context &c, const ModuleLoc *loc, size_t commas, Stmt *lhs,
 				const lex::Lexeme &oper, Stmt *rhs, bool is_intrinsic_call);
 
 	void disp(bool has_next);
@@ -364,7 +329,7 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void setCommas(const size_t &c) { commas = c; }
+	inline void setCommas(size_t c) { commas = c; }
 	inline void setOr(StmtBlock *blk, const lex::Lexeme &blk_var)
 	{
 		or_blk	   = blk;
@@ -372,7 +337,7 @@ public:
 	}
 	inline void setCalledFnTy(FuncTy *calledty) { calledfn = calledty; }
 
-	inline const size_t &getCommas() const { return commas; }
+	inline size_t getCommas() const { return commas; }
 	inline Stmt *&getLHS() { return lhs; }
 	inline Stmt *&getRHS() { return rhs; }
 	inline lex::Lexeme &getOper() { return oper; }
@@ -413,33 +378,24 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-#define SetModifierX(Fn, Mod)                     \
-	inline void set##Fn()                     \
-	{                                         \
-		varmask |= (uint8_t)VarMask::Mod; \
-	}
+#define SetModifierX(Fn, Mod) \
+	inline void set##Fn() { varmask |= (uint8_t)VarMask::Mod; }
 	SetModifierX(Static, STATIC);
 	SetModifierX(Volatile, VOLATILE);
 	SetModifierX(In, IN);
 	SetModifierX(Global, GLOBAL);
 #undef SetModifierX
 
-#define UnsetModifierX(Fn, Mod)                    \
-	inline void unset##Fn()                    \
-	{                                          \
-		varmask &= ~(uint8_t)VarMask::Mod; \
-	}
+#define UnsetModifierX(Fn, Mod) \
+	inline void unset##Fn() { varmask &= ~(uint8_t)VarMask::Mod; }
 	UnsetModifierX(Static, STATIC);
 	UnsetModifierX(Volatile, VOLATILE);
 	UnsetModifierX(In, IN);
 	UnsetModifierX(Global, GLOBAL);
 #undef UnsetModifierX
 
-#define IsModifierX(Fn, Mod)                            \
-	inline bool is##Fn() const                      \
-	{                                               \
-		return varmask & (uint8_t)VarMask::Mod; \
-	}
+#define IsModifierX(Fn, Mod) \
+	inline bool is##Fn() const { return varmask & (uint8_t)VarMask::Mod; }
 	IsModifierX(Static, STATIC);
 	IsModifierX(Volatile, VOLATILE);
 	IsModifierX(In, IN);
@@ -479,14 +435,11 @@ public:
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
 	inline void insertArg(StmtVar *arg) { args.push_back(arg); }
-	inline void insertArg(const size_t &pos, StmtVar *arg)
-	{
-		args.insert(args.begin() + pos, arg);
-	}
+	inline void insertArg(size_t pos, StmtVar *arg) { args.insert(args.begin() + pos, arg); }
 	inline void disableTemplates() { disable_template = true; }
 	inline void setVariadic(bool va) { has_variadic = va; }
 
-	inline StmtVar *&getArg(const size_t &idx) { return args[idx]; }
+	inline StmtVar *&getArg(size_t idx) { return args[idx]; }
 	inline Vector<StmtVar *> &getArgs() { return args; }
 	inline StmtType *&getRetType() { return rettype; }
 	inline bool hasTemplatesDisabled() { return disable_template; }
@@ -530,7 +483,7 @@ public:
 	inline StmtBlock *&getBlk() { return blk; }
 	inline StmtVar *&getParentVar() { return parentvar; }
 
-	inline StmtVar *&getSigArg(const size_t &idx) { return sig->getArg(idx); }
+	inline StmtVar *&getSigArg(size_t idx) { return sig->getArg(idx); }
 	inline const Vector<StmtVar *> &getSigArgs() const { return sig->getArgs(); }
 	inline StmtType *&getSigRetType() { return sig->getRetType(); }
 	inline bool hasSigVariadic() const { return sig->hasVariadic(); }
@@ -823,5 +776,3 @@ public:
 	inline Stmt *&getDeferVal() { return val; }
 };
 } // namespace sc
-
-#endif // PARSER_STMTS_HPP

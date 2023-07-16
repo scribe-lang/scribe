@@ -1,18 +1,4 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
-#ifndef CODEGEN_C_HPP
-#define CODEGEN_C_HPP
+#pragma once
 
 #include "Base.hpp"
 #include "Writer.hpp"
@@ -47,17 +33,11 @@ public:
 	size_t size();
 	void clear();
 
-#define SetX(name, var)                 \
-	inline void set##name(bool val) \
-	{                               \
-		var = val;              \
-	}
+#define SetX(name, var) \
+	inline void set##name(bool val) { var = val; }
 
-#define IsX(name, var)         \
-	inline bool is##name() \
-	{                      \
-		return var;    \
-	}
+#define IsX(name, var) \
+	inline bool is##name() { return var; }
 
 	SetX(Static, isstatic);
 	SetX(Volatile, isvolatile);
@@ -159,5 +139,3 @@ public:
 	bool visit(StmtDefer *stmt, Writer &writer, bool semicol);
 };
 } // namespace sc
-
-#endif // CODEGEN_C_HPP
