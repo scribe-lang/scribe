@@ -1,18 +1,4 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
-#ifndef ARGS_HPP
-#define ARGS_HPP
+#pragma once
 
 #include "Core.hpp"
 
@@ -68,7 +54,7 @@ class ArgParser
 	Vector<StringRef> args;		  // non option arguments, after parsing
 
 public:
-	ArgParser(const int &argc, const char **argv);
+	ArgParser(int argc, const char **argv);
 
 	ArgInfo &add(StringRef argname);
 	void parse();
@@ -87,10 +73,8 @@ public:
 		if(has(argname)) return opts[argname];
 		return "";
 	}
-	inline StringRef get(const size_t &idx) { return idx >= args.size() ? "" : args[idx]; }
+	inline StringRef get(size_t idx) { return idx >= args.size() ? "" : args[idx]; }
 	inline const Vector<StringRef> &getArgv() const { return argv; }
 };
 } // namespace args
 } // namespace sc
-
-#endif // ARGS_HPP

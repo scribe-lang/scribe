@@ -1,18 +1,4 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a
-	copy of this software and associated documentation files (the "Software"), to
-	deal in the Software without restriction, including without limitation the
-	rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-	sell copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
-#ifndef VALUES_HPP
-#define VALUES_HPP
+#pragma once
 
 #include "Core.hpp"
 
@@ -54,11 +40,8 @@ public:
 	virtual Value *clone(Context &c)	       = 0;
 	virtual bool updateValue(Context &c, Value *v) = 0;
 
-#define IsVal(ty, vt)                \
-	inline bool is##ty()         \
-	{                            \
-		return vty == V##vt; \
-	}
+#define IsVal(ty, vt) \
+	inline bool is##ty() { return vty == V##vt; }
 	IsVal(Int, INT);
 	IsVal(Flt, FLT);
 	IsVal(Vec, VEC);
@@ -129,7 +112,7 @@ public:
 
 	inline void insertVal(Value *v) { data.push_back(v); }
 	inline Vector<Value *> &getVal() { return data; }
-	inline Value *&getValAt(const size_t &idx) { return data[idx]; }
+	inline Value *&getValAt(size_t idx) { return data[idx]; }
 	String getAsString();
 };
 
@@ -205,5 +188,3 @@ public:
 	inline StringRef getVal() { return val; }
 };
 } // namespace sc
-
-#endif // VALUES_HPP

@@ -1,16 +1,3 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a
-	copy of this software and associated documentation files (the "Software"), to
-	deal in the Software without restriction, including without limitation the
-	rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-	sell copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
 #include "Lex.hpp"
 
 #include <charconv>
@@ -149,7 +136,7 @@ const char *TokStrs[_LAST] = {
 
 String viewBackSlash(StringRef data);
 
-Tok::Tok(const int &tok) : val((TokType)tok) {}
+Tok::Tok(int tok) : val((TokType)tok) {}
 
 const char *Tok::getUnaryNoCharCStr() const
 {
@@ -282,14 +269,11 @@ String Lexeme::str(int64_t pad) const
 
 Tokenizer::Tokenizer(Context &ctx, Module *m) : ctx(ctx), mod(m) {}
 
-ModuleLoc *Tokenizer::locAlloc(const size_t &line, const size_t &col)
+ModuleLoc *Tokenizer::locAlloc(size_t line, size_t col)
 {
 	return ctx.allocModuleLoc(mod, line, col);
 }
-ModuleLoc Tokenizer::loc(const size_t &line, const size_t &col)
-{
-	return ModuleLoc(mod, line, col);
-}
+ModuleLoc Tokenizer::loc(size_t line, size_t col) { return ModuleLoc(mod, line, col); }
 
 bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 {
@@ -610,8 +594,7 @@ bool Tokenizer::getConstStr(StringRef data, char &quote_type, size_t &i, size_t 
 	return true;
 }
 
-TokType Tokenizer::getOperator(StringRef data, size_t &i, const size_t &line,
-			       const size_t &line_start)
+TokType Tokenizer::getOperator(StringRef data, size_t &i, size_t line, size_t line_start)
 {
 	size_t len	   = data.size();
 	TokType op_type	   = INVALID;

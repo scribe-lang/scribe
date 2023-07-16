@@ -1,18 +1,4 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
-#ifndef PASSES_TYPE_ASSIGN_HPP
-#define PASSES_TYPE_ASSIGN_HPP
+#pragma once
 
 #include "DeferredSpecialize.hpp"
 #include "DeferStack.hpp"
@@ -44,8 +30,8 @@ class TypeAssignPass : public Pass
 	bool chooseSuperiorPrimitiveType(Type *l, Type *r);
 	bool initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> &args);
 
-	void pushFunc(FuncVal *fn, bool is_va, const size_t &va_len);
-	void updateLastFunc(FuncVal *fn, bool is_va, const size_t &va_len);
+	void pushFunc(FuncVal *fn, bool is_va, size_t va_len);
+	void updateLastFunc(FuncVal *fn, bool is_va, size_t va_len);
 	void popFunc();
 
 public:
@@ -86,5 +72,3 @@ public:
 	inline bool isFnVALen() const { return is_fn_va.size() > 0 ? is_fn_va.back() : false; }
 };
 } // namespace sc
-
-#endif // PASSES_TYPE_ASSIGN_HPP

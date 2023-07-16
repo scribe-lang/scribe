@@ -1,18 +1,4 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a
-	copy of this software and associated documentation files (the "Software"), to
-	deal in the Software without restriction, including without limitation the
-	rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-	sell copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
-#ifndef LEX_HPP
-#define LEX_HPP
+#pragma once
 
 #include <cstddef>
 #include <string>
@@ -168,7 +154,7 @@ class Tok
 	TokType val;
 
 public:
-	Tok(const int &tok);
+	Tok(int tok);
 
 	inline bool isData() const
 	{
@@ -272,8 +258,8 @@ class Tokenizer
 	Context &ctx;
 	Module *mod;
 
-	ModuleLoc *locAlloc(const size_t &line, const size_t &col);
-	ModuleLoc loc(const size_t &line, const size_t &col);
+	ModuleLoc *locAlloc(size_t line, size_t col);
+	ModuleLoc loc(size_t line, size_t col);
 
 	StringRef getName(StringRef data, size_t &i);
 	TokType classifyStr(StringRef str);
@@ -281,8 +267,7 @@ class Tokenizer
 			 TokType &num_type, int &base);
 	bool getConstStr(StringRef data, char &quote_type, size_t &i, size_t &line,
 			 size_t &line_start, String &buf);
-	TokType getOperator(StringRef data, size_t &i, const size_t &line,
-			    const size_t &line_start);
+	TokType getOperator(StringRef data, size_t &i, size_t line, size_t line_start);
 	void removeBackSlash(String &s);
 
 public:
@@ -291,5 +276,3 @@ public:
 };
 } // namespace lex
 } // namespace sc
-
-#endif // LEX_HPP

@@ -1,18 +1,4 @@
-/*
-	MIT License
-
-	Copyright (c) 2022 Scribe Language Repositories
-
-	Permission is hereby granted, free of charge, to any person obtaining a
-	copy of this software and associated documentation files (the "Software"), to
-	deal in the Software without restriction, including without limitation the
-	rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-	sell copies of the Software, and to permit persons to whom the Software is
-	furnished to do so.
-*/
-
-#ifndef TYPES_HPP
-#define TYPES_HPP
+#pragma once
 
 #include "Context.hpp"
 #include "Error.hpp"
@@ -65,12 +51,12 @@ public:
 
 	virtual uint32_t getUniqID(); // used by codegen
 	virtual uint32_t getID();
-	virtual bool isTemplate(const size_t &weak_depth = 0);
-	virtual String toStr(const size_t &weak_depth = 0);
-	virtual bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0);
-	virtual void unmergeTemplates(const size_t &weak_depth = 0);
+	virtual bool isTemplate(size_t weak_depth = 0);
+	virtual String toStr(size_t weak_depth = 0);
+	virtual bool mergeTemplatesFrom(Type *ty, size_t weak_depth = 0);
+	virtual void unmergeTemplates(size_t weak_depth = 0);
 	virtual bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc);
-	virtual Type *specialize(Context &c, const size_t &weak_depth = 0) = 0;
+	virtual Type *specialize(Context &c, size_t weak_depth = 0) = 0;
 
 	inline bool isPrimitive() const { return isInt() || isFlt(); }
 	inline bool isPrimitiveOrPtr() const { return isInt() || isFlt() || isPtr(); }
@@ -79,13 +65,10 @@ public:
 	bool isStrLiteral();
 
 	virtual Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-				      const size_t &weak_depth = 0);
+				      size_t weak_depth = 0);
 
-#define IsTyX(Fn, Ty)                 \
-	inline bool is##Fn() const    \
-	{                             \
-		return type == T##Ty; \
-	}
+#define IsTyX(Fn, Ty) \
+	inline bool is##Fn() const { return type == T##Ty; }
 	IsTyX(Void, VOID);
 	IsTyX(TypeTy, TYPE);
 	IsTyX(Any, ANY);
@@ -108,13 +91,13 @@ public:
 	VoidTy();
 	~VoidTy();
 
-	String toStr(const size_t &weak_depth = 0) override;
+	String toStr(size_t weak_depth = 0) override;
 
 	static VoidTy *get(Context &c);
-	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
+	Type *specialize(Context &c, size_t weak_depth = 0) override;
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth = 0) override;
+			      size_t weak_depth = 0) override;
 };
 class AnyTy : public Type
 {
@@ -122,13 +105,13 @@ public:
 	AnyTy();
 	~AnyTy();
 
-	String toStr(const size_t &weak_depth = 0) override;
+	String toStr(size_t weak_depth = 0) override;
 
 	static AnyTy *get(Context &c);
-	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
+	Type *specialize(Context &c, size_t weak_depth = 0) override;
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth = 0) override;
+			      size_t weak_depth = 0) override;
 };
 
 class IntTy : public Type
@@ -141,16 +124,16 @@ public:
 	~IntTy();
 
 	uint32_t getID() override;
-	String toStr(const size_t &weak_depth = 0) override;
+	String toStr(size_t weak_depth = 0) override;
 
 	static IntTy *get(Context &c, uint16_t _bits, bool _sign);
-	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
+	Type *specialize(Context &c, size_t weak_depth = 0) override;
 
 	inline uint16_t getBits() const { return bits; }
 	inline bool isSigned() const { return sign; }
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth = 0) override;
+			      size_t weak_depth = 0) override;
 };
 
 class FltTy : public Type
@@ -162,15 +145,15 @@ public:
 	~FltTy();
 
 	uint32_t getID() override;
-	String toStr(const size_t &weak_depth = 0) override;
+	String toStr(size_t weak_depth = 0) override;
 
 	static FltTy *get(Context &c, uint16_t _bits);
-	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
+	Type *specialize(Context &c, size_t weak_depth = 0) override;
 
 	inline uint16_t getBits() const { return bits; }
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth = 0) override;
+			      size_t weak_depth = 0) override;
 };
 
 class TypeTy : public Type
@@ -184,20 +167,20 @@ public:
 
 	uint32_t getUniqID() override;
 	uint32_t getID() override;
-	bool isTemplate(const size_t &weak_depth = 0) override;
-	String toStr(const size_t &weak_depth = 0) override;
-	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0) override;
-	void unmergeTemplates(const size_t &weak_depth = 0) override;
+	bool isTemplate(size_t weak_depth = 0) override;
+	String toStr(size_t weak_depth = 0) override;
+	bool mergeTemplatesFrom(Type *ty, size_t weak_depth = 0) override;
+	void unmergeTemplates(size_t weak_depth = 0) override;
 
 	static TypeTy *get(Context &c);
-	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
+	Type *specialize(Context &c, size_t weak_depth = 0) override;
 
 	void clearContainedTy();
 	void setContainedTy(Type *ty);
 	Type *getContainedTy();
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth = 0) override;
+			      size_t weak_depth = 0) override;
 };
 
 class PtrTy : public Type
@@ -212,15 +195,15 @@ public:
 
 	uint32_t getUniqID() override;
 	uint32_t getID() override;
-	bool isTemplate(const size_t &weak_depth = 0) override;
-	String toStr(const size_t &weak_depth = 0) override;
-	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0) override;
-	void unmergeTemplates(const size_t &weak_depth = 0) override;
+	bool isTemplate(size_t weak_depth = 0) override;
+	String toStr(size_t weak_depth = 0) override;
+	bool mergeTemplatesFrom(Type *ty, size_t weak_depth = 0) override;
+	void unmergeTemplates(size_t weak_depth = 0) override;
 
 	static PtrTy *get(Context &c, Type *ptr_to, uint64_t count, bool is_weak);
 	static PtrTy *getStr(Context &c);
 	static PtrTy *getStr(Context &c, size_t count);
-	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
+	Type *specialize(Context &c, size_t weak_depth = 0) override;
 
 	inline void setWeak(bool weak) { is_weak = weak; }
 	inline Type *&getTo() { return to; }
@@ -229,7 +212,7 @@ public:
 	inline bool isArrayPtr() { return count > 0; }
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth = 0) override;
+			      size_t weak_depth = 0) override;
 };
 
 class StructTy : public Type
@@ -257,10 +240,10 @@ public:
 
 	uint32_t getUniqID() override;
 	uint32_t getID() override;
-	bool isTemplate(const size_t &weak_depth = 0) override;
-	String toStr(const size_t &weak_depth = 0) override;
-	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0) override;
-	void unmergeTemplates(const size_t &weak_depth = 0) override;
+	bool isTemplate(size_t weak_depth = 0) override;
+	String toStr(size_t weak_depth = 0) override;
+	bool mergeTemplatesFrom(Type *ty, size_t weak_depth = 0) override;
+	void unmergeTemplates(size_t weak_depth = 0) override;
 	bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc) override;
 	// specializes a structure type
 	StructTy *applyTemplates(Context &c, const ModuleLoc *loc, const Vector<Type *> &actuals);
@@ -270,7 +253,7 @@ public:
 	static StructTy *get(Context &c, StmtStruct *decl, const Vector<StringRef> &_fieldnames,
 			     const Vector<Type *> &_fields, const Vector<StringRef> &_templatenames,
 			     const Vector<TypeTy *> &_templates, bool _externed);
-	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
+	Type *specialize(Context &c, size_t weak_depth = 0) override;
 
 	inline void setDecl(StmtStruct *_decl) { decl = _decl; }
 	inline void insertField(StringRef name, Type *ty)
@@ -282,7 +265,7 @@ public:
 	inline void setTemplates(const Vector<TypeTy *> &templs) { templates = templs; }
 	inline void setExterned(bool ext) { externed = ext; }
 	inline StmtStruct *getDecl() { return decl; }
-	inline StringRef getFieldName(const size_t &idx) { return fieldnames[idx]; }
+	inline StringRef getFieldName(size_t idx) { return fieldnames[idx]; }
 	inline Vector<Type *> &getFields() { return fields; }
 	inline const Vector<TypeTy *> &getTemplates() { return templates; }
 	inline const Vector<StringRef> &getTemplateNames() { return templatenames; }
@@ -295,12 +278,12 @@ public:
 	}
 
 	Type *getField(StringRef name);
-	Type *getField(const size_t &pos);
+	Type *getField(size_t pos);
 
 	bool hasTemplate();
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth = 0) override;
+			      size_t weak_depth = 0) override;
 };
 
 enum IntrinType
@@ -325,10 +308,10 @@ class FuncTy : public Type
 
 public:
 	FuncTy(StmtVar *var, const Vector<Type *> &args, Type *ret,
-	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
-	       bool externed, bool variadic);
+	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, IntrinType inty, bool externed,
+	       bool variadic);
 	FuncTy(uint32_t id, StmtVar *var, StmtFnSig *sig, const Vector<Type *> &args, Type *ret,
-	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, const IntrinType &inty,
+	       const Vector<bool> &_argcomptime, IntrinsicFn intrin, IntrinType inty,
 	       uint32_t uniqid, bool externed, bool variadic);
 	~FuncTy();
 
@@ -336,18 +319,18 @@ public:
 	uint32_t getSignatureID();
 	uint32_t getUniqID() override;
 	uint32_t getID() override;
-	bool isTemplate(const size_t &weak_depth = 0) override;
-	String toStr(const size_t &weak_depth = 0) override;
-	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0) override;
-	void unmergeTemplates(const size_t &weak_depth = 0) override;
+	bool isTemplate(size_t weak_depth = 0) override;
+	String toStr(size_t weak_depth = 0) override;
+	bool mergeTemplatesFrom(Type *ty, size_t weak_depth = 0) override;
+	void unmergeTemplates(size_t weak_depth = 0) override;
 	bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc) override;
 	// specializes a function type using StmtFnCallInfo
 	FuncTy *createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &callargs);
 
 	static FuncTy *get(Context &c, StmtVar *_var, const Vector<Type *> &_args, Type *_ret,
-			   const Vector<bool> &_argcomptime, IntrinsicFn _intrin,
-			   const IntrinType &_inty, bool _externed, bool _variadic);
-	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
+			   const Vector<bool> &_argcomptime, IntrinsicFn _intrin, IntrinType _inty,
+			   bool _externed, bool _variadic);
+	Type *specialize(Context &c, size_t weak_depth = 0) override;
 
 	// used in initTemplateFunc
 	inline void setFuncID(FuncTy *other)
@@ -362,20 +345,17 @@ public:
 	}
 	inline void setSig(StmtFnSig *s) { sig = s; }
 	void setSigFromVar();
-	inline void setArg(const size_t &idx, Type *arg) { args[idx] = arg; }
+	inline void setArg(size_t idx, Type *arg) { args[idx] = arg; }
 	inline void setRet(Type *retty) { ret = retty; }
 	inline void insertArg(Type *arg) { args.push_back(arg); }
-	inline void insertArg(const size_t &idx, Type *arg)
-	{
-		args.insert(args.begin() + idx, arg);
-	}
-	inline void eraseArg(const size_t &idx) { args.erase(args.begin() + idx); }
+	inline void insertArg(size_t idx, Type *arg) { args.insert(args.begin() + idx, arg); }
+	inline void eraseArg(size_t idx) { args.erase(args.begin() + idx); }
 	inline void setExterned(bool ext) { externed = ext; }
 	inline void setVariadic(bool va) { variadic = va; }
 	inline StmtVar *&getVar() { return var; }
 	inline StmtFnSig *getSig() { return sig; }
 	inline Vector<Type *> &getArgs() { return args; }
-	inline Type *getArg(const size_t &idx) { return args.size() > idx ? args[idx] : nullptr; }
+	inline Type *getArg(size_t idx) { return args.size() > idx ? args[idx] : nullptr; }
 	inline Type *getRet() { return ret; }
 	inline bool isArgComptime(size_t idx)
 	{
@@ -390,7 +370,7 @@ public:
 	bool callIntrinsic(Context &c, StmtExpr *stmt, Stmt **source, Vector<Stmt *> &callargs);
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth = 0) override;
+			      size_t weak_depth = 0) override;
 };
 
 class VariadicTy : public Type
@@ -401,22 +381,20 @@ public:
 	VariadicTy(const Vector<Type *> &args);
 	~VariadicTy();
 
-	bool isTemplate(const size_t &weak_depth = 0) override;
-	String toStr(const size_t &weak_depth = 0) override;
-	bool mergeTemplatesFrom(Type *ty, const size_t &weak_depth = 0) override;
-	void unmergeTemplates(const size_t &weak_depth = 0) override;
+	bool isTemplate(size_t weak_depth = 0) override;
+	String toStr(size_t weak_depth = 0) override;
+	bool mergeTemplatesFrom(Type *ty, size_t weak_depth = 0) override;
+	void unmergeTemplates(size_t weak_depth = 0) override;
 	bool isCompatible(Context &c, Type *rhs, const ModuleLoc *loc) override;
 
 	static VariadicTy *get(Context &c, const Vector<Type *> &_args);
-	Type *specialize(Context &c, const size_t &weak_depth = 0) override;
+	Type *specialize(Context &c, size_t weak_depth = 0) override;
 
 	inline void addArg(Type *ty) { args.push_back(ty); }
 	inline Vector<Type *> &getArgs() { return args; }
-	inline Type *getArg(const size_t &idx) { return args.size() > idx ? args[idx] : nullptr; }
+	inline Type *getArg(size_t idx) { return args.size() > idx ? args[idx] : nullptr; }
 
 	Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
-			      const size_t &weak_depth = 0) override;
+			      size_t weak_depth = 0) override;
 };
 } // namespace sc
-
-#endif // TYPES_HPP
