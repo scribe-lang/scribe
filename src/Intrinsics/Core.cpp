@@ -15,7 +15,6 @@
 namespace sc
 {
 static StringRef GetCompilerID(Context &c);
-static bool IsValidSource(String &modname);
 static size_t SizeOf(Type *ty);
 
 INTRINSIC(compilerid)
@@ -47,7 +46,7 @@ INTRINSIC(import)
 		return false;
 	}
 
-	if(!IsValidSource(modname)) {
+	if(!c.getParser()->IsValidSource(modname)) {
 		err::out(stmt, {"Error: import file '", modname, "' does not exist"});
 		return false;
 	}
@@ -304,28 +303,6 @@ static StringRef GetCompilerID(Context &c)
 	StringRef id =
 	c.strFrom({MA, ".", MI, ".", PA, " (", REPO_URL, " ", COMMIT_ID, " [", TREE_STATUS, "])"});
 	return id;
-}
-
-static bool IsValidSource(String &modname)
-{
-	static String import_dir = INSTALL_DIR "/include/scribe";
-	if(modname.front() != '~' && modname.front() != '/' && modname.front() != '.') {
-		if(fs::exists(import_dir + "/" + modname + ".sc")) {
-			modname = fs::absPath(import_dir + "/" + modname + ".sc");
-			return true;
-		}
-	} else {
-		if(modname.front() == '~') {
-			modname.erase(modname.begin());
-			String home = fs::home();
-			modname.insert(modname.begin(), home.begin(), home.end());
-		}
-		if(fs::exists(modname + ".sc")) {
-			modname = fs::absPath(modname + ".sc");
-			return true;
-		}
-	}
-	return false;
 }
 
 static size_t SizeOf(Type *ty)

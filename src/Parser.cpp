@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "Config.hpp"
 #include "Error.hpp"
 #include "FS.hpp"
 #include "Parser/Parse.hpp"
@@ -58,7 +59,8 @@ void Module::dumpParseTree() const
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 RAIIParser::RAIIParser(args::ArgParser &args)
-	: args(args), ctx(this), defaultpmpermodule(ctx), defaultpmcombined(ctx)
+	: args(args), ctx(this), defaultpmpermodule(ctx), defaultpmcombined(ctx),
+	  mainmodule(nullptr)
 {
 	defaultpmpermodule.add<TypeAssignPass>();
 	defaultpmcombined.add<SimplifyPass>();
@@ -67,6 +69,21 @@ RAIIParser::RAIIParser(args::ArgParser &args)
 RAIIParser::~RAIIParser()
 {
 	for(auto &m : modules) delete m.second;
+}
+
+bool RAIIParser::init()
+{
+	// import preludes
+	Vector<String> preludes = {"core"};
+	for(auto &prelude : preludes) {
+		if(!IsValidSource(prelude)) {
+			std::cerr << "Prelude source '" << prelude
+				  << "' not found, cannot continue!\n";
+			return false;
+		}
+		if(!parse(prelude, false)) return false;
+	}
+	return true;
 }
 
 void RAIIParser::combineAllModules()
@@ -81,12 +98,11 @@ void RAIIParser::combineAllModules()
 		modstmts.clear();
 	}
 
-	Module *mainmod		  = modules[modulestack.front()];
-	StmtBlock *mainptree	  = as<StmtBlock>(mainmod->getParseTree());
+	StmtBlock *mainptree	  = as<StmtBlock>(mainmodule->getParseTree());
 	Vector<Stmt *> &mainstmts = mainptree->getStmts();
 	mainstmts.insert(mainstmts.begin(), allmodstmts.begin(), allmodstmts.end());
 
-	size_t count = modulestack.size() - 1;
+	ssize_t count = modulestack.size() - 1;
 	while(count--) {
 		modulestack.pop_back();
 	}
@@ -135,6 +151,7 @@ bool RAIIParser::parse(const String &_path, bool main_module, StringRef code)
 	fs::setCWD(wd);
 	if(!res) goto end;
 	if(main_module) {
+		mainmodule = modules[path];
 		combineAllModules();
 		res = modules[path]->executePasses(defaultpmcombined);
 	} else {
@@ -143,16 +160,14 @@ bool RAIIParser::parse(const String &_path, bool main_module, StringRef code)
 end:
 	return res;
 }
-bool RAIIParser::hasModule(StringRef path) { return modules.find(path) != modules.end(); }
+
 Module *RAIIParser::getModule(StringRef path)
 {
 	auto res = modules.find(path);
 	if(res != modules.end()) return res->second;
 	return nullptr;
 }
-const Vector<StringRef> &RAIIParser::getModuleStack() { return modulestack; }
-args::ArgParser &RAIIParser::getCommandArgs() { return args; }
-Context &RAIIParser::getContext() { return ctx; }
+
 void RAIIParser::dumpTokens(bool force)
 {
 	if(!args.has("tokens") && !force) return;
@@ -174,5 +189,27 @@ void RAIIParser::dumpParseTree(bool force)
 		printf("\n\n");
 		modules[*file]->dumpParseTree();
 	}
+}
+
+bool RAIIParser::IsValidSource(String &modname)
+{
+	static String import_dir = INSTALL_DIR "/include/scribe";
+	if(modname.front() != '~' && modname.front() != '/' && modname.front() != '.') {
+		if(fs::exists(import_dir + "/" + modname + ".sc")) {
+			modname = fs::absPath(import_dir + "/" + modname + ".sc");
+			return true;
+		}
+	} else {
+		if(modname.front() == '~') {
+			modname.erase(modname.begin());
+			String home = fs::home();
+			modname.insert(modname.begin(), home.begin(), home.end());
+		}
+		if(fs::exists(modname + ".sc")) {
+			modname = fs::absPath(modname + ".sc");
+			return true;
+		}
+	}
+	return false;
 }
 } // namespace sc

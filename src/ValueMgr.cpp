@@ -6,61 +6,18 @@ namespace sc
 {
 bool LayerStack::exists(StringRef name, bool top_only)
 {
-	size_t i     = layers.size() - 1;
-	bool is_done = false;
-	while(!is_done && i >= 0) {
-		if(i == 0) is_done = true;
+	ssize_t i = layers.size() - 1;
+	while(i >= 0) {
 		if(layers[i].exists(name)) return true;
 		if(top_only) break;
 		--i;
 	}
 	return false;
 }
-Type *LayerStack::getTy(StringRef name, bool top_only)
-{
-	size_t i     = layers.size() - 1;
-	bool is_done = false;
-	while(!is_done && i >= 0) {
-		if(i == 0) is_done = true;
-		Type *res = layers[i].getTy(name);
-		if(res) return res;
-		if(top_only) break;
-		--i;
-	}
-	return nullptr;
-}
-Value *LayerStack::getVal(StringRef name, bool top_only)
-{
-	size_t i     = layers.size() - 1;
-	bool is_done = false;
-	while(!is_done && i >= 0) {
-		if(i == 0) is_done = true;
-		Value *res = layers[i].getVal(name);
-		if(res) return res;
-		if(top_only) break;
-		--i;
-	}
-	return nullptr;
-}
-StmtVar *LayerStack::getDecl(StringRef name, bool top_only)
-{
-	size_t i     = layers.size() - 1;
-	bool is_done = false;
-	while(!is_done && i >= 0) {
-		if(i == 0) is_done = true;
-		StmtVar *res = layers[i].getDecl(name);
-		if(res) return res;
-		if(top_only) break;
-		--i;
-	}
-	return nullptr;
-}
 VarDecl *LayerStack::getAll(StringRef name, bool top_only)
 {
-	size_t i     = layers.size() - 1;
-	bool is_done = false;
-	while(!is_done && i >= 0) {
-		if(i == 0) is_done = true;
+	ssize_t i = layers.size() - 1;
+	while(i >= 0) {
 		VarDecl *res = layers[i].getAll(name);
 		if(res) return res;
 		if(top_only) break;
@@ -103,8 +60,8 @@ bool ValueManager::exists(StringRef var, bool top_only, bool include_globals)
 		if(res || top_only) return res;
 	}
 	bool res = layers.exists(var, top_only);
-	if(res || top_only || !include_globals) return res;
-	return globals.find(var) != globals.end();
+	if(!res && include_globals) return globals.find(var) != globals.end();
+	return res;
 }
 bool ValueManager::existsTypeFn(Type *ty, StringRef name)
 {
@@ -117,39 +74,18 @@ bool ValueManager::existsTypeFn(Type *ty, StringRef name)
 }
 Type *ValueManager::getTy(StringRef var, bool top_only, bool include_globals)
 {
-	if(!funcstack.empty()) {
-		Type *res = funcstack.back().getTy(var, top_only);
-		if(res || top_only) return res;
-	}
-	Type *res = layers.getTy(var, top_only);
-	if(res || top_only || !include_globals) return res;
-	auto gres = globals.find(var);
-	if(gres != globals.end()) return gres->second.ty;
-	return nullptr;
+	VarDecl *decl = getAll(var, top_only, include_globals);
+	return decl ? decl->ty : nullptr;
 }
 Value *ValueManager::getVal(StringRef var, bool top_only, bool include_globals)
 {
-	if(!funcstack.empty()) {
-		Value *res = funcstack.back().getVal(var, top_only);
-		if(res || top_only) return res;
-	}
-	Value *res = layers.getVal(var, top_only);
-	if(res || top_only || !include_globals) return res;
-	auto gres = globals.find(var);
-	if(gres != globals.end()) return gres->second.val;
-	return nullptr;
+	VarDecl *decl = getAll(var, top_only, include_globals);
+	return decl ? decl->val : nullptr;
 }
 StmtVar *ValueManager::getDecl(StringRef var, bool top_only, bool include_globals)
 {
-	if(!funcstack.empty()) {
-		StmtVar *res = funcstack.back().getDecl(var, top_only);
-		if(res || top_only) return res;
-	}
-	StmtVar *res = layers.getDecl(var, top_only);
-	if(res || top_only || !include_globals) return res;
-	auto gres = globals.find(var);
-	if(gres != globals.end()) return gres->second.decl;
-	return nullptr;
+	VarDecl *decl = getAll(var, top_only, include_globals);
+	return decl ? decl->decl : nullptr;
 }
 VarDecl *ValueManager::getAll(StringRef var, bool top_only, bool include_globals)
 {
@@ -158,10 +94,11 @@ VarDecl *ValueManager::getAll(StringRef var, bool top_only, bool include_globals
 		if(res || top_only) return res;
 	}
 	VarDecl *res = layers.getAll(var, top_only);
-	if(res || top_only || !include_globals) return res;
-	auto gres = globals.find(var);
-	if(gres != globals.end()) return &gres->second;
-	return nullptr;
+	if(!res && include_globals) {
+		auto gres = globals.find(var);
+		if(gres != globals.end()) return &gres->second;
+	}
+	return res;
 }
 FuncVal *ValueManager::getTyFn(Type *ty, StringRef name)
 {

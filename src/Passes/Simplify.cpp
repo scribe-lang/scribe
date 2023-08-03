@@ -320,7 +320,7 @@ bool SimplifyPass::visit(StmtDefer *stmt, Stmt **source) { return true; }
 bool SimplifyPass::trySetMainFunction(StmtVar *var, StringRef varname)
 {
 	StmtFnDef *fn = as<StmtFnDef>(var->getVVal());
-	if(!startsWith(var->getName().getDataStr(), "main_0")) return false;
+	if(!startsWith(var->getName().getDataStr(), "main_")) return false;
 	Type *retbase = fn->getSig()->getRetType()->getTy();
 	if(!retbase || !retbase->isInt()) return false;
 	// false => 0 args

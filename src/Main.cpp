@@ -90,6 +90,7 @@ int CompileFile(args::ArgParser &args, String &file)
 	file = fs::absPath(file);
 
 	RAIIParser parser(args);
+	if(!parser.init()) return 1;
 	if(!parser.parse(file, true)) return 1;
 	parser.dumpTokens(false);
 	parser.dumpParseTree(false);
