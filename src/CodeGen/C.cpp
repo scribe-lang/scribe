@@ -90,7 +90,7 @@ CDriver::~CDriver() {}
 
 bool CDriver::compile(StringRef outfile)
 {
-	Module *mainmod = parser.getModule(parser.getModuleStack().front());
+	Module *mainmod = parser.getMainModule();
 	Writer mainwriter;
 	if(!visit(mainmod->getParseTree(), mainwriter, false)) {
 		err::out(mainmod->getParseTree(),
@@ -1160,7 +1160,9 @@ bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool 
 		return true;
 	}
 	default: {
-		err::out(stmt, {"failed to generate C value for value: ", value->toStr()});
+		err::out(stmt, {"failed to generate C value for value: ", value->toStr(),
+				" (value id: ", std::to_string(value->getValType()),
+				") with type: ", type->toStr()});
 		break;
 	}
 	}

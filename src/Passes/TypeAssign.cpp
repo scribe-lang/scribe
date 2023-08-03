@@ -782,8 +782,8 @@ post_mangling:
 			return false;
 		}
 	}
-	if(!stmt->isIn() && vmgr.exists(stmt->getName().getDataStr(), true, false)) {
-		VarDecl *d = vmgr.getAll(stmt->getName().getDataStr(), true, false);
+	if(!stmt->isIn() && vmgr.exists(stmt->getName().getDataStr(), true, stmt->isGlobal())) {
+		VarDecl *d = vmgr.getAll(stmt->getName().getDataStr(), true, stmt->isGlobal());
 		if(!d->val || !d->val->isType() || !d->ty->isStruct() ||
 		   !as<StructTy>(d->ty)->getDecl()->isDecl())
 		{

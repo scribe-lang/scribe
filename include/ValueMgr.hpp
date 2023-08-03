@@ -24,18 +24,6 @@ public:
 		return true;
 	}
 	inline bool exists(StringRef name) { return items.find(name) != items.end(); }
-	inline Type *getTy(StringRef name)
-	{
-		return items.find(name) == items.end() ? 0 : items[name].ty;
-	}
-	inline Value *getVal(StringRef name)
-	{
-		return items.find(name) == items.end() ? 0 : items[name].val;
-	}
-	inline StmtVar *getDecl(StringRef name)
-	{
-		return items.find(name) == items.end() ? nullptr : items[name].decl;
-	}
 	inline VarDecl *getAll(StringRef name)
 	{
 		return items.find(name) == items.end() ? nullptr : &items[name];
@@ -55,9 +43,6 @@ public:
 		return layers.back().add(name, ty, val, decl);
 	}
 	bool exists(StringRef name, bool top_only);
-	Type *getTy(StringRef name, bool top_only);
-	Value *getVal(StringRef name, bool top_only);
-	StmtVar *getDecl(StringRef name, bool top_only);
 	VarDecl *getAll(StringRef name, bool top_only);
 };
 class Function : public LayerStack

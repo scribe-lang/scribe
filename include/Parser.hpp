@@ -58,24 +58,33 @@ class RAIIParser
 
 	Map<StringRef, Module *> modules;
 
+	Module *mainmodule;
+
 	Module *addModule(StringRef path, bool main_module, StringRef code);
 
 public:
 	RAIIParser(args::ArgParser &args);
 	~RAIIParser();
 
+	bool init();
+
 	// if code is not empty, file won't be read/checked
 	bool parse(const String &_path, bool main_module = false, StringRef code = "");
 	void combineAllModules();
 
-	bool hasModule(StringRef path);
+	inline bool hasModule(StringRef path) { return modules.find(path) != modules.end(); }
+	inline const Vector<StringRef> &getModuleStack() { return modulestack; }
+	inline args::ArgParser &getCommandArgs() { return args; }
+	inline Context &getContext() { return ctx; }
+	inline Module *getMainModule() { return mainmodule; }
 	Module *getModule(StringRef path);
-	const Vector<StringRef> &getModuleStack();
-	args::ArgParser &getCommandArgs();
-	Context &getContext();
 
 	// force ignores arg parser
 	void dumpTokens(bool force);
 	void dumpParseTree(bool force);
+
+	// search for a source (import) in the import/include paths
+	// updates the modname parameter if the file is found
+	bool IsValidSource(String &modname);
 };
 } // namespace sc
