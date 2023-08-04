@@ -275,4 +275,17 @@ public:
 	bool tokenize(StringRef data, Vector<Lexeme> &toks);
 };
 } // namespace lex
+
+namespace err
+{
+template<typename... Args> void out(const lex::Lexeme &tok, Args &&...args)
+{
+	out(tok.getLoc(), std::forward<Args>(args)...);
+}
+template<typename... Args> void outw(const lex::Lexeme &tok, Args &&...args)
+{
+	outw(tok.getLoc(), std::forward<Args>(args)...);
+}
+} // namespace err
+
 } // namespace sc

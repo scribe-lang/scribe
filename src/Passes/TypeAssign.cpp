@@ -4,7 +4,6 @@
 #include <float.h>
 
 #include "Parser.hpp"
-#include "Utils.hpp"
 
 namespace sc
 {
@@ -39,8 +38,8 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 	case BREAK: res = visit(as<StmtBreak>(stmt), source); break;
 	case DEFER: res = visit(as<StmtDefer>(stmt), source); break;
 	default: {
-		err::out(stmt, {"invalid statement found for type assignment: ",
-				stmt->getStmtTypeCString()});
+		err::out(
+		stmt, "invalid statement found for type assignment: ", stmt->getStmtTypeCString());
 		break;
 	}
 	}
@@ -62,7 +61,7 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 	}
 	if(stmt->isComptime() && !stmt->getTy()->isTemplate()) {
 		if(!vpass.visit(stmt, source)) {
-			err::out(stmt, {"failed to get value for a comptime type"});
+			err::out(stmt, "failed to get value for a comptime type");
 			return false;
 		}
 	}
@@ -86,7 +85,7 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 			continue;
 		}
 		if(!visit(stmts[i], &stmts[i])) {
-			err::out(stmt, {"failed to assign type to stmt in block"});
+			err::out(stmt, "failed to assign type to stmt in block");
 			return false;
 		}
 		if(!stmts[i]) {
@@ -127,7 +126,7 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 	if(!visit(stmt->getExpr(), &stmt->getExpr()) ||
 	   (!stmt->getExpr()->getVal() && !stmt->getExpr()->getTy()))
 	{
-		err::out(stmt, {"failed to determine type of type-expr"});
+		err::out(stmt, "failed to determine type of type-expr");
 		return false;
 	}
 	bool is_self = false;
@@ -136,7 +135,7 @@ bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
 	   as<StmtSimple>(stmt->getExpr())->getLexValue().getDataStr() == "Self")
 	{
 		if(!stmt->getPtrCount()) {
-			err::out(stmt, {"self referencing struct member must be a pointer"});
+			err::out(stmt, "self referencing struct member must be a pointer");
 			return false;
 		}
 		is_self = true;
@@ -242,7 +241,7 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 	default: return false;
 	}
 	if(!stmt->getTy()) {
-		err::out(stmt, {"undefined variable: ", stmt->getLexValue().getDataStr()});
+		err::out(stmt, "undefined variable: ", stmt->getLexValue().getDataStr());
 		return false;
 	}
 	return true;
@@ -252,7 +251,7 @@ bool TypeAssignPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 	vmgr.pushLayer();
 	for(auto &a : stmt->getArgs()) {
 		if(!visit(a, asStmt(&a))) {
-			err::out(stmt, {"failed to determine type of argument"});
+			err::out(stmt, "failed to determine type of argument");
 			return false;
 		}
 	}
@@ -262,14 +261,14 @@ bool TypeAssignPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 {
 	if(stmt->getLHS() && !visit(stmt->getLHS(), &stmt->getLHS())) {
-		err::out(stmt, {"failed to determine type of LHS in expression"});
+		err::out(stmt, "failed to determine type of LHS in expression");
 		return false;
 	}
 	lex::TokType oper = stmt->getOper().getTokVal();
 	if(oper != lex::DOT && oper != lex::ARROW && stmt->getRHS() &&
 	   !visit(stmt->getRHS(), &stmt->getRHS()))
 	{
-		err::out(stmt, {"failed to determine type of RHS in expression"});
+		err::out(stmt, "failed to determine type of RHS in expression");
 		return false;
 	}
 	Stmt *&lhs = stmt->getLHS();
@@ -277,7 +276,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	switch(oper) {
 	case lex::ARROW: {
 		if(!lhs->getTy()->isPtr()) {
-			err::out(lhs, {"LHS must be a pointer for arrow access"});
+			err::out(lhs, "LHS must be a pointer for arrow access");
 			return false;
 		}
 	}
@@ -291,8 +290,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			rsim->updateLexDataStr(mangled);
 			rsim->setAppliedModuleID(true);
 			if(!visit(stmt->getRHS(), &stmt->getRHS())) {
-				err::out(stmt,
-					 {"failed to determine type of RHS in dot expression"});
+				err::out(stmt, "failed to determine type of RHS in dot expression");
 				return false;
 			}
 			// replace this stmt with RHS (effectively removing LHS - import)
@@ -302,8 +300,8 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			return true;
 		}
 		if(lhs->getVal() && lhs->getVal()->isType() && lhs->getTy()->isStruct()) {
-			err::out(stmt, {"cannot use dot operator on a "
-					"struct type - initialize it first"});
+			err::out(stmt, "cannot use dot operator on a "
+				       "struct type - initialize it first");
 			return false;
 		}
 		StringRef fieldname = rsim->getLexValue().getDataStr();
@@ -335,8 +333,8 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	typefn:
 		FuncVal *fnv = nullptr;
 		if(!(fnv = vmgr.getTyFn(lhs->getTy(), fieldname))) {
-			err::out(stmt, {"no field or function '", fieldname, "' for type '",
-					lhs->getTy()->toStr(), "'"});
+			err::out(stmt, "no field or function '", fieldname, "' for type '",
+				 lhs->getTy()->toStr(), "'");
 			return false;
 		}
 		// erase the expression, replace with the rhs alone
@@ -355,9 +353,10 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		if(!lhs->getVal() || !(lhs->getVal()->isFunc() ||
 				       (lhs->getVal()->isType() && lhs->getTy()->isStruct())))
 		{
-			err::out(stmt, {"func call can be performed only on "
-					"funcs or struct defs, found: ",
-					lhs->getTy()->toStr()});
+			err::out(stmt,
+				 "func call can be performed only on "
+				 "funcs or struct defs, found: ",
+				 lhs->getTy()->toStr());
 			return false;
 		}
 		StmtFnCallInfo *callinfo = as<StmtFnCallInfo>(rhs);
@@ -369,7 +368,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			if(!args[i]->getTy()->isVariadic()) continue;
 			StmtSimple *a = as<StmtSimple>(args[i]);
 			if(a->getVal() && !a->getVal()->isVec()) {
-				err::out(a, {"variadic value must be a vector"});
+				err::out(a, "variadic value must be a vector");
 				return false;
 			}
 			args.erase(args.begin() + i);
@@ -394,8 +393,8 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			bool has_va    = fn->isVariadic();
 			FuncTy *tmpfn  = fn;
 			if(!(fn = fn->createCall(ctx, stmt->getLoc(), args))) {
-				err::out(stmt, {"function '", tmpfn->toStr(),
-						"' is incompatible with call arguments"});
+				err::out(stmt, "function '", tmpfn->toStr(),
+					 "' is incompatible with call arguments");
 				return false;
 			}
 			fnval = TypeVal::create(ctx, fn);
@@ -422,28 +421,27 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 				if(!fnargcomptime || (vpass.visit(arg, &arg) && arg->getVal())) {
 					continue;
 				}
-				err::out(stmt, {"failed to determine value for comptime arg"});
+				err::out(stmt, "failed to determine value for comptime arg");
 				return false;
 			}
 			if(stmt->isIntrinsicCall()) {
 				// clone() is called to resolve any TypeTy's
 				stmt->setTy(fn->getRet());
 				if(!fn->isIntrinsic()) {
-					err::out(stmt, {"function call is intrinsic"
-							"but the function itself is not"});
+					err::out(stmt, "function call is intrinsic"
+						       "but the function itself is not");
 					return false;
 				}
 				if(fn->isParseIntrinsic() &&
 				   !fn->callIntrinsic(ctx, stmt, source, args))
 				{
-					err::out(stmt, {"call to parse intrinsic failed"});
+					err::out(stmt, "call to parse intrinsic failed");
 					return false;
 				}
 				stmt->setCalledFnTy(fn);
 				break;
 			} else if(fn->isIntrinsic()) {
-				err::out(stmt,
-					 {"function is intrinsic - required '@' before call"});
+				err::out(stmt, "function is intrinsic - required '@' before call");
 				return false;
 			}
 			// apply template specialization
@@ -470,7 +468,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			} else {
 				StructTy *resst = st->applyTemplates(ctx, stmt->getLoc(), argtypes);
 				if(!resst) {
-					err::out(stmt, {"failed to specialize struct"});
+					err::out(stmt, "failed to specialize struct");
 					return false;
 				}
 				lhs->setTyVal(resst, TypeVal::create(ctx, resst));
@@ -483,16 +481,17 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	case lex::STCALL: {
 		Value *lv = lhs->getVal();
 		if(!lv || !lv->isType() || !as<TypeVal>(lv)->getVal()->isStruct()) {
-			err::out(stmt, {"struct call is only applicable"
-					" on struct definitions, found: ",
-					lhs->getTy()->toStr()});
+			err::out(stmt,
+				 "struct call is only applicable"
+				 " on struct definitions, found: ",
+				 lhs->getTy()->toStr());
 			return false;
 		}
 		StructTy *st		 = as<StructTy>(as<TypeVal>(lv)->getVal());
 		StmtFnCallInfo *callinfo = as<StmtFnCallInfo>(rhs);
 		Vector<Stmt *> &args	 = callinfo->getArgs();
 		if(!(st = st->instantiate(ctx, stmt->getLoc(), callinfo->getArgs()))) {
-			err::out(stmt, {"failed to instantiate struct with given arguments"});
+			err::out(stmt, "failed to instantiate struct with given arguments");
 			return false;
 		}
 		size_t fnarglen	  = st->getFields().size();
@@ -507,7 +506,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	// address of
 	case lex::UAND: {
 		if(lhs->getVal() && lhs->getVal()->isType()) {
-			err::out(stmt, {"cannot use address-of operator on a type"});
+			err::out(stmt, "cannot use address-of operator on a type");
 			return false;
 		}
 		stmt->setTy(PtrTy::get(ctx, lhs->getTy(), 0, false));
@@ -522,7 +521,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		}
 		Type *t = lhs->getTy();
 		if(!t->isPtr()) {
-			err::out(stmt, {"cannot dereference non pointer type: ", t->toStr()});
+			err::out(stmt, "cannot dereference non pointer type: ", t->toStr());
 			return false;
 		}
 		stmt->setTy(as<PtrTy>(t)->getTo());
@@ -531,22 +530,21 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 	case lex::SUBS: {
 		if(lhs->getTy()->isVariadic()) {
 			if(!lhs->isSimple()) {
-				err::out(stmt, {"LHS in variadic subscript must be a simple stmt"});
+				err::out(stmt, "LHS in variadic subscript must be a simple stmt");
 				return false;
 			}
 			if(!vpass.visit(rhs, &rhs) || !rhs->getVal()) {
-				err::out(rhs, {"variadic index must be calculable at comptime"});
+				err::out(rhs, "variadic index must be calculable at comptime");
 				return false;
 			}
 			if(!rhs->getVal()->isInt()) {
-				err::out(rhs, {"index for a variadic must be integral"});
+				err::out(rhs, "index for a variadic must be integral");
 				return false;
 			}
 			IntVal *iv = as<IntVal>(rhs->getVal());
 			if(getFnVALen() <= iv->getVal()) {
-				err::out(stmt, {"variadic index out of bounds (va: ",
-						ctx.strFrom(getFnVALen()),
-						", index: ", ctx.strFrom(iv->getVal()), ")"});
+				err::out(stmt, "variadic index out of bounds (va: ", getFnVALen(),
+					 ", index: ", iv->getVal(), ")");
 				return false;
 			}
 			StmtSimple *l  = as<StmtSimple>(lhs->clone(ctx));
@@ -555,13 +553,13 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			l->getLexValue().setDataStr(newn);
 			*source = l;
 			if(!visit(*source, source)) {
-				err::out(stmt, {"failed to determine type of LHS in expression"});
+				err::out(stmt, "failed to determine type of LHS in expression");
 				return false;
 			}
 			return true;
 		} else if(lhs->getTy()->isPtr()) {
 			if(!rhs->getTy()->isInt()) {
-				err::out(rhs, {"index for a pointer must be integral"});
+				err::out(rhs, "index for a pointer must be integral");
 				return false;
 			}
 			Type *t = as<PtrTy>(lhs->getTy())->getTo();
@@ -625,15 +623,15 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		lex::Tok &optok = stmt->getOper().getTok();
 		FuncVal *fnval	= vmgr.getTyFn(lhs->getTy(), optok.getOperCStr());
 		if(!fnval) {
-			err::out(stmt, {"function '", optok.getOperCStr(),
-					"' does not exist for type: ", lhs->getTy()->toStr()});
+			err::out(stmt, "function '", optok.getOperCStr(),
+				 "' does not exist for type: ", lhs->getTy()->toStr());
 			return false;
 		}
 		if(optok.isAssign() && (lhs->isConst() || lhs->isCastConst()) &&
 		   !lhs->getTy()->isPtr())
 		{
-			err::out(stmt, {"cannot perform assignment (like)"
-					" operations on const data"});
+			err::out(stmt, "cannot perform assignment (like)"
+				       " operations on const data");
 			return false;
 		}
 		FuncTy *fn = as<FuncTy>(fnval->getVal());
@@ -644,7 +642,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			if(!args[i]->getTy()->isVariadic()) continue;
 			StmtSimple *a = as<StmtSimple>(args[i]);
 			if(a->getVal() && !a->getVal()->isVec()) {
-				err::out(a, {"variadic value must be a vector"});
+				err::out(a, "variadic value must be a vector");
 				return false;
 			}
 			args.erase(args.begin() + i);
@@ -665,7 +663,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		}
 		if(!(fn = fn->createCall(ctx, stmt->getLoc(), args))) {
 			stmt->disp(false);
-			err::out(stmt, {"function is incompatible with call arguments"});
+			err::out(stmt, "function is incompatible with call arguments");
 			return false;
 		}
 		bool both_comptime = true;
@@ -692,25 +690,25 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			if((!both_comptime && !argcomptime) || vpass.visit(args[i], &args[i])) {
 				continue;
 			}
-			err::out(stmt, {"failed to determine value for comptime arg"});
+			err::out(stmt, "failed to determine value for comptime arg");
 			return false;
 		}
 
 		if(fn->isParseIntrinsic()) {
 			stmt->setTy(fn->getRet());
 			if(!both_comptime) {
-				err::out(stmt, {"arguments to parse intrinsic are not comptime"});
+				err::out(stmt, "arguments to parse intrinsic are not comptime");
 				return false;
 			}
 			if(!fn->callIntrinsic(ctx, stmt, source, args)) {
-				err::out(stmt, {"call to parse intrinsic failed"});
+				err::out(stmt, "call to parse intrinsic failed");
 				return false;
 			}
 			stmt->setCalledFnTy(fn);
 			break;
 		}
 		if(!initTemplateFunc(stmt, fn, args)) {
-			err::out(stmt, {"failed to intialize template function"});
+			err::out(stmt, "failed to intialize template function");
 			return false;
 		}
 
@@ -732,7 +730,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		if(both_comptime) stmt->setComptime();
 		break;
 	}
-	default: err::out(stmt->getOper(), {"nonexistent operator"}); return false;
+	default: err::out(stmt->getOper(), "nonexistent operator"); return false;
 	}
 	if(!*source) return true;
 	if(stmt->getCommas() > 0) {
@@ -760,19 +758,19 @@ bool TypeAssignPass::visit(StmtVar *stmt, Stmt **source)
 	stmt->setAppliedModuleID(true);
 post_mangling:
 	if(val && (!visit(val, &val) || (!skip_val && !val->getTy()))) {
-		err::out(stmt, {"unable to determine type of value of this variable"});
+		err::out(stmt, "unable to determine type of value of this variable");
 		return false;
 	}
 	if(vtype && (!visit(vtype, asStmt(&vtype)) || !vtype->getTy())) {
-		err::out(stmt, {"unable to determine type from the given type of this variable"});
+		err::out(stmt, "unable to determine type from the given type of this variable");
 		return false;
 	}
 	if(stmt->isIn()) {
 		StmtFnDef *def = as<StmtFnDef>(stmt->getVVal());
 		StmtVar *self  = def->getSigArgs()[0];
 		if(vmgr.existsTypeFn(self->getTy(), stmt->getName().getDataStr())) {
-			err::out(stmt, {"member function '", stmt->getName().getDataStr(),
-					"' already exists for type: ", self->getTy()->toStr()});
+			err::out(stmt, "member function '", stmt->getName().getDataStr(),
+				 "' already exists for type: ", self->getTy()->toStr());
 			return false;
 		}
 	}
@@ -781,25 +779,24 @@ post_mangling:
 		if(!d->val || !d->val->isType() || !d->ty->isStruct() ||
 		   !(as<StructTy>(d->ty)->getDecl() && as<StructTy>(d->ty)->getDecl()->isDecl()))
 		{
-			err::out(stmt->getName(), {"variable '", stmt->getName().getDataStr(),
-						   "' already exists in scope"});
+			err::out(stmt->getName(), "variable '", stmt->getName().getDataStr(),
+				 "' already exists in scope");
 			return false;
 		}
 	}
 	if(val && !skip_val && val->getTy()->isVoid()) {
-		err::out(stmt,
-			 {"value expression returns void, which cannot be assigned to a var"});
+		err::out(stmt, "value expression returns void, which cannot be assigned to a var");
 		return false;
 	}
 	if(vtype && val && !skip_val &&
 	   !vtype->getTy()->isCompatible(ctx, val->getTy(), stmt->getLoc()))
 	{
-		err::out(stmt, {"incompatible given type and value of the variable decl"});
+		err::out(stmt, "incompatible given type and value of the variable decl");
 		return false;
 	}
 	if(val && !skip_val && stmt->isComptime()) {
 		if(!vpass.visit(val, &val) || !val->getVal()) {
-			err::out(stmt, {"value of comptime variable could not be calculated"});
+			err::out(stmt, "value of comptime variable could not be calculated");
 			return false;
 		}
 		val->setComptime();
@@ -817,7 +814,7 @@ post_mangling:
 		}
 	}
 	if(!stmt->getTy()) {
-		err::out(stmt, {"internal error: no type found in variable declaration"});
+		err::out(stmt, "internal error: no type found in variable declaration");
 		return false;
 	}
 	if(vtype) stmt->appendStmtMask(vtype->getStmtMask());
@@ -830,7 +827,7 @@ post_mangling:
 		if(!stmt->isRef()) {
 			stmt->setVal(stmt->getVal()->clone(ctx));
 		} else if(stmt->getVal()->hasPermaData()) {
-			err::out(stmt, {"a reference variable cannot have perma data"});
+			err::out(stmt, "a reference variable cannot have perma data");
 			return false;
 		}
 	}
@@ -854,7 +851,7 @@ post_mangling:
 		StructTy *srcst	 = as<StructTy>(stmt->getTy());
 		if(destst->getTemplateNames() != srcst->getTemplateNames()) {
 			err::out(stmt->getName(),
-				 {"struct declaration templates don't match the definition"});
+				 "struct declaration templates don't match the definition");
 			return false;
 		}
 		for(size_t i = 0; i < srcst->getFields().size(); ++i) {
@@ -867,7 +864,7 @@ post_mangling:
 	}
 	if(stmt->isIn()) {
 		if(!stmt->getVal()) {
-			err::out(stmt, {"internal error: function variable must have a Value"});
+			err::out(stmt, "internal error: function variable must have a Value");
 			return false;
 		}
 		StmtFnDef *def = as<StmtFnDef>(stmt->getVVal());
@@ -886,12 +883,12 @@ bool TypeAssignPass::visit(StmtFnSig *stmt, Stmt **source)
 	disabled_varname_mangling = true;
 	for(size_t i = 0; i < args.size(); ++i) {
 		if(!visit(args[i], asStmt(&args[i]))) {
-			err::out(stmt, {"failed to determine type of argument"});
+			err::out(stmt, "failed to determine type of argument");
 			return false;
 		}
 	}
 	if(!visit(stmt->getRetType(), asStmt(&stmt->getRetType()))) {
-		err::out(stmt, {"failed to determine type of return type"});
+		err::out(stmt, "failed to determine type of return type");
 		return false;
 	}
 	disabled_varname_mangling = false;
@@ -913,7 +910,7 @@ bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 {
 	pushFunc(nullptr, false, 0); // functy is set later
 	if(!visit(stmt->getSig(), asStmt(&stmt->getSig()))) {
-		err::out(stmt, {"failed to determine type of func signature"});
+		err::out(stmt, "failed to determine type of func signature");
 		return false;
 	}
 	FuncVal *fn   = as<FuncVal>(stmt->getSig()->getVal());
@@ -933,7 +930,7 @@ bool TypeAssignPass::visit(StmtFnDef *stmt, Stmt **source)
 
 	stmt->getBlk()->setTy(sigty->getRet());
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
-		err::out(stmt, {"failed to determine type of function block"});
+		err::out(stmt, "failed to determine type of function block");
 		return false;
 	}
 end:
@@ -946,11 +943,11 @@ bool TypeAssignPass::visit(StmtLib *stmt, Stmt **source) { return true; }
 bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 {
 	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
-		err::out(stmt, {"failed to assign header type"});
+		err::out(stmt, "failed to assign header type");
 		return false;
 	}
 	if(stmt->getLibs() && !visit(stmt->getLibs(), asStmt(&stmt->getLibs()))) {
-		err::out(stmt, {"failed to assign lib type"});
+		err::out(stmt, "failed to assign lib type");
 		return false;
 	}
 	if(!stmt->getEntity()) return true;
@@ -959,7 +956,7 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 		as<StmtStruct>(stmt->getEntity())->setExterned(true);
 	}
 	if(!visit(stmt->getEntity(), &stmt->getEntity())) {
-		err::out(stmt, {"failed to determine type of extern entity"});
+		err::out(stmt, "failed to determine type of extern entity");
 		return false;
 	}
 	if(stmt->getEntity()->isFnSig()) {
@@ -980,16 +977,16 @@ bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 	size_t i	      = 0;
 	Type *ty	      = nullptr;
 	if(stmt->getTagTy() && !visit(stmt->getTagTy(), asStmt(&stmt->getTagTy()))) {
-		err::out(stmt, {"failed to determine provided tag type for enum"});
+		err::out(stmt, "failed to determine provided tag type for enum");
 		return false;
 	}
 	if(stmt->getTagTy() && !stmt->getTagTy()->getVal()->isType()) {
-		err::out(stmt, {"expected enum tag type to be a type"});
+		err::out(stmt, "expected enum tag type to be a type");
 		return false;
 	}
 	if(stmt->getTagTy() && !stmt->getTagTy()->getTy()->isInt()) {
-		err::out(stmt, {"expected enum tag type to be an integer type, found: ",
-				stmt->getTagTy()->getTy()->toStr()});
+		err::out(stmt, "expected enum tag type to be an integer type, found: ",
+			 stmt->getTagTy()->getTy()->toStr());
 		return false;
 	}
 	if(stmt->getTagTy()) ty = stmt->getTagTy()->getTy();
@@ -1028,7 +1025,7 @@ bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 	vmgr.addVar("Self", stmt->getTy(), stmt->getVal(), nullptr);
 	for(auto &f : stmt->getFields()) {
 		if(!visit(f, asStmt(&f))) {
-			err::out(stmt, {"failed to determine type of struct field"});
+			err::out(stmt, "failed to determine type of struct field");
 			return false;
 		}
 		st->insertField(f->getName().getDataStr(), f->getTy());
@@ -1041,7 +1038,7 @@ bool TypeAssignPass::visit(StmtVarDecl *stmt, Stmt **source)
 {
 	for(auto &d : stmt->getDecls()) {
 		if(!visit(d, asStmt(&d))) {
-			err::out(stmt, {"failed to determine type of this variable declaration"});
+			err::out(stmt, "failed to determine type of this variable declaration");
 			return false;
 		}
 	}
@@ -1056,25 +1053,25 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 		StmtBlock *&b	= cond.getBlk();
 		bool this_is_it = false;
 		if(c && !visit(c, &c)) {
-			err::out(stmt, {"failed to determine type of conditional"});
+			err::out(stmt, "failed to determine type of conditional");
 			return false;
 		}
 		if(c && !c->getTy()->isPrimitive()) {
-			err::out(stmt, {"conditional expression type must be primitive"});
+			err::out(stmt, "conditional expression type must be primitive");
 			return false;
 		}
 		if(!stmt->isInline() && !visit(b, asStmt(&b))) {
-			err::out(stmt, {"failed to determine type in conditional block"});
+			err::out(stmt, "failed to determine type in conditional block");
 			return false;
 		}
 		if(!stmt->isInline()) continue;
 		if(!c) goto end;
 		if(!vpass.visit(c, &c) || !c->getVal()) {
-			err::out(stmt, {"failed to get condition value for inline conditional"});
+			err::out(stmt, "failed to get condition value for inline conditional");
 			return false;
 		}
 		if(!c->getVal()->hasData()) {
-			err::out(stmt, {"inline condition received no value"});
+			err::out(stmt, "inline condition received no value");
 			return false;
 		}
 		if(c->getVal()->isInt()) {
@@ -1086,7 +1083,7 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 		if(!this_is_it) continue;
 	end:
 		if(!visit(b, asStmt(&b))) {
-			err::out(stmt, {"failed to determine types in inline conditional block"});
+			err::out(stmt, "failed to determine types in inline conditional block");
 			return false;
 		}
 		*source = b;
@@ -1104,7 +1101,7 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 	// TODO: erase inline loop if nothing exists in block
 	// (for example, when inline if is present whose condition never becomes true)
 	if(stmt->isInline() && !stmt->getCond()) {
-		err::out(stmt, {"inline for-loop requires a condition"});
+		err::out(stmt, "inline for-loop requires a condition");
 		return false;
 	}
 
@@ -1117,24 +1114,24 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 
 	vmgr.pushLayer();
 	if(init && !visit(init, &init)) {
-		err::out(stmt, {"failed to determine type of init expression in for loop"});
+		err::out(stmt, "failed to determine type of init expression in for loop");
 		return false;
 	}
 	if(cond && !visit(cond, &cond)) {
-		err::out(stmt, {"failed to determine type of cond expression in for loop"});
+		err::out(stmt, "failed to determine type of cond expression in for loop");
 		return false;
 	}
 	if(incr && !visit(incr, &incr)) {
-		err::out(stmt, {"failed to determine type of incr expression in for loop"});
+		err::out(stmt, "failed to determine type of incr expression in for loop");
 		return false;
 	}
 	if(cond && !cond->getTy()->isPrimitive()) {
-		err::out(stmt, {"inline for-loop's condition must be a primitive (int/flt)"});
+		err::out(stmt, "inline for-loop's condition must be a primitive (int/flt)");
 		return false;
 	}
 
 	if(!stmt->isInline() && blk && !visit(blk, asStmt(&blk))) {
-		err::out(stmt, {"failed to determine type of for-loop block"});
+		err::out(stmt, "failed to determine type of for-loop block");
 		return false;
 	}
 	if(!stmt->isInline()) {
@@ -1148,12 +1145,12 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 	}
 
 	if(init && !vpass.visit(init, &init)) {
-		err::out(stmt, {"failed to determine value of inline for-loop init expr"});
+		err::out(stmt, "failed to determine value of inline for-loop init expr");
 		return false;
 	}
 	if(!vpass.visit(cond, &cond) || !cond->getVal()) {
-		err::out(stmt, {"failed to determine value of inline for-loop condition;"
-				" ensure relevant variables are comptime"});
+		err::out(stmt, "failed to determine value of inline for-loop condition;"
+			       " ensure relevant variables are comptime");
 		return false;
 	}
 	if(init) newblkstmts.push_back(init->clone(ctx));
@@ -1165,11 +1162,11 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 		}
 		if(incr) newblkstmts.push_back(incr->clone(ctx));
 		if(incr && !vpass.visit(incr, &incr)) {
-			err::out(stmt, {"failed to determine value of inline for-loop incr"});
+			err::out(stmt, "failed to determine value of inline for-loop incr");
 			return false;
 		}
 		if(!vpass.visit(cond, &cond)) {
-			err::out(stmt, {"failed to determine value of inline for-loop condition"});
+			err::out(stmt, "failed to determine value of inline for-loop condition");
 			return false;
 		}
 	}
@@ -1179,7 +1176,7 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 	*source		= finalblk;
 	vmgr.popLayer();
 	if(!visit(*source, source)) {
-		err::out(*source, {"failed to determine type of inlined for-loop block"});
+		err::out(*source, "failed to determine type of inlined for-loop block");
 		return false;
 	}
 	(*source)->clearValue();
@@ -1188,18 +1185,18 @@ bool TypeAssignPass::visit(StmtFor *stmt, Stmt **source)
 bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 {
 	if(!vmgr.hasFunc()) {
-		err::out(stmt, {"return statements can be in functions only"});
+		err::out(stmt, "return statements can be in functions only");
 		return false;
 	}
 	Stmt *&val = stmt->getRetVal();
 	if(val && !visit(val, &val)) {
-		err::out(stmt, {"failed to determine type of the return argument"});
+		err::out(stmt, "failed to determine type of the return argument");
 		return false;
 	}
 	FuncTy *fn	 = vmgr.getTopFunc().getFuncTy();
 	StmtBlock *fnblk = as<StmtFnDef>(fn->getVar()->getVVal())->getBlk();
 	if(!fn->getVar()) {
-		err::out(stmt, {"function type has no declaration"});
+		err::out(stmt, "function type has no declaration");
 		return false;
 	}
 	Type *valtype = val ? val->getTy()->specialize(ctx) : VoidTy::get(ctx);
@@ -1216,9 +1213,8 @@ bool TypeAssignPass::visit(StmtRet *stmt, Stmt **source)
 	Type *fnretty = fn->getRet();
 	if(val && fn->getSig()) stmt->appendStmtMask(fn->getSig()->getRetType()->getStmtMask());
 	if(!was_any && !fnretty->isCompatible(ctx, valtype, stmt->getLoc())) {
-		err::out(stmt,
-			 {"function return type '", fnretty->toStr(), "' and deduced return type '",
-			  valtype->toStr(), "' are incompatible"});
+		err::out(stmt, "function return type '", fnretty->toStr(),
+			 "' and deduced return type '", valtype->toStr(), "' are incompatible");
 		return false;
 	}
 	stmt->setFnBlk(fnblk);
@@ -1428,14 +1424,14 @@ bool TypeAssignPass::initTemplateFunc(Stmt *caller, FuncTy *&cf, Vector<Stmt *> 
 		as<StmtFnDef>(cfvar->getVVal())->setBlk(cfblk);
 	}
 	if(!cfblk) {
-		err::out(caller, {"function definition for specialization has no block"});
+		err::out(caller, "function definition for specialization has no block");
 		return false;
 	}
 	beingtemplated[uniqname] = cfvar;
 	cfblk->setTy(cf->getRet());
 	updateLastFunc(cfn, is_va, va_count);
 	if(!visit(cfblk, asStmt(&cfblk))) {
-		err::out(caller, {"failed to assign type for called template function's var"});
+		err::out(caller, "failed to assign type for called template function's var");
 		return false;
 	}
 	cfsig->getRetType()->setTy(cf->getRet());

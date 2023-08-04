@@ -62,7 +62,7 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 	if(isTypeTy() && rhs->isTypeTy()) {
 		if(!as<TypeTy>(this)->getContainedTy() && !as<TypeTy>(rhs)->getContainedTy()) {
 			// return true;
-			err::out(loc, {"both typetys contain no type - currently unsupported"});
+			err::out(loc, "both typetys contain no type - currently unsupported");
 			return false;
 		}
 	}
@@ -83,23 +83,23 @@ bool Type::isBaseCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 		num_to_num = is_lhs_prim && is_rhs_prim;
 	}
 	if(!num_to_num && !(lhs_ptr && is_rhs_prim) && getID() != rhs->getID()) {
-		err::out(loc, {"different type ids (LHS: ", toStr(), ", RHS: ", rhs->toStr(),
-			       ") not compatible"});
+		err::out(loc, "different type ids (LHS: ", toStr(), ", RHS: ", rhs->toStr(),
+			 ") not compatible");
 		return false;
 	}
 	if(!lhs_ptr && rhs_ptr) {
-		err::out(loc, {"cannot use a pointer type (LHS: ", rhs->toStr(),
-			       ") against non pointer (RHS: ", toStr(), ")"});
+		err::out(loc, "cannot use a pointer type (LHS: ", rhs->toStr(),
+			 ") against non pointer (RHS: ", toStr(), ")");
 		return false;
 	}
 	if(!rhs_ptr && lhs_ptr && !is_rhs_prim) {
-		err::out(loc, {"non pointer type (RHS: ", rhs->toStr(),
-			       ") cannot be assigned to pointer type (LHS: ", toStr(), ")"});
+		err::out(loc, "non pointer type (RHS: ", rhs->toStr(),
+			 ") cannot be assigned to pointer type (LHS: ", toStr(), ")");
 		return false;
 	}
 	if(rhs_ptr != lhs_ptr && !is_rhs_prim) {
-		err::out(loc, {"inequal pointer assignment here (LHS: ", toStr(),
-			       ", RHS: ", rhs->toStr(), ")"});
+		err::out(loc, "inequal pointer assignment here (LHS: ", toStr(),
+			 ", RHS: ", rhs->toStr(), ")");
 		return false;
 	}
 	return true;
@@ -160,7 +160,7 @@ bool Type::isStrRef()
 
 Value *Type::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd, size_t weak_depth)
 {
-	err::out(loc, {"invalid type for toDefaultValue(): ", toStr()});
+	err::out(loc, "invalid type for toDefaultValue(): ", toStr());
 	return nullptr;
 }
 
@@ -179,7 +179,7 @@ VoidTy *VoidTy::get(Context &c)
 }
 Value *VoidTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd, size_t weak_depth)
 {
-	err::out(loc, {"void type has no value"});
+	err::out(loc, "void type has no value");
 	return nullptr;
 }
 
@@ -399,7 +399,7 @@ Value *PtrTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd, 
 		     ? IntVal::create(c, cd, 0)
 		     : to->toDefaultValue(c, loc, cd, weak_depth + is_weak);
 	if(!res) {
-		err::out(loc, {"failed to get default value from array's type"});
+		err::out(loc, "failed to get default value from array's type");
 		return nullptr;
 	}
 	vec.push_back(res);
@@ -509,15 +509,14 @@ bool StructTy::isCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 	if(!isBaseCompatible(c, rhs, loc)) return false;
 	StructTy *r = as<StructTy>(rhs);
 	if(fields.size() != r->fields.size()) {
-		err::out(loc, {"struct type mismatch (LHS fields: ", c.strFrom(fields.size()),
-			       ", RHS fields: ", c.strFrom(r->fields.size()), ")"});
+		err::out(loc, "struct type mismatch (LHS fields: ", fields.size(),
+			 ", RHS fields: ", r->fields.size(), ")");
 		return false;
 	}
 	for(size_t i = 0; i < fields.size(); ++i) {
 		if(fields[i]->isCompatible(c, r->fields[i], loc)) continue;
-		err::out(loc,
-			 {"LHS struct field ", fields[i]->toStr(), " with index ", c.strFrom(i),
-			  ", incompatible with RHS field ", r->fields[i]->toStr()});
+		err::out(loc, "LHS struct field ", fields[i]->toStr(), " with index ", i,
+			 ", incompatible with RHS field ", r->fields[i]->toStr());
 		return false;
 	}
 	return true;
@@ -525,8 +524,8 @@ bool StructTy::isCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 StructTy *StructTy::applyTemplates(Context &c, const ModuleLoc *loc, const Vector<Type *> &actuals)
 {
 	if(templates.size() != actuals.size()) {
-		err::out(loc, {"expected templates for struct: ", c.strFrom(templates.size()),
-			       ", found: ", c.strFrom(actuals.size())});
+		err::out(loc, "expected templates for struct: ", templates.size(),
+			 ", found: ", actuals.size());
 		return nullptr;
 	}
 	for(size_t i = 0; i < templates.size(); ++i) {
@@ -543,7 +542,7 @@ StructTy *StructTy::instantiate(Context &c, const ModuleLoc *loc, const Vector<S
 {
 	if(fields.size() != callargs.size()) return nullptr;
 	if(isTemplate()) {
-		err::out(loc, {"a struct with templates cannot be instantiated"});
+		err::out(loc, "a struct with templates cannot be instantiated");
 		return nullptr;
 	}
 	bool is_field_compatible = true;
@@ -607,7 +606,7 @@ Value *StructTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData c
 	for(auto &f : fieldpos) {
 		Value *res = fields[f.second]->toDefaultValue(c, loc, cd, weak_depth);
 		if(!res) {
-			err::out(loc, {"failed to get default value from struct field type"});
+			err::out(loc, "failed to get default value from struct field type");
 			return nullptr;
 		}
 		st[f.first] = res;
@@ -743,23 +742,23 @@ bool FuncTy::isCompatible(Context &c, Type *rhs, const ModuleLoc *loc)
 	if(!isBaseCompatible(c, rhs, loc)) return false;
 	FuncTy *r = as<FuncTy>(rhs);
 	if(externed != r->externed) {
-		err::out(loc, {"func type mismatch (LHS externed: ", externed ? "yes" : "no",
-			       ", RHS externed: ", r->externed ? "yes" : "no", ")"});
+		err::out(loc, "func type mismatch (LHS externed: ", externed ? "yes" : "no",
+			 ", RHS externed: ", r->externed ? "yes" : "no", ")");
 	}
 	if(args.size() != r->args.size()) {
-		err::out(loc, {"type mismatch (LHS args: ", c.strFrom(args.size()),
-			       ", RHS args: ", c.strFrom(r->args.size())});
+		err::out(loc, "type mismatch (LHS args: ", args.size(),
+			 ", RHS args: ", r->args.size());
 		return false;
 	}
 	for(size_t i = 0; i < args.size(); ++i) {
 		if(args[i]->isCompatible(c, r->args[i], loc)) continue;
-		err::out(loc, {"LHS function arg ", args[i]->toStr(), " with index ", c.strFrom(i),
-			       ", incompatible with RHS arg ", r->args[i]->toStr()});
+		err::out(loc, "LHS function arg ", args[i]->toStr(), " with index ", i,
+			 ", incompatible with RHS arg ", r->args[i]->toStr());
 		return false;
 	}
 	if(!ret->isCompatible(c, r->ret, loc)) {
-		err::out(loc, {"incompatible return types (LHS: ", ret->toStr(),
-			       ", RHS: ", r->ret->toStr(), ")"});
+		err::out(loc, "incompatible return types (LHS: ", ret->toStr(),
+			 ", RHS: ", r->ret->toStr(), ")");
 		return false;
 	}
 	return true;
@@ -783,8 +782,8 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 		if(sig && ciarg->isConst() && !sig->getArg(i)->isConst() &&
 		   (isPtr() || sig->getArg(i)->isRef()))
 		{
-			err::out(loc, {"losing constness for argument index ", std::to_string(i),
-				       ", cannot continue"});
+			err::out(loc, "losing constness for argument index ", std::to_string(i),
+				 ", cannot continue");
 			is_arg_compatible = false;
 			break;
 		}
@@ -800,8 +799,8 @@ FuncTy *FuncTy::createCall(Context &c, const ModuleLoc *loc, const Vector<Stmt *
 		   as<StmtSimple>(ciarg)->getLexValue().getTokVal() != lex::IDEN &&
 		   !sigv->isConst() && sigv->isRef())
 		{
-			err::out(loc, {"cannot pass literal data to a "
-				       "function expecting a non-const reference"});
+			err::out(loc, "cannot pass literal data to a "
+				      "function expecting a non-const reference");
 			is_arg_compatible = false;
 			break;
 		}
@@ -933,7 +932,7 @@ Value *VariadicTy::toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData
 	for(auto &a : args) {
 		Value *v = a->toDefaultValue(c, loc, cd, weak_depth);
 		if(!v) {
-			err::out(loc, {"failed to generate default value for type: ", a->toStr()});
+			err::out(loc, "failed to generate default value for type: ", a->toStr());
 			return nullptr;
 		}
 		vec.push_back(v);

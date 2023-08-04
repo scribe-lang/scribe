@@ -1,6 +1,7 @@
 #include "DeferredSpecialize.hpp"
 
 #include "Error.hpp"
+#include "Parser/Stmts.hpp"
 
 namespace sc
 {
@@ -12,9 +13,10 @@ bool DeferredSpecialize::specialize(uint32_t id, Context &c, const ModuleLoc *lo
 			StructTy *ty = as<StructTy>((*it->loc));
 			ty	     = ty->applyTemplates(c, loc, it->actualtypes);
 			if(!ty) {
-				err::out(*loc, {"Failed to delay specialize"
-						" type: ",
-						(*it->loc)->toStr()});
+				err::out(loc,
+					 "Failed to delay specialize"
+					 " type: ",
+					 (*it->loc)->toStr());
 				return false;
 			}
 			for(auto it = listinternal.begin(); it != listinternal.end();) {

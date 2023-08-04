@@ -1,7 +1,5 @@
 #include "Lex.hpp"
 
-#include <charconv>
-
 namespace sc
 {
 namespace lex
@@ -301,8 +299,8 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 		if(CURR == '*' && NEXT == '/') {
 			if(!comment_block) {
 				err::out(loc(line, i - line_start),
-					 {"encountered multi line comment "
-					  "terminator '*/' in non comment block"});
+					 "encountered multi line comment "
+					 "terminator '*/' in non comment block");
 				return false;
 			}
 			i += 2;
@@ -510,8 +508,8 @@ StringRef Tokenizer::getNum(StringRef data, size_t &i, size_t &line, size_t &lin
 		case '.':
 			if(!read_base && base != 10) {
 				err::out(loc(line, first_digit_at - line_start),
-					 {"encountered dot (.) character when base is not 10 (",
-					  ctx.strFrom((int64_t)base), ") "});
+					 "encountered dot (.) character when base is not 10 (",
+					 base, ") ");
 				return "";
 			} else if(dot_loc == -1) {
 				if(next >= '0' && next <= '9') {
@@ -522,9 +520,9 @@ StringRef Tokenizer::getNum(StringRef data, size_t &i, size_t &line, size_t &lin
 				}
 			} else {
 				err::out(loc(line, first_digit_at - line_start),
-					 {"encountered dot (.) character when the number being "
-					  "retrieved (from column ",
-					  ctx.strFrom(first_digit_at + 1), ") already had one"});
+					 "encountered dot (.) character when the number being "
+					 "retrieved (from column ",
+					 first_digit_at + 1, ") already had one");
 				return "";
 			}
 			read_base = false;
@@ -534,9 +532,8 @@ StringRef Tokenizer::getNum(StringRef data, size_t &i, size_t &line, size_t &lin
 		fail:
 			if(isalnum(c)) {
 				err::out(loc(line, first_digit_at - line_start),
-					 {"encountered invalid character '", String(1, c),
-					  "' while retrieving a number of base ",
-					  ctx.strFrom((int64_t)base)});
+					 "encountered invalid character '", c,
+					 "' while retrieving a number of base ", base);
 				return "";
 			} else {
 				goto end;
@@ -574,9 +571,9 @@ bool Tokenizer::getConstStr(StringRef data, char &quote_type, size_t &i, size_t 
 		buf.push_back(data[i++]);
 		if(quote_type == '\'') {
 			if(CURR != quote_type) {
-				err::out(loc(line, starting_at - line_start),
-					 {"expected single quote for end of const char, found: ",
-					  String(1, CURR)});
+				err::out(
+				loc(line, starting_at - line_start),
+				"expected single quote for end of const char, found: ", CURR);
 				return false;
 			}
 			break;
@@ -584,8 +581,8 @@ bool Tokenizer::getConstStr(StringRef data, char &quote_type, size_t &i, size_t 
 		continuous_backslash = 0;
 	}
 	if(CURR != quote_type) {
-		err::out(loc(line, starting_at - line_start),
-			 {"no matching quote for '", String(1, quote_type), "' found"});
+		err::out(loc(line, starting_at - line_start), "no matching quote for '", quote_type,
+			 "' found");
 		return false;
 	}
 	// omit ending quote
@@ -766,8 +763,8 @@ TokType Tokenizer::getOperator(StringRef data, size_t &i, size_t line, size_t li
 	case ']': SET_OP_TYPE_BRK(RBRACK);
 	case '}': SET_OP_TYPE_BRK(RBRACE);
 	default:
-		err::out(loc(line, starting_at - line_start),
-			 {"unknown operator '", String(1, CURR), "' found"});
+		err::out(loc(line, starting_at - line_start), "unknown operator '", CURR,
+			 "' found");
 		op_type = INVALID;
 	}
 

@@ -35,7 +35,7 @@ void Writer::writeConstChar(int64_t data)
 void Writer::writeConstString(StringRef data)
 {
 	dest += "\"";
-	appendRawString(dest, data);
+	dest += toRawString(data);
 	dest += "\"";
 }
 

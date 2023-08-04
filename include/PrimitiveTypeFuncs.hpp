@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Intrinsics.hpp"
 #include "ValueMgr.hpp"
 
 namespace sc

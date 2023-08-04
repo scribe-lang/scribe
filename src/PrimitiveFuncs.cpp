@@ -1,3 +1,4 @@
+#include "Intrinsics.hpp"
 #include "PrimitiveTypeFuncs.hpp"
 
 namespace sc

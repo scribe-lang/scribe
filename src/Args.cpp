@@ -1,9 +1,6 @@
-#include "../include/Args.hpp"
+#include "Args.hpp"
 
-#include <iostream>
-#include <stdexcept>
-
-#include "../include/Config.hpp"
+#include "Config.hpp"
 
 namespace sc
 {
