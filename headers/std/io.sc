@@ -11,8 +11,8 @@ let fprint = fn(f: *c.FILE, data: ...&const any): i32 {
 	inline for let comptime i = 0; i < len; ++i {
 		inline if @isEqualTy(data[i], string.String) {
 			sum += c.fputs(data[i].cStr(), f);
-		} elif @isEqualTy(data[i], string.StringRef) {
-			sum += c.fprintf(f, "%.*s", data[i].len(), data[i].data());
+		} elif @isEqualTy(data[i], StringRef) {
+			sum += c.fprintf(f, r"%.*s", data[i].len(), data[i].cStr());
 		} elif @isFlt(data[i]) {
 			sum += c.fprintf(f, c.getTypeSpecifier(@typeOf(data[i])), string.getPrecision(), data[i]);
 		} elif @isPrimitiveOrPtr(data[i]) {
@@ -20,8 +20,8 @@ let fprint = fn(f: *c.FILE, data: ...&const any): i32 {
 		} else {
 			let s = data[i].str();
 			defer s.deinit();
-			inline if @isEqualTy(s, string.StringRef) {
-				sum += c.fprintf(f, "%.*s", s.len(), s.data());
+			inline if @isEqualTy(s, StringRef) {
+				sum += c.fprintf(f, r"%.*s", s.len(), s.cStr());
 			} else {
 				sum += c.fputs(s.cStr(), f);
 			}

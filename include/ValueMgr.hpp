@@ -30,11 +30,16 @@ public:
 	}
 	inline Map<StringRef, VarDecl> &getItems() { return items; }
 };
-class LayerStack
+class Function
 {
+	FuncTy *fty;
 	Vector<Layer> layers;
 
 public:
+	Function(FuncTy *ty);
+
+	inline void setTy(FuncTy *ty) { fty = ty; }
+	inline FuncTy *getFuncTy() { return fty; }
 	inline void pushLayer() { layers.emplace_back(); }
 	inline void popLayer() { layers.pop_back(); }
 	inline size_t size() { return layers.size(); }
@@ -45,55 +50,47 @@ public:
 	bool exists(StringRef name, bool top_only);
 	VarDecl *getAll(StringRef name, bool top_only);
 };
-class Function : public LayerStack
-{
-	FuncTy *fty;
-
-public:
-	Function(FuncTy *ty);
-
-	inline void setTy(FuncTy *ty) { fty = ty; }
-	inline FuncTy *getFuncTy() { return fty; }
-};
 class ValueManager
 {
 	Map<uint32_t, Map<StringRef, FuncVal *>> typefuncs;
-	Map<StringRef, VarDecl> globals;
-	LayerStack layers; // outside function
 	Vector<Function> funcstack;
+	Layer globals;
 
 public:
 	ValueManager(Context &c);
 	inline void pushLayer()
 	{
-		if(funcstack.empty()) {
-			layers.pushLayer();
-		} else {
-			funcstack.back().pushLayer();
-		}
+		if(!funcstack.empty()) funcstack.back().pushLayer();
 	}
 	inline void popLayer()
 	{
-		if(funcstack.empty()) {
-			layers.popLayer();
-		} else {
-			funcstack.back().popLayer();
-		}
+		if(!funcstack.empty()) funcstack.back().popLayer();
 	}
-	inline void pushFunc(FuncTy *fn) { funcstack.emplace_back(fn); }
-	inline void popFunc() { funcstack.pop_back(); }
+	inline void pushFunc(FuncTy *fn)
+	{
+		funcstack.emplace_back(fn);
+		funcstack.back().pushLayer();
+	}
+	inline void popFunc()
+	{
+		// who cares about popping layer when we're popping the func
+		// funcstack.back().popLayer();
+		funcstack.pop_back();
+	}
 	inline Function &getTopFunc() { return funcstack.back(); }
 	inline bool hasFunc() { return !funcstack.empty(); }
-	inline bool isTop() { return funcstack.empty() && layers.size() == 1; }
+	inline bool addTypeFn(Type *ty, StringRef name, FuncVal *fn)
+	{
+		return addTypeFn(ty->getID(), name, fn);
+	}
 	bool addVar(StringRef var, Type *ty, Value *val, StmtVar *decl, bool global = false);
-	bool addTypeFn(Type *ty, StringRef name, FuncVal *fn);
-	bool addTypeFn(uint32_t id, StringRef name, FuncVal *fn);
-	bool exists(StringRef var, bool top_only, bool include_globals);
 	bool existsTypeFn(Type *ty, StringRef name);
-	Type *getTy(StringRef var, bool top_only, bool include_globals);
-	Value *getVal(StringRef var, bool top_only, bool include_globals);
-	StmtVar *getDecl(StringRef var, bool top_only, bool include_globals);
-	VarDecl *getAll(StringRef name, bool top_only, bool include_globals);
+	bool addTypeFn(uint32_t id, StringRef name, FuncVal *fn);
+	bool exists(StringRef var, bool top_only);
+	Type *getTy(StringRef var, bool top_only);
+	Value *getVal(StringRef var, bool top_only);
+	StmtVar *getDecl(StringRef var, bool top_only);
+	VarDecl *getAll(StringRef name, bool top_only);
 	FuncVal *getTyFn(Type *ty, StringRef name);
 };
 } // namespace sc

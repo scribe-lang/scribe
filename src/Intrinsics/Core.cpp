@@ -20,27 +20,25 @@ static size_t SizeOf(Type *ty);
 INTRINSIC(compilerid)
 {
 	static StringRef id = GetCompilerID(c);
-	VecVal *res	    = VecVal::createStr(c, CDPERMA, id);
-	stmt->setVal(res);
+	stmt->setVal(StructVal::createStrRef(c, CDPERMA, id));
 	stmt->setConst();
 	return true;
 }
 INTRINSIC(compilerpath)
 {
 	static String path = env::getProcPath();
-	VecVal *res	   = VecVal::createStr(c, CDPERMA, path);
-	stmt->setVal(res);
+	stmt->setVal(StructVal::createStrRef(c, CDPERMA, path));
 	stmt->setConst();
 	return true;
 }
 
 INTRINSIC(import)
 {
-	if(!args[0]->getTy()->isStrLiteral() || !args[0]->getVal() || !args[0]->getVal()->isVec()) {
+	if(!args[0]->getTy()->isStrRef() || !args[0]->getVal() || !args[0]->getVal()->isStruct()) {
 		err::out(stmt, {"import must be a compile time computable string"});
 		return false;
 	}
-	String modname = as<VecVal>(args[0]->getVal())->getAsString();
+	String modname = as<StructVal>(args[0]->getVal())->getStrFromRef();
 	if(modname.empty()) {
 		err::out(stmt, {"invalid comptime value for module string"});
 		return false;
@@ -73,6 +71,18 @@ gen_import:
 	stmt->setTyVal(PtrTy::getStr(c), NamespaceVal::create(c, mod->getID()));
 	return true;
 }
+
+INTRINSIC(setstringrefty)
+{
+	if(!args[0]->getTy()->isStrRef() || !args[0]->getVal() || !args[0]->getVal()->isType()) {
+		err::out(stmt, {"the argument must be a valid type (struct/primitive)"});
+		return false;
+	}
+	StructTy::setStrRef(as<StructTy>(args[0]->getTy()));
+	*source = nullptr;
+	return true;
+}
+
 INTRINSIC(ismainsrc)
 {
 	bool ismm = stmt->getMod()->isMainModule();
@@ -278,8 +288,8 @@ INTRINSIC(compileerror)
 {
 	String e;
 	for(auto &a : args) {
-		if(a->getTy()->isStrLiteral() && a->getVal() && a->getVal()->isVec()) {
-			e += as<VecVal>(a->getVal())->getAsString();
+		if(a->getTy()->isStrRef() && a->getVal() && a->getVal()->isStruct()) {
+			e += as<StructVal>(a->getVal())->getStrFromRef();
 		} else {
 			e += a->getVal()->toStr();
 		}

@@ -17,3 +17,9 @@ let f64Cmp = fn(a: &const f64, b: &const f64): i32 { return a - b; };
 
 let cStrCmp = fn(a: *&const i8, b: *&const i8): i32 { return c.strcmp(a, b); };
 let strCmp = fn(a: &const string.String, b: &const string.String): i32 { return c.strcmp(a.cStr(), b.cStr()); };
+
+let strRefCmp = fn(a: &const StringRef, b: &const StringRef): i32 {
+	let minlen = a.len();
+	if b.len() < minlen { minlen = b.len(); }
+	return c.strncmp(a.cStr(), b.cStr(), minlen);
+};

@@ -6,7 +6,7 @@ let main = fn(argc: i32, argv: **i8): i32 {
 		io.println("Usage: ", argv[0], " <exe name>");
 		return 1;
 	}
-	let exe = argv[1];
+	let exe = toStringRef(argv[1]);
 	let res = os.getExePath(exe);
 	defer res.deinit();
 	if res.isEmpty() {

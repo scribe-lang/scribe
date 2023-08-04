@@ -5,7 +5,7 @@ let string = @import("std/string");
 let main = fn(): i32 {
 	let dict1 = map.new(@ptr(i8), i32);
 	defer dict1.deinit();
-	let k = "ABC";
+	let k = r"ABC";
 	let v = 10;
 	dict1.add(k, v);
 	if dict1.find(k) {

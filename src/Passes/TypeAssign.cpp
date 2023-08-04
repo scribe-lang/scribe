@@ -71,10 +71,7 @@ bool TypeAssignPass::visit(Stmt *stmt, Stmt **source)
 
 bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 {
-	if(!stmt->isLayeringDisabled()) {
-		if(stmt->getMod()->isMainModule() || !stmt->isTop()) vmgr.pushLayer();
-	}
-
+	if(!stmt->isTop()) vmgr.pushLayer();
 	if(stmt->isTop()) deferstack.pushFunc();
 
 	auto &stmts = stmt->getStmts();
@@ -120,10 +117,8 @@ bool TypeAssignPass::visit(StmtBlock *stmt, Stmt **source)
 	}
 
 	if(stmt->isTop()) deferstack.popFunc();
+	if(!stmt->isTop()) vmgr.popLayer();
 
-	if(!stmt->isLayeringDisabled()) {
-		if(stmt->getMod()->isMainModule() || !stmt->isTop()) vmgr.popLayer();
-	}
 	return true;
 }
 bool TypeAssignPass::visit(StmtType *stmt, Stmt **source)
@@ -210,9 +205,8 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		break;
 	}
 	case lex::STR: {
-		stmt->setTyVal(PtrTy::getStr(ctx),
-			       VecVal::createStr(ctx, CDPERMA, tok.getDataStr()));
-		stmt->setConst();
+		stmt->setTyVal(StructTy::getStrRef(ctx),
+			       StructVal::createStrRef(ctx, CDPERMA, tok.getDataStr()));
 		break;
 	}
 	case lex::I1: stmt->setTypeVal(ctx, IntTy::get(ctx, 1, true)); break;
@@ -233,10 +227,10 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		VarDecl *res   = nullptr;
 		if(!stmt->isAppliedModuleID()) {
 			StringRef mangled_name = getMangledName(stmt, name);
-			res		       = vmgr.getAll(mangled_name, false, true);
+			res		       = vmgr.getAll(mangled_name, false);
 			if(res) stmt->updateLexDataStr(mangled_name);
 		}
-		if(!res) res = vmgr.getAll(name, false, true);
+		if(!res) res = vmgr.getAll(name, false);
 		if(!res) break; // error out - undefined variable
 		stmt->setTyVal(res->ty, res->val);
 		decl = res->decl;
@@ -782,10 +776,10 @@ post_mangling:
 			return false;
 		}
 	}
-	if(!stmt->isIn() && vmgr.exists(stmt->getName().getDataStr(), true, stmt->isGlobal())) {
-		VarDecl *d = vmgr.getAll(stmt->getName().getDataStr(), true, stmt->isGlobal());
+	if(!stmt->isIn() && vmgr.exists(stmt->getName().getDataStr(), true)) {
+		VarDecl *d = vmgr.getAll(stmt->getName().getDataStr(), true);
 		if(!d->val || !d->val->isType() || !d->ty->isStruct() ||
-		   !as<StructTy>(d->ty)->getDecl()->isDecl())
+		   !(as<StructTy>(d->ty)->getDecl() && as<StructTy>(d->ty)->getDecl()->isDecl()))
 		{
 			err::out(stmt->getName(), {"variable '", stmt->getName().getDataStr(),
 						   "' already exists in scope"});
@@ -854,8 +848,8 @@ post_mangling:
 			ty->setSig(as<StmtFnSig>(s));
 		}
 	}
-	if(!stmt->isIn() && vmgr.exists(stmt->getName().getDataStr(), true, false)) {
-		Type *t		 = vmgr.getTy(stmt->getName().getDataStr(), true, false);
+	if(!stmt->isIn() && vmgr.exists(stmt->getName().getDataStr(), true)) {
+		Type *t		 = vmgr.getTy(stmt->getName().getDataStr(), true);
 		StructTy *destst = as<StructTy>(t);
 		StructTy *srcst	 = as<StructTy>(stmt->getTy());
 		if(destst->getTemplateNames() != srcst->getTemplateNames()) {
@@ -960,7 +954,7 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 		return false;
 	}
 	if(!stmt->getEntity()) return true;
-	vmgr.pushLayer();
+	vmgr.pushFunc(nullptr); // dummy to add layer
 	if(stmt->getEntity()->isStructDef()) {
 		as<StmtStruct>(stmt->getEntity())->setExterned(true);
 	}
@@ -974,7 +968,7 @@ bool TypeAssignPass::visit(StmtExtern *stmt, Stmt **source)
 		fn->getVal()->setVar(stmt->getParentVar());
 	}
 	stmt->setTyVal(stmt->getEntity());
-	vmgr.popLayer();
+	vmgr.popFunc();
 	return true;
 }
 bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
@@ -1017,7 +1011,7 @@ bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 }
 bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 {
-	vmgr.pushLayer();
+	vmgr.pushFunc(nullptr); // dummy to add layer
 	Vector<TypeTy *> templates;
 	Vector<StringRef> templatenames = stmt->getTemplateNames();
 
@@ -1040,7 +1034,7 @@ bool TypeAssignPass::visit(StmtStruct *stmt, Stmt **source)
 		st->insertField(f->getName().getDataStr(), f->getTy());
 	}
 	disabled_varname_mangling = false;
-	vmgr.popLayer();
+	vmgr.popFunc();
 	return true;
 }
 bool TypeAssignPass::visit(StmtVarDecl *stmt, Stmt **source)
@@ -1091,8 +1085,6 @@ bool TypeAssignPass::visit(StmtCond *stmt, Stmt **source)
 		}
 		if(!this_is_it) continue;
 	end:
-		// no vmgr.(push/pop)Layer() if the inline conditional is at top level
-		if(vmgr.isTop()) b->disableLayering();
 		if(!visit(b, asStmt(&b))) {
 			err::out(stmt, {"failed to determine types in inline conditional block"});
 			return false;
@@ -1459,7 +1451,6 @@ end:
 void TypeAssignPass::pushFunc(FuncVal *fn, bool is_va, size_t va_len)
 {
 	vmgr.pushFunc(fn ? fn->getVal() : nullptr);
-	vmgr.pushLayer();
 	deferstack.pushFunc();
 	is_fn_va.push_back(is_va);
 	valen.push_back(va_len);
@@ -1473,7 +1464,6 @@ void TypeAssignPass::updateLastFunc(FuncVal *fn, bool is_va, size_t va_len)
 void TypeAssignPass::popFunc()
 {
 	deferstack.popFunc();
-	vmgr.popLayer();
 	vmgr.popFunc();
 	is_fn_va.pop_back();
 	valen.pop_back();

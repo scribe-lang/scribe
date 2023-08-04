@@ -12,7 +12,7 @@ let main = fn(): i32 {
 			arr[i][j] = i * j;
 		}
 	}
-	c.strncpy(anotherarr, "Hello", 6);
+	c.strncpy(anotherarr, r"Hello", 6);
 	io.println(anotherarr);
 	for let i = 0; i < 10; ++i {
 		for let j = 0; j < 32; ++j {

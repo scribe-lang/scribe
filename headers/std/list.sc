@@ -113,9 +113,9 @@ let str in const List = fn(): string.String {
 	for let i = 0; i < self.length; ++i {
 		res += tmp.data;
 		tmp = tmp.next;
-		if i < self.length - 1 { res.appendCStr(", ", 2); }
+		if i < self.length - 1 { res.appendRef(", "); }
 	}
-	res.appendCStr("]", 1);
+	res.appendRef("]");
 	return res;
 };
 

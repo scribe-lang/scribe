@@ -98,7 +98,7 @@ bool Parsing::parseBlock(ParseHelper &p, StmtBlock *&tree, bool with_brace)
 		}
 	}
 
-	tree = StmtBlock::create(ctx, start.getLoc(), stmts, !with_brace, false);
+	tree = StmtBlock::create(ctx, start.getLoc(), stmts, !with_brace);
 	return true;
 }
 
@@ -1488,7 +1488,7 @@ bool Parsing::parseForIn(ParseHelper &p, Stmt *&fin)
 
 	// StmtBlock
 	Vector<Stmt *> outerblkstmts = {in_interm_vardecl, loop};
-	fin = StmtBlock::create(ctx, start.getLoc(), outerblkstmts, false, false);
+	fin			     = StmtBlock::create(ctx, start.getLoc(), outerblkstmts, false);
 	return true;
 }
 bool Parsing::parseFor(ParseHelper &p, Stmt *&f)

@@ -30,16 +30,18 @@ let setEnv = inline fn(key: *const i8, val: *const i8, overwrite: i1): i32 {
 	return c.setenv(key, val, overwrite);
 };
 
-let dirName = fn(path: *const i8): string.String {
+let dirName = fn(path: StringRef): string.String {
 	let p: @array(i8, PATH_MAX);
-	c.strcpy(p, path);
+	c.strncpy(p, path.cStr(), path.len());
+	p[path.len()] = '\0';
 	c.dirname(p);
 	return string.from(p);
 };
 
-let baseName = fn(path: *const i8): string.String {
+let baseName = fn(path: StringRef): string.String {
 	let p: @array(i8, PATH_MAX);
-	c.strcpy(p, path);
+	c.strncpy(p, path.cStr(), path.len());
+	p[path.len()] = '\0';
 	c.basename(p);
 	return string.from(p);
 };
@@ -51,10 +53,10 @@ let getCWD = fn(): string.String {
 	return path;
 };
 
-let getExePath = fn(exe: *const i8): string.String {
+let getExePath = fn(exe: StringRef): string.String {
 	let res = string.new();
-	if @as(u64, exe) == nil { return res; }
-	let path = getEnv("PATH");
+	if exe.isEmpty() { return res; }
+	let path = getEnv(r"PATH");
 	defer path.deinit();
 	if path.isEmpty() { return path; }
 
@@ -63,8 +65,8 @@ let getExePath = fn(exe: *const i8): string.String {
 
 	for let i = 0; i < delimpath.len(); ++i {
 		res = delimpath[i];
-		res.appendCStr("/", 1);
-		res.append(exe);
+		res.appendRef("/");
+		res.appendRef(exe);
 		if fs.exists(res.cStr()) { break; }
 		res.clear();
 	}
@@ -74,7 +76,7 @@ let getExePath = fn(exe: *const i8): string.String {
 let exec = fn(command: ...&const any): i32 {
 	let cmd = string.from(command);
 	defer cmd.deinit();
-	let pipe = c.popen(cmd.cStr(), "r");
+	let pipe = c.popen(cmd.cStr(), r"r");
 	if !@as(u64, pipe) {
 		err.push(-1, "failed to execute popen()");
 		return -1;
@@ -83,7 +85,7 @@ let exec = fn(command: ...&const any): i32 {
 	let len: u64 = 0;
 	let nread: i64;
 	while (nread = c.getline(&line, &len, pipe)) != -1 {
-		c.fprintf(c.stdout, "%s", line);
+		c.fprintf(c.stdout, r"%s", line);
 	}
 	mem.free(i8, line);
 	return c.wexitstatus(c.pclose(pipe));
@@ -117,7 +119,7 @@ let exec in MultiThreadedExec = fn(command: ...&const any): i32 {
 	let cmd = string.from(command);
 	defer cmd.deinit();
 	self.mtx.lock();
-	let pipe = c.popen(cmd.cStr(), "r");
+	let pipe = c.popen(cmd.cStr(), r"r");
 	self.mtx.unlock();
 	if !@as(u64, pipe) {
 		err.push(-1, "failed to execute popen()");
@@ -127,7 +129,7 @@ let exec in MultiThreadedExec = fn(command: ...&const any): i32 {
 	let len: u64 = 0;
 	let nread: i64;
 	while (nread = c.getline(&line, &len, pipe)) != -1 {
-		c.fprintf(c.stdout, "%s", line);
+		c.fprintf(c.stdout, r"%s", line);
 	}
 	mem.free(i8, line);
 	self.mtx.lock();

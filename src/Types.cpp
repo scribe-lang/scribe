@@ -15,6 +15,8 @@ static const char *TypeStrs[] = {
 };
 static Map<uint32_t, Type *> containedtypes;
 
+static StructTy *strrefty = nullptr;
+
 uint32_t genTypeID()
 {
 	static uint32_t id = MAX_FLT_ID + 1;
@@ -142,6 +144,17 @@ bool Type::isStrLiteral()
 	if(!pty->getTo() || !pty->getTo()->isInt()) return false;
 	IntTy *toty = as<IntTy>(pty->getTo());
 	if(!toty->isSigned() || toty->getBits() != 8) return false;
+	return true;
+}
+bool Type::isStrRef()
+{
+	if(!isStruct()) return false;
+	StructTy *sty = as<StructTy>(this);
+	if(sty->getFields().size() != 2) return false;
+	if(sty->getFieldName(0) != "data" || sty->getFieldName(1) != "length") return false;
+	if(!sty->getField(0)->isStrLiteral() || !sty->getField(1)->isIntegral()) return false;
+	IntTy *ity = as<IntTy>(sty->getField(1));
+	if(ity->getBits() != 64 || ity->isSigned()) return false;
 	return true;
 }
 
@@ -367,11 +380,7 @@ PtrTy *PtrTy::get(Context &c, Type *ptr_to, uint64_t count, bool is_weak)
 }
 PtrTy *PtrTy::getStr(Context &c)
 {
-	static PtrTy *res = nullptr;
-	if(!res) {
-		Type *ch = IntTy::get(c, 8, true);
-		res	 = PtrTy::get(c, ch, 0, false);
-	}
+	static PtrTy *res = PtrTy::get(c, IntTy::get(c, 8, true), 0, false);
 	return res;
 }
 PtrTy *PtrTy::getStr(Context &c, size_t count)
@@ -554,6 +563,20 @@ StructTy *StructTy::get(Context &c, StmtStruct *decl, const Vector<StringRef> &_
 {
 	return c.allocType<StructTy>(decl, _fieldnames, _fields, _templatenames, _templates,
 				     _externed);
+}
+void StructTy::setStrRef(StructTy *ty)
+{
+	if(strrefty) ty->id = strrefty->id;
+	strrefty = ty;
+}
+StructTy *StructTy::getStrRef(Context &c)
+{
+	if(!strrefty) {
+		Type *s	 = PtrTy::getStr(c);
+		Type *i	 = IntTy::get(c, 64, false);
+		strrefty = StructTy::get(c, nullptr, {"data", "length"}, {s, i}, {}, {}, false);
+	}
+	return strrefty;
 }
 Type *StructTy::getField(StringRef name)
 {

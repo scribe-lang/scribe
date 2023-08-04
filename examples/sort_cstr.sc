@@ -6,11 +6,11 @@ let main = fn(): i32 {
 	let v = vec.new(*i8, true);
 	defer v.deinit();
 
-	v.push("Hello");
-	v.push("Hi");
-	v.push("There");
-	v.push("I");
-	v.push("Go");
+	v.push(r"Hello");
+	v.push(r"Hi");
+	v.push(r"There");
+	v.push(r"I");
+	v.push(r"Go");
 
 	io.println("Original: ", v);
 	v.sort(sorting.cStrCmp);
