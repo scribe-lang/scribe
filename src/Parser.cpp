@@ -142,8 +142,9 @@ bool RAIIParser::parse(const String &_path, bool main_module, StringRef code)
 		return false;
 	}
 
-	String wd = fs::getCWD();
-	fs::setCWD(fs::parentDir(_path));
+	String wd	 = fs::getCWD();
+	String parentdir = fs::parentDir(_path);
+	if(!parentdir.empty()) fs::setCWD(parentdir);
 	size_t src_id  = 0;
 	StringRef path = ctx.strFrom(_path);
 	if(!addModule(path, main_module, code)) return false;
