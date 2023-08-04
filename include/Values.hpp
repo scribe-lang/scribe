@@ -129,6 +129,7 @@ public:
 
 	static StructVal *create(Context &c, ContainsData has_data,
 				 const Map<StringRef, Value *> &val);
+	static StructVal *createStrRef(Context &c, ContainsData has_data, StringRef val);
 
 	inline Map<StringRef, Value *> &getVal() { return data; }
 
@@ -137,6 +138,8 @@ public:
 		if(data.find(key) == data.end()) return nullptr;
 		return data[key];
 	}
+
+	String getStrFromRef();
 };
 
 class FuncVal : public Value

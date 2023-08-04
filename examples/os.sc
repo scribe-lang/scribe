@@ -3,7 +3,7 @@ let os = @import("std/os");
 let string = @import("std/string");
 
 let main = fn(): i32 {
-	let p = os.getEnv("PATH");
+	let p = os.getEnv(r"PATH");
 	defer p.deinit();
 	if p.isEmpty() {
 		io.println("No PATH available");
@@ -14,8 +14,8 @@ let main = fn(): i32 {
 	let newpath = string.from(p);
 	defer newpath.deinit();
 	newpath.append(":/tmp/bin");
-	os.setEnv("PATH", newpath.cStr(), true);
-	io.println("Final PATH is: ", os.getEnv("PATH"));
+	os.setEnv(r"PATH", newpath.cStr(), true);
+	io.println("Final PATH is: ", os.getEnv(r"PATH"));
 
 	let delimited = newpath.delim(':');
 	defer delimited.deinit();

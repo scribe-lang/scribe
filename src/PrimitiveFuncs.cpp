@@ -55,24 +55,27 @@ void addFltFn(Context &c, ValueManager &vmgr, StringRef name, FuncVal *fv)
 
 void AddPrimitiveFuncs(Context &c, ValueManager &vmgr)
 {
-	AnyTy *a   = AnyTy::get(c);
-	TypeTy *g  = nullptr; // g = generic
-	TypeTy *g2 = nullptr;
-	IntTy *i0  = IntTy::get(c, 0, true); // 0 bits => any int
-	FltTy *f0  = FltTy::get(c, 0);	     // 0 bits => any flt
-	IntTy *i1  = IntTy::get(c, 1, true);
-	IntTy *i8  = IntTy::get(c, 8, true);
-	IntTy *i32 = IntTy::get(c, 32, true);
-	IntTy *u64 = IntTy::get(c, 64, false);
-	Type *cstr = PtrTy::getStr(c);
-	VoidTy *v  = VoidTy::get(c);
+	AnyTy *a     = AnyTy::get(c);
+	IntTy *i0    = IntTy::get(c, 0, true); // 0 bits => any int
+	FltTy *f0    = FltTy::get(c, 0);       // 0 bits => any flt
+	IntTy *i1    = IntTy::get(c, 1, true);
+	IntTy *i8    = IntTy::get(c, 8, true);
+	IntTy *i32   = IntTy::get(c, 32, true);
+	IntTy *u64   = IntTy::get(c, 64, false);
+	TypeTy *g    = nullptr; // g = generic
+	TypeTy *g2   = nullptr;
+	VoidTy *v    = VoidTy::get(c);
+	Type *strref = StructTy::getStrRef(c);
 
-	ADDFN("compilerID", createFnVal(c, {}, cstr, intrinsic_compilerid, IPARSE));
+	ADDFN("compilerID", createFnVal(c, {}, strref, intrinsic_compilerid, IPARSE));
 
-	ADDFN("compilerPath", createFnVal(c, {}, cstr, intrinsic_compilerpath, IPARSE));
+	ADDFN("compilerPath", createFnVal(c, {}, strref, intrinsic_compilerpath, IPARSE));
 
 	g = TypeTy::get(c);
-	ADDFN("import", createComptimeFnVal(c, {cstr}, g, {true}, intrinsic_import, IPARSE));
+	ADDFN("import", createComptimeFnVal(c, {strref}, g, {true}, intrinsic_import, IPARSE));
+
+	g = TypeTy::get(c);
+	ADDFN("setStringRefTy", createFnVal(c, {g}, v, intrinsic_setstringrefty, IPARSE, false));
 
 	ADDFN("isMainSrc", createFnVal(c, {}, i1, intrinsic_ismainsrc, IPARSE));
 

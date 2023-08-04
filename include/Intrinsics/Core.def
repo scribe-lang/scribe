@@ -1,6 +1,7 @@
 INTRINSIC(compilerid);
 INTRINSIC(compilerpath);
 INTRINSIC(import);
+INTRINSIC(setstringrefty);
 INTRINSIC(ismainsrc);
 INTRINSIC(isprimitive);
 INTRINSIC(isptr);

@@ -93,13 +93,14 @@ class CDriver : public CodeGenDriver
 	StringRef getConstantDataVar(const lex::Lexeme &val, Type *ty);
 	StringRef getNewConstantVar();
 	static bool acceptsSemicolon(Stmt *stmt);
-	bool getCType(CTy &res, Stmt *stmt, Type *ty);
+	bool getCType(CTy &res, const ModuleLoc *loc, Type *ty);
+	StringRef getCTypeForStringRef(Context &c, const ModuleLoc *loc);
 	bool getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool i8_to_char = true);
-	bool addStructDef(Stmt *stmt, StructTy *sty);
+	bool addStructDef(const ModuleLoc *loc, StructTy *sty);
 	bool writeCallArgs(const ModuleLoc *loc, const Vector<Stmt *> &args, Type *ty,
 			   Writer &writer);
 	bool applyCast(Stmt *stmt, Writer &writer, Writer &tmp);
-	bool getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt);
+	bool getFuncPointer(CTy &res, FuncTy *f, const ModuleLoc *loc);
 	StringRef getArrCount(Type *t, size_t &ptrsin);
 	StringRef getSystemCompiler();
 

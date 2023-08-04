@@ -8,7 +8,7 @@ let string = @import("std/string");
 
 let Error = struct {
 	code: i32;
-	msg: string.StringRef;
+	msg: StringRef;
 };
 
 let deinit in Error = fn() {
@@ -20,7 +20,7 @@ let str in const Error = fn(): string.String {
 	s.append(self.code); // internally calls s.appendInt()
 	s.append(", Message: ");
 	s.append(self.msg); // internally calls s.appendRef()
-	s.appendCStr(" }", 2);
+	s.append(" }"); // internally calls s.appendRef()
 	return s;
 };
 
@@ -42,13 +42,13 @@ let deinit = fn() {
 	inited = false;
 };
 
-let allToRef = fn(data: ...&const any): string.StringRef {
+let allToRef = fn(data: ...&const any): StringRef {
 	let comptime len = @valen();
 	inline if len == 1 && @isCString(data[0]) {
 		return string.getRefCStr(data[0]);
 	} elif len == 1 && @isEqualTy(data[0], string.String) {
 		return data[0].getRef();
-	} elif len == 1 && @isEqualTy(data[0], string.StringRef) {
+	} elif len == 1 && @isEqualTy(data[0], StringRef) {
 		return data[0];
 	} else {
 		let errstr = string.new();
@@ -77,22 +77,22 @@ let getCode = fn(): i32 {
 	return errstack.back().code;
 };
 
-let getMsg = fn(): string.StringRef {
-	if !inited { return ref"err system uninitialized"; }
+let getMsg = fn(): StringRef {
+	if !inited { return "err system uninitialized"; }
 	if errstack.isEmpty() {
-		return ref"no error present in stack";
+		return "no error present in stack";
 	}
 	return errstack.back().msg;
 };
 
 let pop = fn(): Error {
-	if !inited { return Error{-1, ref"err system uninitialized"}; }
+	if !inited { return Error{-1, "err system uninitialized"}; }
 	if !errstack.isEmpty() {
 		let res = errstack.backByVal();
 		errstack.pop();
 		return res;
 	}
-	return Error{-1, ref"invalid error pop"};
+	return Error{-1, "invalid error pop"};
 };
 
 inline if @isMainSrc() {
@@ -103,10 +103,10 @@ let main = fn(): i32 {
 	init();
 	defer deinit();
 
-	push(5, ref"error code 5");
-	push(3, ref"error code 3");
-	push(1, ref"error code 1");
-	push(2, ref"error code 2");
+	push(5, "error code 5");
+	push(3, "error code 3");
+	push(1, "error code 1");
+	push(2, "error code 2");
 
 	io.println(pop());
 	io.println(pop());

@@ -115,7 +115,7 @@ VecVal *VecVal::createStr(Context &c, ContainsData has_data, StringRef val)
 	for(auto &ch : val) {
 		chars.push_back(IntVal::create(c, has_data, ch));
 	}
-	return c.allocVal<VecVal>(has_data, chars);
+	return create(c, has_data, chars);
 }
 String VecVal::getAsString()
 {
@@ -166,6 +166,14 @@ StructVal *StructVal::create(Context &c, ContainsData has_data, const Map<String
 {
 	return c.allocVal<StructVal>(has_data, val);
 }
+StructVal *StructVal::createStrRef(Context &c, ContainsData has_data, StringRef val)
+{
+	Value *s		  = VecVal::createStr(c, has_data, val);
+	Value *i		  = IntVal::create(c, has_data, val.size());
+	Map<StringRef, Value *> m = {{"data", s}, {"length", i}};
+	return create(c, has_data, m);
+}
+String StructVal::getStrFromRef() { return as<VecVal>(getField("data"))->getAsString(); }
 
 FuncVal::FuncVal(Context &c, FuncTy *val) : Value(VFUNC, CDPERMA), ty(val) {}
 

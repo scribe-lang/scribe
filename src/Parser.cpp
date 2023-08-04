@@ -74,7 +74,7 @@ RAIIParser::~RAIIParser()
 bool RAIIParser::init()
 {
 	// import preludes
-	Vector<String> preludes = {"core"};
+	Vector<String> preludes = {"prelude/core", "prelude/stringref"};
 	for(auto &prelude : preludes) {
 		if(!IsValidSource(prelude)) {
 			std::cerr << "Prelude source '" << prelude
@@ -103,7 +103,7 @@ void RAIIParser::combineAllModules()
 	mainstmts.insert(mainstmts.begin(), allmodstmts.begin(), allmodstmts.end());
 
 	ssize_t count = modulestack.size() - 1;
-	while(count--) {
+	while(count-- > 0) {
 		modulestack.pop_back();
 	}
 }
@@ -174,10 +174,7 @@ void RAIIParser::dumpTokens(bool force)
 
 	printf("-------------------------------------------------- Token(s) "
 	       "--------------------------------------------------\n");
-	for(auto file = modulestack.rbegin(); file != modulestack.rend(); ++file) {
-		printf("\n\n");
-		modules[*file]->dumpTokens();
-	}
+	mainmodule->dumpTokens();
 }
 void RAIIParser::dumpParseTree(bool force)
 {
@@ -185,10 +182,7 @@ void RAIIParser::dumpParseTree(bool force)
 
 	printf("-------------------------------------------------- Parse Tree(s) "
 	       "--------------------------------------------------\n");
-	for(auto file = modulestack.rbegin(); file != modulestack.rend(); ++file) {
-		printf("\n\n");
-		modules[*file]->dumpParseTree();
-	}
+	mainmodule->dumpParseTree();
 }
 
 bool RAIIParser::IsValidSource(String &modname)

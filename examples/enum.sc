@@ -1,7 +1,7 @@
 let io = @import("std/io");
 let os = @import("std/os");
 
-let getOSName = fn(): *const i8 {
+let getOSName = fn(): StringRef {
 	inline if os.currentOS == os.id.Linux {
 		return "Using Linux";
 	} elif os.currentOS == os.id.Windows {

@@ -197,14 +197,12 @@ class StmtBlock : public Stmt
 {
 	Vector<Stmt *> stmts;
 	bool is_top;
-	bool disable_layering;
 
 public:
-	StmtBlock(const ModuleLoc *loc, const Vector<Stmt *> &stmts, bool is_top,
-		  bool disable_layering);
+	StmtBlock(const ModuleLoc *loc, const Vector<Stmt *> &stmts, bool is_top);
 	~StmtBlock();
 	static StmtBlock *create(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &stmts,
-				 bool is_top, bool disable_layering);
+				 bool is_top);
 
 	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
@@ -212,11 +210,8 @@ public:
 	bool requiresTemplateInit();
 	void _setFuncUsed(bool inc, Set<Stmt *> &done);
 
-	inline void disableLayering() { disable_layering = true; }
-
 	inline Vector<Stmt *> &getStmts() { return stmts; }
 	inline bool isTop() const { return is_top; }
-	inline bool isLayeringDisabled() const { return disable_layering; }
 };
 
 class StmtType : public Stmt

@@ -63,6 +63,7 @@ public:
 	inline bool isIntegral() const { return isInt(); }
 	inline bool isFloat() const { return isFlt(); }
 	bool isStrLiteral();
+	bool isStrRef();
 
 	virtual Value *toDefaultValue(Context &c, const ModuleLoc *loc, ContainsData cd,
 				      size_t weak_depth = 0);
@@ -253,6 +254,8 @@ public:
 	static StructTy *get(Context &c, StmtStruct *decl, const Vector<StringRef> &_fieldnames,
 			     const Vector<Type *> &_fields, const Vector<StringRef> &_templatenames,
 			     const Vector<TypeTy *> &_templates, bool _externed);
+	static void setStrRef(StructTy *ty);
+	static StructTy *getStrRef(Context &c);
 	Type *specialize(Context &c, size_t weak_depth = 0) override;
 
 	inline void setDecl(StmtStruct *_decl) { decl = _decl; }

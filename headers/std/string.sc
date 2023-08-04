@@ -9,7 +9,7 @@ let vec = @import("std/vec"); // required for vec.str() and str.delim()
 let utils = @import("std/utils");
 let hashing = @import("std/hashing");
 
-let NPOS: const u64 = -1;
+let comptime NPOS: const u64 = STRING_NPOS;
 
 let float_precision = 3;
 
@@ -19,121 +19,6 @@ let setPrecision = inline fn(digits: const i32) {
 
 let getPrecision = inline fn(): i32 {
 	return float_precision;
-};
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// StringRef Type
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-let StringRef = struct {
-	start: *const i8;
-	count: u64;
-};
-
-let deinit in StringRef = inline fn() {};
-
-let subRefCStr = fn(data: *const i8, start: u64, count: u64): StringRef {
-	if count == 0 { count = c.strlen(&data[start]); }
-	return StringRef{&data[start], count};
-};
-
-let getRefCStr = inline fn(data: *const i8): StringRef {
-	return subRefCStr(data, 0, 0);
-};
-
-let global ref = inline fn(data: *const i8): StringRef {
-	return getRefCStr(data);
-};
-
-let getRef in const i8 = inline fn(): StringRef {
-	return subRefCStr(&self, 0, 1);
-};
-
-let isEmpty in const StringRef = inline fn(): i1 {
-	return @as(u64, self.start) == nil || self.count == 0;
-};
-
-let data in const StringRef = inline fn(): *const i8 {
-	return self.start;
-};
-
-let len in const StringRef = inline fn(): u64 {
-	return self.count;
-};
-
-let hash in const StringRef = inline fn(): u64 {
-	return hashing.cStr(self.start, self.count);
-};
-
-let __assn__ in StringRef = fn(other: StringRef): &self {
-	self.start = other.start;
-	self.count = other.count;
-	return self;
-};
-
-let __subscr__ in StringRef = inline fn(idx: u64): &const i8 {
-	return self.start[idx];
-};
-
-let __eq__ in const StringRef = fn(other: StringRef): i1 {
-	if self.count != other.count { return false; }
-	if self.count == 0 { return false; }
-	return c.strncmp(self.start, other.start, self.count) == 0;
-};
-
-let __ne__ in const StringRef = inline fn(other: StringRef): i1 {
-	return !(self == other);
-};
-
-let subRef in const StringRef = fn(start: u64, count: u64): StringRef {
-	if start >= self.count { return StringRef{nil, 0}; }
-	if count == 0 || count == NPOS { count = self.count - start; }
-	elif start + count > self.count { count = self.count - start; }
-	return StringRef{&self.start[start], count};
-};
-
-let find in const StringRef = fn(other: StringRef): u64 {
-	let slen = self.len();
-	let olen = other.len();
-	if slen == 0 || olen == 0 || olen > slen { return NPOS; }
-	let pos: u64 = NPOS;
-	for let i: u64 = 0; i < slen; ++i {
-		if self.start[i] != *other.start { continue; }
-		let found = true;
-		for let j: u64 = 0; j < olen; ++j {
-			if i + j >= slen || self.start[i + j] != other.start[j] {
-				found = false;
-				break;
-			}
-		}
-		if !found { continue; }
-		pos = i;
-		break;
-	}
-	return pos;
-};
-
-let rfind in const StringRef = fn(other: StringRef): u64 {
-	let slen = self.len();
-	let olen = other.len();
-	if slen == 0 || olen == 0 || olen > slen { return NPOS; }
-	let pos: u64 = NPOS;
-	let i: u64 = slen - 1, j: u64 = olen - 1;
-	let found = false;
-	while i >= 0 && j >= 0 {
-		if self.start[i] != other.start[j] {
-			if i == 0 { break; }
-			--i;
-			found = false;
-			continue;
-		}
-		found = true;
-		if j == 0 { pos = i; }
-		if i == 0 || j == 0 { break; }
-		--i;
-		--j;
-	}
-	return pos;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -202,8 +87,8 @@ let fromSubCStr = fn(data: *const i8, count: u64): String {
 	return res;
 };
 
-let fromStringRef = inline fn(data: &const StringRef): String {
-	return fromSubCStr(data.start, data.count);
+let fromStringRef = inline fn(data: StringRef): String {
+	return fromSubCStr(data.data, data.length);
 };
 
 // from() is implemented later with the Utility Functions
@@ -229,7 +114,7 @@ let setLen in String = inline fn(len: u64) {
 };
 
 let cStr in const String = fn(): *const i8 {
-	if @as(u64, self.data) == nil { return ""; }
+	if @as(u64, self.data) == nil { return r""; }
 	return self.data;
 };
 
@@ -264,7 +149,9 @@ let subString in const String = fn(start: u64, count: u64): String {
 	return fromSubCStr(&self.data[start], count);
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
 // StringRef related functions
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 let getRef in const String = inline fn(): StringRef {
 	return StringRef{self.data, self.length};
@@ -316,7 +203,7 @@ let appendCStr in String = fn(other: *const i8, count: u64): &String {
 };
 
 let appendRef in String = inline fn(other: StringRef): &String {
-	return self.appendCStr(other.start, other.count);
+	return self.appendCStr(other.data, other.length);
 };
 
 let appendInt in String = fn(data: i64): &String {
@@ -328,7 +215,7 @@ let appendInt in String = fn(data: i64): &String {
 		self.capacity = self.length + otherlen + 1;
 		self.data = mem.realloc(i8, self.data, self.capacity);
 	}
-	c.snprintf(&self.data[self.length], otherlen + 1, "%lld", data);
+	c.snprintf(&self.data[self.length], otherlen + 1, r"%lld", data);
 	self.length += otherlen;
 	self.data[self.length] = 0;
 	return self;
@@ -343,7 +230,7 @@ let appendUInt in String = fn(data: u64): &String {
 		self.capacity = self.length + otherlen + 1;
 		self.data = mem.realloc(i8, self.data, self.capacity);
 	}
-	c.snprintf(&self.data[self.length], otherlen + 1, "%llu", data);
+	c.snprintf(&self.data[self.length], otherlen + 1, r"%llu", data);
 	self.length += otherlen;
 	self.data[self.length] = 0;
 	return self;
@@ -358,7 +245,7 @@ let appendFlt in String = fn(data: f64): &String {
 		self.capacity = self.length + otherlen + 1;
 		self.data = mem.realloc(i8, self.data, self.capacity);
 	}
-	c.snprintf(&self.data[self.length], otherlen + 1, "%.*lf", getPrecision(), data);
+	c.snprintf(&self.data[self.length], otherlen + 1, r"%.*lf", getPrecision(), data);
 	self.length += otherlen;
 	self.data[self.length] = 0;
 	return self;
@@ -449,48 +336,12 @@ let __ne__ in const String = inline fn(other: &const String): i1 {
 	return !(self == other);
 };
 
-let find in const String = fn(other: StringRef): u64 {
-	let slen = self.len();
-	let olen = other.len();
-	if slen == 0 || olen == 0 || olen > slen { return NPOS; }
-	let pos: u64 = NPOS;
-	for let i: u64 = 0; i < slen; ++i {
-		if self.data[i] != *other.start { continue; }
-		let found = true;
-		for let j: u64 = 0; j < olen; ++j {
-			if i + j >= slen || self.data[i + j] != other.start[j] {
-				found = false;
-				break;
-			}
-		}
-		if !found { continue; }
-		pos = i;
-		break;
-	}
-	return pos;
+let find in const String = inline fn(other: StringRef): u64 {
+	return self.getRef().find(other);
 };
 
-let rfind in const String = fn(other: StringRef): u64 {
-	let slen = self.len();
-	let olen = other.len();
-	if slen == 0 || olen == 0 || olen > slen { return NPOS; }
-	let pos: u64 = NPOS;
-	let i: u64 = slen - 1, j: u64 = olen - 1;
-	let found = false;
-	while i >= 0 && j >= 0 {
-		if self.data[i] != other.start[j] {
-			if i == 0 { break; }
-			--i;
-			found = false;
-			continue;
-		}
-		found = true;
-		if j == 0 { pos = i; }
-		if i == 0 || j == 0 { break; }
-		--i;
-		--j;
-	}
-	return pos;
+let rfind in const String = inline fn(other: StringRef): u64 {
+	return self.getRef().rfind(other);
 };
 
 let delim in const String = fn(ch: i8): vec.Vec(String) {
@@ -583,9 +434,9 @@ let str in const vec.Vec = fn(): String {
 	let res = from("[");
 	for let i = 0; i < self.length; ++i {
 		res += self.data[i];
-		if i < self.length - 1 { res.appendCStr(", ", 2); }
+		if i < self.length - 1 { res.appendRef(", "); }
 	}
-	res.appendCStr("]", 1);
+	res.appendRef("]");
 	return res;
 };
 

@@ -8,8 +8,8 @@ let main = fn(argc: i32, argv: **i8): i32 {
 
 	let args = argparse.new(argc, argv);
 	defer args.deinit();
-	args.add(ref"version", ref"v").setHelp(ref"prints program version");
-	args.add(ref"value", ref"e").setValReqd(true).setHelp(ref"Enter a value");
+	args.add("version", "v").setHelp("prints program version");
+	args.add("value", "e").setValReqd(true).setHelp("Enter a value");
 
 	if !args.parse() {
 		io.println("Failed to parse command line arguments");
@@ -18,16 +18,16 @@ let main = fn(argc: i32, argv: **i8): i32 {
 		}
 		return 1;
 	}
-	if args.has(ref"help") {
+	if args.has("help") {
 		args.printHelp(io.stdout);
 		return 0;
 	}
-	if args.has(ref"version") {
+	if args.has("version") {
 		io.println("Scribe Arg Parser v0.0.1, built with Scribe Compiler v", @compilerID());
 		return 0;
 	}
-	if args.has(ref"value") {
-		io.println("Value entered: ", args.getArgVal(ref"value"));
+	if args.has("value") {
+		io.println("Value entered: ", args.getArgVal("value"));
 	}
 	let file = args.getArgIdx(1);
 	if file.isEmpty() {

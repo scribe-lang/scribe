@@ -568,7 +568,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		StmtFnDef *fn	 = as<StmtFnDef>(stmt->getVVal());
 		StmtType *sigret = fn->getSigRetType();
 		CTy retcty;
-		if(!getCType(retcty, sigret, sigret->getTy())) {
+		if(!getCType(retcty, sigret->getLoc(), sigret->getTy())) {
 			err::out(stmt, {"failed to determine C type for scribe type: ",
 					sigret->getTy()->toStr()});
 			return false;
@@ -633,7 +633,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		CTy cty;
 		String cval;
 		Type *t = stmt->getTy();
-		if(!getCType(cty, stmt, t)) {
+		if(!getCType(cty, stmt->getLoc(), t)) {
 			err::out(stmt,
 				 {"failed to determine C type for scribe type: ", t->toStr()});
 			return false;
@@ -668,7 +668,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 	}
 	CTy cty;
 	Type *valty = stmt->getCast() ? stmt->getCast() : stmt->getTy();
-	if(!getCType(cty, stmt, valty)) {
+	if(!getCType(cty, stmt->getLoc(), valty)) {
 		err::out(stmt, {"unable to determine C type for scribe type: ", valty->toStr()});
 		return false;
 	}
@@ -693,7 +693,7 @@ bool CDriver::visit(StmtFnSig *stmt, Writer &writer, bool semicol)
 {
 	CTy cty;
 	Stmt *retty = stmt->getRetType();
-	if(!getCType(cty, retty, retty->getTy())) {
+	if(!getCType(cty, retty->getLoc(), retty->getTy())) {
 		err::out(stmt,
 			 {"unable to determine C type for scribe type: ", stmt->getTy()->toStr()});
 		return false;
@@ -957,13 +957,17 @@ StringRef CDriver::getConstantDataVar(const lex::Lexeme &val, Type *ty)
 		key  = value;
 		type = "const i8";
 		break;
-	case lex::STR:
-		value += '"';
+	case lex::STR: {
 		appendRawString(value, val.getDataStr());
-		value += '"';
+		size_t sz = value.size();
+		value	  = "{\"" + value;
+		value += "\", ";
+		value += std::to_string(sz);
+		value += "}";
 		key  = value;
-		type = "const i8*";
+		type = getCTypeForStringRef(ctx, val.getLoc());
 		break;
+	}
 	default: break;
 	}
 	if(key.empty()) {
@@ -1013,7 +1017,16 @@ bool CDriver::acceptsSemicolon(Stmt *stmt)
 	return false;
 }
 
-bool CDriver::getCType(CTy &cty, Stmt *stmt, Type *ty)
+StringRef CDriver::getCTypeForStringRef(Context &c, const ModuleLoc *loc)
+{
+	static StringRef res;
+	if(res.empty()) {
+		CTy ty;
+		if(getCType(ty, loc, StructTy::getStrRef(c))) res = c.moveStr(ty.toStr(nullptr));
+	}
+	return res;
+}
+bool CDriver::getCType(CTy &cty, const ModuleLoc *loc, Type *ty)
 {
 	if(cty.isTop()) {
 		size_t ptrsin = 0;
@@ -1035,8 +1048,8 @@ bool CDriver::getCType(CTy &cty, Stmt *stmt, Type *ty)
 	}
 	if(ty->isTypeTy()) {
 		Type *ctyp = as<TypeTy>(ty)->getContainedTy();
-		if(!getCType(cty, stmt, ctyp)) {
-			err::out(stmt,
+		if(!getCType(cty, loc, ctyp)) {
+			err::out(loc,
 				 {"failed to determine C type for scribe type: ", ctyp->toStr()});
 			return false;
 		}
@@ -1055,8 +1068,8 @@ bool CDriver::getCType(CTy &cty, Stmt *stmt, Type *ty)
 	if(ty->isPtr()) {
 		Type *to = as<PtrTy>(ty)->getTo();
 		cty.setWeak(as<PtrTy>(ty)->isWeak());
-		if(!getCType(cty, stmt, to)) {
-			err::out(stmt,
+		if(!getCType(cty, loc, to)) {
+			err::out(loc,
 				 {"failed to determine C type for scribe type: ", to->toStr()});
 			return false;
 		}
@@ -1064,19 +1077,19 @@ bool CDriver::getCType(CTy &cty, Stmt *stmt, Type *ty)
 		return true;
 	}
 	if(ty->isFunc()) {
-		return getFuncPointer(cty, as<FuncTy>(ty), stmt);
+		return getFuncPointer(cty, as<FuncTy>(ty), loc);
 	}
 	if(ty->isStruct()) {
 		StructTy *s = as<StructTy>(ty);
-		if(!addStructDef(stmt, s)) {
-			err::out(stmt, {"failed to add struct def '", s->toStr(), "' in C code"});
+		if(!addStructDef(loc, s)) {
+			err::out(loc, {"failed to add struct def '", s->toStr(), "' in C code"});
 			return false;
 		}
 		cty.base = "struct_";
 		cty.base += std::to_string(s->getUniqID());
 		return true;
 	}
-	err::out(stmt, {"invalid scribe type encountered: ", ty->toStr()});
+	err::out(loc, {"invalid scribe type encountered: ", ty->toStr()});
 	return false;
 }
 bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool i8_to_char)
@@ -1168,7 +1181,7 @@ bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool 
 	}
 	return false;
 }
-bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
+bool CDriver::addStructDef(const ModuleLoc *loc, StructTy *sty)
 {
 	static Set<uint64_t> declaredstructs;
 	if(declaredstructs.find(sty->getUniqID()) != declaredstructs.end()) return true;
@@ -1189,9 +1202,8 @@ bool CDriver::addStructDef(Stmt *stmt, StructTy *sty)
 		StringRef fieldname = sty->getFieldName(i);
 		Type *t		    = sty->getField(i);
 		cty.setDecl(true);
-		if(!getCType(cty, stmt, t)) {
-			err::out(stmt,
-				 {"failed to determine C type for scribe type: ", t->toStr()});
+		if(!getCType(cty, loc, t)) {
+			err::out(loc, {"failed to determine C type for scribe type: ", t->toStr()});
 			return false;
 		}
 		cty.setStatic(stdecl && stdecl->getField(i)->isStatic());
@@ -1219,7 +1231,7 @@ bool CDriver::applyCast(Stmt *stmt, Writer &writer, Writer &tmp)
 		writer.write("(");
 		CTy cty;
 		cty.setCast(true);
-		if(!getCType(cty, stmt, stmt->getCast())) {
+		if(!getCType(cty, stmt->getLoc(), stmt->getCast())) {
 			err::out(stmt, {"received invalid c type name for scribe cast type: ",
 					stmt->getCast()->toStr()});
 			return false;
@@ -1275,7 +1287,7 @@ bool CDriver::writeCallArgs(const ModuleLoc *loc, const Vector<Stmt *> &args, Ty
 	}
 	return true;
 }
-bool CDriver::getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt)
+bool CDriver::getFuncPointer(CTy &res, FuncTy *f, const ModuleLoc *loc)
 {
 	static Set<uint64_t> funcids;
 	res.base = "func_";
@@ -1287,8 +1299,8 @@ bool CDriver::getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt)
 	cty.setCast(res.isCast());
 	cty.setDecl(res.isDecl());
 	cty.setWeak(res.isWeak());
-	if(!getCType(cty, stmt, f->getRet())) {
-		err::out(stmt,
+	if(!getCType(cty, loc, f->getRet())) {
+		err::out(loc,
 			 {"failed to determine C type for scribe type: ", f->getRet()->toStr()});
 		return false;
 	}
@@ -1302,9 +1314,8 @@ bool CDriver::getFuncPointer(CTy &res, FuncTy *f, Stmt *stmt)
 		Type *t	     = f->getArg(i);
 		StmtVar *arg = f->getSig() ? f->getSig()->getArg(i) : nullptr;
 		cty.clear();
-		if(!getCType(cty, stmt, t)) {
-			err::out(stmt,
-				 {"failed to determine C type for scribe type: ", t->toStr()});
+		if(!getCType(cty, loc, t)) {
+			err::out(loc, {"failed to determine C type for scribe type: ", t->toStr()});
 			return false;
 		}
 		cty.setConst(arg && arg->isConst());

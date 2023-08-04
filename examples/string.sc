@@ -9,13 +9,13 @@ let Point = struct {
 
 let str in const Point = fn(): string.String {
 	let str = string.new();
-	str.appendCStr("{", 1);
+	str.appendRef("{");
 	str.append(self.x); // should then call str.appendInt()
-	str.appendCStr(", ", 2);
+	str.appendRef(", ");
 	str.append(self.y); // should then call str.appendUInt()
-	str.appendCStr(", ", 2);
+	str.appendRef(", ");
 	str.append(self.z); // should then call str.appendFlt()
-	str.appendCStr("}", 1);
+	str.appendRef("}");
 	return str;
 };
 
@@ -34,7 +34,7 @@ let main = fn(): i32 {
 	io.println(a); // "Hella"
 
 	// sub C-string test
-	let b = string.fromSubCStr("Hello", 4);
+	let b = string.fromSubCStr("Hello".data, 4);
 	defer b.deinit();
 	io.println(b);
 

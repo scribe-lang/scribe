@@ -1,12 +1,12 @@
 let os = @import("std/os");
 
-let getModule = fn(): *const i8 {
+let getModule = fn(): StringRef {
 	if os.currentOS == os.id.Linux {
 		return "std/io";
 	} elif os.currentOS == os.id.Apple {
 		return "std/io_apple";
 	}
-	return nil;
+	return "";
 };
 
 let io = @import(getModule());

@@ -11,12 +11,11 @@ let superFlip = fn(input: i1, started: &i1, ctr: &i32): i1 {
 	return ctr > 0;
 };
 
-let attempt = fn(data: *const i8) {
-	let len = c.strlen(data);
+let attempt = fn(data: StringRef) {
 	let started = false;
 	let ctr = 2;
 	io.print("input:  ", data, "\noutput: ");
-	for let i = 0; i < len; ++i {
+	for let i = 0; i < data.length; ++i {
 		if superFlip(data[i] == '1', started, ctr) {
 			io.print("1");
 		} else {

@@ -46,23 +46,23 @@ let _wexitstatus = extern[WEXITSTATUS, "<stdlib.h>"] fn(status: i32): i32;
 
 let getTypeSpecifier = inline fn(comptime ty: type): *const i8 {
 	inline if @isEqualTy(ty, i1) || @isEqualTy(ty, i16) || @isEqualTy(ty, i32) {
-		return "%d";
+		return r"%d";
 	} elif @isEqualTy(ty, u8) || @isEqualTy(ty, u16) || @isEqualTy(ty, u32) {
-		return "%u";
+		return r"%u";
 	} elif @isEqualTy(ty, i64) {
-		return "%lld";
+		return r"%lld";
 	} elif @isEqualTy(ty, u64) {
-		return "%llu";
+		return r"%llu";
 	} elif @isEqualTy(ty, i8) {
-		return "%c";
+		return r"%c";
 	} elif @isEqualTy(ty, f32) {
-		return "%.*f";
+		return r"%.*f";
 	} elif @isEqualTy(ty, f64) {
-		return "%.*lf";
+		return r"%.*lf";
 	} elif @isCString(ty) {
-		return "%s";
+		return r"%s";
 	} elif @isPtr(ty) {
-		return "%p";
+		return r"%p";
 	}
 	return nil;
 };
