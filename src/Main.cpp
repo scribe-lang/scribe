@@ -55,11 +55,12 @@ int main(int argc, char **argv)
 
 int BuildRunProj(args::ArgParser &args, bool buildonly)
 {
-	int res = fs::mkdir("build");
-	if(res) return res;
+	if(!fs::mkdir("build")) return 1;
 
+	int res	    = 0;
 	String file = "<build>";
 	RAIIParser parser(args);
+	if(!parser.init()) return 1;
 	if(!parser.parse(file, true, buildcode)) return 1;
 	parser.dumpTokens(false);
 	parser.dumpParseTree(false);
