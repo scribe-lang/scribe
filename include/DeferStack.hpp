@@ -1,6 +1,5 @@
 #pragma once
 
-#include <string> // for size_t
 #include <unordered_map>
 #include <vector>
 

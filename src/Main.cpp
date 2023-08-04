@@ -7,9 +7,7 @@
 #include "CodeGen/C.hpp"
 #include "Config.hpp"
 #include "Env.hpp"
-#include "Error.hpp"
 #include "FS.hpp"
-#include "Lex.hpp"
 #include "Parser.hpp"
 
 using namespace sc;

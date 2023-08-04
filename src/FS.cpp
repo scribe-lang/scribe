@@ -1,6 +1,6 @@
-#include "../include/FS.hpp"
+#include "FS.hpp"
 
-#include "../include/Env.hpp"
+#include "Env.hpp"
 
 namespace sc
 {

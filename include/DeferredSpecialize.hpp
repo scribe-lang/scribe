@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Parser/Stmts.hpp"
+#include "Types.hpp"
 
 namespace sc
 {

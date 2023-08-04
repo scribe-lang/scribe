@@ -1,6 +1,5 @@
 #include "Passes/Simplify.hpp"
 
-#include "Parser.hpp"
 #include "Utils.hpp"
 
 namespace sc
@@ -39,7 +38,7 @@ bool SimplifyPass::visit(Stmt *stmt, Stmt **source)
 	case BREAK: return visit(as<StmtBreak>(stmt), source);
 	case DEFER: return visit(as<StmtDefer>(stmt), source);
 	}
-	err::out(stmt, {"invalid statement found for simplify pass: ", stmt->getStmtTypeCString()});
+	err::out(stmt, "invalid statement found for simplify pass: ", stmt->getStmtTypeCString());
 	return false;
 }
 
@@ -49,7 +48,7 @@ bool SimplifyPass::visit(StmtBlock *stmt, Stmt **source)
 	intermediates.push_back({});
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(!visit(stmts[i], &stmts[i])) {
-			err::out(stmt, {"failed to perform simplify pass on stmt in block"});
+			err::out(stmt, "failed to perform simplify pass on stmt in block");
 			return false;
 		}
 		auto &intermediate_list = intermediates.back();
@@ -88,7 +87,7 @@ bool SimplifyPass::visit(StmtFnCallInfo *stmt, Stmt **source)
 			continue;
 		}
 		if(!visit(args[i], &args[i])) {
-			err::out(stmt, {"failed to apply simplify pass on call argument"});
+			err::out(stmt, "failed to apply simplify pass on call argument");
 			return false;
 		}
 	}
@@ -100,11 +99,11 @@ bool SimplifyPass::visit(StmtExpr *stmt, Stmt **source)
 	Stmt *&rhs	  = stmt->getRHS();
 	lex::TokType oper = stmt->getOper().getTokVal();
 	if(lhs && !visit(lhs, &lhs)) {
-		err::out(stmt, {"failed to apply simplify pass on LHS in expression"});
+		err::out(stmt, "failed to apply simplify pass on LHS in expression");
 		return false;
 	}
 	if(rhs && !visit(rhs, &rhs)) {
-		err::out(stmt, {"failed to apply simplify pass on LHS in expression"});
+		err::out(stmt, "failed to apply simplify pass on LHS in expression");
 		return false;
 	}
 	if(!stmt->getCalledFn() || stmt->getVal()) return true;
@@ -142,7 +141,7 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 		static bool maindone = false;
 		if(trySetMainFunction(stmt, stmt->getName().getDataStr())) {
 			if(maindone) {
-				err::out(stmt, {"multiple main functions found"});
+				err::out(stmt, "multiple main functions found");
 				return false;
 			}
 			as<StmtFnDef>(stmt->getVVal())->incUsed();
@@ -153,7 +152,7 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 	}
 	bool had_val = stmt->getVVal();
 	if(stmt->getVVal() && !visit(stmt->getVVal(), &stmt->getVVal())) {
-		err::out(stmt, {"failed to apply simplify pass on variable value expression"});
+		err::out(stmt, "failed to apply simplify pass on variable value expression");
 		return false;
 	}
 	if(had_val && !stmt->getVVal()) {
@@ -161,7 +160,7 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 		return true;
 	}
 	if(stmt->getVType() && !visit(stmt->getVType(), asStmt(&stmt->getVType()))) {
-		err::out(stmt, {"failed to apply simplify pass on variable type expression"});
+		err::out(stmt, "failed to apply simplify pass on variable type expression");
 		return false;
 	}
 	return true;
@@ -175,8 +174,7 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 	auto &args = stmt->getArgs();
 	for(size_t i = 0; i < args.size(); ++i) {
 		if(args[i]->getTy()->isVariadic()) {
-			err::out(stmt,
-				 {"variadic argument in function cannot reach simplify stage"});
+			err::out(stmt, "variadic argument in function cannot reach simplify stage");
 			return false;
 		}
 		Stmt *argtyexpr = args[i]->getVType()->getExpr();
@@ -187,7 +185,7 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 			continue;
 		}
 		if(!visit(args[i], asStmt(&args[i]))) {
-			err::out(stmt, {"failed to apply simplify pass on function signature arg"});
+			err::out(stmt, "failed to apply simplify pass on function signature arg");
 			return false;
 		}
 		if(!args[i]) {
@@ -197,7 +195,7 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 		}
 	}
 	if(!visit(stmt->getRetType(), asStmt(&stmt->getRetType()))) {
-		err::out(stmt, {"failed to apply simplify pass on func signature ret type"});
+		err::out(stmt, "failed to apply simplify pass on func signature ret type");
 		return false;
 	}
 	return true;
@@ -205,7 +203,7 @@ bool SimplifyPass::visit(StmtFnSig *stmt, Stmt **source)
 bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
 {
 	if(!visit(stmt->getSig(), asStmt(&stmt->getSig()))) {
-		err::out(stmt, {"failed to apply simplify pass on func signature in definition"});
+		err::out(stmt, "failed to apply simplify pass on func signature in definition");
 		return false;
 	}
 	if(!stmt->getSig()) {
@@ -217,7 +215,7 @@ bool SimplifyPass::visit(StmtFnDef *stmt, Stmt **source)
 		return true;
 	}
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
-		err::out(stmt, {"failed to apply simplify pass on func def block"});
+		err::out(stmt, "failed to apply simplify pass on func def block");
 		return false;
 	}
 	return true;
@@ -228,7 +226,7 @@ bool SimplifyPass::visit(StmtExtern *stmt, Stmt **source)
 {
 	if(!stmt->getEntity()) return true;
 	if(!visit(stmt->getEntity(), &stmt->getEntity())) {
-		err::out(stmt, {"failed to apply simplify pass on func signature in definition"});
+		err::out(stmt, "failed to apply simplify pass on func signature in definition");
 		return false;
 	}
 	if(!stmt->getEntity()) {
@@ -236,11 +234,11 @@ bool SimplifyPass::visit(StmtExtern *stmt, Stmt **source)
 		return true;
 	}
 	if(stmt->getHeaders() && !visit(stmt->getHeaders(), asStmt(&stmt->getHeaders()))) {
-		err::out(stmt, {"failed to apply simplify pass on header in extern"});
+		err::out(stmt, "failed to apply simplify pass on header in extern");
 		return false;
 	}
 	if(stmt->getLibs() && !visit(stmt->getLibs(), asStmt(&stmt->getLibs()))) {
-		err::out(stmt, {"failed to apply simplify pass on libs in extern"});
+		err::out(stmt, "failed to apply simplify pass on libs in extern");
 		return false;
 	}
 	return true;
@@ -257,7 +255,7 @@ bool SimplifyPass::visit(StmtVarDecl *stmt, Stmt **source)
 	for(size_t i = 0; i < stmt->getDecls().size(); ++i) {
 		auto &d = stmt->getDecls()[i];
 		if(!visit(d, asStmt(&d))) {
-			err::out(stmt, {"failed to apply simplify pass on variable declaration"});
+			err::out(stmt, "failed to apply simplify pass on variable declaration");
 			return false;
 		}
 		if(!d) {
@@ -275,11 +273,11 @@ bool SimplifyPass::visit(StmtCond *stmt, Stmt **source)
 {
 	for(auto &c : stmt->getConditionals()) {
 		if(c.getCond() && !visit(c.getCond(), &c.getCond())) {
-			err::out(stmt, {"failed to apply simplify pass on conditional condition"});
+			err::out(stmt, "failed to apply simplify pass on conditional condition");
 			return false;
 		}
 		if(c.getBlk() && !visit(c.getBlk(), asStmt(&c.getBlk()))) {
-			err::out(stmt, {"failed to apply simplify pass on conditional block"});
+			err::out(stmt, "failed to apply simplify pass on conditional block");
 			return false;
 		}
 	}
@@ -288,19 +286,19 @@ bool SimplifyPass::visit(StmtCond *stmt, Stmt **source)
 bool SimplifyPass::visit(StmtFor *stmt, Stmt **source)
 {
 	if(stmt->getInit() && !visit(stmt->getInit(), &stmt->getInit())) {
-		err::out(stmt, {"failed to apply simplify pass on for-loop init"});
+		err::out(stmt, "failed to apply simplify pass on for-loop init");
 		return false;
 	}
 	if(stmt->getCond() && !visit(stmt->getCond(), &stmt->getCond())) {
-		err::out(stmt, {"failed to apply simplify pass on for-loop cond"});
+		err::out(stmt, "failed to apply simplify pass on for-loop cond");
 		return false;
 	}
 	if(stmt->getIncr() && !visit(stmt->getIncr(), &stmt->getIncr())) {
-		err::out(stmt, {"failed to apply simplify pass on for-loop incr"});
+		err::out(stmt, "failed to apply simplify pass on for-loop incr");
 		return false;
 	}
 	if(!visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) {
-		err::out(stmt, {"failed to apply simplify pass on func def block"});
+		err::out(stmt, "failed to apply simplify pass on func def block");
 		return false;
 	}
 	return true;
@@ -308,7 +306,7 @@ bool SimplifyPass::visit(StmtFor *stmt, Stmt **source)
 bool SimplifyPass::visit(StmtRet *stmt, Stmt **source)
 {
 	if(stmt->getRetVal() && !visit(stmt->getRetVal(), &stmt->getRetVal())) {
-		err::out(stmt, {"failed to apply simplify pass on return value"});
+		err::out(stmt, "failed to apply simplify pass on return value");
 		return false;
 	}
 	return true;

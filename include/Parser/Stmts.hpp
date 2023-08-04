@@ -193,6 +193,18 @@ template<typename T> T *as(Stmt *data) { return static_cast<T *>(data); }
 
 template<typename T> Stmt **asStmt(T **data) { return (Stmt **)(data); }
 
+namespace err
+{
+template<typename... Args> void out(Stmt *stmt, Args &&...args)
+{
+	out(stmt->getLoc(), std::forward<Args>(args)...);
+}
+template<typename... Args> void outw(Stmt *stmt, Args &&...args)
+{
+	outw(stmt->getLoc(), std::forward<Args>(args)...);
+}
+} // namespace err
+
 class StmtBlock : public Stmt
 {
 	Vector<Stmt *> stmts;

@@ -1,6 +1,5 @@
 #include "Config.hpp"
 #include "Env.hpp"
-#include "FS.hpp"
 #include "Intrinsics.hpp"
 #include "Parser.hpp"
 #include "Passes/TypeAssign.hpp"
@@ -35,17 +34,17 @@ INTRINSIC(compilerpath)
 INTRINSIC(import)
 {
 	if(!args[0]->getTy()->isStrRef() || !args[0]->getVal() || !args[0]->getVal()->isStruct()) {
-		err::out(stmt, {"import must be a compile time computable string"});
+		err::out(stmt, "import must be a compile time computable string");
 		return false;
 	}
 	String modname = as<StructVal>(args[0]->getVal())->getStrFromRef();
 	if(modname.empty()) {
-		err::out(stmt, {"invalid comptime value for module string"});
+		err::out(stmt, "invalid comptime value for module string");
 		return false;
 	}
 
 	if(!c.getParser()->IsValidSource(modname)) {
-		err::out(stmt, {"Error: import file '", modname, "' does not exist"});
+		err::out(stmt, "Error: import file '", modname, "' does not exist");
 		return false;
 	}
 
@@ -59,7 +58,7 @@ INTRINSIC(import)
 		goto gen_import;
 	}
 	if(!parser->parse(modname)) {
-		err::out(stmt, {"failed to parse source: ", modname});
+		err::out(stmt, "failed to parse source: ", modname);
 		return false;
 	}
 	mod    = parser->getModule(modname);
@@ -75,7 +74,7 @@ gen_import:
 INTRINSIC(setstringrefty)
 {
 	if(!args[0]->getTy()->isStrRef() || !args[0]->getVal() || !args[0]->getVal()->isType()) {
-		err::out(stmt, {"the argument must be a valid type (struct/primitive)"});
+		err::out(stmt, "the argument must be a valid type (struct/primitive)");
 		return false;
 	}
 	StructTy::setStrRef(as<StructTy>(args[0]->getTy()));
@@ -153,7 +152,7 @@ INTRINSIC(szof)
 {
 	int64_t sz = SizeOf(args[0]->getTy());
 	if(!sz) {
-		err::out(args[0], {"invalid type info, received size 0"});
+		err::out(args[0], "invalid type info, received size 0");
 		return false;
 	}
 	stmt->setVal(IntVal::create(c, CDPERMA, sz));
@@ -163,7 +162,7 @@ INTRINSIC(as)
 {
 	// args[0] must have a value of type TypeVal
 	if(!args[0]->getVal() || !args[0]->getVal()->isType()) {
-		err::out(args[0], {"expected a type for the first argument to @as()"});
+		err::out(args[0], "expected a type for the first argument to @as()");
 		return false;
 	}
 	args[1]->castTo(as<TypeVal>(args[0]->getVal())->getVal(), args[0]->getStmtMask());
@@ -179,7 +178,7 @@ INTRINSIC(ptr)
 {
 	// args[0] should be a TypeVal
 	if(!args[0]->getVal() || !args[0]->getVal()->isType()) {
-		err::out(args[0], {"expected a type for the first argument to @ptr()"});
+		err::out(args[0], "expected a type for the first argument to @ptr()");
 		return false;
 	}
 	Type *res = as<TypeVal>(args[0]->getVal())->getVal()->specialize(c);
@@ -191,7 +190,7 @@ INTRINSIC(valen)
 {
 	TypeAssignPass *ta = c.getPass<TypeAssignPass>();
 	if(!ta->isFnVALen()) {
-		err::out(stmt, {"this is not a variadic function"});
+		err::out(stmt, "this is not a variadic function");
 		return false;
 	}
 	size_t vasz = ta->getFnVALen();
@@ -201,7 +200,7 @@ INTRINSIC(valen)
 INTRINSIC(array)
 {
 	if(!args[0]->getVal() || !args[0]->getVal()->isType()) {
-		err::out(args[0], {"expected array type for the first argument"});
+		err::out(args[0], "expected array type for the first argument");
 		return false;
 	}
 	Vector<int64_t> counts;
@@ -213,13 +212,13 @@ INTRINSIC(array)
 	for(auto &count : counts) {
 		resty = PtrTy::get(c, resty, count, false);
 		if(!resty) {
-			err::out(stmt, {"failed to create array - 0 count provided"});
+			err::out(stmt, "failed to create array - 0 count provided");
 			return false;
 		}
 	}
 	Value *res = resty->toDefaultValue(c, stmt->getLoc(), CDPERMA);
 	if(!res) {
-		err::out(stmt, {"failed to get default value from array's type"});
+		err::out(stmt, "failed to get default value from array's type");
 		return false;
 	}
 	stmt->setTyVal(resty, res);
@@ -228,14 +227,14 @@ INTRINSIC(array)
 INTRINSIC(enumtagty)
 {
 	if(!args[0]->getVal() || !args[0]->getVal()->isNamespace()) {
-		err::out(args[0], {"expected an enum for the first argument"});
+		err::out(args[0], "expected an enum for the first argument");
 		return false;
 	}
 	Value *v	   = args[0]->getVal();
 	TypeAssignPass *ta = c.getPass<TypeAssignPass>();
 	Type *ty	   = ta->getEnumTagTy(as<NamespaceVal>(v)->getVal());
 	if(!ty) {
-		err::out(stmt, {"invalid enum encountered: ", as<NamespaceVal>(v)->getVal()});
+		err::out(stmt, "invalid enum encountered: ", as<NamespaceVal>(v)->getVal());
 		return false;
 	}
 	stmt->setTypeVal(c, ty);
@@ -243,7 +242,7 @@ INTRINSIC(enumtagty)
 }
 INTRINSIC(assn_ptr)
 {
-	err::out(stmt, {"assn pointer intrinsic does not work on values"});
+	err::out(stmt, "assn pointer intrinsic does not work on values");
 	return false;
 }
 // enum is:
@@ -294,7 +293,7 @@ INTRINSIC(compileerror)
 			e += a->getVal()->toStr();
 		}
 	}
-	err::out(stmt, {e});
+	err::out(stmt, e);
 	return false;
 }
 INTRINSIC(setmaxcompilererr)

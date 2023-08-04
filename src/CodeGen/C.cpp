@@ -7,7 +7,6 @@
 #include "Env.hpp"
 #include "FS.hpp"
 #include "Parser.hpp"
-#include "Utils.hpp"
 
 namespace sc
 {
@@ -93,8 +92,7 @@ bool CDriver::compile(StringRef outfile)
 	Module *mainmod = parser.getMainModule();
 	Writer mainwriter;
 	if(!visit(mainmod->getParseTree(), mainwriter, false)) {
-		err::out(mainmod->getParseTree(),
-			 {"failed to compile module: ", mainmod->getPath()});
+		err::out(mainmod->getParseTree(), "failed to compile module: ", mainmod->getPath());
 		return false;
 	}
 	Writer finalmod;
@@ -151,15 +149,15 @@ bool CDriver::compile(StringRef outfile)
 		StringRef res = cliargs.val("opt");
 		if(res.empty()) {
 			err::out(mainmod->getParseTree(),
-				 {"optimization option must have a value, found nothing"});
+				 "optimization option must have a value, found nothing");
 			return false;
 		}
 		if(res != "0" && res != "1" && res != "2" && res != "3" && res != "s" && res != "z")
 		{
 			err::out(mainmod->getParseTree(),
-				 {"optimization option value must be one of"
-				  " 0, 1, 2, 3, s, or z; found: ",
-				  res});
+				 "optimization option value must be one of"
+				 " 0, 1, 2, 3, s, or z; found: ",
+				 res);
 			return false;
 		}
 		opt = res;
@@ -168,12 +166,12 @@ bool CDriver::compile(StringRef outfile)
 		StringRef res = cliargs.val("std");
 		if(res.empty()) {
 			err::out(mainmod->getParseTree(),
-				 {"standard option must have a value, found nothing"});
+				 "standard option must have a value, found nothing");
 			return false;
 		}
 		if(res != "11" && res != "14" && res != "17") {
-			err::out(mainmod->getParseTree(), {"standard option value must be"
-							   " one of 11, 14, or 17; found nothing"});
+			err::out(mainmod->getParseTree(), "standard option value must be"
+							  " one of 11, 14, or 17; found nothing");
 			return false;
 		}
 		std = res;
@@ -191,7 +189,7 @@ bool CDriver::compile(StringRef outfile)
 	FILE *f = fopen(tmpfile.c_str(), "w+");
 	if(!f) {
 		err::out(mainmod->getParseTree(),
-			 {"failed to create file for writing C code: ", tmpfile});
+			 "failed to create file for writing C code: ", tmpfile);
 		return false;
 	}
 	fprintf(f, "%s\n", finalmod.getData().c_str());
@@ -221,9 +219,8 @@ bool CDriver::compile(StringRef outfile)
 	if(llir) cmd += ".ll -S -emit-llvm";
 	int res = env::exec(cmd);
 	if(res) {
-		StringRef resref = ctx.strFrom((int64_t)res);
 		err::out(mainmod->getParseTree(),
-			 {"failed to compile code, got compiler exit status: ", resref});
+			 "failed to compile code, got compiler exit status: ", res);
 		return false;
 	}
 	return true;
@@ -255,8 +252,8 @@ bool CDriver::visit(Stmt *stmt, Writer &writer, bool semicol)
 	case BREAK: res = visit(as<StmtBreak>(stmt), tmp, semicol); break;
 	case DEFER: res = visit(as<StmtDefer>(stmt), tmp, semicol); break;
 	default: {
-		err::out(stmt, {"invalid statement found for C code generation: %s",
-				stmt->getStmtTypeCString()});
+		err::out(stmt, "invalid statement found for C code generation: ",
+			 stmt->getStmtTypeCString());
 		break;
 	}
 	}
@@ -286,7 +283,7 @@ bool CDriver::visit(StmtBlock *stmt, Writer &writer, bool semicol)
 		auto &s = stmt->getStmts()[i];
 		Writer tmp(writer);
 		if(!visit(s, tmp, acceptsSemicolon(s))) {
-			err::out(stmt, {"failed to generate IR for block"});
+			err::out(stmt, "failed to generate IR for block");
 			return false;
 		}
 		if(tmp.empty()) continue;
@@ -333,8 +330,8 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 	if(stmt->getVal() && stmt->getVal()->hasPermaData()) {
 		String cval;
 		if(!getCValue(cval, stmt, stmt->getVal(), stmt->getTy())) {
-			err::out(stmt, {"failed to get C value for scribe value: ",
-					stmt->getVal()->toStr()});
+			err::out(
+			stmt, "failed to get C value for scribe value: ", stmt->getVal()->toStr());
 			return false;
 		}
 		if(!cval.empty()) {
@@ -352,7 +349,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 	   oper == lex::UAND || oper == lex::UMUL)
 	{
 		if(!visit(lhs, l, false)) {
-			err::out(stmt, {"failed to generate C code for LHS in expression"});
+			err::out(stmt, "failed to generate C code for LHS in expression");
 			return false;
 		}
 	}
@@ -455,11 +452,11 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 		lex::Tok &optok = stmt->getOper().getTok();
 		if(oper == lex::SUBS && lhs->getTy()->isPtr()) {
 			if(!visit(lhs, l, false)) {
-				err::out(stmt, {"failed to generate C code for LHS in expression"});
+				err::out(stmt, "failed to generate C code for LHS in expression");
 				return false;
 			}
 			if(!visit(rhs, r, false)) {
-				err::out(stmt, {"failed to generate C code for RHS in expression"});
+				err::out(stmt, "failed to generate C code for RHS in expression");
 				return false;
 			}
 			writer.append(l);
@@ -470,7 +467,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 		}
 		if(lhs->getTy()->isPrimitiveOrPtr() && (!rhs || rhs->getTy()->isPrimitiveOrPtr())) {
 			if(!visit(lhs, l, false)) {
-				err::out(stmt, {"failed to generate C code for LHS in expression"});
+				err::out(stmt, "failed to generate C code for LHS in expression");
 				return false;
 			}
 			if(optok.isUnaryPre()) {
@@ -488,7 +485,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 				break;
 			}
 			if(!visit(rhs, r, false)) {
-				err::out(stmt, {"failed to generate C code for RHS in expression"});
+				err::out(stmt, "failed to generate C code for RHS in expression");
 				return false;
 			}
 			if(oper != lex::ASSN) writer.write("(");
@@ -510,7 +507,7 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 		writer.write(")");
 		break;
 	}
-	default: err::out(stmt->getOper(), {"nonexistent operator"}); return false;
+	default: err::out(stmt->getOper(), "nonexistent operator"); return false;
 	}
 	return true;
 }
@@ -553,7 +550,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 			macros.push_back(ctx.moveStr(std::move(macro)));
 		}
 		if(!visit(stmt->getVVal(), writer, false)) {
-			err::out(stmt, {"failed to generate C code for extern variable"});
+			err::out(stmt, "failed to generate C code for extern variable");
 			return false;
 		}
 		return true;
@@ -561,7 +558,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 	if(stmt->getVVal() && stmt->getVVal()->isFnDef()) {
 		Writer tmp(writer);
 		if(!visit(stmt->getVVal(), tmp, false)) {
-			err::out(stmt, {"failed to generate C code for function def"});
+			err::out(stmt, "failed to generate C code for function def");
 			return false;
 		}
 
@@ -569,8 +566,8 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		StmtType *sigret = fn->getSigRetType();
 		CTy retcty;
 		if(!getCType(retcty, sigret->getLoc(), sigret->getTy())) {
-			err::out(stmt, {"failed to determine C type for scribe type: ",
-					sigret->getTy()->toStr()});
+			err::out(stmt, "failed to determine C type for scribe type: ",
+				 sigret->getTy()->toStr());
 			return false;
 		}
 		retcty.setConst(sigret->isConst());
@@ -585,7 +582,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		// add declaration (at the top) for the function
 		Writer decl;
 		if(!visit(as<StmtFnDef>(stmt->getVVal())->getSig(), decl, true)) {
-			err::out(stmt, {"failed to generate C code for function def"});
+			err::out(stmt, "failed to generate C code for function def");
 			return false;
 		}
 		decl.insertAfter(retcty.size(), varname);
@@ -606,8 +603,8 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 			Writer tmp(writer);
 			Stmt *val = stmt->getVVal();
 			if(!visit(val, tmp, false)) {
-				err::out(stmt, {"failed to get C value for scribe value: ",
-						stmt->getVal()->toStr()});
+				err::out(stmt, "failed to get C value for scribe value: ",
+					 stmt->getVal()->toStr());
 				return false;
 			}
 			macros.push_back(ctx.strFrom({"#define ", varname, " ", tmp.getData()}));
@@ -634,13 +631,12 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 		String cval;
 		Type *t = stmt->getTy();
 		if(!getCType(cty, stmt->getLoc(), t)) {
-			err::out(stmt,
-				 {"failed to determine C type for scribe type: ", t->toStr()});
+			err::out(stmt, "failed to determine C type for scribe type: ", t->toStr());
 			return false;
 		}
 		if(!getCValue(cval, stmt, stmt->getVal(), stmt->getTy())) {
-			err::out(stmt, {"failed to get C value for scribe value: ",
-					stmt->getVal()->toStr()});
+			err::out(
+			stmt, "failed to get C value for scribe value: ", stmt->getVal()->toStr());
 			return false;
 		}
 		cty.setStatic(stmt->isStatic());
@@ -653,7 +649,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 
 	Writer tmp(writer);
 	if(stmt->getVVal() && !visit(stmt->getVVal(), tmp, false)) {
-		err::out(stmt, {"failed to generate C code from scribe declaration value"});
+		err::out(stmt, "failed to generate C code from scribe declaration value");
 		return false;
 	}
 	// check if value is itself an externed variable, if so, make this a macro
@@ -669,7 +665,7 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 	CTy cty;
 	Type *valty = stmt->getCast() ? stmt->getCast() : stmt->getTy();
 	if(!getCType(cty, stmt->getLoc(), valty)) {
-		err::out(stmt, {"unable to determine C type for scribe type: ", valty->toStr()});
+		err::out(stmt, "unable to determine C type for scribe type: ", valty->toStr());
 		return false;
 	}
 	cty.setStatic(stmt->isStatic());
@@ -695,7 +691,7 @@ bool CDriver::visit(StmtFnSig *stmt, Writer &writer, bool semicol)
 	Stmt *retty = stmt->getRetType();
 	if(!getCType(cty, retty->getLoc(), retty->getTy())) {
 		err::out(stmt,
-			 {"unable to determine C type for scribe type: ", stmt->getTy()->toStr()});
+			 "unable to determine C type for scribe type: ", stmt->getTy()->toStr());
 		return false;
 	}
 	cty.setConst(retty->isConst());
@@ -706,7 +702,7 @@ bool CDriver::visit(StmtFnSig *stmt, Writer &writer, bool semicol)
 		auto &a = stmt->getArgs()[i];
 		Writer tmp(writer);
 		if(!visit(a, tmp, false)) {
-			err::out(stmt, {"failed to generate C code for function arg"});
+			err::out(stmt, "failed to generate C code for function arg");
 			return false;
 		}
 		writer.append(tmp);
@@ -718,13 +714,13 @@ bool CDriver::visit(StmtFnSig *stmt, Writer &writer, bool semicol)
 bool CDriver::visit(StmtFnDef *stmt, Writer &writer, bool semicol)
 {
 	if(!visit(stmt->getSig(), writer, false)) {
-		err::out(stmt, {"failed to generate C code for function"});
+		err::out(stmt, "failed to generate C code for function");
 		return false;
 	}
 	if(!stmt->getBlk()) return true;
 	writer.write(" ");
 	if(!visit(stmt->getBlk(), writer, false)) {
-		err::out(stmt, {"failed to generate C code for function block"});
+		err::out(stmt, "failed to generate C code for function block");
 		return false;
 	}
 	return true;
@@ -765,7 +761,7 @@ bool CDriver::visit(StmtExtern *stmt, Writer &writer, bool semicol)
 }
 bool CDriver::visit(StmtEnum *stmt, Writer &writer, bool semicol)
 {
-	err::out(stmt, {"Unimplemented enum C code generation"});
+	err::out(stmt, "Unimplemented enum C code generation");
 	return false;
 }
 bool CDriver::visit(StmtStruct *stmt, Writer &writer, bool semicol)
@@ -780,7 +776,7 @@ bool CDriver::visit(StmtVarDecl *stmt, Writer &writer, bool semicol)
 		auto &d = stmt->getDecls()[i];
 		Writer tmp(writer);
 		if(!visit(d, tmp, semicol)) {
-			err::out(stmt, {"failed to generate C code for var decl"});
+			err::out(stmt, "failed to generate C code for var decl");
 			return false;
 		}
 		writer.append(tmp);
@@ -796,7 +792,7 @@ bool CDriver::visit(StmtCond *stmt, Writer &writer, bool semicol)
 	if(stmt->isInline()) {
 		if(stmt->getConditionals().empty()) return true;
 		if(!visit(stmt->getConditionals().back().getBlk(), writer, false)) {
-			err::out(stmt, {"failed to generate C code for inline conditional block"});
+			err::out(stmt, "failed to generate C code for inline conditional block");
 			return false;
 		}
 		return true;
@@ -808,15 +804,14 @@ bool CDriver::visit(StmtCond *stmt, Writer &writer, bool semicol)
 			writer.write("if(");
 			Writer tmp(writer);
 			if(!visit(c.getCond(), tmp, false)) {
-				err::out(c.getCond(),
-					 {"failed to generate C code for conditional"});
+				err::out(c.getCond(), "failed to generate C code for conditional");
 				return false;
 			}
 			writer.append(tmp);
 			writer.write(") ");
 		}
 		if(!visit(c.getBlk(), writer, false)) {
-			err::out(stmt, {"failed to generate C code for conditional block"});
+			err::out(stmt, "failed to generate C code for conditional block");
 			return false;
 		}
 	}
@@ -828,7 +823,7 @@ bool CDriver::visit(StmtFor *stmt, Writer &writer, bool semicol)
 		if(stmt->getBlk()->getStmts().empty()) return true;
 		Writer tmp(writer);
 		if(!visit(stmt->getBlk(), tmp, false)) {
-			err::out(stmt, {"failed to generate C code for inline for-loop block"});
+			err::out(stmt, "failed to generate C code for inline for-loop block");
 			return false;
 		}
 		writer.append(tmp);
@@ -838,7 +833,7 @@ bool CDriver::visit(StmtFor *stmt, Writer &writer, bool semicol)
 	if(stmt->getInit()) {
 		Writer tmp(writer);
 		if(!visit(stmt->getInit(), tmp, false)) {
-			err::out(stmt, {"failed to generate C code for for-loop init"});
+			err::out(stmt, "failed to generate C code for for-loop init");
 			return false;
 		}
 		writer.append(tmp);
@@ -848,7 +843,7 @@ bool CDriver::visit(StmtFor *stmt, Writer &writer, bool semicol)
 		writer.write(" ");
 		Writer tmp(writer);
 		if(!visit(stmt->getCond(), tmp, false)) {
-			err::out(stmt, {"failed to generate C code for for-loop condition"});
+			err::out(stmt, "failed to generate C code for for-loop condition");
 			return false;
 		}
 		writer.append(tmp);
@@ -858,7 +853,7 @@ bool CDriver::visit(StmtFor *stmt, Writer &writer, bool semicol)
 		writer.write(" ");
 		Writer tmp(writer);
 		if(!visit(stmt->getIncr(), tmp, false)) {
-			err::out(stmt, {"failed to generate C code for for-loop incr"});
+			err::out(stmt, "failed to generate C code for for-loop incr");
 			return false;
 		}
 		writer.append(tmp);
@@ -866,7 +861,7 @@ bool CDriver::visit(StmtFor *stmt, Writer &writer, bool semicol)
 	writer.write(") ");
 	Writer tmp(writer);
 	if(!visit(stmt->getBlk(), tmp, false)) {
-		err::out(stmt, {"failed to generate C code for for-loop block"});
+		err::out(stmt, "failed to generate C code for for-loop block");
 		return false;
 	}
 	writer.append(tmp);
@@ -880,7 +875,7 @@ bool CDriver::visit(StmtRet *stmt, Writer &writer, bool semicol)
 	}
 	Writer tmp(writer);
 	if(!visit(stmt->getRetVal(), tmp, false)) {
-		err::out(stmt, {"failed to generate C code for return value"});
+		err::out(stmt, "failed to generate C code for return value");
 		return false;
 	}
 	writer.write("return ");
@@ -905,7 +900,7 @@ bool CDriver::visit(StmtBreak *stmt, Writer &writer, bool semicol)
 }
 bool CDriver::visit(StmtDefer *stmt, Writer &writer, bool semicol)
 {
-	err::out(stmt, {"defer should never come as a part of code generation"});
+	err::out(stmt, "defer should never come as a part of code generation");
 	return false;
 }
 
@@ -952,17 +947,17 @@ StringRef CDriver::getConstantDataVar(const lex::Lexeme &val, Type *ty)
 		break;
 	case lex::CHAR:
 		value += '\'';
-		appendRawString(value, val.getDataStr());
+		value += toRawString(val.getDataStr());
 		value += '\'';
 		key  = value;
 		type = "const i8";
 		break;
 	case lex::STR: {
-		appendRawString(value, val.getDataStr());
-		size_t sz = value.size();
-		value	  = "{\"" + value;
+		String tmp = toRawString(val.getDataStr());
+		value	   = "{\"";
+		value += tmp;
 		value += "\", ";
-		value += std::to_string(sz);
+		value += std::to_string(tmp.size());
 		value += "}";
 		key  = value;
 		type = getCTypeForStringRef(ctx, val.getLoc());
@@ -1050,7 +1045,7 @@ bool CDriver::getCType(CTy &cty, const ModuleLoc *loc, Type *ty)
 		Type *ctyp = as<TypeTy>(ty)->getContainedTy();
 		if(!getCType(cty, loc, ctyp)) {
 			err::out(loc,
-				 {"failed to determine C type for scribe type: ", ctyp->toStr()});
+				 "failed to determine C type for scribe type: ", ctyp->toStr());
 			return false;
 		}
 		return true;
@@ -1069,8 +1064,7 @@ bool CDriver::getCType(CTy &cty, const ModuleLoc *loc, Type *ty)
 		Type *to = as<PtrTy>(ty)->getTo();
 		cty.setWeak(as<PtrTy>(ty)->isWeak());
 		if(!getCType(cty, loc, to)) {
-			err::out(loc,
-				 {"failed to determine C type for scribe type: ", to->toStr()});
+			err::out(loc, "failed to determine C type for scribe type: ", to->toStr());
 			return false;
 		}
 		if(!as<PtrTy>(ty)->getCount()) cty.incPtrs();
@@ -1082,14 +1076,14 @@ bool CDriver::getCType(CTy &cty, const ModuleLoc *loc, Type *ty)
 	if(ty->isStruct()) {
 		StructTy *s = as<StructTy>(ty);
 		if(!addStructDef(loc, s)) {
-			err::out(loc, {"failed to add struct def '", s->toStr(), "' in C code"});
+			err::out(loc, "failed to add struct def '", s->toStr(), "' in C code");
 			return false;
 		}
 		cty.base = "struct_";
 		cty.base += std::to_string(s->getUniqID());
 		return true;
 	}
-	err::out(loc, {"invalid scribe type encountered: ", ty->toStr()});
+	err::out(loc, "invalid scribe type encountered: ", ty->toStr());
 	return false;
 }
 bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool i8_to_char)
@@ -1136,8 +1130,8 @@ bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool 
 		for(auto &e : as<VecVal>(value)->getVal()) {
 			String cval;
 			if(!getCValue(cval, stmt, e, to, is_str)) {
-				err::out(stmt, {"failed to determine C value of scribe value: ",
-						e->toStr()});
+				err::out(
+				stmt, "failed to determine C value of scribe value: ", e->toStr());
 				return false;
 			}
 			res += cval;
@@ -1158,8 +1152,8 @@ bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool 
 			Value *fv = as<StructVal>(value)->getField(st->getFieldName(i));
 			String cval;
 			if(!getCValue(cval, stmt, fv, st->getField(i))) {
-				err::out(stmt, {"failed to determine C value of scribe value: ",
-						fv->toStr()});
+				err::out(
+				stmt, "failed to determine C value of scribe value: ", fv->toStr());
 				return false;
 			}
 			res += cval;
@@ -1173,9 +1167,8 @@ bool CDriver::getCValue(String &res, Stmt *stmt, Value *value, Type *type, bool 
 		return true;
 	}
 	default: {
-		err::out(stmt, {"failed to generate C value for value: ", value->toStr(),
-				" (value id: ", std::to_string(value->getValType()),
-				") with type: ", type->toStr()});
+		err::out(stmt, "failed to generate C value for value: ", value->toStr(),
+			 " (value id: ", value->getValType(), ") with type: ", type->toStr());
 		break;
 	}
 	}
@@ -1203,7 +1196,7 @@ bool CDriver::addStructDef(const ModuleLoc *loc, StructTy *sty)
 		Type *t		    = sty->getField(i);
 		cty.setDecl(true);
 		if(!getCType(cty, loc, t)) {
-			err::out(loc, {"failed to determine C type for scribe type: ", t->toStr()});
+			err::out(loc, "failed to determine C type for scribe type: ", t->toStr());
 			return false;
 		}
 		cty.setStatic(stdecl && stdecl->getField(i)->isStatic());
@@ -1232,8 +1225,8 @@ bool CDriver::applyCast(Stmt *stmt, Writer &writer, Writer &tmp)
 		CTy cty;
 		cty.setCast(true);
 		if(!getCType(cty, stmt->getLoc(), stmt->getCast())) {
-			err::out(stmt, {"received invalid c type name for scribe cast type: ",
-					stmt->getCast()->toStr()});
+			err::out(stmt, "received invalid c type name for scribe cast type: ",
+				 stmt->getCast()->toStr());
 			return false;
 		}
 		cty.setConst(stmt->isCastConst());
@@ -1267,7 +1260,7 @@ bool CDriver::writeCallArgs(const ModuleLoc *loc, const Vector<Stmt *> &args, Ty
 		uint8_t castmask = a->getCastStmtMask();
 		a->castTo(nullptr, (uint8_t)0);
 		if(!visit(a, tmp, false)) {
-			err::out(loc, {"failed to generate C code for func call argument"});
+			err::out(loc, "failed to generate C code for func call argument");
 			return false;
 		}
 		a->castTo(cast, castmask);
@@ -1300,8 +1293,7 @@ bool CDriver::getFuncPointer(CTy &res, FuncTy *f, const ModuleLoc *loc)
 	cty.setDecl(res.isDecl());
 	cty.setWeak(res.isWeak());
 	if(!getCType(cty, loc, f->getRet())) {
-		err::out(loc,
-			 {"failed to determine C type for scribe type: ", f->getRet()->toStr()});
+		err::out(loc, "failed to determine C type for scribe type: ", f->getRet()->toStr());
 		return false;
 	}
 	cty.setConst(f->getSig() && f->getSig()->getRetType()->isConst());
@@ -1315,7 +1307,7 @@ bool CDriver::getFuncPointer(CTy &res, FuncTy *f, const ModuleLoc *loc)
 		StmtVar *arg = f->getSig() ? f->getSig()->getArg(i) : nullptr;
 		cty.clear();
 		if(!getCType(cty, loc, t)) {
-			err::out(loc, {"failed to determine C type for scribe type: ", t->toStr()});
+			err::out(loc, "failed to determine C type for scribe type: ", t->toStr());
 			return false;
 		}
 		cty.setConst(arg && arg->isConst());
