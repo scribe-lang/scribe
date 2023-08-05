@@ -490,7 +490,30 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 		StructTy *st		 = as<StructTy>(as<TypeVal>(lv)->getVal());
 		StmtFnCallInfo *callinfo = as<StmtFnCallInfo>(rhs);
 		Vector<Stmt *> &args	 = callinfo->getArgs();
-		if(!(st = st->instantiate(ctx, stmt->getLoc(), callinfo->getArgs()))) {
+		for(size_t i = 0; i < args.size(); ++i) {
+			if(!args[i]->getTy()->isVariadic()) continue;
+			StmtSimple *a = as<StmtSimple>(args[i]);
+			if(a->getVal() && !a->getVal()->isVec()) {
+				err::out(a, "variadic value must be a vector");
+				return false;
+			}
+			args.erase(args.begin() + i);
+			StringRef name = a->getLexValue().getDataStr();
+			VariadicTy *vt = as<VariadicTy>(a->getTy());
+			VecVal *vv     = nullptr;
+			if(a->getVal()) vv = as<VecVal>(a->getVal());
+			for(size_t j = 0; j < vt->getArgs().size(); ++j) {
+				StringRef newn	 = ctx.strFrom({name, "__", ctx.strFrom(j)});
+				StmtSimple *newa = as<StmtSimple>(a->clone(ctx));
+				newa->getLexValue().setDataStr(newn);
+				newa->setTy(vt->getArg(j));
+				if(a->getVal()) newa->setVal(vv->getValAt(j));
+				args.insert(args.begin() + i, newa);
+				++i;
+			}
+			if(vt->getArgs().size() > 0) --i;
+		}
+		if(!(st = st->instantiate(ctx, stmt->getLoc(), args))) {
 			err::out(stmt, "failed to instantiate struct with given arguments");
 			return false;
 		}

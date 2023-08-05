@@ -17,13 +17,20 @@ let global r = inline fn(data: StringRef): *const i8 {
 	return data.cStr();
 };
 
+let subRef in const StringRef = fn(start: u64, count: u64): StringRef {
+	if start >= self.length { return StringRef{nil, 0}; }
+	if count == STRING_NPOS { count = self.length - start; }
+	elif start + count > self.length { count = self.length - start; }
+	return StringRef{&self.data[start], count};
+};
+
 let subRefCStr = fn(data: *const i8, start: u64, count: u64): StringRef {
-	if count == 0 { count = c.strlen(&data[start]); }
+	if count == STRING_NPOS { count = c.strlen(&data[start]); }
 	return StringRef{&data[start], count};
 };
 
 let getRefCStr = inline fn(data: *const i8): StringRef {
-	return subRefCStr(data, 0, 0);
+	return subRefCStr(data, 0, STRING_NPOS);
 };
 
 let global toStringRef = fn(data: &const any): StringRef {
@@ -34,7 +41,7 @@ let global toStringRef = fn(data: &const any): StringRef {
 	}
 };
 
-let getRef in const i8 = inline fn(): StringRef {
+let ref in const i8 = inline fn(): StringRef {
 	return subRefCStr(&self, 0, 1);
 };
 
@@ -64,13 +71,6 @@ let __eq__ in const StringRef = fn(other: StringRef): i1 {
 
 let __ne__ in const StringRef = inline fn(other: StringRef): i1 {
 	return !(self == other);
-};
-
-let subRef in const StringRef = fn(start: u64, count: u64): StringRef {
-	if start >= self.length { return StringRef{nil, 0}; }
-	if count == 0 || count == STRING_NPOS { count = self.length - start; }
-	elif start + count > self.length { count = self.length - start; }
-	return StringRef{&self.data[start], count};
 };
 
 let find in const StringRef = fn(other: StringRef): u64 {
@@ -115,4 +115,27 @@ let rfind in const StringRef = fn(other: StringRef): u64 {
 		--j;
 	}
 	return pos;
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Conversion Functions
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+let int in const StringRef = fn(): i64 {
+	let tmp: @array(i8, 1024);
+	c.strncpy(tmp, self.data, self.length);
+	tmp[self.length] = '\0';
+	return c.atoll(tmp);
+};
+let uint in const StringRef = fn(): u64 {
+	let tmp: @array(i8, 1024);
+	c.strncpy(tmp, self.data, self.length);
+	tmp[self.length] = '\0';
+	return c.atoull(tmp);
+};
+let flt in const StringRef = fn(): f64 {
+	let tmp: @array(i8, 1024);
+	c.strncpy(tmp, self.data, self.length);
+	tmp[self.length] = '\0';
+	return c.atof(tmp);
 };

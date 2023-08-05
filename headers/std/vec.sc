@@ -60,6 +60,11 @@ let pushVal in Vec = inline fn(d: self.T): self {
 	return self.push(d);
 };
 
+let emplace in Vec = fn(args: ...&const any): self {
+	self.push(self.T{args});
+	return self;
+};
+
 let insert in Vec = fn(d: &const self.T, idx: u64): self {
 	if idx >= self.length { return self.push(d); }
 	if self.length >= self.capacity {
