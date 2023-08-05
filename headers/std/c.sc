@@ -43,6 +43,9 @@ let strerror = extern[strerror, "<string.h>"] fn(errnum: i32): *const i8;
 let dirname = extern[dirname, "<libgen.h>"] fn(path: *i8): *i8;
 let basename = extern[basename, "<libgen.h>"] fn(path: *i8): *i8;
 let _wexitstatus = extern[WEXITSTATUS, "<stdlib.h>"] fn(status: i32): i32;
+let atoll = extern[atoll, "<stdlib.h>"] fn(str: *const i8): i64;
+let atoull = extern[atoull, "<stdlib.h>"] fn(str: *const i8): u64;
+let atof =  extern[atof, "<stdlib.h>"] fn(str: *const i8): f64;
 
 let getTypeSpecifier = inline fn(comptime ty: type): *const i8 {
 	inline if @isEqualTy(ty, i1) || @isEqualTy(ty, i16) || @isEqualTy(ty, i32) {

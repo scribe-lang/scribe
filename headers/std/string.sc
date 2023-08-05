@@ -153,15 +153,12 @@ let subString in const String = fn(start: u64, count: u64): String {
 // StringRef related functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-let getRef in const String = inline fn(): StringRef {
+let ref in const String = inline fn(): StringRef {
 	return StringRef{self.data, self.length};
 };
 
-let subRef in const String = fn(start: u64, count: u64): StringRef {
-	if start >= self.length { return StringRef{nil, 0}; }
-	if count == 0 || count == NPOS { count = self.length - start; }
-	elif start + count > self.length { count = self.length - start; }
-	return StringRef{&self.data[start], count};
+let subRef in const String = inline fn(start: u64, count: u64): StringRef {
+	return self.ref().subRef(start, count);
 };
 
 let isSpace in const i8 = inline fn(): i1 {
@@ -337,11 +334,11 @@ let __ne__ in const String = inline fn(other: &const String): i1 {
 };
 
 let find in const String = inline fn(other: StringRef): u64 {
-	return self.getRef().find(other);
+	return self.ref().find(other);
 };
 
 let rfind in const String = inline fn(other: StringRef): u64 {
-	return self.getRef().rfind(other);
+	return self.ref().rfind(other);
 };
 
 let delim in const String = fn(ch: i8): vec.Vec(String) {
@@ -380,6 +377,20 @@ let trim in String = fn() {
 		self.erase(i);
 		--i;
 	}
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Conversion Functions
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+let int in const String = inline fn(): i64 {
+	return c.atoll(self.cStr());
+};
+let uint in const String = inline fn(): u64 {
+	return c.atoull(self.cStr());
+};
+let flt in const String = inline fn(): f64 {
+	return c.atof(self.cStr());
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

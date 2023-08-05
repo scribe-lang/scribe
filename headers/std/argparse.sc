@@ -182,11 +182,11 @@ let parse in ArgParser = fn(): i1 {
 		if arg.find("-") == 0 {
 			arg = arg.subRef(1, 0);
 			for let i: u64 = 0; i < arg.len(); ++i {
-				if !self.shrtargs.find(arg[i].getRef()) {
+				if !self.shrtargs.find(arg[i].ref()) {
 					err.push(1, "Invalid option encountered: -", arg[i]);
 					return false;
 				}
-				let a = self.args.get(self.shrtargs.get(arg[i].getRef()));
+				let a = self.args.get(self.shrtargs.get(arg[i].ref()));
 				a.setPresent(true);
 				if a.isReqd() { a.setReqd(false); }
 				if a.isValReqd() {

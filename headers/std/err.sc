@@ -47,7 +47,7 @@ let allToRef = fn(data: ...&const any): StringRef {
 	inline if len == 1 && @isCString(data[0]) {
 		return string.getRefCStr(data[0]);
 	} elif len == 1 && @isEqualTy(data[0], string.String) {
-		return data[0].getRef();
+		return data[0].ref();
 	} elif len == 1 && @isEqualTy(data[0], StringRef) {
 		return data[0];
 	} else {
@@ -56,7 +56,7 @@ let allToRef = fn(data: ...&const any): StringRef {
 			errstr.append(data[i]); // String.append() is a generic function
 		}
 		strlist.push(errstr);
-		return strlist.back().getRef();
+		return strlist.back().ref();
 	}
 };
 
