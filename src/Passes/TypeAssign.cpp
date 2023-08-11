@@ -224,7 +224,7 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		Module *mod    = stmt->getMod();
 		StringRef name = stmt->getLexValue().getDataStr();
 		VarDecl *res   = nullptr;
-		if(!stmt->isAppliedModuleID()) {
+		if(!stmt->isModuleIDManglingDisabled()) {
 			StringRef mangled_name = getMangledName(stmt, name);
 			res		       = vmgr.getAll(mangled_name, false);
 			if(res) stmt->updateLexDataStr(mangled_name);
@@ -233,9 +233,12 @@ bool TypeAssignPass::visit(StmtSimple *stmt, Stmt **source)
 		if(!res) break; // error out - undefined variable
 		stmt->setTyVal(res->ty, res->val);
 		decl = res->decl;
-		stmt->setAppliedModuleID(true);
+		stmt->disableModuleIDMangling();
 		stmt->setDecl(decl);
-		if(decl) stmt->setStmtMask(decl->getStmtMask());
+		if(decl) {
+			stmt->setStmtMask(decl->getStmtMask());
+			if(decl->isCodeGenManglingDisabled()) stmt->disableCodeGenMangling();
+		}
 		break;
 	}
 	default: return false;
@@ -288,7 +291,7 @@ bool TypeAssignPass::visit(StmtExpr *stmt, Stmt **source)
 			NamespaceVal *import = as<NamespaceVal>(lhs->getVal());
 			StringRef mangled    = getMangledName(rhs, rdata, import);
 			rsim->updateLexDataStr(mangled);
-			rsim->setAppliedModuleID(true);
+			rsim->disableModuleIDMangling();
 			if(!visit(stmt->getRHS(), &stmt->getRHS())) {
 				err::out(stmt, "failed to determine type of RHS in dot expression");
 				return false;
@@ -772,14 +775,16 @@ bool TypeAssignPass::visit(StmtVar *stmt, Stmt **source)
 		if(stmt->isIn()) goto post_mangling;
 	}
 	if(val && val->isExtern()) {
-		as<StmtExtern>(val)->setParentVar(stmt);
-		if(!as<StmtExtern>(val)->getEntity()) skip_val = true;
+		StmtExtern *ext = as<StmtExtern>(val);
+		ext->setParentVar(stmt);
+		if(!ext->getEntity()) skip_val = true;
+		if(ext->getEntity() && ext->getEntity()->isFnSig()) stmt->disableCodeGenMangling();
 	}
 	if(stmt->isGlobal()) goto post_mangling;
-	if(disabled_varname_mangling || stmt->isAppliedModuleID()) goto post_mangling;
+	if(disabled_varname_mangling || stmt->isModuleIDManglingDisabled()) goto post_mangling;
 	stmt->getName().setDataStr(getMangledName(stmt, stmt->getName().getDataStr()));
-	stmt->setAppliedModuleID(true);
 post_mangling:
+	stmt->disableModuleIDMangling();
 	if(val && (!visit(val, &val) || (!skip_val && !val->getTy()))) {
 		err::out(stmt, "unable to determine type of value of this variable");
 		return false;
@@ -895,10 +900,8 @@ post_mangling:
 		return vmgr.addTypeFn(self->getTy(), stmt->getName().getDataStr(),
 				      as<FuncVal>(stmt->getVal()));
 	}
-	// since FuncTy contains the variable declaration in itself,
-	// no need to pass this stmt to vmgr.addVar()
-	return vmgr.addVar(stmt->getName().getDataStr(), stmt->getTy(), stmt->getVal(),
-			   stmt->getTy()->isFunc() ? nullptr : stmt, stmt->isGlobal());
+	return vmgr.addVar(stmt->getName().getDataStr(), stmt->getTy(), stmt->getVal(), stmt,
+			   stmt->isGlobal());
 }
 bool TypeAssignPass::visit(StmtFnSig *stmt, Stmt **source)
 {
@@ -1021,7 +1024,7 @@ bool TypeAssignPass::visit(StmtEnum *stmt, Stmt **source)
 		var->setTy(ty);
 		var->setVal(IntVal::create(ctx, CDPERMA, i++));
 		var->setComptime();
-		var->setAppliedModuleID(true);
+		var->disableModuleIDMangling();
 		additionalvars.push_back(var);
 		vmgr.addVar(e.getDataStr(), var->getTy(), var->getVal(), var);
 	}
@@ -1264,7 +1267,7 @@ StringRef TypeAssignPass::getMangledName(Stmt *stmt, StringRef name, NamespaceVa
 {
 	if(stmt->isSimple()) {
 		StmtSimple *sim = as<StmtSimple>(stmt);
-		if(sim->isAppliedModuleID()) return name;
+		if(sim->isModuleIDManglingDisabled()) return name;
 	}
 	return ctx.strFrom({name, "_", (ns ? ns->getVal() : stmt->getMod()->getID())});
 }

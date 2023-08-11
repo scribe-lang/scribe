@@ -320,7 +320,8 @@ bool CDriver::visit(StmtSimple *stmt, Writer &writer, bool semicol)
 	// in type assign pass for StmtVar
 	// The following part is only valid for existing variables.
 	// the part for variable declaration exists in Var visit
-	writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
+	if(stmt->isCodeGenManglingDisabled()) writer.write(stmt->getLexValue().getDataStr());
+	else writer.write(getMangledName(stmt->getLexValue().getDataStr(), stmt));
 	return true;
 }
 bool CDriver::visit(StmtFnCallInfo *stmt, Writer &writer, bool semicol) { return true; }
@@ -373,7 +374,8 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 		StringRef fname	     = as<StmtSimple>(lhs)->getLexValue().getDataStr();
 		Vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
 		writer.write(fname);
-		writer.write(lhs->getTy()->getUniqID());
+		if(!as<StmtSimple>(lhs)->isCodeGenManglingDisabled())
+			writer.write(lhs->getTy()->getUniqID());
 		writer.write("(");
 		if(!writeCallArgs(stmt->getLoc(), args, lhs->getTy(), writer)) return false;
 		writer.write(")");
@@ -382,7 +384,8 @@ bool CDriver::visit(StmtExpr *stmt, Writer &writer, bool semicol)
 	case lex::STCALL: {
 		Vector<Stmt *> &args = as<StmtFnCallInfo>(rhs)->getArgs();
 		writer.write("(struct_");
-		writer.write(lhs->getTy()->getUniqID());
+		if(!as<StmtSimple>(lhs)->isCodeGenManglingDisabled())
+			writer.write(lhs->getTy()->getUniqID());
 		writer.write("){");
 		if(!writeCallArgs(stmt->getLoc(), args, lhs->getTy(), writer)) return false;
 		writer.write("}");
@@ -515,39 +518,23 @@ bool CDriver::visit(StmtVar *stmt, Writer &writer, bool semicol)
 {
 	writer.clear();
 	StringRef varname = stmt->getName().getDataStr();
-	if(!stmt->isCodeGenMangled()) varname = getMangledName(varname, stmt);
+	if(!stmt->isCodeGenManglingDisabled()) varname = getMangledName(varname, stmt);
 
 	if(stmt->getVVal() && stmt->getVVal()->isExtern()) {
 		StmtExtern *ext	  = as<StmtExtern>(stmt->getVVal());
 		Stmt *ent	  = ext->getEntity();
 		StringRef extname = ext->getName().getDataStr();
-		if(!ent) {
-			macros.push_back(ctx.strFrom({"#define ", varname, " ", extname}));
+		if(!ent || ent->isFnSig()) {
+			static Set<StringRef> dones;
+			StringRef def = ctx.strFrom({"#define ", varname, " ", extname});
+			if(!dones.contains(def)) {
+				macros.push_back(ctx.strFrom({"#define ", varname, " ", extname}));
+				dones.insert(def);
+			}
 		} else if(ent->isStructDef()) {
 			String uniqid = std::to_string(ent->getTy()->getUniqID());
 			StringRef res = ctx.strFrom({"typedef ", extname, " struct_", uniqid, ";"});
 			typedefs.push_back(res);
-		} else if(ent->isFnSig()) {
-			size_t args  = as<StmtFnSig>(ent)->getArgs().size();
-			String macro = "#define ";
-			macro += varname;
-			macro += "(";
-			String argstr;
-			for(size_t i = 0; i < args; ++i) {
-				argstr += 'a' + i;
-				argstr += ", ";
-			}
-			if(args) {
-				argstr.pop_back();
-				argstr.pop_back();
-			}
-			macro += argstr;
-			macro += ") ";
-			macro += extname;
-			macro += "(";
-			macro += argstr;
-			macro += ")";
-			macros.push_back(ctx.moveStr(std::move(macro)));
 		}
 		if(!visit(stmt->getVVal(), writer, false)) {
 			err::out(stmt, "failed to generate C code for extern variable");
