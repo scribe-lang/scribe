@@ -147,7 +147,7 @@ bool SimplifyPass::visit(StmtVar *stmt, Stmt **source)
 			as<StmtFnDef>(stmt->getVVal())->incUsed();
 			maindone = true;
 			stmt->getName().setDataStr("main");
-			stmt->setCodeGenMangle(true);
+			stmt->disableCodeGenMangling();
 		}
 	}
 	bool had_val = stmt->getVVal();

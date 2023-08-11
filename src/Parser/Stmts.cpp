@@ -184,7 +184,8 @@ bool StmtType::isMetaType() const
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 StmtSimple::StmtSimple(const ModuleLoc *loc, const lex::Lexeme &val)
-	: Stmt(SIMPLE, loc), decl(nullptr), val(val), self(nullptr), applied_module_id(false)
+	: Stmt(SIMPLE, loc), decl(nullptr), val(val), self(nullptr),
+	  disable_module_id_mangle(false), disable_codegen_mangle(false)
 {}
 
 StmtSimple::~StmtSimple() {}
@@ -307,7 +308,7 @@ bool StmtExpr::requiresTemplateInit()
 StmtVar::StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
 		 uint8_t varmask)
 	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval), varmask(varmask),
-	  applied_module_id(false), applied_codegen_mangle(false)
+	  disable_module_id_mangle(false), disable_codegen_mangle(false)
 {
 	if(vtype) appendStmtMask(vtype->getStmtMask());
 }

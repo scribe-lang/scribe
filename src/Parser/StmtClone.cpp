@@ -36,9 +36,10 @@ Stmt *StmtType::clone(Context &ctx)
 
 Stmt *StmtSimple::clone(Context &ctx)
 {
-	StmtSimple *newsim	  = StmtSimple::create(ctx, getLoc(), val);
-	newsim->self		  = self ? self->clone(ctx) : nullptr;
-	newsim->applied_module_id = applied_module_id;
+	StmtSimple *newsim		 = StmtSimple::create(ctx, getLoc(), val);
+	newsim->self			 = self ? self->clone(ctx) : nullptr;
+	newsim->disable_module_id_mangle = disable_module_id_mangle;
+	newsim->disable_codegen_mangle	 = disable_codegen_mangle;
 	newsim->appendStmtMask(getStmtMask());
 	newsim->castTo(getCast(), this->getCastStmtMask());
 	return newsim;
@@ -86,7 +87,8 @@ Stmt *StmtVar::clone(Context &ctx)
 	StmtType *newvtype = vtype ? as<StmtType>(vtype->clone(ctx)) : nullptr;
 	Stmt *newvval	   = vval ? vval->clone(ctx) : nullptr;
 	StmtVar *res	   = StmtVar::create(ctx, getLoc(), name, newvtype, newvval, varmask);
-	res->setAppliedModuleID(applied_module_id);
+	res->disable_module_id_mangle = disable_module_id_mangle;
+	res->disable_codegen_mangle   = disable_codegen_mangle;
 	res->appendStmtMask(getStmtMask());
 	res->castTo(getCast(), this->getCastStmtMask());
 	return res;

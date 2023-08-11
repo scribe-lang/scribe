@@ -268,7 +268,8 @@ class StmtSimple : public Stmt
 	lex::Lexeme val;
 	Stmt *self; // for executing member functions
 
-	bool applied_module_id;
+	bool disable_module_id_mangle;
+	bool disable_codegen_mangle;
 
 public:
 	StmtSimple(const ModuleLoc *loc, const lex::Lexeme &val);
@@ -284,11 +285,14 @@ public:
 	inline void setDecl(StmtVar *d) { decl = d; }
 	inline void updateLexDataStr(StringRef newdata) { val.setDataStr(newdata); }
 	inline void setSelf(Stmt *s) { self = s; }
-	inline void setAppliedModuleID(bool apply) { applied_module_id = apply; }
+	inline void disableModuleIDMangling() { disable_module_id_mangle = true; }
+	inline void disableCodeGenMangling() { disable_codegen_mangle = true; }
+
 	inline StmtVar *&getDecl() { return decl; }
 	inline lex::Lexeme &getLexValue() { return val; }
 	inline Stmt *&getSelf() { return self; }
-	inline bool isAppliedModuleID() const { return applied_module_id; }
+	inline bool isModuleIDManglingDisabled() const { return disable_module_id_mangle; }
+	inline bool isCodeGenManglingDisabled() { return disable_codegen_mangle; }
 };
 
 class StmtFnCallInfo : public Stmt
@@ -368,8 +372,8 @@ class StmtVar : public Stmt
 	StmtType *vtype;
 	Stmt *vval;	 // either of expr, funcdef, enumdef, or structdef
 	uint8_t varmask; // from VarMask
-	bool applied_module_id;
-	bool applied_codegen_mangle;
+	bool disable_module_id_mangle;
+	bool disable_codegen_mangle;
 
 public:
 	StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
@@ -410,14 +414,14 @@ public:
 #undef IsModifierX
 
 	inline void setVVal(Stmt *val) { vval = val; }
-	inline void setCodeGenMangle(bool cgmangle) { applied_codegen_mangle = cgmangle; }
+	inline void disableModuleIDMangling() { disable_module_id_mangle = true; }
+	inline void disableCodeGenMangling() { disable_codegen_mangle = true; }
 
 	inline lex::Lexeme &getName() { return name; }
 	inline StmtType *&getVType() { return vtype; }
 	inline Stmt *&getVVal() { return vval; }
-	inline void setAppliedModuleID(bool apply) { applied_module_id = apply; }
-	inline bool isAppliedModuleID() const { return applied_module_id; }
-	inline bool isCodeGenMangled() { return applied_codegen_mangle; }
+	inline bool isModuleIDManglingDisabled() const { return disable_module_id_mangle; }
+	inline bool isCodeGenManglingDisabled() { return disable_codegen_mangle; }
 };
 
 class StmtFnSig : public Stmt
