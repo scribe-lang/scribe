@@ -37,7 +37,7 @@ bool read(const String &file, String &data)
 	return true;
 }
 
-static String _home()
+static String _homeDir()
 {
 	String home;
 #if defined(OS_WINDOWS)
@@ -49,10 +49,10 @@ static String _home()
 	return home;
 }
 
-String home()
+String homeDir()
 {
-	static String __home = _home();
-	return __home;
+	static String home = _homeDir();
+	return home;
 }
 } // namespace fs
 } // namespace sc

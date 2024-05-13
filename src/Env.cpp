@@ -60,17 +60,22 @@ String getProcPath()
 	return path;
 }
 
-String getExeFromPath(const String &exe)
+String getExeFromPath(StringRef exe)
 {
 	String path = get("PATH");
 	if(path.empty()) return "";
 
 	Vector<StringRef> paths = stringDelim(path, getPathDelim());
 
+	String tmp;
 	for(auto &p : paths) {
-		if(fs::exists(String(p) + "/" + exe)) return String(p) + "/" + exe;
+		tmp += p;
+		tmp += "/";
+		tmp += exe;
+		if(fs::exists(tmp)) break;
+		tmp.clear();
 	}
-	return "";
+	return tmp;
 }
 
 int exec(const String &cmd)

@@ -12,7 +12,7 @@ String get(const String &key);
 
 String getProcPath();
 
-String getExeFromPath(const String &exe);
+String getExeFromPath(StringRef exe);
 
 int exec(const String &cmd);
 } // namespace env

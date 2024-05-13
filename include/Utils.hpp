@@ -34,58 +34,27 @@ String vecToStr(Span<String> items);
 
 inline void appendToString(String &dest) {}
 
-template<typename... Args> void appendToString(String &dest, StringRef data, Args... args);
-template<typename... Args> void appendToString(String &dest, char data, Args... args);
-template<typename... Args> void appendToString(String &dest, u8 data, Args... args);
-template<typename... Args> void appendToString(String &dest, int data, Args... args);
-template<typename... Args> void appendToString(String &dest, int64_t data, Args... args);
-template<typename... Args> void appendToString(String &dest, size_t data, Args... args);
-template<typename... Args> void appendToString(String &dest, float data, Args... args);
-template<typename... Args> void appendToString(String &dest, double data, Args... args);
+inline void appendToString(String &dest, bool data) { dest += data ? "(true)" : "(false)"; }
+inline void appendToString(String &dest, char data) { dest += data; }
+inline void appendToString(String &dest, u8 data) { dest += std::to_string(data); }
+inline void appendToString(String &dest, int data) { dest += std::to_string(data); }
+inline void appendToString(String &dest, int64_t data) { dest += std::to_string(data); }
+inline void appendToString(String &dest, size_t data) { dest += std::to_string(data); }
+inline void appendToString(String &dest, float data) { dest += std::to_string(data); }
+inline void appendToString(String &dest, double data) { dest += std::to_string(data); }
+inline void appendToString(String &dest, const char *data) { dest += data; }
+inline void appendToString(String &dest, StringRef data) { dest += data; }
+inline void appendToString(String &dest, const String &data) { dest += data; }
 
-template<typename... Args> void appendToString(String &dest, StringRef data, Args... args)
+template<typename... Args> void appendToString(String &dest, Args... args)
 {
-	dest += data;
-	appendToString(dest, args...);
-}
-template<typename... Args> void appendToString(String &dest, char data, Args... args)
-{
-	dest += data;
-	appendToString(dest, args...);
-}
-template<typename... Args> void appendToString(String &dest, u8 data, Args... args)
-{
-	dest += std::to_string(data);
-	appendToString(dest, args...);
-}
-template<typename... Args> void appendToString(String &dest, int data, Args... args)
-{
-	dest += std::to_string(data);
-	appendToString(dest, args...);
-}
-template<typename... Args> void appendToString(String &dest, int64_t data, Args... args)
-{
-	dest += std::to_string(data);
-	appendToString(dest, args...);
-}
-template<typename... Args> void appendToString(String &dest, size_t data, Args... args)
-{
-	dest += std::to_string(data);
-	appendToString(dest, args...);
-}
-template<typename... Args> void appendToString(String &dest, float data, Args... args)
-{
-	dest += std::to_string(data);
-	appendToString(dest, args...);
-}
-template<typename... Args> void appendToString(String &dest, double data, Args... args)
-{
-	dest += std::to_string(data);
-	appendToString(dest, args...);
-}
-template<typename T, typename... Args> void appendToString(String &dest, Args... args)
-{
-	int tmp[] = {(appendToString(dest, args))...};
+	int tmp[] = {(appendToString(dest, args), 0)...};
 	static_cast<void>(tmp);
+}
+template<typename... Args> String toString(Args... args)
+{
+	String dest;
+	appendToString(dest, std::forward<Args>(args)...);
+	return dest;
 }
 } // namespace sc

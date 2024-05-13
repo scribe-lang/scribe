@@ -4,9 +4,7 @@
 
 #include "Args.hpp"
 #include "Builder.hpp"
-#include "CodeGen/C.hpp"
 #include "Config.hpp"
-#include "Env.hpp"
 #include "FS.hpp"
 #include "Parser.hpp"
 
@@ -20,8 +18,8 @@ int main(int argc, char **argv)
 	args::ArgParser args(argc, (const char **)argv);
 	args.add("version").setShort("v").setHelp("prints program version");
 	args.add("tokens").setShort("t").setHelp("shows lexical tokens");
-	args.add("parse").setShort("p").setHelp("shows AST");
-	args.add("semantic").setShort("s").setHelp("shows Semantic Tree");
+	args.add("ast").setShort("a").setHelp("shows abstract syntax tree");
+	args.add("sst").setShort("s").setHelp("shows semantic syntax tree");
 	args.add("ir").setShort("i").setHelp("shows codegen IR");
 	args.add("nofile").setShort("n").setHelp("disables output to a file");
 	args.add("opt").setShort("O").setValReqd(true).setHelp("set optimization level");
@@ -65,18 +63,7 @@ int BuildRunProj(args::ArgParser &args, bool buildonly)
 	parser.dumpTokens(false);
 	parser.dumpParseTree(false);
 	if(args.has("nofile")) return 0;
-
-	CDriver cdriver(parser);
-	StringRef outfile = "./build/builder";
-	if(!cdriver.compile(outfile)) return 1;
-	String cmd = "./build/builder .";
-	auto argv  = args.getArgv();
-	// append everything to cmd after build/run
-	for(int i = 1; i < argv.size(); ++i) {
-		cmd += " ";
-		cmd += argv[i];
-	}
-	res = env::exec(cmd);
+	// TODO: execute builder
 	return res;
 }
 
@@ -95,19 +82,13 @@ int CompileFile(args::ArgParser &args, String &file)
 	parser.dumpParseTree(false);
 	if(args.has("nofile")) return 0;
 
-	// TODO: make proper log system
-	if(args.has("verbose"))
+	if(args.has("verbose")) {
+		// TODO: make proper log system
+		// logger.info("total read lines in source '%s': %d", file.c_str(),
+		// 	    fs::getLastTotalLines());
 		std::cout << "total read lines: " << fs::getLastTotalLines() << "\n";
-
-	CDriver cdriver(parser);
-	String outfile = String(args.get(2));
-	if(outfile.empty()) {
-		char f[2048] = {0};
-		strcpy(f, file.c_str());
-		outfile = fs::baseName(f);
 	}
-	auto ext = outfile.find_last_of('.');
-	if(ext != String::npos) outfile = outfile.substr(0, ext);
-	if(!cdriver.compile(outfile)) return 1;
+
+	// Compilation Driver (C, LLVM, ...)
 	return 0;
 }

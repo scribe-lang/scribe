@@ -1,15 +1,27 @@
 #include "Lex.hpp"
 
+#include <limits>
+
 namespace sc
 {
 namespace lex
 {
 const char *TokStrs[_LAST] = {
-"INT",
-"FLT",
-"CHAR",
+"i1",
+"i8",
+"i16",
+"i32",
+"i64",
+"u8",
+"u16",
+"u32",
+"u64",
+"f32",
+"f64",
+"void",
 "STR",
 "IDEN",
+"ATTRS",
 
 // Keywords
 "let",
@@ -23,23 +35,8 @@ const char *TokStrs[_LAST] = {
 "return",
 "continue",
 "break",
-"void",
-"true",
-"false",
-"nil",
 "any",
 "type",
-"i1",
-"i8",
-"i16",
-"i32",
-"i64",
-"u8",
-"u16",
-"u32",
-"u64",
-"f32",
-"f64",
 "or",
 "static",
 "const",
@@ -50,6 +47,7 @@ const char *TokStrs[_LAST] = {
 "global",
 "inline",
 "struct",
+"union",
 "enum",
 
 // Operators
@@ -106,8 +104,8 @@ const char *TokStrs[_LAST] = {
 "{}",
 
 // Varargs
-"x...",
 "...x",
+"x...",
 
 // Separators
 ".",
@@ -134,11 +132,9 @@ const char *TokStrs[_LAST] = {
 
 String viewBackSlash(StringRef data);
 
-Tok::Tok(int tok) : val((TokType)tok) {}
-
-const char *Tok::getUnaryNoCharCStr() const
+const char *getTokUnaryNoCharCStr(TokType token)
 {
-	switch(val) {
+	switch(token) {
 	case XINC:
 	case INCX: return "++";
 	case XDEC:
@@ -154,9 +150,9 @@ const char *Tok::getUnaryNoCharCStr() const
 	return "";
 }
 
-const char *Tok::getOperCStr() const
+const char *getTokOperCStr(TokType token)
 {
-	switch(val) {
+	switch(token) {
 	case ASSN: return "__assn__";
 	// Arithmetic
 	case ADD: return "__add__";
@@ -208,54 +204,92 @@ const char *Tok::getOperCStr() const
 	return "";
 }
 
-bool Data::cmp(const Data &other, const TokType type) const
+uint64_t getIntMaxForType(TokType token)
 {
-	switch(type) {
-	case STR:
-	case IDEN: return s == other.s;
-	case INT: return i == other.i;
-	case FLT: return f == other.f;
-	default: return false;
-	}
-	return false;
+	if(token == I1) return std::numeric_limits<bool>().max();
+	if(token == I8) return std::numeric_limits<int8_t>().max();
+	if(token == I16) return std::numeric_limits<int16_t>().max();
+	if(token == I32) return std::numeric_limits<int32_t>().max();
+	if(token == I64) return std::numeric_limits<int64_t>().max();
+	if(token == I8) return std::numeric_limits<uint8_t>().max();
+	if(token == I16) return std::numeric_limits<uint16_t>().max();
+	if(token == I32) return std::numeric_limits<uint32_t>().max();
+	if(token == I64) return std::numeric_limits<uint64_t>().max();
+	return 0;
+}
+int64_t getIntMinForType(TokType token)
+{
+	if(token == I1) return std::numeric_limits<bool>().min();
+	if(token == I8) return std::numeric_limits<int8_t>().min();
+	if(token == I16) return std::numeric_limits<int16_t>().min();
+	if(token == I32) return std::numeric_limits<int32_t>().min();
+	if(token == I64) return std::numeric_limits<int64_t>().min();
+	if(token == I8) return std::numeric_limits<uint8_t>().min();
+	if(token == I16) return std::numeric_limits<uint16_t>().min();
+	if(token == I32) return std::numeric_limits<uint32_t>().min();
+	if(token == I64) return std::numeric_limits<uint64_t>().min();
+	return 0;
+}
+long double getFltMaxForType(TokType token)
+{
+	if(token == F32) return std::numeric_limits<float>().max();
+	if(token == F64) return std::numeric_limits<long double>().max();
+	return 0.0;
+}
+long double getFltMinForType(TokType token)
+{
+	if(token == F32) return std::numeric_limits<float>().min();
+	if(token == F64) return std::numeric_limits<long double>().min();
+	return 0.0;
 }
 
-Lexeme::Lexeme(const ModuleLoc *loc) : loc(loc), tok(INVALID), data({.s = "", .i = 0lu, .f = 0.0})
+Lexeme::Lexeme(const ModuleLoc *loc) : loc(loc), tokty(INVALID), data(0), containsdata(false) {}
+Lexeme::Lexeme(const ModuleLoc *loc, TokType type)
+	: loc(loc), tokty(type), data(0), containsdata(false)
 {}
-Lexeme::Lexeme(const ModuleLoc *loc, const TokType &type)
-	: loc(loc), tok(type), data({.s = "", .i = 0lu, .f = 0.0})
+Lexeme::Lexeme(const ModuleLoc *loc, TokType type, StringRef _data)
+	: loc(loc), tokty(type), data(String(_data)), containsdata(true)
 {}
-Lexeme::Lexeme(const ModuleLoc *loc, const TokType &type, StringRef _data)
-	: loc(loc), tok(type), data({.s = _data, .i = 0lu, .f = 0.0})
+Lexeme::Lexeme(const ModuleLoc *loc, TokType type, int64_t _data)
+	: loc(loc), tokty(type), data(_data), containsdata(true)
 {}
-Lexeme::Lexeme(const ModuleLoc *loc, int64_t _data)
-	: loc(loc), tok(INT), data({.s = "", .i = _data, .f = 0.0})
-{}
-Lexeme::Lexeme(const ModuleLoc *loc, const long double &_data)
-	: loc(loc), tok(FLT), data({.s = "", .i = 0lu, .f = _data})
+Lexeme::Lexeme(const ModuleLoc *loc, TokType type, long double _data)
+	: loc(loc), tokty(type), data(_data), containsdata(true)
 {}
 String Lexeme::str(int64_t pad) const
 {
 	String res;
 	int64_t len;
-	res += tok.cStr();
+	res += tokCStr();
 	len = res.size();
 	for(int64_t i = 0; i < pad - len; ++i) res += " ";
 	if(pad == 0) res += " ";
 	len = res.size();
 	res += "[" + loc->getLocStr() + "]";
-	if(!tok.isData()) return res;
+	if(!containsData()) return res;
 	len = res.size() - len;
 	for(int64_t i = 0; i < pad - len; ++i) res += " ";
 	if(pad == 0) res += " ";
-	if(tok.getVal() == CHAR || tok.getVal() == STR || tok.getVal() == IDEN) {
-		res += viewBackSlash(data.s);
-	} else if(tok.getVal() == INT) {
-		res += std::to_string(data.i);
-	} else if(tok.getVal() == FLT) {
-		res += std::to_string(data.f);
+	if(tokty == STR || tokty == IDEN) {
+		res += viewBackSlash(std::get<String>(data));
+	} else if(tokty >= I1 && tokty <= U64) {
+		res += std::to_string(std::get<int64_t>(data));
+	} else if(tokty >= F32 && tokty <= F64) {
+		res += std::to_string(std::get<long double>(data));
 	}
 	return res;
+}
+bool Lexeme::operator==(const Lexeme &other) const
+{
+	if(tokty != other.tokty) return false;
+	if(tokty == STR || tokty == IDEN) {
+		return std::get<String>(data) == std::get<String>(other.data);
+	} else if(tokty >= I1 && tokty <= U64) {
+		return std::get<int64_t>(data) == std::get<int64_t>(other.data);
+	} else if(tokty >= F32 && tokty <= F64) {
+		return std::get<long double>(data) == std::get<long double>(other.data);
+	}
+	return false;
 }
 
 #define CURR (data[i])
@@ -322,17 +356,32 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 			continue;
 		}
 
-		// strings
+		// attributes
+		if(CURR == '#') {
+			StringRef attrs = getAttributes(data, ++i);
+			toks.emplace_back(locAlloc(line, i - line_start - attrs.size()), ATTRS,
+					  attrs);
+			continue;
+		}
+
+		// identifiers
 		if((CURR == '.' && (isalpha(NEXT) || NEXT == '_') && !isalnum(PREV) &&
 		    PREV != '_' && PREV != ')' && PREV != ']' && PREV != '\'' && PREV != '"') ||
 		   isalpha(CURR) || CURR == '_')
 		{
 			StringRef str = getName(data, i);
+			// true and false are handled separately - they are technically keywords,
+			// but they can also be represented as i1(1) and i1(0) respectively
+			if(str == "true" || str == "false") {
+				toks.emplace_back(locAlloc(line, i - line_start - str.size()), I1,
+						  (int64_t)(str == "true"));
+				continue;
+			}
 			// check if string is a keyword
 			TokType str_class = classifyStr(str);
 			if(str[0] == '.') str = str.substr(0, 1);
-			if(str_class == STR || str_class == IDEN)
-			{ // place either the data itself (type = STR, IDEN)
+			if(str_class == STR || str_class == IDEN) {
+				// place either the data itself (type = STR, IDEN)
 				toks.emplace_back(locAlloc(line, i - line_start - str.size()),
 						  str_class, str);
 			} else { // or the type
@@ -344,15 +393,15 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 
 		// numbers
 		if(isdigit(CURR)) {
-			TokType num_type = INT;
+			TokType num_type = I32;
 			int base	 = 10;
-			StringRef num	 = getNum(data, i, line, line_start, num_type, base);
+			String num	 = getNum(data, i, line, line_start, num_type, base);
 			if(num.empty()) return false;
-			if(num_type == FLT) {
+			if(num_type == F32 || num_type == F64) {
 				long double fltval;
 				std::from_chars(num.data(), num.data() + num.size(), fltval);
 				toks.emplace_back(locAlloc(line, i - line_start - num.size()),
-						  fltval);
+						  num_type, fltval);
 				continue;
 			}
 			int64_t intval;
@@ -362,7 +411,8 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 				num = num.substr(base == 8 ? 1 : 2);
 			}
 			std::from_chars(num.data(), num.data() + num.size(), intval, base);
-			toks.emplace_back(locAlloc(line, i - line_start - num.size()), intval);
+			toks.emplace_back(locAlloc(line, i - line_start - num.size()), num_type,
+					  intval);
 			continue;
 		}
 
@@ -371,9 +421,13 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 			String str;
 			char quote_type = 0;
 			if(!getConstStr(data, quote_type, i, line, line_start, str)) return false;
-			StringRef strref = ctx.moveStr(std::move(str));
-			toks.emplace_back(locAlloc(line, i - line_start - str.size()),
-					  quote_type == '\'' ? CHAR : STR, strref);
+			if(quote_type == '\'') {
+				toks.emplace_back(locAlloc(line, i - line_start - str.size()), I8,
+						  (int64_t)str[0]);
+			} else {
+				toks.emplace_back(locAlloc(line, i - line_start - str.size()), STR,
+						  str);
+			}
 			continue;
 		}
 
@@ -386,6 +440,17 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 	return true;
 }
 
+StringRef Tokenizer::getAttributes(StringRef data, size_t &i)
+{
+	size_t len   = data.size();
+	size_t start = i;
+	while(i < len) {
+		if(!isalnum(CURR) && CURR != ',' && CURR != '=' && CURR != '_') break;
+		++i;
+	}
+	return data.substr(start, i - start);
+}
+
 StringRef Tokenizer::getName(StringRef data, size_t &i)
 {
 	size_t len   = data.size();
@@ -395,8 +460,7 @@ StringRef Tokenizer::getName(StringRef data, size_t &i)
 		++i;
 	}
 	if(i < len && CURR == '?') ++i;
-
-	return StringRef(data).substr(start, i - start);
+	return data.substr(start, i - start);
 }
 
 TokType Tokenizer::classifyStr(StringRef str)
@@ -414,9 +478,6 @@ TokType Tokenizer::classifyStr(StringRef str)
 	if(str == TokStrs[CONTINUE]) return CONTINUE;
 	if(str == TokStrs[BREAK]) return BREAK;
 	if(str == TokStrs[VOID]) return VOID;
-	if(str == TokStrs[TRUE]) return TRUE;
-	if(str == TokStrs[FALSE]) return FALSE;
-	if(str == TokStrs[NIL]) return NIL;
 	if(str == TokStrs[ANY]) return ANY;
 	if(str == TokStrs[TYPE]) return TYPE;
 	if(str == TokStrs[I1]) return I1;
@@ -439,14 +500,15 @@ TokType Tokenizer::classifyStr(StringRef str)
 	if(str == TokStrs[COMPTIME]) return COMPTIME;
 	if(str == TokStrs[INLINE]) return INLINE;
 	if(str == TokStrs[STRUCT]) return STRUCT;
+	if(str == TokStrs[UNION]) return UNION;
 	if(str == TokStrs[ENUM]) return ENUM;
 
 	// if string begins with dot, it's an atom (str), otherwise an identifier
 	return str[0] == '.' ? STR : IDEN;
 }
 
-StringRef Tokenizer::getNum(StringRef data, size_t &i, size_t &line, size_t &line_start,
-			    TokType &num_type, int &base)
+String Tokenizer::getNum(StringRef data, size_t &i, size_t &line, size_t &line_start,
+			 TokType &num_type, int &base)
 {
 	size_t len = data.size();
 	String buf;
@@ -514,7 +576,7 @@ StringRef Tokenizer::getNum(StringRef data, size_t &i, size_t &line, size_t &lin
 			} else if(dot_loc == -1) {
 				if(next >= '0' && next <= '9') {
 					dot_loc	 = i;
-					num_type = FLT;
+					num_type = F32;
 				} else {
 					goto end;
 				}
@@ -544,7 +606,7 @@ StringRef Tokenizer::getNum(StringRef data, size_t &i, size_t &line, size_t &lin
 		++i;
 	}
 end:
-	return ctx.moveStr(std::move(buf));
+	return buf;
 }
 
 bool Tokenizer::getConstStr(StringRef data, char &quote_type, size_t &i, size_t &line,

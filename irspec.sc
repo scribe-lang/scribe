@@ -38,13 +38,13 @@ let main = fn(): i32 {
 entryPoint %81
 
 %1 = constData "std/io" // -> ConstDataValInstr
-%2 = getVar "import" // -> getVar(name: string) -> VarValInstr
-%3 = call %2, true, %1 // call(fn: FnValInstr, intrin: bool, args: ...Instr) -> ValInstr
+%2 = constData "import" // -> ConstDataValInstr
+%3 = call %2, true, %1 // call(fn: FnValInstr, intrin: bool, args: ...Instr) -> RetValInstr
 %4 = createVar "io" nil, nil, %3, false // createVar(name: string, in: TypeValInstr/nil, type: TypeValInstr/nil, val: Instr/nil, comptime: bool) -> VarValInstr
 
 %5 = createStruct T { // createStruct(templates: ...string) { definition } -> TypeValInstr
-	%6 = getVar "T"
-	%7 = ptr %6 // -> TypeValInstr
+	%6 = getVar "T" // getVar(name: string) -> VarValInstr
+	%7 = @ptr(%6) // -> TypeValInstr
 	%8 = createVar "list", %7, nil, false
 }
 %9 = createVar "Data", nil, nil, %5, false
@@ -71,14 +71,14 @@ body:
 %34 = createFn, %29, %24, %26 {
 args:
 	%22 = getVar "Data"
-	%23 = ref %22 // -> TypeValInstr
+	%23 = @ref(%22) // -> TypeValInstr
 	%24 = createVar "self", nil, %23, nil, false
 	%25 = getVar "u64"
 	%26 = createVar "idx", nil, %25, nil, false
 returns:
 	%27 = getVar "self"
 	%28 = dot %27, "T" // dot(aggregate: ValInstr, field: string) -> ValInstr
-	%29 = ref %28
+	%29 = @ref(%28)
 body:
 	%30 = getVar "self"
 	%31 = dot %30, "list"
@@ -92,19 +92,19 @@ body:
 %45 = createFn %43, %40 {
 args:
 	%37 = getVar "Data"
-	%38 = const %37
-	%39 = ref %38
+	%38 = @const(%37)
+	%39 = @ref(%38)
 	%40 = createVar "self", nil, %39, nil, false
 returns:
 	%41 = getVar "i8"
-	%42 = const %41
-	%43 = ptr %42
+	%42 = @const(%41)
+	%43 = %ptr(%42)
 body:
 	%44 = constData "Hi"
 	ret %44
 }
 %46 = getVar "Data"
-%47 = const %46
+%47 = @const(%46)
 %48 = createVar "str", %47, nil, %45, false
 
 %80 = createFn %49 {

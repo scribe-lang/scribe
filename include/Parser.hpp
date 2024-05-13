@@ -1,9 +1,10 @@
 #pragma once
 
 #include "Args.hpp"
+#include "AST/Passes/Base.hpp"
+#include "AST/Stmts.hpp"
+// #include "IR/Instruction.hpp"
 #include "Lex.hpp"
-#include "Parser/Stmts.hpp"
-#include "Passes/Base.hpp"
 
 namespace sc
 {
@@ -12,30 +13,49 @@ class Module
 {
 	Context &ctx;
 
-	StringRef id;
-	StringRef path;
-	StringRef code;
+	String id;
+	String path;
+	String code;
 	Vector<lex::Lexeme> tokens;
-	Stmt *ptree;
+	AST::Stmt *ptree;
+	// Vector<Instruction *> instrs;
 	bool is_main_module;
 
 public:
-	Module(Context &ctx, StringRef id, StringRef path, StringRef code, bool is_main_module);
+	Module(Context &ctx, String &&id, const String &path, StringRef code, bool is_main_module);
+	Module(Context &ctx, String &&id, const String &path, String &&code, bool is_main_module);
 	~Module();
 
 	bool tokenize();
 	bool parseTokens();
-	bool executePasses(PassManager &pm);
 
-	StringRef getID() const;
-	StringRef getPath() const;
-	StringRef getCode() const;
-	const Vector<lex::Lexeme> &getTokens() const;
-	Stmt *&getParseTree();
-	bool isMainModule() const;
+	// Allocates instructions
+	// This is the only function where instructions can be allocated
+	// template<typename T, typename... Args>
+	// std::enable_if<std::is_base_of<Instruction, T>::value, T *>::type
+	// appendInstruction(Args &&...args)
+	// {
+	// 	instrs.push_back(new T(std::forward<Args>(args)...));
+	// 	return instrs.back();
+	// }
+
+	inline bool executePasses(AST::PassManager &pm) { return pm.visit(ptree); }
+
+	inline StringRef getID() const { return id; }
+	inline StringRef getPath() const { return path; }
+	inline StringRef getCode() const { return code; }
+	inline Span<const lex::Lexeme> getTokens() const { return tokens; }
+	inline bool isMainModule() const { return is_main_module; }
+	inline AST::Stmt *&getParseTree() { return ptree; }
+	// inline Span<Instruction *> getInstructions() { return instrs; }
+	// inline Instruction *getInstruction(size_t idx)
+	// {
+	// 	return idx < instrs.size() ? instrs[idx] : nullptr;
+	// }
 
 	void dumpTokens() const;
 	void dumpParseTree() const;
+	void dumpIR() const;
 };
 
 class RAIIParser
@@ -47,7 +67,7 @@ class RAIIParser
 	// default pms that run:
 	// 1. on each module
 	// 2. once all modules are combined
-	PassManager defaultpmpermodule, defaultpmcombined;
+	AST::PassManager defaultpmpermodule, defaultpmcombined;
 
 	// as new sources are imported, they'll be pushed back
 	Vector<StringRef> modulestack;
@@ -60,7 +80,7 @@ class RAIIParser
 
 	Module *mainmodule;
 
-	Module *addModule(StringRef path, bool main_module, StringRef code);
+	Module *addModule(const String &path, bool main_module, StringRef code);
 
 public:
 	RAIIParser(args::ArgParser &args);
@@ -69,7 +89,7 @@ public:
 	bool init();
 
 	// if code is not empty, file won't be read/checked
-	bool parse(const String &_path, bool main_module = false, StringRef code = "");
+	bool parse(const String &path, bool main_module = false, StringRef code = "");
 	void combineAllModules();
 
 	inline bool hasModule(StringRef path) { return modules.find(path) != modules.end(); }
@@ -85,6 +105,6 @@ public:
 
 	// search for a source (import) in the import/include paths
 	// updates the modname parameter if the file is found
-	bool IsValidSource(String &modname);
+	bool isValidSource(String &modname);
 };
 } // namespace sc

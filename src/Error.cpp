@@ -19,8 +19,11 @@ size_t max_errs = 10;
 void outCommonStr(const ModuleLoc *loc, bool iswarn, bool withloc, const String &e)
 {
 	static size_t errcount = 0;
+	// To prevent errors from showing up at the same location multiple times therefore
+	// cluttering the output
+	static const ModuleLoc *lastLoc = nullptr;
 
-	if(errcount >= max_errs) return;
+	if(errcount >= max_errs || lastLoc == loc) return;
 
 	// just show the error
 	if(!withloc) {
@@ -31,6 +34,8 @@ void outCommonStr(const ModuleLoc *loc, bool iswarn, bool withloc, const String 
 		if(errcount >= max_errs) std::cout << "Failure: Too many errors encountered\n";
 		return;
 	}
+
+	lastLoc = loc;
 
 	Module *mod = loc->getMod();
 	size_t line = loc->getLine();

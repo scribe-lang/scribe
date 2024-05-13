@@ -175,7 +175,6 @@ let parse in ArgParser = fn(): i1 {
 			if a.isValReqd() {
 				expect_key = a.getLong();
 				expect_val = true;
-				break;
 			}
 			continue;
 		}

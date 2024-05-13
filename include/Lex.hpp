@@ -1,9 +1,5 @@
 #pragma once
 
-#include <cstddef>
-#include <string>
-#include <vector>
-
 #include "Context.hpp"
 #include "Error.hpp"
 
@@ -11,14 +7,26 @@ namespace sc
 {
 namespace lex
 {
+// true => @as(i1, 1)
+// false => @as(i1, 0)
+// nil => @as(usize, 0)
 enum TokType
 {
-	INT,
-	FLT,
-
-	CHAR,
+	I1,
+	I8,
+	I16,
+	I32,
+	I64,
+	U8,
+	U16,
+	U32,
+	U64,
+	F32,
+	F64,
+	VOID,
 	STR,
 	IDEN,
+	ATTRS,
 
 	// Keywords
 	LET,
@@ -32,23 +40,8 @@ enum TokType
 	RETURN,
 	CONTINUE,
 	BREAK,
-	VOID,
-	TRUE,
-	FALSE,
-	NIL,
 	ANY,  // type: any
 	TYPE, // type: type
-	I1,
-	I8,
-	I16,
-	I32,
-	I64,
-	U8,
-	U16,
-	U32,
-	U64,
-	F32,
-	F64,
 	OR,
 	STATIC,
 	CONST,
@@ -59,6 +52,7 @@ enum TokType
 	GLOBAL,
 	INLINE,
 	STRUCT,
+	UNION,
 	ENUM,
 
 	// Operators
@@ -149,108 +143,114 @@ enum TokType
  */
 extern const char *TokStrs[_LAST];
 
-class Tok
+inline bool isTokLiteral(TokType token) { return token >= I1 && token <= STR; }
+inline bool isTokIdentifier(TokType token) { return token == IDEN; }
+inline bool isTokType(TokType token)
 {
-	TokType val;
+	return (token >= I1 && token <= VOID) || token == ANY || token == TYPE;
+}
+inline bool isTokInt(TokType token) { return token >= I1 && token <= U64; }
+inline bool isTokFlt(TokType token) { return token >= F32 && token <= F64; }
+inline bool isTokNumeric(TokType token) { return isTokInt(token) || isTokFlt(token); }
+inline bool isTokOper(TokType token) { return token >= ASSN && token <= RBRACK; }
 
-public:
-	Tok(int tok);
-
-	inline bool isData() const
-	{
-		return val == INT || val == FLT || val == CHAR || val == STR || val == IDEN ||
-		       val == VOID || val == TRUE || val == FALSE || val == NIL || val == ANY ||
-		       val == TYPE || val == I1 || val == I8 || val == I16 || val == I32 ||
-		       val == I64 || val == U8 || val == U16 || val == U32 || val == U64 ||
-		       val == F32 || val == F64;
-	}
-	inline bool isLiteral() const
-	{
-		return val == INT || val == FLT || val == CHAR || val == STR;
-	}
-
-	inline bool isOper() const { return val >= ASSN && val <= RBRACK; }
-
-	inline bool isUnaryPre() const
-	{
-		return val == UADD || val == USUB || val == UAND || val == UMUL || val == INCX ||
-		       val == DECX || val == LNOT || val == BNOT;
-	}
-
-	inline bool isUnaryPost() const { return val == XINC || val == XDEC; }
-
-	inline bool isComparison() const
-	{
-		return val == EQ || val == LT || val == GT || val == LE || val == GE || val == NE;
-	}
-
-	inline bool isAssign() const
-	{
-		return (val == ASSN || val == ADD_ASSN || val == SUB_ASSN || val == MUL_ASSN ||
-			val == DIV_ASSN || val == MOD_ASSN || val == BAND_ASSN || val == BOR_ASSN ||
-			val == BNOT_ASSN || val == BXOR_ASSN || val == LSHIFT_ASSN ||
-			val == RSHIFT_ASSN);
-	}
-
-	inline bool isValid() const { return val != INVALID && val != FEOF; }
-
-	inline const char *cStr() const { return TokStrs[val]; }
-	inline String str() const { return TokStrs[val]; }
-
-	const char *getOperCStr() const;
-	const char *getUnaryNoCharCStr() const;
-
-	inline bool operator==(const Tok &other) const { return val == other.val; }
-
-	inline TokType getVal() const { return val; }
-
-	inline void setVal(const TokType &v) { val = v; }
-
-	inline bool isType(const TokType &other) const { return val == other; }
-};
-
-struct Data
+inline bool isTokUnaryPre(TokType token)
 {
-	StringRef s;
-	int64_t i;
-	long double f;
+	return token == UADD || token == USUB || token == UAND || token == UMUL || token == INCX ||
+	       token == DECX || token == LNOT || token == BNOT;
+}
 
-	bool cmp(const Data &other, const TokType type) const;
-};
+inline bool isTokUnaryPost(TokType token) { return token == XINC || token == XDEC; }
+
+inline bool isTokComparison(TokType token)
+{
+	return token == LT || token == GT || token == LE || token == GE || token == EQ ||
+	       token == NE;
+}
+
+inline bool isTokAssign(TokType token)
+{
+	return (token == ASSN || token == ADD_ASSN || token == SUB_ASSN || token == MUL_ASSN ||
+		token == DIV_ASSN || token == MOD_ASSN || token == BAND_ASSN || token == BOR_ASSN ||
+		token == BNOT_ASSN || token == BXOR_ASSN || token == LSHIFT_ASSN ||
+		token == RSHIFT_ASSN);
+}
+
+inline bool isTokValid(TokType token) { return token != INVALID && token != FEOF; }
+
+inline const char *tokToCStr(TokType token) { return TokStrs[token]; }
+
+const char *getTokUnaryNoCharCStr(TokType token);
+const char *getTokOperCStr(TokType token);
+uint64_t getIntMaxForType(TokType token);
+int64_t getIntMinForType(TokType token);
+long double getFltMaxForType(TokType token);
+long double getFltMinForType(TokType token);
 
 class Lexeme
 {
 	const ModuleLoc *loc;
-	Tok tok;
-	Data data;
+	TokType tokty;
+	Variant<String, int64_t, long double> data;
+	bool containsdata;
 
 public:
 	Lexeme(const ModuleLoc *loc = nullptr);
-	explicit Lexeme(const ModuleLoc *loc, const TokType &type);
-	explicit Lexeme(const ModuleLoc *loc, const TokType &type, StringRef _data);
-	explicit Lexeme(const ModuleLoc *loc, int64_t _data);
-	explicit Lexeme(const ModuleLoc *loc, const long double &_data);
+	explicit Lexeme(const ModuleLoc *loc, TokType type);
+	explicit Lexeme(const ModuleLoc *loc, TokType type, StringRef _data);
+	explicit Lexeme(const ModuleLoc *loc, TokType type, int64_t _data);
+	explicit Lexeme(const ModuleLoc *loc, TokType type, long double _data);
 
 	String str(int64_t pad = 10) const;
 
-	inline bool operator==(const Lexeme &other) const
-	{
-		return tok == other.tok && data.cmp(other.data, tok.getVal());
-	}
+	bool operator==(const Lexeme &other) const;
 	inline bool operator!=(const Lexeme &other) const { return *this == other ? false : true; }
 
-	inline void setDataStr(StringRef str) { data.s = str; }
-	inline void setDataInt(int64_t i) { data.i = i; }
-	inline void setDataFlt(const long double &f) { data.f = f; }
+	inline void setDataStr(StringRef str) { std::get<String>(data) = str; }
+	inline void setDataStr(String &&str)
+	{
+		using namespace std;
+		swap(std::get<String>(data), str);
+	}
+	inline void setDataInt(int64_t i) { data = i; }
+	inline void setDataFlt(long double f) { data = f; }
 
-	inline StringRef getDataStr() const { return data.s; }
-	inline int64_t getDataInt() const { return data.i; }
-	inline const long double &getDataFlt() const { return data.f; }
+	inline StringRef getDataStr() const { return std::get<String>(data); }
+	inline int64_t getDataInt() const { return std::get<int64_t>(data); }
+	inline long double getDataFlt() const { return std::get<long double>(data); }
+	inline int64_t getDataAsInt() const
+	{
+		return tokty >= I1 && tokty <= I64 ? getDataInt()
+						   : (int64_t)std::get<long double>(data);
+	}
+	inline long double getDataAsFlt() const
+	{
+		return tokty >= F32 && tokty <= F64 ? getDataFlt()
+						    : (long double)std::get<int64_t>(data);
+	}
 
-	inline Tok &getTok() { return tok; }
-	inline const Tok &getTok() const { return tok; }
-	inline TokType getTokVal() const { return tok.getVal(); }
+	inline TokType getType() const { return tokty; }
+	inline bool isType(TokType ty) const { return tokty == ty; }
+	inline void setType(TokType ty) { tokty = ty; }
 	inline const ModuleLoc *getLoc() const { return loc; }
+	inline bool containsData() const { return containsdata; }
+
+	inline bool isLiteral() const { return isTokLiteral(tokty) && containsdata; }
+	inline bool isIdentifier() const { return isTokIdentifier(tokty); }
+	inline bool isType() const { return isTokType(tokty); }
+	inline bool isInt() const { return isTokInt(tokty) && containsdata; }
+	inline bool isFlt() const { return isTokFlt(tokty) && containsdata; }
+	inline bool isNumeric() const { return isInt() || isFlt(); }
+	inline bool isOper() const { return isTokOper(tokty); }
+	inline bool isUnaryPre() const { return isTokUnaryPre(tokty); }
+	inline bool isUnaryPost() const { return isTokUnaryPost(tokty); }
+	inline bool isComparison() const { return isTokComparison(tokty); }
+	inline bool isAssign() const { return isTokAssign(tokty); }
+	inline bool isValid() const { return isTokValid(tokty); }
+	inline const char *getUnaryNoCharCStr() const { return getTokUnaryNoCharCStr(tokty); }
+	inline const char *getOperCStr() const { return getTokOperCStr(tokty); }
+	inline const char *tokCStr() const { return tokToCStr(tokty); }
+	inline StringRef tokStr() const { return tokToCStr(tokty); }
 };
 
 class Tokenizer
@@ -261,10 +261,11 @@ class Tokenizer
 	ModuleLoc *locAlloc(size_t line, size_t col);
 	ModuleLoc loc(size_t line, size_t col);
 
+	StringRef getAttributes(StringRef data, size_t &i);
 	StringRef getName(StringRef data, size_t &i);
 	TokType classifyStr(StringRef str);
-	StringRef getNum(StringRef data, size_t &i, size_t &line, size_t &line_start,
-			 TokType &num_type, int &base);
+	String getNum(StringRef data, size_t &i, size_t &line, size_t &line_start,
+		      TokType &num_type, int &base);
 	bool getConstStr(StringRef data, char &quote_type, size_t &i, size_t &line,
 			 size_t &line_start, String &buf);
 	TokType getOperator(StringRef data, size_t &i, size_t line, size_t line_start);
