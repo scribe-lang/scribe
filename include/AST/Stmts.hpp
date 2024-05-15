@@ -298,31 +298,23 @@ class StmtVar : public Stmt
 {
 	lex::Lexeme name;
 	StmtType *vtype;
-	Stmt *vval;	 // either of expr, funcdef, enumdef, or structdef
-	uint8_t varmask; // from VarMask
-	bool disable_module_id_mangle;
-	bool disable_codegen_mangle;
+	Stmt *vval; // either of expr, funcdef, enumdef, or structdef
 
 public:
-	StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
-		uint8_t varmask);
+	StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval);
 	~StmtVar();
 	// at least one of type or val must be present
 	static StmtVar *create(Context &c, const ModuleLoc *loc, const lex::Lexeme &name,
-			       StmtType *vtype, Stmt *vval, uint8_t varmask);
+			       StmtType *vtype, Stmt *vval);
 
 	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 
 	inline void setVVal(Stmt *val) { vval = val; }
-	inline void disableModuleIDMangling() { disable_module_id_mangle = true; }
-	inline void disableCodeGenMangling() { disable_codegen_mangle = true; }
 
 	inline lex::Lexeme &getName() { return name; }
 	inline StmtType *&getVType() { return vtype; }
 	inline Stmt *&getVVal() { return vval; }
-	inline bool isModuleIDManglingDisabled() const { return disable_module_id_mangle; }
-	inline bool isCodeGenManglingDisabled() { return disable_codegen_mangle; }
 };
 
 class StmtFnSig : public Stmt

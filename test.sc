@@ -16,6 +16,14 @@ let X = struct {
 	b: u32;
 };
 
+// Make the function private and "invisible" to outside code.
+// This is only a suggestion for the autocompleter.
+// Code using this function outside this module will still work.
+#private
+let x in X = fn() {
+	// ...
+};
+
 let X = union {
 	a: u64;
 	b: f64;

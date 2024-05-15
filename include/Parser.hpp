@@ -94,14 +94,14 @@ public:
 
 	inline bool hasModule(StringRef path) { return modules.find(path) != modules.end(); }
 	inline const Vector<StringRef> &getModuleStack() { return modulestack; }
-	inline args::ArgParser &getCommandArgs() { return args; }
+	inline args::ArgParser &getCliArgs() { return args; }
 	inline Context &getContext() { return ctx; }
 	inline Module *getMainModule() { return mainmodule; }
 	Module *getModule(StringRef path);
 
 	// force ignores arg parser
-	void dumpTokens(bool force);
-	void dumpParseTree(bool force);
+	void dumpTokens();
+	void dumpParseTree();
 
 	// search for a source (import) in the import/include paths
 	// updates the modname parameter if the file is found

@@ -1,5 +1,6 @@
 #include "Lex.hpp"
 
+#include <charconv>
 #include <limits>
 
 namespace sc

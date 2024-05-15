@@ -37,10 +37,10 @@ bool Parsing::parseBlock(ParseHelper &p, StmtBlock *&tree, bool with_brace)
 
 		if(p.accept(lex::ATTRS) && !parseAttributes(p, attributes)) return false;
 		// TODO: this must be during simplify as all inline stuff is resolved as well
-		// if(!with_brace && !p.accept(lex::LET)) {
-		// 	err::out(p.peek(), "top level block can contain only 'let' declarations");
-		// 	return false;
-		// }
+		if(!with_brace && !p.accept(lex::LET)) {
+			err::out(p.peek(), "top level block can contain only 'let' declarations");
+			return false;
+		}
 		// logic
 		if(p.accept(lex::LET)) {
 			if(!parseVarDecl(p, stmt)) return false;
@@ -1018,11 +1018,11 @@ done:
 		}
 		lex::Lexeme selfeme(in->getLoc(), lex::IDEN, "self");
 		in->setRef();
-		StmtVar *selfvar  = StmtVar::create(ctx, in->getLoc(), selfeme, in, nullptr, 0);
+		StmtVar *selfvar  = StmtVar::create(ctx, in->getLoc(), selfeme, in, nullptr);
 		StmtFnSig *valsig = as<StmtFnDef>(val)->getSig();
 		valsig->getArgs().insert(valsig->getArgs().begin(), selfvar);
 	}
-	var = StmtVar::create(ctx, name.getLoc(), name, type, val, stmtmask);
+	var = StmtVar::create(ctx, name.getLoc(), name, type, val);
 	var->setStmtMask(stmtmask);
 	return true;
 }
@@ -1461,8 +1461,7 @@ bool Parsing::parseForIn(ParseHelper &p, Stmt *&fin)
 	in_interm.setDataStr(toString(in_interm.getDataStr(), "_interm"));
 	iter_interm.setDataStr(toString("_", iter_interm.getDataStr()));
 
-	StmtVar *in_interm_var =
-	StmtVar::create(ctx, in_interm.getLoc(), in_interm, nullptr, in, 0);
+	StmtVar *in_interm_var = StmtVar::create(ctx, in_interm.getLoc(), in_interm, nullptr, in);
 	// block statement 1:
 	StmtVarDecl *in_interm_vardecl = StmtVarDecl::create(ctx, loc, {in_interm_var});
 
@@ -1475,7 +1474,7 @@ bool Parsing::parseForIn(ParseHelper &p, Stmt *&fin)
 	StmtExpr *init_expr =
 	StmtExpr::create(ctx, loc, 0, init_dot_expr, call_op, init_call_info, false);
 	StmtVar *init_iter_interm_var =
-	StmtVar::create(ctx, iter_interm.getLoc(), iter_interm, nullptr, init_expr, 0);
+	StmtVar::create(ctx, iter_interm.getLoc(), iter_interm, nullptr, init_expr);
 	StmtVarDecl *init = StmtVarDecl::create(ctx, iter_interm.getLoc(), {init_iter_interm_var});
 
 	// cond:
@@ -1514,7 +1513,7 @@ bool Parsing::parseForIn(ParseHelper &p, Stmt *&fin)
 	StmtFnCallInfo::create(ctx, loc, {loop_var_val_call_arg});
 	StmtExpr *loop_var_val	  = StmtExpr::create(ctx, loc, 0, loop_var_val_dot_expr, call_op,
 						     loop_var_val_call_info, false);
-	StmtVar *loop_var	  = StmtVar::create(ctx, loc, iter, nullptr, loop_var_val, 0);
+	StmtVar *loop_var	  = StmtVar::create(ctx, loc, iter, nullptr, loop_var_val);
 	StmtVarDecl *loop_vardecl = StmtVarDecl::create(ctx, loc, {loop_var});
 	blk->getStmts().insert(blk->getStmts().begin(), loop_vardecl);
 

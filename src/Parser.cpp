@@ -163,18 +163,14 @@ Module *RAIIParser::getModule(StringRef path)
 	return nullptr;
 }
 
-void RAIIParser::dumpTokens(bool force)
+void RAIIParser::dumpTokens()
 {
-	if(!args.has("tokens") && !force) return;
-
 	printf("-------------------------------------------------- Token(s) "
 	       "--------------------------------------------------\n");
 	mainmodule->dumpTokens();
 }
-void RAIIParser::dumpParseTree(bool force)
+void RAIIParser::dumpParseTree()
 {
-	if(!args.has("ast") && !args.has("sst") && !force) return;
-
 	printf("-------------------------------------------------- Parse Tree(s) "
 	       "--------------------------------------------------\n");
 	mainmodule->dumpParseTree();

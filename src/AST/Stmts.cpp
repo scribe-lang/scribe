@@ -245,16 +245,14 @@ void StmtExpr::disp(bool has_next)
 //////////////////////////////////////////// StmtVar //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtVar::StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval,
-		 uint8_t varmask)
-	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval), varmask(varmask),
-	  disable_module_id_mangle(false), disable_codegen_mangle(false)
+StmtVar::StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval)
+	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval)
 {}
 StmtVar::~StmtVar() {}
 StmtVar *StmtVar::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype,
-			 Stmt *vval, uint8_t infomask)
+			 Stmt *vval)
 {
-	return c.allocStmt<StmtVar>(loc, name, vtype, vval, infomask);
+	return c.allocStmt<StmtVar>(loc, name, vtype, vval);
 }
 
 void StmtVar::disp(bool has_next)

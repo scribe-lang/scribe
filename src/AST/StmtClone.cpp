@@ -83,9 +83,7 @@ Stmt *StmtVar::clone(Context &ctx)
 {
 	StmtType *newvtype = vtype ? as<StmtType>(vtype->clone(ctx)) : nullptr;
 	Stmt *newvval	   = vval ? vval->clone(ctx) : nullptr;
-	StmtVar *res	   = StmtVar::create(ctx, getLoc(), name, newvtype, newvval, varmask);
-	res->disable_module_id_mangle = disable_module_id_mangle;
-	res->disable_codegen_mangle   = disable_codegen_mangle;
+	StmtVar *res	   = StmtVar::create(ctx, getLoc(), name, newvtype, newvval);
 	res->appendStmtMask(getStmtMask());
 	res->setAttributes(attrs);
 	return res;

@@ -61,7 +61,7 @@ public:
 	bool parseEnum(ParseHelper &p, Stmt *&ed);
 	bool parseStruct(ParseHelper &p, Stmt *&sd, bool allowed_templs);
 
-	bool parseVarDecl(ParseHelper &p, Stmt *&vd); // combines VAR_DECL_BASE and VAR_DECL
+	bool parseVarDecl(ParseHelper &p, Stmt *&vd);
 
 	bool parseConds(ParseHelper &p, Stmt *&conds);
 	// this is just a transformation that generates a for loop

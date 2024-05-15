@@ -1,11 +1,11 @@
 #include <cstring>
 #include <iostream>
-#include <stdexcept>
 
 #include "Args.hpp"
 #include "Builder.hpp"
 #include "Config.hpp"
 #include "FS.hpp"
+#include "Logger.hpp"
 #include "Parser.hpp"
 
 using namespace sc;
@@ -39,6 +39,10 @@ int main(int argc, char **argv)
 			COMMIT_ID, TREE_STATUS, BUILD_CXX_COMPILER, BUILD_DATE);
 		return 0;
 	}
+
+	logger.addSink(&std::cerr, true, false);
+	if(args.has("verbose")) logger.setLevel(LogLevels::INFO);
+
 	String file = String(args.get(1));
 	if(file.empty()) {
 		std::cerr << "Error: no source provided to read from\n";
@@ -60,10 +64,15 @@ int BuildRunProj(args::ArgParser &args, bool buildonly)
 	RAIIParser parser(args);
 	if(!parser.init()) return 1;
 	if(!parser.parse(file, true, buildcode)) return 1;
-	parser.dumpTokens(false);
-	parser.dumpParseTree(false);
+
+	if(args.has("tokens")) parser.dumpTokens();
+	if(args.has("ast")) parser.dumpParseTree();
+
 	if(args.has("nofile")) return 0;
-	// TODO: execute builder
+
+	// Compilation Driver (C, LLVM, ...)
+
+	// Execute built binary
 	return res;
 }
 
@@ -78,16 +87,13 @@ int CompileFile(args::ArgParser &args, String &file)
 	RAIIParser parser(args);
 	if(!parser.init()) return 1;
 	if(!parser.parse(file, true)) return 1;
-	parser.dumpTokens(false);
-	parser.dumpParseTree(false);
-	if(args.has("nofile")) return 0;
 
-	if(args.has("verbose")) {
-		// TODO: make proper log system
-		// logger.info("total read lines in source '%s': %d", file.c_str(),
-		// 	    fs::getLastTotalLines());
-		std::cout << "total read lines: " << fs::getLastTotalLines() << "\n";
-	}
+	logger.info("Total lines read in source '", file, "': ", fs::getLastTotalLines());
+
+	if(args.has("tokens")) parser.dumpTokens();
+	if(args.has("ast")) parser.dumpParseTree();
+
+	if(args.has("nofile")) return 0;
 
 	// Compilation Driver (C, LLVM, ...)
 	return 0;

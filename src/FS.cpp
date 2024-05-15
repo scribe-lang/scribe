@@ -23,9 +23,11 @@ bool read(const String &file, String &data)
 
 	while(fgets(buf, sizeof(buf), fp) != NULL) data += buf;
 
+	total_lines = 0;
 	for(auto c : data) {
 		if(c == '\n') ++total_lines;
 	}
+	if(!data.empty() && data.back() != '\n') ++total_lines;
 
 	fclose(fp);
 
