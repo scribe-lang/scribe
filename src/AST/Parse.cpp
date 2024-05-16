@@ -36,12 +36,13 @@ bool Parsing::parseBlock(ParseHelper &p, StmtBlock *&tree, bool with_brace)
 		bool skip_cols = false;
 
 		if(p.accept(lex::ATTRS) && !parseAttributes(p, attributes)) return false;
+
 		// TODO: this must be during simplify as all inline stuff is resolved as well
-		if(!with_brace && !p.accept(lex::LET)) {
-			err::out(p.peek(), "top level block can contain only 'let' declarations");
-			return false;
-		}
-		// logic
+		// if(!with_brace && !p.accept(lex::LET)) {
+		// 	err::out(p.peek(), "top level block can contain only 'let' declarations");
+		// 	return false;
+		// }
+
 		if(p.accept(lex::LET)) {
 			if(!parseVarDecl(p, stmt)) return false;
 		} else if(p.accept(lex::IF)) {
@@ -983,10 +984,13 @@ val:
 	}
 	if(p.accept(lex::ENUM)) {
 		if(!parseEnum(p, val)) return false;
+		as<StmtEnum>(val)->setName(name.getDataStr());
 	} else if(p.accept(lex::STRUCT, lex::UNION)) {
 		if(!parseStruct(p, val, true)) return false;
+		as<StmtStruct>(val)->setName(name.getDataStr());
 	} else if(p.accept(lex::INLINE, lex::FN)) {
 		if(!parseFnDef(p, val)) return false;
+		as<StmtFnDef>(val)->setName(name.getDataStr());
 	} else if(p.accept(lex::EXTERN)) {
 		if(!parseExtern(p, val)) return false;
 		if(!as<StmtExtern>(val)->getEntity() && !type) {

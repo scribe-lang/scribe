@@ -5,6 +5,17 @@
 namespace sc::AST
 {
 
+String genAnonymousName(StringRef suffix = "")
+{
+	static size_t id = 0;
+	String res	 = "Anonymous";
+	if(!suffix.empty()) {
+		res += suffix;
+	}
+	res += std::to_string(id++);
+	return res;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////// Stmt //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -330,9 +341,9 @@ StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc *loc, StmtFnSig *sig, S
 void StmtFnDef::disp(bool has_next)
 {
 	tio::tabAdd(has_next);
-	tio::print(has_next, "Function definition [is inline: ", is_inline ? "yes" : "no",
-		   "] [has parent: ", parentvar ? "yes" : "no", "]", attributesToString(" (", ")"),
-		   "\n");
+	tio::print(
+	has_next, "Function '", getName(), "' definition [is inline: ", is_inline ? "yes" : "no",
+	"] [has parent: ", parentvar ? "yes" : "no", "]", attributesToString(" (", ")"), "\n");
 	tio::tabAdd(true);
 	tio::print(true, "Function Signature:\n");
 	sig->disp(false);
@@ -454,7 +465,7 @@ StmtEnum *StmtEnum::create(Context &c, const ModuleLoc *loc, const Vector<lex::L
 void StmtEnum::disp(bool has_next)
 {
 	tio::tabAdd(has_next);
-	tio::print(has_next, "Enumerations", attributesToString(" (", ")"), ":\n");
+	tio::print(has_next, "Enum: '", getName(), "'", attributesToString(" (", ")"), ":\n");
 	if(tagty) {
 		tio::tabAdd(!items.empty());
 		tio::print(!items.empty(), "Provided Tag Type:\n");
@@ -500,8 +511,8 @@ void StmtStruct::disp(bool has_next)
 	}
 
 	tio::tabAdd(has_next);
-	tio::print(has_next, is_union ? "Union" : "Struct", templatestr, is_decl ? " (decl)" : "",
-		   attributesToString(" (", ")"), "\n");
+	tio::print(has_next, is_union ? "Union " : "Struct '", getName(), "'", templatestr,
+		   is_decl ? " (decl)" : "", attributesToString(" (", ")"), "\n");
 
 	if(!fields.empty()) {
 		tio::tabAdd(false);

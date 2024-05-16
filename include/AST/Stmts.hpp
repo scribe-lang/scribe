@@ -41,6 +41,8 @@ enum class StmtMask : uint16_t
 	GLOBAL	 = 1 << 6,
 };
 
+String genAnonymousName(StringRef suffix);
+
 class Stmt
 {
 protected:
@@ -349,6 +351,7 @@ public:
 
 class StmtFnDef : public Stmt
 {
+	String name;
 	StmtFnSig *sig;
 	StmtBlock *blk;
 	StmtVar *parentvar;
@@ -364,9 +367,15 @@ public:
 	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 
+	inline void setName(StringRef newName) { name = newName; }
 	inline void setBlk(StmtBlock *_blk) { blk = _blk; }
 
 	inline void setParentVar(StmtVar *pvar) { parentvar = pvar; }
+	inline StringRef getName()
+	{
+		if(name.empty()) name = genAnonymousName("Func");
+		return name;
+	}
 	inline StmtFnSig *&getSig() { return sig; }
 	inline StmtBlock *&getBlk() { return blk; }
 	inline StmtVar *&getParentVar() { return parentvar; }
@@ -446,6 +455,7 @@ public:
 
 class StmtEnum : public Stmt
 {
+	String name;
 	Vector<lex::Lexeme> items;
 	StmtType *tagty; // optional
 
@@ -458,6 +468,12 @@ public:
 	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 
+	inline void setName(StringRef newName) { name = newName; }
+	inline StringRef getName()
+	{
+		if(name.empty()) name = genAnonymousName("Enum");
+		return name;
+	}
 	inline Vector<lex::Lexeme> &getItems() { return items; }
 	inline StmtType *&getTagTy() { return tagty; }
 };
@@ -465,6 +481,7 @@ public:
 // both declaration + definition, and struct + union
 class StmtStruct : public Stmt
 {
+	String name;
 	Vector<StmtVar *> fields;
 	Vector<lex::Lexeme> templates;
 	bool is_union;
@@ -483,8 +500,14 @@ public:
 	void disp(bool has_next);
 	Stmt *clone(Context &ctx);
 
+	inline void setName(StringRef newName) { name = newName; }
 	inline void setDecl(bool decl) { is_decl = decl; }
 	inline void setExterned(bool externed) { is_externed = externed; }
+	inline StringRef getName()
+	{
+		if(name.empty()) name = genAnonymousName("Struct");
+		return name;
+	}
 	inline Vector<StmtVar *> &getFields() { return fields; }
 	inline StmtVar *getField(size_t idx) { return fields[idx]; }
 	inline const Vector<lex::Lexeme> &getTemplates() { return templates; }
