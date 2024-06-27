@@ -1,11 +1,11 @@
-#include "AST/Passes/ConstFold.hpp"
+#include "AST/Passes/IRGen.hpp"
 
 namespace sc::AST
 {
-ConstFoldPass::ConstFoldPass(Context &c) : Pass(Pass::genPassID<ConstFoldPass>(), c) {}
-ConstFoldPass::~ConstFoldPass() {}
+IRGenPass::IRGenPass(Context &c) : Pass(Pass::genPassID<IRGenPass>(), c) {}
+IRGenPass::~IRGenPass() {}
 
-bool ConstFoldPass::visit(Stmt *stmt, Stmt **source)
+bool IRGenPass::visit(Stmt *stmt, Stmt **source)
 {
 	bool res = false;
 	switch(stmt->getStmtType()) {
@@ -29,27 +29,26 @@ bool ConstFoldPass::visit(Stmt *stmt, Stmt **source)
 	case CONTINUE: res = visit(as<StmtContinue>(stmt), source); break;
 	case BREAK: res = visit(as<StmtBreak>(stmt), source); break;
 	default: {
-		err::out(stmt,
-			 "invalid statement found for const folding: ", stmt->getStmtTypeCString());
+		err::out(stmt, "invalid statement found for IR gen: ", stmt->getStmtTypeCString());
 		break;
 	}
 	}
 	return res;
 }
-bool ConstFoldPass::visit(StmtBlock *stmt, Stmt **source)
+bool IRGenPass::visit(StmtBlock *stmt, Stmt **source)
 {
 	for(auto &s : stmt->getStmts()) {
 		if(!visit(s, &s)) {
-			err::out(s, "failed to apply const folding for this statement");
+			err::out(s, "failed to generate IR for this statement");
 			return false;
 		}
 	}
 	return true;
 }
-bool ConstFoldPass::visit(StmtType *stmt, Stmt **source) { return true; }
-bool ConstFoldPass::visit(StmtSimple *stmt, Stmt **source) { return true; }
-bool ConstFoldPass::visit(StmtFnCallInfo *stmt, Stmt **source) { return true; }
-bool ConstFoldPass::visit(StmtExpr *stmt, Stmt **source)
+bool IRGenPass::visit(StmtType *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtSimple *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtFnCallInfo *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtExpr *stmt, Stmt **source)
 {
 	Stmt *&lhs = stmt->getLHS();
 	Stmt *&rhs = stmt->getRHS();
@@ -428,29 +427,29 @@ bool ConstFoldPass::visit(StmtExpr *stmt, Stmt **source)
 	}
 	return true;
 }
-bool ConstFoldPass::visit(StmtVar *stmt, Stmt **source)
+bool IRGenPass::visit(StmtVar *stmt, Stmt **source)
 {
 	if(stmt->getVVal()) return visit(stmt->getVVal(), &stmt->getVVal());
 	return true;
 }
-bool ConstFoldPass::visit(StmtFnSig *stmt, Stmt **source) { return true; }
-bool ConstFoldPass::visit(StmtFnDef *stmt, Stmt **source)
+bool IRGenPass::visit(StmtFnSig *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtFnDef *stmt, Stmt **source)
 {
 	return visit(stmt->getBlk(), asStmt(&stmt->getBlk()));
 }
-bool ConstFoldPass::visit(StmtHeader *stmt, Stmt **source) { return true; }
-bool ConstFoldPass::visit(StmtLib *stmt, Stmt **source) { return true; }
-bool ConstFoldPass::visit(StmtExtern *stmt, Stmt **source) { return true; }
-bool ConstFoldPass::visit(StmtEnum *stmt, Stmt **source) { return true; }
-bool ConstFoldPass::visit(StmtStruct *stmt, Stmt **source) { return true; }
-bool ConstFoldPass::visit(StmtVarDecl *stmt, Stmt **source)
+bool IRGenPass::visit(StmtHeader *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtLib *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtExtern *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtEnum *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtStruct *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtVarDecl *stmt, Stmt **source)
 {
 	for(auto &d : stmt->getDecls()) {
 		if(!visit(d, asStmt(&d))) return false;
 	}
 	return true;
 }
-bool ConstFoldPass::visit(StmtCond *stmt, Stmt **source)
+bool IRGenPass::visit(StmtCond *stmt, Stmt **source)
 {
 	for(auto &c : stmt->getConditionals()) {
 		if(c.getCond() && !visit(c.getCond(), &c.getCond())) return false;
@@ -458,7 +457,7 @@ bool ConstFoldPass::visit(StmtCond *stmt, Stmt **source)
 	}
 	return true;
 }
-bool ConstFoldPass::visit(StmtFor *stmt, Stmt **source)
+bool IRGenPass::visit(StmtFor *stmt, Stmt **source)
 {
 	if(stmt->getInit() && !visit(stmt->getInit(), &stmt->getInit())) return false;
 	if(stmt->getCond() && !visit(stmt->getCond(), &stmt->getCond())) return false;
@@ -466,11 +465,11 @@ bool ConstFoldPass::visit(StmtFor *stmt, Stmt **source)
 	if(stmt->getBlk() && !visit(stmt->getBlk(), asStmt(&stmt->getBlk()))) return false;
 	return true;
 }
-bool ConstFoldPass::visit(StmtRet *stmt, Stmt **source)
+bool IRGenPass::visit(StmtRet *stmt, Stmt **source)
 {
 	if(stmt->getRetVal() && !visit(stmt->getRetVal(), &stmt->getRetVal())) return false;
 	return true;
 }
-bool ConstFoldPass::visit(StmtContinue *stmt, Stmt **source) { return true; }
-bool ConstFoldPass::visit(StmtBreak *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtContinue *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtBreak *stmt, Stmt **source) { return true; }
 } // namespace sc::AST
