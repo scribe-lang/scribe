@@ -4,20 +4,27 @@
 
 namespace sc
 {
-enum class Instructions
-{
-	LOAD,
-};
 
+enum class Values
+{
+	SIMPLE,
+	INSTRUCTION,
+};
 class Value
 {
+	Values valty;
 	ModuleLoc *loc;
 	StringMap<String> attrs;
-	Vector<Value *> args;
 
 public:
 	Value(const ModuleLoc *loc);
 	virtual ~Value();
+
+	virtual String toString() const = 0;
+
+#define isValueX(X, ENUMVAL) \
+	inline bool is##X() { return valty == Values::ENUMVAL; }
+	isValueX(Simple, SIMPLE);
 
 	inline bool hasAttribute(StringRef name) { return attrs.find(name) != attrs.end(); }
 	inline void addAttribute(StringRef name, StringRef val = "") { attrs[String(name)] = val; }
@@ -29,6 +36,64 @@ public:
 	}
 	StringRef getAttributeValue(StringRef name);
 	String attributesToString(StringRef prefix = "", StringRef suffix = "");
+};
+
+enum class SimpleValues
+{
+	NIL,
+	TRUE,
+	FALSE,
+	CHAR,
+	INT,
+	FLT,
+	STR,
+	IDEN,
+};
+class SimpleValue : public Value
+{
+	SimpleValues simplevalty;
+	Variant<String, int64_t, long double> data;
+
+public:
+	SimpleValue(SimpleValues valty);
+	SimpleValue(SimpleValues valty, char data);
+	SimpleValue(SimpleValues valty, int64_t data);
+	SimpleValue(SimpleValues valty, long double data);
+	SimpleValue(SimpleValues valty, StringRef data);
+	~SimpleValue();
+
+	String toString() const override;
+
+#define isSimpleValueX(X, ENUMVAL) \
+	inline bool is##X() { return simplevalty == SimpleValues::ENUMVAL; }
+	isSimpleValueX(Nil, NIL);
+	isSimpleValueX(True, TRUE);
+	isSimpleValueX(False, FALSE);
+	isSimpleValueX(Int, INT);
+	isSimpleValueX(Flt, FLT);
+	isSimpleValueX(Char, CHAR);
+	isSimpleValueX(Str, STR);
+	isSimpleValueX(Iden, IDEN);
+
+	inline SimpleValues getType() { return simplevalty; }
+
+	inline StringRef getDataStr() { return std::get<String>(data); }
+	inline int64_t getDataInt() { return std::get<int64_t>(data); }
+	inline long double getDataFlt() { return std::get<long double>(data); }
+};
+
+enum class Instructions
+{
+	LOAD,
+};
+class Instruction : public Value
+{
+	Instructions instrty;
+	Vector<Value *> args;
+
+public:
+	Instruction(Instructions instrty);
+	virtual ~Instruction();
 
 	inline void addArg(Value *arg) { args.push_back(arg); }
 	inline Value *getArg(size_t idx) { return args[idx]; }
@@ -43,17 +108,11 @@ public:
 	}
 };
 
-class SimpleValue : public Value
+// Args:
+// Data: SimpleValue
+class LoadInstruction : public Instruction
 {
-	Variant<String, int64_t, long double> data;
-
 public:
-	inline bool isDataStr() { return std::holds_alternative<String>(data); }
-	inline bool isDataInt() { return std::holds_alternative<String>(data); }
-	inline bool isDataFlt() { return std::holds_alternative<String>(data); }
 };
-
-class Instruction
-{};
 
 } // namespace sc
