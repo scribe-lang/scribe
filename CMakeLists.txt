@@ -112,8 +112,8 @@ endif()
 
 # Finally! The sources!!!!!
 
-# Set Config.hpp.in template
-configure_file("${PROJECT_SOURCE_DIR}/include/Config.hpp.in" "${PROJECT_SOURCE_DIR}/include/Config.hpp" @ONLY)
+# Set Base.hpp.in template
+configure_file("${PROJECT_SOURCE_DIR}/include/Core/Core.hpp.in" "${PROJECT_SOURCE_DIR}/include/Core/Core.hpp" @ONLY)
 
 # Install CMake modules
 # install(DIRECTORY "${CMAKE_SOURCE_DIR}/cmake_modules/"
@@ -126,27 +126,88 @@ configure_file("${PROJECT_SOURCE_DIR}/include/Config.hpp.in" "${PROJECT_SOURCE_D
 # 	FILES_MATCHING PATTERN "*.hpp"
 # )
 
-# Install Scribe Includes
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/headers/"
-	DESTINATION "${CMAKE_INSTALL_PREFIX}/include/scribe"
+# Install Scribe Sources
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/"
+	DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/scribe"
 	FILES_MATCHING PATTERN "*.sc"
 )
 
+# Core Library
+file(GLOB_RECURSE COREINCS RELATIVE "${PROJECT_SOURCE_DIR}" "include/Core/*.hpp")
+file(GLOB_RECURSE CORESRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/Core/*.cpp")
+add_library(libcore SHARED ${CORESRCS} ${COREINCS})
+target_include_directories(libcore PUBLIC "${PROJECT_SOURCE_DIR}/include/Core")
+set_target_properties(libcore
+    PROPERTIES
+    PREFIX "" # 'lib' as prefix is not needed on linux since the name is libcore anyway
+    LINK_FLAGS "${EXTRA_LD_FLAGS}"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/scribe/" # for so (non-windows)
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>" # for dll (windows)
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>" # for lib (windows)
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+)
+install(TARGETS libcore
+	LIBRARY
+	  DESTINATION "lib/scribe/"
+	RUNTIME
+	  DESTINATION "bin/$<0:>"
+	ARCHIVE
+	  DESTINATION "bin/$<0:>"
+)
+
+# Scribe VM Library
+file(GLOB_RECURSE VMINCS RELATIVE "${PROJECT_SOURCE_DIR}" "include/VM/*.hpp")
+file(GLOB_RECURSE VMSRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/VM/*.cpp")
+list(REMOVE_ITEM VMSRCS "src/VM/Main.cpp")
+add_library(libvm SHARED ${VMSRCS} ${VMINCS})
+target_include_directories(libvm PUBLIC "${PROJECT_SOURCE_DIR}/include/VM")
+target_link_libraries(libvm libcore)
+set_target_properties(libvm
+    PROPERTIES
+    PREFIX "" # 'lib' as prefix is not needed on linux since the name is libcore anyway
+    LINK_FLAGS "${EXTRA_LD_FLAGS}"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/scribe/" # for so (non-windows)
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>" # for dll (windows)
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>" # for lib (windows)
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+)
+install(TARGETS libvm
+	LIBRARY
+	  DESTINATION "lib/scribe/"
+	RUNTIME
+	  DESTINATION "bin/$<0:>"
+	ARCHIVE
+	  DESTINATION "bin/$<0:>"
+)
+
+# Scribe VM Binary
+add_executable(scribevm "${PROJECT_SOURCE_DIR}/src/VM/Main.cpp" ${VMSRCS} ${VMINCS})
+target_include_directories(scribevm PRIVATE "${PROJECT_SOURCE_DIR}/include/VM")
+target_link_libraries(scribevm libvm)
+set_target_properties(scribevm
+	PROPERTIES
+	LINK_FLAGS "${EXTRA_LD_FLAGS}"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>"
+	INSTALL_RPATH_USE_LINK_PATH TRUE
+)
+install(TARGETS scribevm
+	RUNTIME
+	  DESTINATION bin
+	  COMPONENT Binaries
+)
+
 # Scribe Compiler
-file(GLOB_RECURSE INCS RELATIVE "${PROJECT_SOURCE_DIR}" "include/*.hpp")
-file(GLOB_RECURSE SRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/*.cpp")
+file(GLOB_RECURSE COMPILERINCS RELATIVE "${PROJECT_SOURCE_DIR}" "include/Compiler/*.hpp")
+file(GLOB_RECURSE COMPILERSRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/Compiler/*.cpp")
+list(REMOVE_ITEM COMPILERSRCS "src/Compiler/Main.cpp")
 
-list(REMOVE_ITEM SRCS "src/Main.cpp")
-
-add_executable(scribe "${PROJECT_SOURCE_DIR}/src/Main.cpp" ${SRCS} ${INCS})
-target_include_directories(scribe PRIVATE ${PROJECT_SOURCE_DIR}/include)
-# Link against LLVM libraries
-# target_link_libraries(scribe ${llvm_libs})
+add_executable(scribe "${PROJECT_SOURCE_DIR}/src/Compiler/Main.cpp" ${COMPILERSRCS} ${COMPILERINCS})
+target_include_directories(scribe PRIVATE "${PROJECT_SOURCE_DIR}/include/Compiler")
+target_link_libraries(scribe libvm)
 set_target_properties(scribe
 	PROPERTIES
-	OUTPUT_NAME scribe
 	LINK_FLAGS "${EXTRA_LD_FLAGS}"
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>"
 	INSTALL_RPATH_USE_LINK_PATH TRUE
 )
 install(TARGETS scribe

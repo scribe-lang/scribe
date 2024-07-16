@@ -13,7 +13,6 @@ compile_commands.json
 ###############
 testbin/
 bin/
-/lib/
 build/
 dockerbuild/
 buildfiles/
@@ -21,8 +20,8 @@ CMakeFiles/
 doxygen/
 flag_cache
 book/book/
-include/Config.hpp
 .cache/
+include/Core/Core.hpp
 
 # Extra data #
 #######################

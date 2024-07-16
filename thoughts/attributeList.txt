@@ -1,0 +1,13 @@
+reference
+pointerCount
+
+comptime
+static
+constant
+inline
+volatile
+global
+variadic
+extern
+
+inType
