@@ -2,8 +2,8 @@
 
 namespace sc::AST
 {
-ParseHelper::ParseHelper(Context &ctx, Module *mod, Vector<lex::Lexeme> &toks, size_t begin)
-	: ctx(ctx), mod(mod), toks(toks), invalid(), eof(ModuleLoc(), lex::FEOF), idx(begin)
+ParseHelper::ParseHelper(Module *mod, Vector<lex::Lexeme> &toks, size_t begin)
+	: mod(mod), toks(toks), invalid(), eof(ModuleLoc(), lex::FEOF), idx(begin)
 {}
 
 lex::Lexeme &ParseHelper::peek(int offset)

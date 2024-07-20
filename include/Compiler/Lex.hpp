@@ -1,10 +1,11 @@
 #pragma once
 
-#include "CompilerContext.hpp"
 #include "Error.hpp"
 
 namespace sc
 {
+class Module; // for Lexeme
+
 namespace lex
 {
 // true => @as(i1, 1)
@@ -244,7 +245,6 @@ public:
 
 class Tokenizer
 {
-	Context &ctx;
 	size_t moduleId;
 
 	ModuleLoc loc(size_t offset);
@@ -260,7 +260,7 @@ class Tokenizer
 	void removeBackSlash(String &s);
 
 public:
-	Tokenizer(Context &ctx, Module *m);
+	Tokenizer(Module *m);
 	bool tokenize(StringRef data, Vector<Lexeme> &toks);
 };
 } // namespace lex

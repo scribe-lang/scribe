@@ -13,12 +13,11 @@ namespace sc
 //////////////////////////////////////////// Module ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Module::Module(Context &ctx, String &&id, const String &path, StringRef code, bool is_main_module)
-	: ctx(ctx), id(id), path(path), code(code), tokens(), ptree(nullptr),
-	  is_main_module(is_main_module)
+Module::Module(String &&id, const String &path, StringRef code, bool is_main_module)
+	: id(id), path(path), code(code), tokens(), ptree(nullptr), is_main_module(is_main_module)
 {}
-Module::Module(Context &ctx, String &&id, const String &path, String &&code, bool is_main_module)
-	: ctx(ctx), id(id), path(path), code(std::move(code)), tokens(), ptree(nullptr),
+Module::Module(String &&id, const String &path, String &&code, bool is_main_module)
+	: id(id), path(path), code(std::move(code)), tokens(), ptree(nullptr),
 	  is_main_module(is_main_module)
 {}
 Module::~Module()
@@ -27,13 +26,13 @@ Module::~Module()
 }
 bool Module::tokenize()
 {
-	lex::Tokenizer tokenizer(ctx, this);
+	lex::Tokenizer tokenizer(this);
 	return tokenizer.tokenize(code, tokens);
 }
-bool Module::parseTokens()
+bool Module::parseTokens(ListAllocator<AST::Stmt> &allocator)
 {
-	AST::ParseHelper p(ctx, this, tokens);
-	AST::Parsing parsing(ctx);
+	AST::ParseHelper p(this, tokens);
+	AST::Parsing parsing(allocator);
 	return parsing.parseBlock(p, (AST::StmtBlock *&)ptree, false);
 }
 void Module::dumpTokens() const
@@ -54,8 +53,7 @@ void Module::dumpParseTree() const
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 RAIIParser::RAIIParser(args::ArgParser &args)
-	: args(args), ctx(this), defaultpmpermodule(ctx), defaultpmcombined(ctx),
-	  mainmodule(nullptr)
+	: args(args), stmtallocator("AST::Stmt"), mainmodule(nullptr)
 {
 	// defaultpmpermodule.add<AST::ConstFoldPass>();
 	// defaultpmpermodule.add<TypeAssignPass>();
@@ -112,14 +110,14 @@ Module *RAIIParser::addModule(const String &path, bool main_module, StringRef co
 	if(code.empty() && !fs::read(path.c_str(), _code)) return nullptr;
 	Module *mod = nullptr;
 	if(_code.empty()) {
-		mod = new Module(ctx, utils::toString(modulestack.size()), path, code, main_module);
+		mod = new Module(utils::toString(modulestack.size()), path, code, main_module);
 	} else {
-		mod = new Module(ctx, utils::toString(modulestack.size()), path, std::move(_code),
+		mod = new Module(utils::toString(modulestack.size()), path, std::move(_code),
 				 main_module);
 	}
 
 	modulestack.push_back(mod->getPath());
-	if(!mod->tokenize() || !mod->parseTokens()) {
+	if(!mod->tokenize() || !mod->parseTokens(stmtallocator)) {
 		modulestack.pop_back();
 		delete mod;
 		return nullptr;

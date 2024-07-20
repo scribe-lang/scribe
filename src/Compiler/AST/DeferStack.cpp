@@ -3,7 +3,7 @@
 namespace sc::AST
 {
 DeferStack::DeferStack() {}
-Vector<Stmt *> DeferStack::getAllStmts(Context &c)
+Vector<Stmt *> DeferStack::getAllStmts()
 {
 	Vector<Stmt *> res;
 	for(auto stackit = stack.back().rbegin(); stackit != stack.back().rend(); ++stackit) {

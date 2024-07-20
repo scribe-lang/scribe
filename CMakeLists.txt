@@ -160,7 +160,7 @@ file(GLOB_RECURSE VMINCS RELATIVE "${PROJECT_SOURCE_DIR}" "include/VM/*.hpp")
 file(GLOB_RECURSE VMSRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/VM/*.cpp")
 list(REMOVE_ITEM VMSRCS "src/VM/Main.cpp")
 add_library(libvm SHARED ${VMSRCS} ${VMINCS})
-target_include_directories(libvm PUBLIC "${PROJECT_SOURCE_DIR}/include/VM")
+target_include_directories(libvm PRIVATE "${PROJECT_SOURCE_DIR}/include/VM")
 target_link_libraries(libvm libcore)
 set_target_properties(libvm
     PROPERTIES
@@ -202,7 +202,7 @@ file(GLOB_RECURSE COMPILERSRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/Compiler/*.
 list(REMOVE_ITEM COMPILERSRCS "src/Compiler/Main.cpp")
 
 add_executable(scribe "${PROJECT_SOURCE_DIR}/src/Compiler/Main.cpp" ${COMPILERSRCS} ${COMPILERINCS})
-target_include_directories(scribe PRIVATE "${PROJECT_SOURCE_DIR}/include/Compiler")
+target_include_directories(scribe PRIVATE "${PROJECT_SOURCE_DIR}/include/Compiler" "${PROJECT_SOURCE_DIR}/include")
 target_link_libraries(scribe libvm)
 set_target_properties(scribe
 	PROPERTIES

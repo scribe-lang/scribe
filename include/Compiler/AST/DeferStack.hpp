@@ -12,13 +12,13 @@ class DeferStack
 
 public:
 	DeferStack();
-	Vector<AST::Stmt *> getAllStmts(Context &c);
+	Vector<AST::Stmt *> getAllStmts();
 
 	inline void pushFunc() { stack.push_back({}); }
 	inline void popFunc() { stack.pop_back(); }
 	inline void pushFrame() { stack.back().push_back({}); }
 	inline void popFrame() { stack.back().pop_back(); }
 	inline void addStmt(AST::Stmt *s) { stack.back().back().push_back(s); }
-	inline Span<AST::Stmt *> getTopStmts(Context &c) { return stack.back().back(); }
+	inline Span<AST::Stmt *> getTopStmts() { return stack.back().back(); }
 };
 } // namespace sc::AST

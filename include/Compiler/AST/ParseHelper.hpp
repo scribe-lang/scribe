@@ -6,7 +6,6 @@ namespace sc::AST
 {
 class ParseHelper
 {
-	Context &ctx;
 	Module *mod;
 	// requires modification at parsing stage, hence not set by module pointer
 	Vector<lex::Lexeme> &toks;
@@ -14,7 +13,7 @@ class ParseHelper
 	size_t idx;
 
 public:
-	ParseHelper(Context &ctx, Module *mod, Vector<lex::Lexeme> &toks, size_t begin = 0);
+	ParseHelper(Module *mod, Vector<lex::Lexeme> &toks, size_t begin = 0);
 
 	lex::Lexeme &peek(int offset = 0);
 	lex::TokType peekt(int offset = 0) const;

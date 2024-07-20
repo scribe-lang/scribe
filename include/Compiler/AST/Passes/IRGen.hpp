@@ -7,7 +7,7 @@ namespace sc::AST
 class IRGenPass : public Pass
 {
 public:
-	IRGenPass(Context &ctx);
+	IRGenPass();
 	~IRGenPass();
 
 	bool visit(Stmt *stmt, Stmt **source) override;

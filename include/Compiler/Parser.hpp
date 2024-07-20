@@ -8,8 +8,6 @@ namespace sc
 
 class Module
 {
-	Context &ctx;
-
 	String id;
 	String path;
 	String code;
@@ -19,12 +17,12 @@ class Module
 	bool is_main_module;
 
 public:
-	Module(Context &ctx, String &&id, const String &path, StringRef code, bool is_main_module);
-	Module(Context &ctx, String &&id, const String &path, String &&code, bool is_main_module);
+	Module(String &&id, const String &path, StringRef code, bool is_main_module);
+	Module(String &&id, const String &path, String &&code, bool is_main_module);
 	~Module();
 
 	bool tokenize();
-	bool parseTokens();
+	bool parseTokens(ListAllocator<AST::Stmt> &allocator);
 
 	// Allocates instructions
 	// This is the only function where instructions can be allocated
@@ -58,8 +56,7 @@ public:
 class RAIIParser
 {
 	args::ArgParser &args;
-
-	Context ctx;
+	ListAllocator<AST::Stmt> stmtallocator;
 
 	// default pms that run:
 	// 1. on each module
@@ -92,7 +89,6 @@ public:
 	inline bool hasModule(StringRef path) { return modules.find(path) != modules.end(); }
 	inline const Vector<StringRef> &getModuleStack() { return modulestack; }
 	inline args::ArgParser &getCliArgs() { return args; }
-	inline Context &getContext() { return ctx; }
 	inline Module *getMainModule() { return mainmodule; }
 	Module *getModule(StringRef path);
 

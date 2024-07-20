@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Allocator.hpp"
 #include "DeferStack.hpp"
 #include "ParseHelper.hpp"
 
@@ -13,11 +14,11 @@ enum class Occurs
 };
 class Parsing
 {
-	Context &ctx;
+	ListAllocator<Stmt> &allocator;
 	DeferStack deferstack;
 
 public:
-	Parsing(Context &ctx);
+	Parsing(ListAllocator<Stmt> &allocator);
 
 	// on successful parse, returns true, and tree is allocated
 	// if with_brace is true, it will attempt to find the beginning and ending brace for each

@@ -4,7 +4,7 @@
 
 namespace sc::AST
 {
-Parsing::Parsing(Context &ctx) : ctx(ctx) {}
+Parsing::Parsing(ListAllocator<Stmt> &allocator) : allocator(allocator) {}
 
 // on successful parse, returns true, and tree is allocated
 // if with_brace is true, it will attempt to find the beginning and ending brace for each block
@@ -95,7 +95,7 @@ bool Parsing::parseBlock(ParseHelper &p, StmtBlock *&tree, bool with_brace)
 			if((stmt->isOneWord() && as<StmtOneWord>(stmt)->isReturn()) &&
 			   !inserted_defers)
 			{
-				Vector<Stmt *> deferred = deferstack.getAllStmts(ctx);
+				Vector<Stmt *> deferred = deferstack.getAllStmts();
 				stmts.insert(stmts.end(), deferred.begin(), deferred.end());
 				inserted_defers = true;
 			}
@@ -113,7 +113,7 @@ bool Parsing::parseBlock(ParseHelper &p, StmtBlock *&tree, bool with_brace)
 	}
 
 	if(!inserted_defers) {
-		Span<Stmt *> deferred = deferstack.getTopStmts(ctx);
+		Span<Stmt *> deferred = deferstack.getTopStmts();
 		stmts.insert(stmts.end(), deferred.begin(), deferred.end());
 	}
 
@@ -126,7 +126,7 @@ bool Parsing::parseBlock(ParseHelper &p, StmtBlock *&tree, bool with_brace)
 		return false;
 	}
 
-	tree = StmtBlock::create(ctx, start.getLoc(), stmts, !with_brace);
+	tree = StmtBlock::create(allocator, start.getLoc(), stmts, !with_brace);
 	return true;
 }
 
@@ -145,7 +145,7 @@ bool Parsing::parseType(ParseHelper &p, StmtType *&type)
 
 	if(p.accept(lex::FN, lex::STRUCT, lex::UNION, lex::EXTERN)) {
 		if(!parseSignature(p, expr)) return false;
-		type = StmtType::create(ctx, start.getLoc(), expr);
+		type = StmtType::create(allocator, start.getLoc(), expr);
 		return true;
 	}
 
@@ -168,7 +168,7 @@ bool Parsing::parseType(ParseHelper &p, StmtType *&type)
 		return false;
 	}
 
-	type = StmtType::create(ctx, start.getLoc(), expr);
+	type = StmtType::create(allocator, start.getLoc(), expr);
 	if(!attrs.empty()) type->setAttributes(std::move(attrs));
 	return true;
 }
@@ -185,7 +185,7 @@ bool Parsing::parseSimple(ParseHelper &p, Stmt *&data)
 	lex::Lexeme &val = p.peek();
 	p.next();
 
-	data = StmtSimple::create(ctx, val.getLoc(), val);
+	data = StmtSimple::create(allocator, val.getLoc(), val);
 	return true;
 }
 
@@ -201,10 +201,10 @@ bool Parsing::parsePrefixedSuffixedLiteral(ParseHelper &p, Stmt *&expr)
 	p.next();
 	p.next();
 
-	StmtSimple *arg	   = StmtSimple::create(ctx, lit.getLoc(), lit);
-	StmtSimple *fn	   = StmtSimple::create(ctx, iden.getLoc(), iden);
-	StmtCallArgs *args = StmtCallArgs::create(ctx, arg->getLoc(), {arg});
-	expr		   = StmtExpr::create(ctx, lit.getLoc(), 0, fn, oper, args, false);
+	StmtSimple *arg	   = StmtSimple::create(allocator, lit.getLoc(), lit);
+	StmtSimple *fn	   = StmtSimple::create(allocator, iden.getLoc(), iden);
+	StmtCallArgs *args = StmtCallArgs::create(allocator, arg->getLoc(), {arg});
+	expr		   = StmtExpr::create(allocator, lit.getLoc(), 0, fn, oper, args, false);
 
 	return true;
 }
@@ -240,7 +240,7 @@ bool Parsing::parseExpr17(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr16(p, lhs, disable_brace_after_iden)) {
 			return false;
 		}
-		rhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		rhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		lhs = nullptr;
 	}
 
@@ -291,11 +291,11 @@ bool Parsing::parseExpr16(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 	if(!parseExpr15(p, lhs_rhs, disable_brace_after_iden)) {
 		return false;
 	}
-	rhs = StmtExpr::create(ctx, oper.getLoc(), 0, lhs_lhs, oper_inside, lhs_rhs, false);
+	rhs = StmtExpr::create(allocator, oper.getLoc(), 0, lhs_lhs, oper_inside, lhs_rhs, false);
 	goto after_quest;
 
 after_quest:
-	expr = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+	expr = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 	return true;
 }
 // Right Associative
@@ -321,7 +321,7 @@ bool Parsing::parseExpr15(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr14(p, lhs, disable_brace_after_iden)) {
 			return false;
 		}
-		rhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		rhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		lhs = nullptr;
 	}
 
@@ -361,7 +361,7 @@ bool Parsing::parseExpr14(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr13(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -378,7 +378,7 @@ bool Parsing::parseExpr14(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		return false;
 	}
 	if(expr->getStmtType() != EXPR) {
-		expr = StmtExpr::create(ctx, expr->getLoc(), 0, expr, {}, nullptr, false);
+		expr = StmtExpr::create(allocator, expr->getLoc(), 0, expr, {}, nullptr, false);
 	}
 	as<StmtExpr>(expr)->setOr(or_blk, or_blk_var);
 	return true;
@@ -406,7 +406,7 @@ bool Parsing::parseExpr13(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr12(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -436,7 +436,7 @@ bool Parsing::parseExpr12(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr11(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -466,7 +466,7 @@ bool Parsing::parseExpr11(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr10(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -496,7 +496,7 @@ bool Parsing::parseExpr10(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr09(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -526,7 +526,7 @@ bool Parsing::parseExpr09(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr08(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -556,7 +556,7 @@ bool Parsing::parseExpr08(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr07(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -587,7 +587,7 @@ bool Parsing::parseExpr07(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr06(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -617,7 +617,7 @@ bool Parsing::parseExpr06(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr05(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -647,7 +647,7 @@ bool Parsing::parseExpr05(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr04(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -677,7 +677,7 @@ bool Parsing::parseExpr04(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 		if(!parseExpr03(p, rhs, disable_brace_after_iden)) {
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, start.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, start.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -738,7 +738,7 @@ bool Parsing::parseExpr03(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 	}
 
 	for(auto &op : opers) {
-		lhs = StmtExpr::create(ctx, op.getLoc(), 0, lhs, op, nullptr, false);
+		lhs = StmtExpr::create(allocator, op.getLoc(), 0, lhs, op, nullptr, false);
 	}
 
 	expr = lhs;
@@ -763,7 +763,8 @@ bool Parsing::parseExpr02(ParseHelper &p, Stmt *&expr, bool disable_brace_after_
 
 	if(p.accept(lex::XINC, lex::XDEC, lex::PreVA)) {
 		if(p.peekt() == lex::PreVA) p.sett(lex::PostVA);
-		lhs = StmtExpr::create(ctx, p.peek().getLoc(), 0, lhs, p.peek(), nullptr, false);
+		lhs =
+		StmtExpr::create(allocator, p.peek().getLoc(), 0, lhs, p.peek(), nullptr, false);
 		p.next();
 	}
 
@@ -810,7 +811,7 @@ begin:
 after_dot:
 	if(!p.acceptd() || !parseSimple(p, rhs)) return false;
 	if(lhs && rhs) {
-		lhs = StmtExpr::create(ctx, dot.getLoc(), 0, lhs, dot, rhs, false);
+		lhs = StmtExpr::create(allocator, dot.getLoc(), 0, lhs, dot, rhs, false);
 		rhs = nullptr;
 	}
 
@@ -836,7 +837,7 @@ begin_brack:
 				 p.peek().tokCStr());
 			return false;
 		}
-		lhs = StmtExpr::create(ctx, oper.getLoc(), 0, lhs, oper, rhs, false);
+		lhs = StmtExpr::create(allocator, oper.getLoc(), 0, lhs, oper, rhs, false);
 		rhs = nullptr;
 		if(p.accept(lex::LBRACK, lex::LPAREN) ||
 		   (p.peekt() == lex::DOT && p.peekt(1) == lex::LT))
@@ -872,8 +873,8 @@ begin_brack:
 			return false;
 		}
 	post_args:
-		rhs  = StmtCallArgs::create(ctx, oper.getLoc(), args);
-		lhs  = StmtExpr::create(ctx, oper.getLoc(), 0, lhs, oper, rhs, is_intrinsic);
+		rhs  = StmtCallArgs::create(allocator, oper.getLoc(), args);
+		lhs  = StmtExpr::create(allocator, oper.getLoc(), 0, lhs, oper, rhs, is_intrinsic);
 		rhs  = nullptr;
 		args = {};
 
@@ -884,8 +885,8 @@ begin_brack:
 dot:
 	if(p.acceptn(lex::DOT, lex::ARROW)) {
 		if(lhs && rhs) {
-			lhs =
-			StmtExpr::create(ctx, p.peek(-1).getLoc(), 0, lhs, p.peek(-1), rhs, false);
+			lhs = StmtExpr::create(allocator, p.peek(-1).getLoc(), 0, lhs, p.peek(-1),
+					       rhs, false);
 			rhs = nullptr;
 		}
 		dot = p.peek(-1);
@@ -894,7 +895,7 @@ dot:
 
 done:
 	if(lhs && rhs) {
-		lhs = StmtExpr::create(ctx, dot.getLoc(), 0, lhs, dot, rhs, false);
+		lhs = StmtExpr::create(allocator, dot.getLoc(), 0, lhs, dot, rhs, false);
 		rhs = nullptr;
 	}
 	expr = lhs;
@@ -1013,11 +1014,11 @@ done:
 		}
 		lex::Lexeme selfeme(in->getLoc(), lex::IDEN, "self");
 		in->addAttribute("reference");
-		StmtVar *selfvar      = StmtVar::create(ctx, in->getLoc(), selfeme, in, nullptr);
+		StmtVar *selfvar = StmtVar::create(allocator, in->getLoc(), selfeme, in, nullptr);
 		StmtSignature *valsig = as<StmtFnDef>(val)->getSig();
 		valsig->getArgs().insert(valsig->getArgs().begin(), selfvar);
 	}
-	var = StmtVar::create(ctx, name.getLoc(), name, type, val);
+	var = StmtVar::create(allocator, name.getLoc(), name, type, val);
 	var->setAttributes(std::move(attrs));
 	return true;
 }
@@ -1089,14 +1090,14 @@ post_args:
 	}
 	if(!rettype) {
 		lex::Lexeme voideme = lex::Lexeme(p.peek(-1).getLoc(), lex::VOID, "void");
-		StmtSimple *voidsim = StmtSimple::create(ctx, voideme.getLoc(), voideme);
-		rettype		    = StmtType::create(ctx, voidsim->getLoc(), voidsim);
+		StmtSimple *voidsim = StmtSimple::create(allocator, voideme.getLoc(), voideme);
+		rettype		    = StmtType::create(allocator, voidsim->getLoc(), voidsim);
 	}
 
 	if(found_va) attrs["variadic"] = "";
 	if(isExtern) attrs["extern"] = "";
 
-	sig = StmtSignature::create(ctx, start.getLoc(), args, rettype, sigty);
+	sig = StmtSignature::create(allocator, start.getLoc(), args, rettype, sigty);
 	sig->setAttributes(std::move(attrs));
 	return true;
 }
@@ -1120,7 +1121,7 @@ bool Parsing::parseFnDef(ParseHelper &p, Stmt *&fndef)
 	if(!parseBlock(p, blk)) return false;
 	deferstack.popFunc();
 
-	fndef = StmtFnDef::create(ctx, start.getLoc(), (StmtSignature *)sig, blk);
+	fndef = StmtFnDef::create(allocator, start.getLoc(), (StmtSignature *)sig, blk);
 	fndef->setAttributes(std::move(attrs));
 	return true;
 }
@@ -1147,7 +1148,7 @@ bool Parsing::parseVarDecl(ParseHelper &p, Stmt *&vd)
 		if(!p.acceptn(lex::COMMA)) break;
 	}
 
-	vd = StmtVarDecl::create(ctx, start.getLoc(), decls);
+	vd = StmtVarDecl::create(allocator, start.getLoc(), decls);
 	return true;
 }
 
@@ -1186,7 +1187,7 @@ blk:
 	if(p.accept(lex::ELIF)) goto cond;
 	if(p.acceptn(lex::ELSE)) goto blk;
 
-	conds = StmtCond::create(ctx, start.getLoc(), std::move(cvec), is_inline);
+	conds = StmtCond::create(allocator, start.getLoc(), std::move(cvec), is_inline);
 	return true;
 }
 // For-In transformation:
@@ -1256,68 +1257,71 @@ bool Parsing::parseForIn(ParseHelper &p, Stmt *&fin)
 	in_interm.setDataStr(utils::toString(in_interm.getDataStr(), "_interm"));
 	iter_interm.setDataStr(utils::toString("_", iter_interm.getDataStr()));
 
-	StmtVar *in_interm_var = StmtVar::create(ctx, in_interm.getLoc(), in_interm, nullptr, in);
+	StmtVar *in_interm_var =
+	StmtVar::create(allocator, in_interm.getLoc(), in_interm, nullptr, in);
 	// block statement 1:
-	StmtVarDecl *in_interm_vardecl = StmtVarDecl::create(ctx, loc, {in_interm_var});
+	StmtVarDecl *in_interm_vardecl = StmtVarDecl::create(allocator, loc, {in_interm_var});
 
 	// init:
 	// let <iter_interm> = <in_interm>.begin()
-	StmtSimple *init_lhs	= StmtSimple::create(ctx, loc, in_interm);
-	StmtSimple *init_rhs	= StmtSimple::create(ctx, loc, lexbegin);
-	StmtExpr *init_dot_expr = StmtExpr::create(ctx, loc, 0, init_lhs, dot_op, init_rhs, false);
-	StmtCallArgs *init_call_info = StmtCallArgs::create(ctx, loc, {});
+	StmtSimple *init_lhs = StmtSimple::create(allocator, loc, in_interm);
+	StmtSimple *init_rhs = StmtSimple::create(allocator, loc, lexbegin);
+	StmtExpr *init_dot_expr =
+	StmtExpr::create(allocator, loc, 0, init_lhs, dot_op, init_rhs, false);
+	StmtCallArgs *init_call_info = StmtCallArgs::create(allocator, loc, {});
 	StmtExpr *init_expr =
-	StmtExpr::create(ctx, loc, 0, init_dot_expr, call_op, init_call_info, false);
+	StmtExpr::create(allocator, loc, 0, init_dot_expr, call_op, init_call_info, false);
 	StmtVar *init_iter_interm_var =
-	StmtVar::create(ctx, iter_interm.getLoc(), iter_interm, nullptr, init_expr);
-	StmtVarDecl *init = StmtVarDecl::create(ctx, iter_interm.getLoc(), {init_iter_interm_var});
+	StmtVar::create(allocator, iter_interm.getLoc(), iter_interm, nullptr, init_expr);
+	StmtVarDecl *init =
+	StmtVarDecl::create(allocator, iter_interm.getLoc(), {init_iter_interm_var});
 
 	// cond:
 	// <iter_interm> != <in_interm>.end()
-	StmtSimple *cond_rhs_lhs = StmtSimple::create(ctx, loc, in_interm);
-	StmtSimple *cond_rhs_rhs = StmtSimple::create(ctx, loc, lexend);
+	StmtSimple *cond_rhs_lhs = StmtSimple::create(allocator, loc, in_interm);
+	StmtSimple *cond_rhs_rhs = StmtSimple::create(allocator, loc, lexend);
 	StmtExpr *cond_dot_expr =
-	StmtExpr::create(ctx, loc, 0, cond_rhs_lhs, dot_op, cond_rhs_rhs, false);
-	StmtCallArgs *cond_call_info = StmtCallArgs::create(ctx, loc, {});
+	StmtExpr::create(allocator, loc, 0, cond_rhs_lhs, dot_op, cond_rhs_rhs, false);
+	StmtCallArgs *cond_call_info = StmtCallArgs::create(allocator, loc, {});
 	StmtExpr *cond_rhs =
-	StmtExpr::create(ctx, loc, 0, cond_dot_expr, call_op, cond_call_info, false);
-	StmtSimple *cond_lhs = StmtSimple::create(ctx, iter_interm.getLoc(), iter_interm);
-	StmtExpr *cond	     = StmtExpr::create(ctx, loc, 0, cond_lhs, ne_op, cond_rhs, false);
+	StmtExpr::create(allocator, loc, 0, cond_dot_expr, call_op, cond_call_info, false);
+	StmtSimple *cond_lhs = StmtSimple::create(allocator, iter_interm.getLoc(), iter_interm);
+	StmtExpr *cond = StmtExpr::create(allocator, loc, 0, cond_lhs, ne_op, cond_rhs, false);
 
 	// incr:
 	// <iter_interm> = <in_interm>.next(<iter_interm>)
-	StmtSimple *incr_lhs_lhs = StmtSimple::create(ctx, loc, in_interm);
-	StmtSimple *incr_lhs_rhs = StmtSimple::create(ctx, loc, lexnext);
+	StmtSimple *incr_lhs_lhs = StmtSimple::create(allocator, loc, in_interm);
+	StmtSimple *incr_lhs_rhs = StmtSimple::create(allocator, loc, lexnext);
 	StmtExpr *incr_dot_expr =
-	StmtExpr::create(ctx, loc, 0, incr_lhs_lhs, dot_op, incr_lhs_rhs, false);
-	StmtSimple *incr_call_arg    = StmtSimple::create(ctx, loc, iter_interm);
-	StmtCallArgs *incr_call_info = StmtCallArgs::create(ctx, loc, {incr_call_arg});
+	StmtExpr::create(allocator, loc, 0, incr_lhs_lhs, dot_op, incr_lhs_rhs, false);
+	StmtSimple *incr_call_arg    = StmtSimple::create(allocator, loc, iter_interm);
+	StmtCallArgs *incr_call_info = StmtCallArgs::create(allocator, loc, {incr_call_arg});
 	StmtExpr *incr_lhs =
-	StmtExpr::create(ctx, loc, 0, incr_dot_expr, call_op, incr_call_info, false);
-	StmtSimple *incr_rhs = StmtSimple::create(ctx, iter_interm.getLoc(), iter_interm);
-	StmtExpr *incr	     = StmtExpr::create(ctx, loc, 0, incr_lhs, assn_op, incr_rhs, false);
+	StmtExpr::create(allocator, loc, 0, incr_dot_expr, call_op, incr_call_info, false);
+	StmtSimple *incr_rhs = StmtSimple::create(allocator, iter_interm.getLoc(), iter_interm);
+	StmtExpr *incr = StmtExpr::create(allocator, loc, 0, incr_lhs, assn_op, incr_rhs, false);
 
 	// inside loop block:
 	// let <iter> = <in_interm>.at(<iter_interm>)
-	StmtSimple *loop_var_val_lhs = StmtSimple::create(ctx, loc, in_interm);
-	StmtSimple *loop_var_val_rhs = StmtSimple::create(ctx, loc, lexat);
+	StmtSimple *loop_var_val_lhs = StmtSimple::create(allocator, loc, in_interm);
+	StmtSimple *loop_var_val_rhs = StmtSimple::create(allocator, loc, lexat);
 	StmtExpr *loop_var_val_dot_expr =
-	StmtExpr::create(ctx, loc, 0, loop_var_val_lhs, dot_op, loop_var_val_rhs, false);
-	StmtSimple *loop_var_val_call_arg = StmtSimple::create(ctx, loc, iter_interm);
+	StmtExpr::create(allocator, loc, 0, loop_var_val_lhs, dot_op, loop_var_val_rhs, false);
+	StmtSimple *loop_var_val_call_arg = StmtSimple::create(allocator, loc, iter_interm);
 	StmtCallArgs *loop_var_val_call_info =
-	StmtCallArgs::create(ctx, loc, {loop_var_val_call_arg});
-	StmtExpr *loop_var_val	  = StmtExpr::create(ctx, loc, 0, loop_var_val_dot_expr, call_op,
-						     loop_var_val_call_info, false);
-	StmtVar *loop_var	  = StmtVar::create(ctx, loc, iter, nullptr, loop_var_val);
-	StmtVarDecl *loop_vardecl = StmtVarDecl::create(ctx, loc, {loop_var});
+	StmtCallArgs::create(allocator, loc, {loop_var_val_call_arg});
+	StmtExpr *loop_var_val = StmtExpr::create(allocator, loc, 0, loop_var_val_dot_expr, call_op,
+						  loop_var_val_call_info, false);
+	StmtVar *loop_var      = StmtVar::create(allocator, loc, iter, nullptr, loop_var_val);
+	StmtVarDecl *loop_vardecl = StmtVarDecl::create(allocator, loc, {loop_var});
 	blk->getStmts().insert(blk->getStmts().begin(), loop_vardecl);
 
 	// StmtFor - block statement 2:
-	StmtFor *loop = StmtFor::create(ctx, start.getLoc(), init, cond, incr, blk, false);
+	StmtFor *loop = StmtFor::create(allocator, start.getLoc(), init, cond, incr, blk, false);
 
 	// StmtBlock
 	Vector<Stmt *> outerblkstmts = {in_interm_vardecl, loop};
-	fin			     = StmtBlock::create(ctx, start.getLoc(), outerblkstmts, false);
+	fin = StmtBlock::create(allocator, start.getLoc(), outerblkstmts, false);
 	return true;
 }
 bool Parsing::parseFor(ParseHelper &p, Stmt *&f)
@@ -1371,7 +1375,7 @@ body:
 		return false;
 	}
 
-	f = StmtFor::create(ctx, start.getLoc(), init, cond, incr, blk, is_inline);
+	f = StmtFor::create(allocator, start.getLoc(), init, cond, incr, blk, is_inline);
 	return true;
 }
 bool Parsing::parseWhile(ParseHelper &p, Stmt *&w)
@@ -1397,7 +1401,7 @@ bool Parsing::parseWhile(ParseHelper &p, Stmt *&w)
 		return false;
 	}
 
-	w = StmtFor::create(ctx, start.getLoc(), nullptr, cond, nullptr, blk, is_inline);
+	w = StmtFor::create(allocator, start.getLoc(), nullptr, cond, nullptr, blk, is_inline);
 	return true;
 }
 bool Parsing::parseOneWord(ParseHelper &p, Stmt *&word)
@@ -1430,7 +1434,7 @@ bool Parsing::parseOneWord(ParseHelper &p, Stmt *&word)
 	}
 
 done:
-	word = StmtOneWord::create(ctx, start.getLoc(), val, wordty);
+	word = StmtOneWord::create(allocator, start.getLoc(), val, wordty);
 	return true;
 }
 

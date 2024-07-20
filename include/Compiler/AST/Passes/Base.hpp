@@ -8,7 +8,6 @@ class Pass
 {
 protected:
 	size_t passid;
-	Context &ctx;
 
 	// https://stackoverflow.com/questions/51332851/alternative-id-generators-for-types
 	template<typename T> static inline std::uintptr_t passID()
@@ -18,7 +17,7 @@ protected:
 	}
 
 public:
-	Pass(size_t passid, Context &ctx);
+	Pass(size_t passid);
 	virtual ~Pass();
 
 	template<typename T>
@@ -55,17 +54,16 @@ template<typename T> T *as(Pass *t) { return static_cast<T *>(t); }
 
 class PassManager
 {
-	Context &ctx;
 	Vector<Pass *> passes;
 
 public:
-	PassManager(Context &ctx);
+	PassManager();
 	PassManager(const PassManager &pm) = delete;
 	~PassManager();
 	template<class T, typename... Args>
 	typename std::enable_if<std::is_base_of<Pass, T>::value, void>::type add(Args... args)
 	{
-		passes.push_back(new T(ctx, args...));
+		passes.push_back(new T(args...));
 	}
 	bool visit(Stmt *&ptree);
 };

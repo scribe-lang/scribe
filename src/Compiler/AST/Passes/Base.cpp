@@ -2,10 +2,10 @@
 
 namespace sc::AST
 {
-Pass::Pass(size_t passid, Context &ctx) : passid(passid), ctx(ctx) { ctx.addPass(passid, this); }
-Pass::~Pass() { ctx.remPass(passid); }
+Pass::Pass(size_t passid) : passid(passid) {}
+Pass::~Pass() {}
 
-PassManager::PassManager(Context &ctx) : ctx(ctx) {}
+PassManager::PassManager() {}
 PassManager::~PassManager()
 {
 	for(auto &p : passes) delete p;

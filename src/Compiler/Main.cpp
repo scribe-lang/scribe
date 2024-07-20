@@ -25,6 +25,7 @@ int main(int argc, char **argv)
 	args.add("std").setShort("std").setValReqd(true).setHelp("set C standard");
 	args.add("llir").setShort("llir").setHelp("emit LLVM IR (C backend)");
 	args.add("verbose").setShort("V").setHelp("show verbose compiler output");
+	args.add("trace").setShort("T").setHelp("show trace (even more verbose) compiler output");
 	args.parse();
 
 	if(args.has("help")) {
@@ -42,6 +43,7 @@ int main(int argc, char **argv)
 
 	logger.addSink(&std::cerr, true, false);
 	if(args.has("verbose")) logger.setLevel(LogLevels::INFO);
+	else if(args.has("trace")) logger.setLevel(LogLevels::TRACE);
 
 	String file = String(args.get(1));
 	if(file.empty()) {

@@ -257,9 +257,7 @@ bool Lexeme::operator==(const Lexeme &other) const
 	op_type = type;       \
 	break
 
-Tokenizer::Tokenizer(Context &ctx, Module *m)
-	: ctx(ctx), moduleId(ModuleLoc::getOrAddModuleIdForPath(m->getPath()))
-{}
+Tokenizer::Tokenizer(Module *m) : moduleId(ModuleLoc::getOrAddModuleIdForPath(m->getPath())) {}
 
 ModuleLoc Tokenizer::loc(size_t offset) { return ModuleLoc(moduleId, offset); }
 
