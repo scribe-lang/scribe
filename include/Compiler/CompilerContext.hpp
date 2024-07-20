@@ -14,8 +14,7 @@ class Module;
 class ModuleLoc;
 class Context
 {
-	UniList<ModuleLoc> modlocmem;
-	Vector<AST::Stmt *> stmtmem;
+	UniList<AST::Stmt *> stmtmem;
 	Map<size_t, AST::Pass *> passes;
 	RAIIParser *parser;
 
@@ -23,12 +22,12 @@ public:
 	Context(RAIIParser *parser);
 	~Context();
 
-	ModuleLoc *allocModuleLoc(size_t moduleId, size_t offset);
-
-	template<typename T, typename... Args> T *allocStmt(Args... args)
+	template<typename T, typename... Args>
+	typename std::enable_if<std::is_base_of<AST::Stmt, T>::value, T *>::type
+	allocStmt(Args... args)
 	{
 		T *res = new T(args...);
-		stmtmem.push_back(res);
+		stmtmem.push_front(res);
 		return res;
 	}
 

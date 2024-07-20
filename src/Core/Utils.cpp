@@ -1,6 +1,6 @@
 #include "Utils.hpp"
 
-namespace sc
+namespace sc::utils
 {
 Vector<StringRef> stringDelim(StringRef str, StringRef delim)
 {
@@ -125,4 +125,4 @@ String vecToStr(Span<String> items)
 	res += "]";
 	return res;
 }
-} // namespace sc
+} // namespace sc::utils

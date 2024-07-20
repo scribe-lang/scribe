@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Context.hpp"
+#include "CompilerContext.hpp"
 #include "Error.hpp"
 
 namespace sc
@@ -180,17 +180,17 @@ const char *getTokOperCStr(TokType token);
 
 class Lexeme
 {
-	const ModuleLoc *loc;
+	ModuleLoc loc;
 	TokType tokty;
 	Variant<String, int64_t, long double> data;
 	bool containsdata;
 
 public:
-	Lexeme(const ModuleLoc *loc = nullptr);
-	explicit Lexeme(const ModuleLoc *loc, TokType type);
-	explicit Lexeme(const ModuleLoc *loc, TokType type, StringRef _data);
-	explicit Lexeme(const ModuleLoc *loc, TokType type, int64_t _data);
-	explicit Lexeme(const ModuleLoc *loc, TokType type, long double _data);
+	Lexeme(ModuleLoc loc = ModuleLoc());
+	explicit Lexeme(ModuleLoc loc, TokType type);
+	explicit Lexeme(ModuleLoc loc, TokType type, StringRef _data);
+	explicit Lexeme(ModuleLoc loc, TokType type, int64_t _data);
+	explicit Lexeme(ModuleLoc loc, TokType type, long double _data);
 
 	String str(int64_t pad = 10) const;
 
@@ -221,7 +221,7 @@ public:
 	inline TokType getType() const { return tokty; }
 	inline bool isType(TokType ty) const { return tokty == ty; }
 	inline void setType(TokType ty) { tokty = ty; }
-	inline const ModuleLoc *getLoc() const { return loc; }
+	inline const ModuleLoc &getLoc() const { return loc; }
 	inline bool containsData() const { return containsdata; }
 
 	inline bool isLiteral() const { return isTokLiteral(tokty) && containsdata; }
@@ -247,7 +247,6 @@ class Tokenizer
 	Context &ctx;
 	size_t moduleId;
 
-	ModuleLoc *locAlloc(size_t offset);
 	ModuleLoc loc(size_t offset);
 
 	StringRef getAttributes(StringRef data, size_t &i);
@@ -270,11 +269,11 @@ namespace err
 {
 template<typename... Args> void out(const lex::Lexeme &tok, Args &&...args)
 {
-	out(tok.getLoc(), std::forward<Args>(args)...);
+	out(&tok.getLoc(), std::forward<Args>(args)...);
 }
 template<typename... Args> void outw(const lex::Lexeme &tok, Args &&...args)
 {
-	outw(tok.getLoc(), std::forward<Args>(args)...);
+	outw(&tok.getLoc(), std::forward<Args>(args)...);
 }
 } // namespace err
 

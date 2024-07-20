@@ -45,7 +45,7 @@ class Logger
 	{
 		if((int)level < (int)lvl) return;
 		String res;
-		appendToString(res, std::forward<Args>(args)...);
+		utils::appendToString(res, std::forward<Args>(args)...);
 		logInternal(lvl, res);
 	}
 

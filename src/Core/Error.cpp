@@ -10,6 +10,7 @@ static Vector<String> moduleList;
 // Only set when errors/warnings are thrown so as to not read files over and over again.
 static StringMap<String> moduleData;
 
+ModuleLoc::ModuleLoc() : moduleId(-1), offset(0) {}
 ModuleLoc::ModuleLoc(StringRef filePath, size_t offset)
 	: moduleId(getOrAddModuleIdForPath(filePath)), offset(offset)
 {}
@@ -52,7 +53,7 @@ void outCommonStr(const ModuleLoc *loc, bool iswarn, bool withloc, const String 
 	size_t offset, lineNum, lineOffset, tabCount = 0;
 
 	// just show the error
-	if(!withloc || loc->getModuleId() == -1) goto unknownLoc;
+	if(!withloc || !loc->isValid()) goto unknownLoc;
 
 	lastLoc = loc;
 

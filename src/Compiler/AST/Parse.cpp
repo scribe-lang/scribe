@@ -153,7 +153,7 @@ bool Parsing::parseType(ParseHelper &p, StmtType *&type)
 
 	while(p.acceptn(lex::MUL)) ++pointerCount;
 
-	if(pointerCount > 0) attrs["pointerCount"] = toString(pointerCount);
+	if(pointerCount > 0) attrs["pointerCount"] = utils::toString(pointerCount);
 
 	if(p.acceptn(lex::BAND)) attrs["reference"] = "";
 	if(p.acceptn(lex::CONST)) attrs["constant"] = "";
@@ -1241,7 +1241,7 @@ bool Parsing::parseForIn(ParseHelper &p, Stmt *&fin)
 		return false;
 	}
 
-	const ModuleLoc *loc	= iter.getLoc();
+	ModuleLoc loc		= iter.getLoc();
 	lex::Lexeme in_interm	= iter; // e_interm
 	lex::Lexeme iter_interm = iter; // _e
 	lex::Lexeme lexbegin	= lex::Lexeme(loc, lex::IDEN, "begin");
@@ -1253,8 +1253,8 @@ bool Parsing::parseForIn(ParseHelper &p, Stmt *&fin)
 	lex::Lexeme ne_op	= lex::Lexeme(loc, lex::NE);
 	lex::Lexeme assn_op	= lex::Lexeme(loc, lex::ASSN);
 
-	in_interm.setDataStr(toString(in_interm.getDataStr(), "_interm"));
-	iter_interm.setDataStr(toString("_", iter_interm.getDataStr()));
+	in_interm.setDataStr(utils::toString(in_interm.getDataStr(), "_interm"));
+	iter_interm.setDataStr(utils::toString("_", iter_interm.getDataStr()));
 
 	StmtVar *in_interm_var = StmtVar::create(ctx, in_interm.getLoc(), in_interm, nullptr, in);
 	// block statement 1:

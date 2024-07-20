@@ -54,6 +54,8 @@
 #define _STRINGIFY(x) #x
 #define STRINGIFY(x) _STRINGIFY(x)
 
+// #define MEM_COUNT
+
 namespace sc
 {
 

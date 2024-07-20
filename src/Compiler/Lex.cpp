@@ -201,17 +201,15 @@ const char *getTokOperCStr(TokType token)
 	return "";
 }
 
-Lexeme::Lexeme(const ModuleLoc *loc) : loc(loc), tokty(INVALID), data(0), containsdata(false) {}
-Lexeme::Lexeme(const ModuleLoc *loc, TokType type)
-	: loc(loc), tokty(type), data(0), containsdata(false)
-{}
-Lexeme::Lexeme(const ModuleLoc *loc, TokType type, StringRef _data)
+Lexeme::Lexeme(ModuleLoc loc) : loc(loc), tokty(INVALID), data(0), containsdata(false) {}
+Lexeme::Lexeme(ModuleLoc loc, TokType type) : loc(loc), tokty(type), data(0), containsdata(false) {}
+Lexeme::Lexeme(ModuleLoc loc, TokType type, StringRef _data)
 	: loc(loc), tokty(type), data(String(_data)), containsdata(true)
 {}
-Lexeme::Lexeme(const ModuleLoc *loc, TokType type, int64_t _data)
+Lexeme::Lexeme(ModuleLoc loc, TokType type, int64_t _data)
 	: loc(loc), tokty(type), data(_data), containsdata(true)
 {}
-Lexeme::Lexeme(const ModuleLoc *loc, TokType type, long double _data)
+Lexeme::Lexeme(ModuleLoc loc, TokType type, long double _data)
 	: loc(loc), tokty(type), data(_data), containsdata(true)
 {}
 String Lexeme::str(int64_t pad) const
@@ -224,7 +222,7 @@ String Lexeme::str(int64_t pad) const
 	if(pad == 0) res += " ";
 	len = res.size();
 	res += "[";
-	res += toString(loc->getOffset());
+	res += utils::toString(loc.getOffset());
 	res += "]";
 	if(!containsData()) return res;
 	len = res.size() - len;
@@ -263,7 +261,6 @@ Tokenizer::Tokenizer(Context &ctx, Module *m)
 	: ctx(ctx), moduleId(ModuleLoc::getOrAddModuleIdForPath(m->getPath()))
 {}
 
-ModuleLoc *Tokenizer::locAlloc(size_t offset) { return ctx.allocModuleLoc(moduleId, offset); }
 ModuleLoc Tokenizer::loc(size_t offset) { return ModuleLoc(moduleId, offset); }
 
 bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
@@ -317,7 +314,7 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 		// attributes
 		if(CURR == '#') {
 			StringRef attrs = getAttributes(data, ++i);
-			toks.emplace_back(locAlloc(i - attrs.size()), ATTRS, attrs);
+			toks.emplace_back(loc(i - attrs.size()), ATTRS, attrs);
 			continue;
 		}
 
@@ -332,9 +329,9 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 			if(str[0] == '.') str = str.substr(1);
 			if(str_class == STR || str_class == IDEN) {
 				// place either the data itself (type = STR, IDEN)
-				toks.emplace_back(locAlloc(i - str.size()), str_class, str);
+				toks.emplace_back(loc(i - str.size()), str_class, str);
 			} else { // or the type
-				toks.emplace_back(locAlloc(i - str.size()), str_class);
+				toks.emplace_back(loc(i - str.size()), str_class);
 			}
 			continue;
 		}
@@ -348,7 +345,7 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 			if(num_type == FLT) {
 				long double fltval;
 				std::from_chars(num.data(), num.data() + num.size(), fltval);
-				toks.emplace_back(locAlloc(i - num.size()), num_type, fltval);
+				toks.emplace_back(loc(i - num.size()), num_type, fltval);
 				continue;
 			}
 			int64_t intval;
@@ -358,7 +355,7 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 				num = num.substr(base == 8 ? 1 : 2);
 			}
 			std::from_chars(num.data(), num.data() + num.size(), intval, base);
-			toks.emplace_back(locAlloc(i - num.size()), num_type, intval);
+			toks.emplace_back(loc(i - num.size()), num_type, intval);
 			continue;
 		}
 
@@ -368,9 +365,9 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 			char quote_type = 0;
 			if(!getConstStr(data, quote_type, i, line, line_start, str)) return false;
 			if(quote_type == '\'') {
-				toks.emplace_back(locAlloc(i - str.size()), CHAR, (int64_t)str[0]);
+				toks.emplace_back(loc(i - str.size()), CHAR, (int64_t)str[0]);
 			} else {
-				toks.emplace_back(locAlloc(i - str.size()), STR, str);
+				toks.emplace_back(loc(i - str.size()), STR, str);
 			}
 			continue;
 		}
@@ -379,7 +376,7 @@ bool Tokenizer::tokenize(StringRef data, Vector<Lexeme> &toks)
 		size_t begin	= i;
 		TokType op_type = getOperator(data, i, line, line_start);
 		if(op_type == INVALID) return false;
-		toks.emplace_back(locAlloc(begin), op_type);
+		toks.emplace_back(loc(begin), op_type);
 	}
 	return true;
 }

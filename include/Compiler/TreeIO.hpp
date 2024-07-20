@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core.hpp"
+#include "Utils.hpp"
 
 namespace sc
 {
@@ -19,7 +20,7 @@ inline void printStr(const String &data) { std::cout << data; }
 template<typename... Args> void printWithoutTab(Args &&...args)
 {
 	String res;
-	appendToString(res, std::forward<Args>(args)...);
+	utils::appendToString(res, std::forward<Args>(args)...);
 	printStr(res);
 }
 template<typename... Args> void print(bool has_next, Args &&...args)

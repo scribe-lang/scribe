@@ -9,7 +9,7 @@ namespace sc::AST
 /////////////////////////////////////////////// Stmt //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Stmt::Stmt(Stmts stmt_type, const ModuleLoc *loc) : loc(loc), derefcount(0), stype(stmt_type) {}
+Stmt::Stmt(Stmts stmt_type, ModuleLoc loc) : loc(loc), derefcount(0), stype(stmt_type) {}
 Stmt::~Stmt() {}
 
 const char *Stmt::getStmtTypeCString() const
@@ -60,12 +60,11 @@ String Stmt::attributesToString(StringRef prefix, StringRef suffix)
 //////////////////////////////////////////// StmtBlock ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtBlock::StmtBlock(const ModuleLoc *loc, const Vector<Stmt *> &stmts, bool is_top)
+StmtBlock::StmtBlock(ModuleLoc loc, const Vector<Stmt *> &stmts, bool is_top)
 	: Stmt(BLOCK, loc), stmts(stmts), is_top(is_top)
 {}
 StmtBlock::~StmtBlock() {}
-StmtBlock *StmtBlock::create(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &stmts,
-			     bool is_top)
+StmtBlock *StmtBlock::create(Context &c, ModuleLoc loc, const Vector<Stmt *> &stmts, bool is_top)
 {
 	return c.allocStmt<StmtBlock>(loc, stmts, is_top);
 }
@@ -91,9 +90,9 @@ void StmtBlock::disp(bool has_next)
 //////////////////////////////////////////// StmtType /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtType::StmtType(const ModuleLoc *loc, Stmt *expr) : Stmt(TYPE, loc), expr(expr) {}
+StmtType::StmtType(ModuleLoc loc, Stmt *expr) : Stmt(TYPE, loc), expr(expr) {}
 StmtType::~StmtType() {}
-StmtType *StmtType::create(Context &c, const ModuleLoc *loc, Stmt *expr)
+StmtType *StmtType::create(Context &c, ModuleLoc loc, Stmt *expr)
 {
 	return c.allocStmt<StmtType>(loc, expr);
 }
@@ -116,12 +115,12 @@ bool StmtType::isMetaType() const
 ////////////////////////////////////////// StmtSimple /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtSimple::StmtSimple(const ModuleLoc *loc, const lex::Lexeme &val)
+StmtSimple::StmtSimple(ModuleLoc loc, const lex::Lexeme &val)
 	: Stmt(SIMPLE, loc), decl(nullptr), val(val)
 {}
 
 StmtSimple::~StmtSimple() {}
-StmtSimple *StmtSimple::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &val)
+StmtSimple *StmtSimple::create(Context &c, ModuleLoc loc, const lex::Lexeme &val)
 {
 	return c.allocStmt<StmtSimple>(loc, val);
 }
@@ -138,11 +137,11 @@ void StmtSimple::disp(bool has_next)
 //////////////////////////////////////// StmtFnCallInfo ///////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtCallArgs::StmtCallArgs(const ModuleLoc *loc, const Vector<Stmt *> &args)
+StmtCallArgs::StmtCallArgs(ModuleLoc loc, const Vector<Stmt *> &args)
 	: Stmt(CALLARGS, loc), args(args)
 {}
 StmtCallArgs::~StmtCallArgs() {}
-StmtCallArgs *StmtCallArgs::create(Context &c, const ModuleLoc *loc, const Vector<Stmt *> &args)
+StmtCallArgs *StmtCallArgs::create(Context &c, ModuleLoc loc, const Vector<Stmt *> &args)
 {
 	return c.allocStmt<StmtCallArgs>(loc, args);
 }
@@ -167,13 +166,13 @@ void StmtCallArgs::disp(bool has_next)
 //////////////////////////////////////////// StmtExpr /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtExpr::StmtExpr(const ModuleLoc *loc, size_t commas, Stmt *lhs, const lex::Lexeme &oper,
-		   Stmt *rhs, bool is_intrinsic_call)
+StmtExpr::StmtExpr(ModuleLoc loc, size_t commas, Stmt *lhs, const lex::Lexeme &oper, Stmt *rhs,
+		   bool is_intrinsic_call)
 	: Stmt(EXPR, loc), commas(commas), lhs(lhs), oper(oper), rhs(rhs), or_blk(nullptr),
 	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call)
 {}
 StmtExpr::~StmtExpr() {}
-StmtExpr *StmtExpr::create(Context &c, const ModuleLoc *loc, size_t commas, Stmt *lhs,
+StmtExpr *StmtExpr::create(Context &c, ModuleLoc loc, size_t commas, Stmt *lhs,
 			   const lex::Lexeme &oper, Stmt *rhs, bool is_intrinsic_call)
 {
 	return c.allocStmt<StmtExpr>(loc, commas, lhs, oper, rhs, is_intrinsic_call);
@@ -216,11 +215,11 @@ void StmtExpr::disp(bool has_next)
 //////////////////////////////////////////// StmtVar //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtVar::StmtVar(const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval)
+StmtVar::StmtVar(ModuleLoc loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval)
 	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval)
 {}
 StmtVar::~StmtVar() {}
-StmtVar *StmtVar::create(Context &c, const ModuleLoc *loc, const lex::Lexeme &name, StmtType *vtype,
+StmtVar *StmtVar::create(Context &c, ModuleLoc loc, const lex::Lexeme &name, StmtType *vtype,
 			 Stmt *vval)
 {
 	return c.allocStmt<StmtVar>(loc, name, vtype, vval);
@@ -251,12 +250,12 @@ void StmtVar::disp(bool has_next)
 //////////////////////////////////////////// StmtFnSig ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtSignature::StmtSignature(const ModuleLoc *loc, Vector<StmtVar *> &args, StmtType *rettype,
+StmtSignature::StmtSignature(ModuleLoc loc, Vector<StmtVar *> &args, StmtType *rettype,
 			     SignatureType sigty)
 	: Stmt(SIGNATURE, loc), args(args), rettype(rettype), sigty(sigty)
 {}
 StmtSignature::~StmtSignature() {}
-StmtSignature *StmtSignature::create(Context &c, const ModuleLoc *loc, Vector<StmtVar *> &args,
+StmtSignature *StmtSignature::create(Context &c, ModuleLoc loc, Vector<StmtVar *> &args,
 				     StmtType *rettype, SignatureType sigty)
 {
 	return c.allocStmt<StmtSignature>(loc, args, rettype, sigty);
@@ -292,11 +291,11 @@ void StmtSignature::disp(bool has_next)
 //////////////////////////////////////////// StmtFnDef ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtFnDef::StmtFnDef(const ModuleLoc *loc, StmtSignature *sig, StmtBlock *blk)
+StmtFnDef::StmtFnDef(ModuleLoc loc, StmtSignature *sig, StmtBlock *blk)
 	: Stmt(FNDEF, loc), sig(sig), blk(blk)
 {}
 StmtFnDef::~StmtFnDef() {}
-StmtFnDef *StmtFnDef::create(Context &c, const ModuleLoc *loc, StmtSignature *sig, StmtBlock *blk)
+StmtFnDef *StmtFnDef::create(Context &c, ModuleLoc loc, StmtSignature *sig, StmtBlock *blk)
 {
 	return c.allocStmt<StmtFnDef>(loc, sig, blk);
 }
@@ -320,11 +319,11 @@ void StmtFnDef::disp(bool has_next)
 ///////////////////////////////////////// StmtVarDecl /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtVarDecl::StmtVarDecl(const ModuleLoc *loc, const Vector<StmtVar *> &decls)
+StmtVarDecl::StmtVarDecl(ModuleLoc loc, const Vector<StmtVar *> &decls)
 	: Stmt(VARDECL, loc), decls(decls)
 {}
 StmtVarDecl::~StmtVarDecl() {}
-StmtVarDecl *StmtVarDecl::create(Context &c, const ModuleLoc *loc, const Vector<StmtVar *> &decls)
+StmtVarDecl *StmtVarDecl::create(Context &c, ModuleLoc loc, const Vector<StmtVar *> &decls)
 {
 	return c.allocStmt<StmtVarDecl>(loc, decls);
 }
@@ -346,15 +345,14 @@ void StmtVarDecl::disp(bool has_next)
 Conditional::Conditional(Stmt *cond, StmtBlock *blk) : cond(cond), blk(blk) {}
 Conditional::~Conditional() {}
 
-StmtCond::StmtCond(const ModuleLoc *loc, Vector<Conditional> &&conds, bool is_inline)
+StmtCond::StmtCond(ModuleLoc loc, Vector<Conditional> &&conds, bool is_inline)
 	: Stmt(COND, loc), conds(std::move(conds)), is_inline(is_inline)
 {}
-StmtCond::StmtCond(const ModuleLoc *loc, const Vector<Conditional> &conds, bool is_inline)
+StmtCond::StmtCond(ModuleLoc loc, const Vector<Conditional> &conds, bool is_inline)
 	: Stmt(COND, loc), conds(conds), is_inline(is_inline)
 {}
 StmtCond::~StmtCond() {}
-StmtCond *StmtCond::create(Context &c, const ModuleLoc *loc, Vector<Conditional> &&conds,
-			   bool is_inline)
+StmtCond *StmtCond::create(Context &c, ModuleLoc loc, Vector<Conditional> &&conds, bool is_inline)
 {
 	return c.allocStmt<StmtCond>(loc, std::move(conds), is_inline);
 }
@@ -385,12 +383,11 @@ void StmtCond::disp(bool has_next)
 //////////////////////////////////////////// StmtFor //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtFor::StmtFor(const ModuleLoc *loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *blk,
-		 bool is_inline)
+StmtFor::StmtFor(ModuleLoc loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *blk, bool is_inline)
 	: Stmt(FOR, loc), init(init), cond(cond), incr(incr), blk(blk), is_inline(is_inline)
 {}
 StmtFor::~StmtFor() {}
-StmtFor *StmtFor::create(Context &c, const ModuleLoc *loc, Stmt *init, Stmt *cond, Stmt *incr,
+StmtFor *StmtFor::create(Context &c, ModuleLoc loc, Stmt *init, Stmt *cond, Stmt *incr,
 			 StmtBlock *blk, bool is_inline)
 {
 	return c.allocStmt<StmtFor>(loc, init, cond, incr, blk, is_inline);
@@ -432,11 +429,11 @@ void StmtFor::disp(bool has_next)
 //////////////////////////////////////////// StmtRet //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtOneWord::StmtOneWord(const ModuleLoc *loc, Stmt *arg, OneWordType wordty)
+StmtOneWord::StmtOneWord(ModuleLoc loc, Stmt *arg, OneWordType wordty)
 	: Stmt(ONEWORD, loc), arg(arg), wordty(wordty)
 {}
 StmtOneWord::~StmtOneWord() {}
-StmtOneWord *StmtOneWord::create(Context &c, const ModuleLoc *loc, Stmt *arg, OneWordType wordty)
+StmtOneWord *StmtOneWord::create(Context &c, ModuleLoc loc, Stmt *arg, OneWordType wordty)
 {
 	return c.allocStmt<StmtOneWord>(loc, arg, wordty);
 }

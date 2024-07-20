@@ -112,10 +112,10 @@ Module *RAIIParser::addModule(const String &path, bool main_module, StringRef co
 	if(code.empty() && !fs::read(path.c_str(), _code)) return nullptr;
 	Module *mod = nullptr;
 	if(_code.empty()) {
-		mod = new Module(ctx, toString(modulestack.size()), path, code, main_module);
+		mod = new Module(ctx, utils::toString(modulestack.size()), path, code, main_module);
 	} else {
-		mod =
-		new Module(ctx, toString(modulestack.size()), path, std::move(_code), main_module);
+		mod = new Module(ctx, utils::toString(modulestack.size()), path, std::move(_code),
+				 main_module);
 	}
 
 	modulestack.push_back(mod->getPath());

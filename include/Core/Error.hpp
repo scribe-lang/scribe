@@ -11,6 +11,7 @@ class ModuleLoc
 	size_t offset;	 // pretty much of type std::streamoff
 
 public:
+	ModuleLoc();
 	ModuleLoc(StringRef filePath, size_t offset);
 	ModuleLoc(size_t moduleId, size_t offset);
 
@@ -20,6 +21,7 @@ public:
 	inline const String &getModuleName() const { return getModuleNameFromId(moduleId); }
 	inline size_t getModuleId() const { return moduleId; }
 	inline size_t getOffset() const { return offset; }
+	inline bool isValid() const { return moduleId != -1; }
 };
 
 namespace err
@@ -35,7 +37,7 @@ template<typename... Args>
 void outCommon(const ModuleLoc *loc, bool iswarn, bool withloc, Args &&...args)
 {
 	String res;
-	appendToString(res, std::forward<Args>(args)...);
+	utils::appendToString(res, std::forward<Args>(args)...);
 	outCommonStr(loc, iswarn, withloc, res);
 }
 

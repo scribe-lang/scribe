@@ -2,7 +2,7 @@
 
 #include "Core.hpp"
 
-namespace sc
+namespace sc::utils
 {
 // RAII class to manage a pointer
 template<typename T> class Pointer
@@ -57,4 +57,4 @@ template<typename... Args> String toString(Args... args)
 	appendToString(dest, std::forward<Args>(args)...);
 	return dest;
 }
-} // namespace sc
+} // namespace sc::utils

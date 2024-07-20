@@ -10,7 +10,6 @@ class ParseHelper
 	Module *mod;
 	// requires modification at parsing stage, hence not set by module pointer
 	Vector<lex::Lexeme> &toks;
-	ModuleLoc *emptyloc; // used by invalid and eof
 	lex::Lexeme invalid, eof;
 	size_t idx;
 
