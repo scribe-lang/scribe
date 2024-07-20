@@ -56,7 +56,7 @@ public:
 
 	ArgInfo &add(StringRef argname);
 	void parse();
-	void printHelp(FILE *file);
+	void printHelp(OStream &os);
 	inline void clear()
 	{
 		arg_defs.clear();

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Values.hpp"
-#include "VMContext.hpp"
 
 namespace sc
 {
@@ -45,9 +44,10 @@ public:
 
 	inline String toString() const override;
 
-	static inline LoadInstruction *create(Context &c, ModuleLoc loc, SimpleValue *data)
+	static inline LoadInstruction *create(Allocator &allocator, ModuleLoc loc,
+					      SimpleValue *data)
 	{
-		return c.allocValue<LoadInstruction>(loc, data);
+		return allocator.alloc<LoadInstruction>(loc, data);
 	}
 
 	inline SimpleValue *getData() const { return as<SimpleValue>(getArg(0)); }

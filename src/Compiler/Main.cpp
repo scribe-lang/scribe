@@ -2,15 +2,29 @@
 #include <iostream>
 
 #include "Args.hpp"
+#include "AST/Parser.hpp"
+#include "AST/Passes/IRGen.hpp"
 #include "Builder.hpp"
 #include "FS.hpp"
 #include "Logger.hpp"
-#include "Parser.hpp"
 
 using namespace sc;
 
-int BuildRunProj(args::ArgParser &args, bool buildonly);
+// Uses task to determine build/run/install/etc.
+int BuildProject(args::ArgParser &args, StringRef task);
+
 int CompileFile(args::ArgParser &args, String &file);
+// This function is provided as a callback to the VM since file parsing is supposed to be a
+// black box for it, but is required by the import() function.
+// Modifies path to absolute path
+bool ParseFile(Allocator &allocator, args::ArgParser &args, String &path);
+
+// CompileFile minus the file reading part.
+// In this function, the filesystem is never touched, therefore path can be something like <repl>.
+int CompileSource(args::ArgParser &args, StringRef path, StringRef code);
+// ParseFile minus the file reading part.
+// In this function, the filesystem is never touched, therefore path can be something like <repl>.
+bool ParseSource(Allocator &allocator, args::ArgParser &args, StringRef path, StringRef code);
 
 int main(int argc, char **argv)
 {
@@ -29,7 +43,7 @@ int main(int argc, char **argv)
 	args.parse();
 
 	if(args.has("help")) {
-		args.printHelp(stdout);
+		args.printHelp(std::cout);
 		return 0;
 	}
 
@@ -47,55 +61,112 @@ int main(int argc, char **argv)
 
 	String file = String(args.get(1));
 	if(file.empty()) {
+		file = "build";
 		logger.fatal("Error: no source provided to read from");
 		return 1;
 	}
 
-	if(file == "build" || file == "run") {
-		return BuildRunProj(args, file == "build");
+	if(file == "build" || file == "run" || file == "install") {
+		return BuildProject(args, file);
 	}
 	return CompileFile(args, file);
 }
 
-int BuildRunProj(args::ArgParser &args, bool buildonly)
+int BuildProject(args::ArgParser &args, StringRef task)
 {
 	std::error_code ec;
-	if(!fs::mkdir("build", ec)) return 1;
+	if(!fs::mkdir("build", ec)) return ec.value();
 
-	int res	    = 0;
-	String file = "<build>";
-	RAIIParser parser(args);
-	if(!parser.init()) return 1;
-	if(!parser.parse(file, true, buildcode)) return 1;
-
-	if(args.has("tokens")) parser.dumpTokens();
-	if(args.has("ast")) parser.dumpParseTree();
-
-	if(args.has("nofile")) return 0;
+	if(!CompileSource(args, "<build>", buildcode)) {
+		logger.fatal("Failed to compile build code");
+		return 1;
+	}
 
 	// Compilation Driver (C, LLVM, ...)
 
 	// Execute built binary
-	return res;
+	return 0;
 }
 
-int CompileFile(args::ArgParser &args, String &file)
+int CompileFile(args::ArgParser &args, String &path)
 {
-	if(!fs::exists(file)) {
-		logger.fatal("Error: file ", file, " does not exist");
-		return 1;
-	}
-	file = fs::absPath(file.c_str());
+	// TODO: get allocator from a VM instance created here
+	Allocator allocator("<Should be VM Allocator>");
 
-	RAIIParser parser(args);
-	if(!parser.init()) return 1;
-	if(!parser.parse(file, true)) return 1;
-
-	if(args.has("tokens")) parser.dumpTokens();
-	if(args.has("ast")) parser.dumpParseTree();
-
-	if(args.has("nofile")) return 0;
+	if(!ParseFile(allocator, args, path)) return 1;
 
 	// Compilation Driver (C, LLVM, ...)
 	return 0;
+}
+
+bool ParseFile(Allocator &allocator, args::ArgParser &args, String &path)
+{
+	if(!fs::exists(path)) {
+		logger.fatal("File does not exist: ", path);
+		return false;
+	}
+	path = fs::absPath(path.c_str());
+
+	String data;
+	int totalLinesInFile = 0;
+	if(!fs::read(path.c_str(), data, &totalLinesInFile)) {
+		logger.fatal("Failed to read file: ", path);
+		return false;
+	}
+
+	return ParseSource(allocator, args, path, data);
+}
+
+int CompileSource(args::ArgParser &args, StringRef path, StringRef code)
+{
+	// TODO: get allocator from a VM instance created here
+	Allocator allocator("<Should be VM Allocator>");
+
+	if(!ParseSource(allocator, args, path, code)) return 1;
+
+	// Compilation Driver (C, LLVM, ...)
+	return 0;
+}
+
+bool ParseSource(Allocator &allocator, args::ArgParser &args, StringRef path, StringRef code)
+{
+	size_t moduleId = ModuleLoc::getOrAddModuleIdForPath(path);
+
+	Vector<lex::Lexeme> tokens;
+	if(!lex::tokenize(moduleId, code, tokens)) {
+		logger.fatal("Failed to tokenize file: ", path);
+		return false;
+	}
+	if(args.has("tokens")) {
+		std::cout << "====================== Tokens for: " << path
+			  << " ======================\n";
+		lex::dumpTokens(std::cout, tokens);
+	}
+
+	// Separate allocator for AST since we don't want the AST nodes (Stmt) to persist outside
+	// this function - because this function is supposed to generate IR for the VM to consume.
+	Allocator astallocator(utils::toString("AST(", path, ")"));
+	ast::StmtBlock *ptree = nullptr;
+	if(!ast::parse(astallocator, tokens, ptree)) {
+		logger.fatal("Failed to parse tokens for file: ", path);
+		return false;
+	}
+	if(args.has("ast")) {
+		std::cout << "====================== AST for: " << path
+			  << " ======================\n";
+		ast::dumpTree(std::cout, ptree);
+	}
+
+	ast::PassManager pm;
+	Vector<Value *> ir;
+	pm.add<ast::IRGenPass>(allocator, ir);
+
+	if(!pm.visit((ast::Stmt *&)ptree)) {
+		logger.fatal("Failed to perform passes on AST for file: ", path);
+		return false;
+	}
+
+	// IR is ready now
+
+	return true;
 }

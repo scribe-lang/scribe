@@ -4,10 +4,10 @@
 
 namespace sc
 {
-class Module; // for Lexeme
 
 namespace lex
 {
+
 // true => @as(i1, 1)
 // false => @as(i1, 0)
 // nil => @as(usize, 0)
@@ -243,26 +243,9 @@ public:
 	inline StringRef tokStr() const { return tokToCStr(tokty); }
 };
 
-class Tokenizer
-{
-	size_t moduleId;
+bool tokenize(size_t moduleId, StringRef data, Vector<Lexeme> &toks);
+void dumpTokens(OStream &os, Span<Lexeme> toks);
 
-	ModuleLoc loc(size_t offset);
-
-	StringRef getAttributes(StringRef data, size_t &i);
-	StringRef getName(StringRef data, size_t &i);
-	TokType classifyStr(StringRef str);
-	String getNum(StringRef data, size_t &i, size_t &line, size_t &line_start,
-		      TokType &num_type, int &base);
-	bool getConstStr(StringRef data, char &quote_type, size_t &i, size_t &line,
-			 size_t &line_start, String &buf);
-	TokType getOperator(StringRef data, size_t &i, size_t line, size_t line_start);
-	void removeBackSlash(String &s);
-
-public:
-	Tokenizer(Module *m);
-	bool tokenize(StringRef data, Vector<Lexeme> &toks);
-};
 } // namespace lex
 
 namespace err

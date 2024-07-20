@@ -1,9 +1,13 @@
 #include "AST/Passes/IRGen.hpp"
 
-namespace sc::AST
+#include "VM/Instructions.hpp"
+
+namespace sc::ast
 {
 
-IRGenPass::IRGenPass() : Pass(Pass::genPassID<IRGenPass>()) {}
+IRGenPass::IRGenPass(Allocator &allocator, Vector<Value *> &ir)
+	: Pass(Pass::genPassID<IRGenPass>()), allocator(allocator), ir(ir)
+{}
 IRGenPass::~IRGenPass() {}
 
 bool IRGenPass::visit(Stmt *stmt, Stmt **source)
@@ -52,4 +56,4 @@ bool IRGenPass::visit(StmtCond *stmt, Stmt **source) { return true; }
 bool IRGenPass::visit(StmtFor *stmt, Stmt **source) { return true; }
 bool IRGenPass::visit(StmtOneWord *stmt, Stmt **source) { return true; }
 
-} // namespace sc::AST
+} // namespace sc::ast

@@ -16,17 +16,17 @@ inline void tabRem(size_t num = 1)
 {
 	while(num-- > 0) _tabs.pop_back();
 }
-inline void printStr(const String &data) { std::cout << data; }
-template<typename... Args> void printWithoutTab(Args &&...args)
+inline void printStr(OStream &os, const String &data) { os << data; }
+template<typename... Args> void printWithoutTab(OStream &os, Args &&...args)
 {
 	String res;
 	utils::appendToString(res, std::forward<Args>(args)...);
-	printStr(res);
+	printStr(os, res);
 }
-template<typename... Args> void print(bool has_next, Args &&...args)
+template<typename... Args> void print(OStream &os, bool has_next, Args &&...args)
 {
 	applyTab(has_next);
-	printWithoutTab(std::forward<Args>(args)...);
+	printWithoutTab(os, std::forward<Args>(args)...);
 }
 } // namespace tio
 } // namespace sc

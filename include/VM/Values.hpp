@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Allocator.hpp"
 #include "Error.hpp"
 
 namespace sc
@@ -10,7 +11,7 @@ enum class Values
 	SIMPLE,
 	INSTRUCTION,
 };
-class Value
+class Value : public IAllocated
 {
 	ModuleLoc loc;
 	Values valty;

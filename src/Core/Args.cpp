@@ -72,24 +72,24 @@ void ArgParser::parse()
 	return;
 }
 
-void ArgParser::printHelp(FILE *file)
+void ArgParser::printHelp(OStream &os)
 {
-	std::cout << PROJECT_NAME << " compiler " << COMPILER_MAJOR << "." << COMPILER_MINOR << "."
-		  << COMPILER_PATCH << "\n";
+	os << PROJECT_NAME << " compiler " << COMPILER_MAJOR << "." << COMPILER_MINOR << "."
+	   << COMPILER_PATCH << "\n";
 
-	std::cout << "usage: " << argv[0];
+	os << "usage: " << argv[0];
 	for(auto &arg : arg_defs) {
 		if(arg.second.reqd) {
-			std::cout << " [" << arg.first << "]";
+			os << " [" << arg.first << "]";
 		}
 	}
-	std::cout << " <args>\n\n";
+	os << " <args>\n\n";
 	for(auto &arg : arg_defs) {
 		if(!arg.second.shrt.empty()) {
-			std::cout << "-" << arg.second.shrt << ", --" << arg.second.lng << "\t\t"
-				  << arg.second.help << "\n";
+			os << "-" << arg.second.shrt << ", --" << arg.second.lng << "\t\t"
+			   << arg.second.help << "\n";
 		} else {
-			std::cout << "--" << arg.second.lng << "\t\t" << arg.second.help << "\n";
+			os << "--" << arg.second.lng << "\t\t" << arg.second.help << "\n";
 		}
 	}
 }

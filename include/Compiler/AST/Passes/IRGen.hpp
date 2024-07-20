@@ -2,12 +2,21 @@
 
 #include "Base.hpp"
 
-namespace sc::AST
+namespace sc
 {
+
+class Value;
+
+namespace ast
+{
+
 class IRGenPass : public Pass
 {
+	Allocator &allocator;
+	Vector<Value *> &ir;
+
 public:
-	IRGenPass();
+	IRGenPass(Allocator &allocator, Vector<Value *> &ir);
 	~IRGenPass();
 
 	bool visit(Stmt *stmt, Stmt **source) override;
@@ -25,4 +34,6 @@ public:
 	bool visit(StmtFor *stmt, Stmt **source) override;
 	bool visit(StmtOneWord *stmt, Stmt **source) override;
 };
-} // namespace sc::AST
+
+} // namespace ast
+} // namespace sc

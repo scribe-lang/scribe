@@ -1,6 +1,6 @@
 #include "AST/DeferStack.hpp"
 
-namespace sc::AST
+namespace sc::ast
 {
 DeferStack::DeferStack() {}
 Vector<Stmt *> DeferStack::getAllStmts()
@@ -15,4 +15,4 @@ Vector<Stmt *> DeferStack::getAllStmts()
 	}
 	return res;
 }
-} // namespace sc::AST
+} // namespace sc::ast

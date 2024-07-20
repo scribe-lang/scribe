@@ -1,6 +1,6 @@
 #include "AST/Passes/Base.hpp"
 
-namespace sc::AST
+namespace sc::ast
 {
 Pass::Pass(size_t passid) : passid(passid) {}
 Pass::~Pass() {}
@@ -17,4 +17,4 @@ bool PassManager::visit(Stmt *&ptree)
 	}
 	return true;
 }
-} // namespace sc::AST
+} // namespace sc::ast

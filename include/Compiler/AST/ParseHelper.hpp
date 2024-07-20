@@ -1,19 +1,18 @@
 #pragma once
 
-#include "Parser.hpp"
+#include "Lex.hpp"
 
-namespace sc::AST
+namespace sc::ast
 {
 class ParseHelper
 {
-	Module *mod;
 	// requires modification at parsing stage, hence not set by module pointer
 	Vector<lex::Lexeme> &toks;
 	lex::Lexeme invalid, eof;
 	size_t idx;
 
 public:
-	ParseHelper(Module *mod, Vector<lex::Lexeme> &toks, size_t begin = 0);
+	ParseHelper(Vector<lex::Lexeme> &toks, size_t begin = 0);
 
 	lex::Lexeme &peek(int offset = 0);
 	lex::TokType peekt(int offset = 0) const;
@@ -58,11 +57,9 @@ public:
 
 	const lex::Lexeme *at(size_t idx) const;
 
-	inline Module *getModule() { return mod; }
-
 	inline bool hasNext() const { return idx + 1 < toks.size(); }
 
 	inline void setPos(size_t idx) { this->idx = idx; }
 	inline size_t getPos() const { return idx; }
 };
-} // namespace sc::AST
+} // namespace sc::ast

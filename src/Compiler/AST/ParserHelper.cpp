@@ -1,9 +1,9 @@
 #include "AST/ParseHelper.hpp"
 
-namespace sc::AST
+namespace sc::ast
 {
-ParseHelper::ParseHelper(Module *mod, Vector<lex::Lexeme> &toks, size_t begin)
-	: mod(mod), toks(toks), invalid(), eof(ModuleLoc(), lex::FEOF), idx(begin)
+ParseHelper::ParseHelper(Vector<lex::Lexeme> &toks, size_t begin)
+	: toks(toks), invalid(), eof(ModuleLoc(), lex::FEOF), idx(begin)
 {}
 
 lex::Lexeme &ParseHelper::peek(int offset)
@@ -53,4 +53,4 @@ const lex::Lexeme *ParseHelper::at(size_t idx) const
 	if(idx >= toks.size()) return &invalid;
 	return &toks[idx];
 }
-} // namespace sc::AST
+} // namespace sc::ast

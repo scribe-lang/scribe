@@ -3,7 +3,7 @@
 #include "Allocator.hpp"
 #include "Lex.hpp"
 
-namespace sc::AST
+namespace sc::ast
 {
 
 enum Stmts : uint8_t
@@ -22,7 +22,7 @@ enum Stmts : uint8_t
 	ONEWORD, // return, break, continue, defer, goto
 };
 
-class Stmt
+class Stmt : public IAllocated
 {
 protected:
 	ModuleLoc loc;
@@ -34,7 +34,7 @@ public:
 	Stmt(Stmts stmt_type, ModuleLoc loc);
 	virtual ~Stmt();
 
-	virtual void disp(bool has_next) = 0;
+	virtual void disp(OStream &os, bool has_next) = 0;
 
 	const char *getStmtTypeCString() const;
 
@@ -72,26 +72,27 @@ public:
 	String attributesToString(StringRef prefix = "", StringRef suffix = "");
 };
 
-template<typename T> T *as(AST::Stmt *data) { return static_cast<T *>(data); }
+template<typename T> T *as(ast::Stmt *data) { return static_cast<T *>(data); }
 
 template<typename T> Stmt **asStmt(T **data) { return (Stmt **)(data); }
 
-} // namespace sc::AST
+} // namespace sc::ast
 
 namespace sc::err
 {
-template<typename... Args> void out(AST::Stmt *stmt, Args &&...args)
+template<typename... Args> void out(ast::Stmt *stmt, Args &&...args)
 {
 	out(&stmt->getLoc(), std::forward<Args>(args)...);
 }
-template<typename... Args> void outw(AST::Stmt *stmt, Args &&...args)
+template<typename... Args> void outw(ast::Stmt *stmt, Args &&...args)
 {
 	outw(&stmt->getLoc(), std::forward<Args>(args)...);
 }
 } // namespace sc::err
 
-namespace sc::AST
+namespace sc::ast
 {
+
 class StmtBlock : public Stmt
 {
 	Vector<Stmt *> stmts;
@@ -100,10 +101,10 @@ class StmtBlock : public Stmt
 public:
 	StmtBlock(ModuleLoc loc, const Vector<Stmt *> &stmts, bool is_top);
 	~StmtBlock();
-	static StmtBlock *create(ListAllocator<Stmt> &mem, ModuleLoc loc,
-				 const Vector<Stmt *> &stmts, bool is_top);
+	static StmtBlock *create(Allocator &allocator, ModuleLoc loc, const Vector<Stmt *> &stmts,
+				 bool is_top);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
 	inline Vector<Stmt *> &getStmts() { return stmts; }
 	inline bool isTop() const { return is_top; }
@@ -116,9 +117,9 @@ class StmtType : public Stmt
 public:
 	StmtType(ModuleLoc loc, Stmt *expr);
 	~StmtType();
-	static StmtType *create(ListAllocator<Stmt> &mem, ModuleLoc loc, Stmt *expr);
+	static StmtType *create(Allocator &allocator, ModuleLoc loc, Stmt *expr);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
 	inline Stmt *&getExpr() { return expr; }
 
@@ -130,22 +131,19 @@ public:
 class StmtVar;
 class StmtSimple : public Stmt
 {
-	StmtVar *decl;
 	lex::Lexeme val;
 
 public:
 	StmtSimple(ModuleLoc loc, const lex::Lexeme &val);
 	~StmtSimple();
-	static StmtSimple *create(ListAllocator<Stmt> &mem, ModuleLoc loc, const lex::Lexeme &val);
+	static StmtSimple *create(Allocator &allocator, ModuleLoc loc, const lex::Lexeme &val);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
-	inline void setDecl(StmtVar *d) { decl = d; }
 	inline void setLexeme(const lex::Lexeme &newdata) { val = newdata; }
 	inline void updateLexDataStr(StringRef newdata) { val.setDataStr(newdata); }
 
-	inline StmtVar *&getDecl() { return decl; }
-	inline lex::Lexeme &getLexValue() { return val; }
+	inline lex::Lexeme &getLexeme() { return val; }
 	inline bool isLexTokType(lex::TokType ty) { return val.isType(ty); }
 };
 
@@ -156,10 +154,10 @@ class StmtCallArgs : public Stmt
 public:
 	StmtCallArgs(ModuleLoc loc, const Vector<Stmt *> &args);
 	~StmtCallArgs();
-	static StmtCallArgs *create(ListAllocator<Stmt> &mem, ModuleLoc loc,
+	static StmtCallArgs *create(Allocator &allocator, ModuleLoc loc,
 				    const Vector<Stmt *> &args);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
 	inline void setArg(size_t idx, Stmt *a) { args[idx] = a; }
 	inline Vector<Stmt *> &getArgs() { return args; }
@@ -181,10 +179,10 @@ public:
 		 bool is_intrinsic_call);
 	~StmtExpr();
 	// or_blk and or_blk_var can be set separately - nullptr/INVALID by default
-	static StmtExpr *create(ListAllocator<Stmt> &mem, ModuleLoc loc, size_t commas, Stmt *lhs,
+	static StmtExpr *create(Allocator &allocator, ModuleLoc loc, size_t commas, Stmt *lhs,
 				const lex::Lexeme &oper, Stmt *rhs, bool is_intrinsic_call);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
 	inline void setCommas(size_t c) { commas = c; }
 	inline void setOr(StmtBlock *blk, const lex::Lexeme &blk_var)
@@ -212,10 +210,10 @@ public:
 	StmtVar(ModuleLoc loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval);
 	~StmtVar();
 	// at least one of type or val must be present
-	static StmtVar *create(ListAllocator<Stmt> &mem, ModuleLoc loc, const lex::Lexeme &name,
+	static StmtVar *create(Allocator &allocator, ModuleLoc loc, const lex::Lexeme &name,
 			       StmtType *vtype, Stmt *vval);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
 	inline void setVVal(Stmt *val) { vval = val; }
 
@@ -242,11 +240,10 @@ public:
 	StmtSignature(ModuleLoc loc, Vector<StmtVar *> &args, StmtType *rettype,
 		      SignatureType sigty);
 	~StmtSignature();
-	static StmtSignature *create(ListAllocator<Stmt> &mem, ModuleLoc loc,
-				     Vector<StmtVar *> &args, StmtType *rettype,
-				     SignatureType sigty);
+	static StmtSignature *create(Allocator &allocator, ModuleLoc loc, Vector<StmtVar *> &args,
+				     StmtType *rettype, SignatureType sigty);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
 	inline StmtVar *&getArg(size_t idx) { return args[idx]; }
 	inline Vector<StmtVar *> &getArgs() { return args; }
@@ -264,10 +261,10 @@ class StmtFnDef : public Stmt
 public:
 	StmtFnDef(ModuleLoc loc, StmtSignature *sig, StmtBlock *blk);
 	~StmtFnDef();
-	static StmtFnDef *create(ListAllocator<Stmt> &mem, ModuleLoc loc, StmtSignature *sig,
+	static StmtFnDef *create(Allocator &allocator, ModuleLoc loc, StmtSignature *sig,
 				 StmtBlock *blk);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
 	inline StmtSignature *&getSig() { return sig; }
 	inline StmtBlock *&getBlk() { return blk; }
@@ -286,10 +283,10 @@ public:
 	StmtVarDecl(ModuleLoc loc, const Vector<StmtVar *> &decls);
 	~StmtVarDecl();
 	// StmtVar can contain any combination of type, in, val(any), or all three
-	static StmtVarDecl *create(ListAllocator<Stmt> &mem, ModuleLoc loc,
+	static StmtVarDecl *create(Allocator &allocator, ModuleLoc loc,
 				   const Vector<StmtVar *> &decls);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
 	inline Vector<StmtVar *> &getDecls() { return decls; }
 };
@@ -324,10 +321,10 @@ public:
 	StmtCond(ModuleLoc loc, Vector<Conditional> &&conds, bool is_inline);
 	StmtCond(ModuleLoc loc, const Vector<Conditional> &conds, bool is_inline);
 	~StmtCond();
-	static StmtCond *create(ListAllocator<Stmt> &mem, ModuleLoc loc,
-				Vector<Conditional> &&conds, bool is_inline);
+	static StmtCond *create(Allocator &allocator, ModuleLoc loc, Vector<Conditional> &&conds,
+				bool is_inline);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
 	inline Vector<Conditional> &getConditionals() { return conds; }
 	inline bool isInline() const { return is_inline; }
@@ -345,10 +342,10 @@ public:
 	StmtFor(ModuleLoc loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *blk, bool is_inline);
 	~StmtFor();
 	// init, cond, incr can be nullptr
-	static StmtFor *create(ListAllocator<Stmt> &mem, ModuleLoc loc, Stmt *init, Stmt *cond,
+	static StmtFor *create(Allocator &allocator, ModuleLoc loc, Stmt *init, Stmt *cond,
 			       Stmt *incr, StmtBlock *blk, bool is_inline);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
 	inline Stmt *&getInit() { return init; }
 	inline Stmt *&getCond() { return cond; }
@@ -373,10 +370,10 @@ class StmtOneWord : public Stmt
 public:
 	StmtOneWord(ModuleLoc loc, Stmt *arg, OneWordType wordty);
 	~StmtOneWord();
-	static StmtOneWord *create(ListAllocator<Stmt> &mem, ModuleLoc loc, Stmt *arg,
+	static StmtOneWord *create(Allocator &allocator, ModuleLoc loc, Stmt *arg,
 				   OneWordType wordty);
 
-	void disp(bool has_next);
+	void disp(OStream &os, bool has_next);
 
 #define isWordTy(X, ENUMVAL) \
 	inline bool is##X() { return wordty == OneWordType::ENUMVAL; }
@@ -388,4 +385,5 @@ public:
 
 	inline Stmt *&getArg() { return arg; }
 };
-} // namespace sc::AST
+
+} // namespace sc::ast

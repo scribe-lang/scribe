@@ -2,7 +2,7 @@
 
 #include "TreeIO.hpp"
 
-namespace sc::AST
+namespace sc::ast
 {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -64,25 +64,25 @@ StmtBlock::StmtBlock(ModuleLoc loc, const Vector<Stmt *> &stmts, bool is_top)
 	: Stmt(BLOCK, loc), stmts(stmts), is_top(is_top)
 {}
 StmtBlock::~StmtBlock() {}
-StmtBlock *StmtBlock::create(ListAllocator<Stmt> &allocator, ModuleLoc loc,
-			     const Vector<Stmt *> &stmts, bool is_top)
+StmtBlock *StmtBlock::create(Allocator &allocator, ModuleLoc loc, const Vector<Stmt *> &stmts,
+			     bool is_top)
 {
 	return allocator.alloc<StmtBlock>(loc, stmts, is_top);
 }
 
-void StmtBlock::disp(bool has_next)
+void StmtBlock::disp(OStream &os, bool has_next)
 {
 	tio::tabAdd(has_next);
-	tio::print(has_next, "Block [top = ", is_top ? "yes" : "no", "]",
+	tio::print(os, has_next, "Block [top = ", is_top ? "yes" : "no", "]",
 		   attributesToString(" (", ")"), ":\n");
 	for(size_t i = 0; i < stmts.size(); ++i) {
 		if(!stmts[i]) {
 			tio::tabAdd(has_next);
-			tio::print(i != stmts.size() - 1, "<Source End>\n");
+			tio::print(os, i != stmts.size() - 1, "<Source End>\n");
 			tio::tabRem();
 			continue;
 		}
-		stmts[i]->disp(i != stmts.size() - 1);
+		stmts[i]->disp(os, i != stmts.size() - 1);
 	}
 	tio::tabRem();
 }
@@ -93,45 +93,41 @@ void StmtBlock::disp(bool has_next)
 
 StmtType::StmtType(ModuleLoc loc, Stmt *expr) : Stmt(TYPE, loc), expr(expr) {}
 StmtType::~StmtType() {}
-StmtType *StmtType::create(ListAllocator<Stmt> &allocator, ModuleLoc loc, Stmt *expr)
+StmtType *StmtType::create(Allocator &allocator, ModuleLoc loc, Stmt *expr)
 {
 	return allocator.alloc<StmtType>(loc, expr);
 }
 
-void StmtType::disp(bool has_next)
+void StmtType::disp(OStream &os, bool has_next)
 {
 	tio::tabAdd(has_next);
-	tio::print(has_next, "Type Expr", attributesToString(" (", ")"), ":\n");
-	expr->disp(false);
+	tio::print(os, has_next, "Type Expr", attributesToString(" (", ")"), ":\n");
+	expr->disp(os, false);
 	tio::tabRem();
 }
 
 bool StmtType::isMetaType() const
 {
 	return expr && expr->getStmtType() == SIMPLE &&
-	       as<StmtSimple>(expr)->getLexValue().isType(lex::TYPE);
+	       as<StmtSimple>(expr)->getLexeme().isType(lex::TYPE);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////// StmtSimple /////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-StmtSimple::StmtSimple(ModuleLoc loc, const lex::Lexeme &val)
-	: Stmt(SIMPLE, loc), decl(nullptr), val(val)
-{}
+StmtSimple::StmtSimple(ModuleLoc loc, const lex::Lexeme &val) : Stmt(SIMPLE, loc), val(val) {}
 
 StmtSimple::~StmtSimple() {}
-StmtSimple *StmtSimple::create(ListAllocator<Stmt> &allocator, ModuleLoc loc,
-			       const lex::Lexeme &val)
+StmtSimple *StmtSimple::create(Allocator &allocator, ModuleLoc loc, const lex::Lexeme &val)
 {
 	return allocator.alloc<StmtSimple>(loc, val);
 }
 
-void StmtSimple::disp(bool has_next)
+void StmtSimple::disp(OStream &os, bool has_next)
 {
 	tio::tabAdd(has_next);
-	tio::print(has_next, "Simple [decl = ", decl ? "yes" : "no", "]",
-		   attributesToString(" (", ")"), ": ", val.str(0), "\n");
+	tio::print(os, has_next, "Simple", attributesToString(" (", ")"), ": ", val.str(0), "\n");
 	tio::tabRem();
 }
 
@@ -143,22 +139,21 @@ StmtCallArgs::StmtCallArgs(ModuleLoc loc, const Vector<Stmt *> &args)
 	: Stmt(CALLARGS, loc), args(args)
 {}
 StmtCallArgs::~StmtCallArgs() {}
-StmtCallArgs *StmtCallArgs::create(ListAllocator<Stmt> &allocator, ModuleLoc loc,
-				   const Vector<Stmt *> &args)
+StmtCallArgs *StmtCallArgs::create(Allocator &allocator, ModuleLoc loc, const Vector<Stmt *> &args)
 {
 	return allocator.alloc<StmtCallArgs>(loc, args);
 }
 
-void StmtCallArgs::disp(bool has_next)
+void StmtCallArgs::disp(OStream &os, bool has_next)
 {
 	tio::tabAdd(has_next);
-	tio::print(has_next, "Function Call args", attributesToString(" (", ")"), ": ",
+	tio::print(os, has_next, "Function Call args", attributesToString(" (", ")"), ": ",
 		   args.empty() ? "(empty)" : "", "\n");
 	if(!args.empty()) {
 		tio::tabAdd(false);
-		tio::print(false, "Args:\n");
+		tio::print(os, false, "Args:\n");
 		for(size_t i = 0; i < args.size(); ++i) {
-			args[i]->disp(i != args.size() - 1);
+			args[i]->disp(os, i != args.size() - 1);
 		}
 		tio::tabRem();
 	}
@@ -175,40 +170,40 @@ StmtExpr::StmtExpr(ModuleLoc loc, size_t commas, Stmt *lhs, const lex::Lexeme &o
 	  or_blk_var(loc), is_intrinsic_call(is_intrinsic_call)
 {}
 StmtExpr::~StmtExpr() {}
-StmtExpr *StmtExpr::create(ListAllocator<Stmt> &allocator, ModuleLoc loc, size_t commas, Stmt *lhs,
+StmtExpr *StmtExpr::create(Allocator &allocator, ModuleLoc loc, size_t commas, Stmt *lhs,
 			   const lex::Lexeme &oper, Stmt *rhs, bool is_intrinsic_call)
 {
 	return allocator.alloc<StmtExpr>(loc, commas, lhs, oper, rhs, is_intrinsic_call);
 }
 
-void StmtExpr::disp(bool has_next)
+void StmtExpr::disp(OStream &os, bool has_next)
 {
 	tio::tabAdd(has_next);
-	tio::print(has_next, "Expression [parsing intinsic: ", is_intrinsic_call ? "yes" : "no",
+	tio::print(os, has_next, "Expression [parsing intinsic: ", is_intrinsic_call ? "yes" : "no",
 		   "]", attributesToString(" (", ")"), ":\n");
 	if(lhs) {
 		tio::tabAdd(oper.isValid() || rhs || or_blk);
-		tio::print(oper.isValid() || rhs || or_blk, "LHS:\n");
-		lhs->disp(false);
+		tio::print(os, oper.isValid() || rhs || or_blk, "LHS:\n");
+		lhs->disp(os, false);
 		tio::tabRem();
 	}
 	if(oper.isValid()) {
 		tio::tabAdd(rhs || or_blk);
-		tio::print(rhs || or_blk, "Oper: ", oper.tokCStr(), "\n");
+		tio::print(os, rhs || or_blk, "Oper: ", oper.tokCStr(), "\n");
 		tio::tabRem();
 	}
 	if(rhs) {
 		tio::tabAdd(or_blk);
-		tio::print(or_blk != nullptr, "RHS:\n");
-		rhs->disp(false);
+		tio::print(os, or_blk != nullptr, "RHS:\n");
+		rhs->disp(os, false);
 		tio::tabRem();
 	}
 	if(or_blk) {
 		tio::tabAdd(false);
 		StringRef orblkvardata =
 		or_blk_var.isIdentifier() ? or_blk_var.getDataStr() : "<none>";
-		tio::print(false, "Or: ", orblkvardata, "\n");
-		or_blk->disp(false);
+		tio::print(os, false, "Or: ", orblkvardata, "\n");
+		or_blk->disp(os, false);
 		tio::tabRem();
 	}
 	tio::tabRem();
@@ -222,28 +217,28 @@ StmtVar::StmtVar(ModuleLoc loc, const lex::Lexeme &name, StmtType *vtype, Stmt *
 	: Stmt(VAR, loc), name(name), vtype(vtype), vval(vval)
 {}
 StmtVar::~StmtVar() {}
-StmtVar *StmtVar::create(ListAllocator<Stmt> &allocator, ModuleLoc loc, const lex::Lexeme &name,
+StmtVar *StmtVar::create(Allocator &allocator, ModuleLoc loc, const lex::Lexeme &name,
 			 StmtType *vtype, Stmt *vval)
 {
 	return allocator.alloc<StmtVar>(loc, name, vtype, vval);
 }
 
-void StmtVar::disp(bool has_next)
+void StmtVar::disp(OStream &os, bool has_next)
 {
 	tio::tabAdd(has_next);
 	// TODO: make sure the attribute name is correct
-	tio::print(has_next, "Variable", attributesToString(" (", ")"), ": ", name.getDataStr(),
+	tio::print(os, has_next, "Variable", attributesToString(" (", ")"), ": ", name.getDataStr(),
 		   "\n");
 	if(vtype) {
 		tio::tabAdd(vval);
-		tio::print(vval != nullptr, "Type:\n");
-		vtype->disp(false);
+		tio::print(os, vval != nullptr, "Type:\n");
+		vtype->disp(os, false);
 		tio::tabRem();
 	}
 	if(vval) {
 		tio::tabAdd(false);
-		tio::print(false, "Value:\n");
-		vval->disp(false);
+		tio::print(os, false, "Value:\n");
+		vval->disp(os, false);
 		tio::tabRem();
 	}
 	tio::tabRem();
@@ -258,14 +253,13 @@ StmtSignature::StmtSignature(ModuleLoc loc, Vector<StmtVar *> &args, StmtType *r
 	: Stmt(SIGNATURE, loc), args(args), rettype(rettype), sigty(sigty)
 {}
 StmtSignature::~StmtSignature() {}
-StmtSignature *StmtSignature::create(ListAllocator<Stmt> &allocator, ModuleLoc loc,
-				     Vector<StmtVar *> &args, StmtType *rettype,
-				     SignatureType sigty)
+StmtSignature *StmtSignature::create(Allocator &allocator, ModuleLoc loc, Vector<StmtVar *> &args,
+				     StmtType *rettype, SignatureType sigty)
 {
 	return allocator.alloc<StmtSignature>(loc, args, rettype, sigty);
 }
 
-void StmtSignature::disp(bool has_next)
+void StmtSignature::disp(OStream &os, bool has_next)
 {
 	StringRef sigTyName = "";
 	if(sigty == SignatureType::STRUCT) sigTyName = "Struct";
@@ -273,19 +267,19 @@ void StmtSignature::disp(bool has_next)
 	else if(sigty == SignatureType::FUNC) sigTyName = "Func";
 
 	tio::tabAdd(has_next);
-	tio::print(has_next, sigTyName, " Signature", attributesToString(" (", ")"), "\n");
+	tio::print(os, has_next, sigTyName, " Signature", attributesToString(" (", ")"), "\n");
 	if(args.size() > 0) {
 		tio::tabAdd(rettype);
-		tio::print(rettype != nullptr, "Parameters:\n");
+		tio::print(os, rettype != nullptr, "Parameters:\n");
 		for(size_t i = 0; i < args.size(); ++i) {
-			args[i]->disp(i != args.size() - 1);
+			args[i]->disp(os, i != args.size() - 1);
 		}
 		tio::tabRem();
 	}
 	if(rettype) {
 		tio::tabAdd(false);
-		tio::print(false, "Return Type", "\n");
-		rettype->disp(false);
+		tio::print(os, false, "Return Type", "\n");
+		rettype->disp(os, false);
 		tio::tabRem();
 	}
 	tio::tabRem();
@@ -299,24 +293,24 @@ StmtFnDef::StmtFnDef(ModuleLoc loc, StmtSignature *sig, StmtBlock *blk)
 	: Stmt(FNDEF, loc), sig(sig), blk(blk)
 {}
 StmtFnDef::~StmtFnDef() {}
-StmtFnDef *StmtFnDef::create(ListAllocator<Stmt> &allocator, ModuleLoc loc, StmtSignature *sig,
+StmtFnDef *StmtFnDef::create(Allocator &allocator, ModuleLoc loc, StmtSignature *sig,
 			     StmtBlock *blk)
 {
 	return allocator.alloc<StmtFnDef>(loc, sig, blk);
 }
 
-void StmtFnDef::disp(bool has_next)
+void StmtFnDef::disp(OStream &os, bool has_next)
 {
 	tio::tabAdd(has_next);
-	tio::print(has_next, "Function definition", attributesToString(" (", ")"), "\n");
+	tio::print(os, has_next, "Function definition", attributesToString(" (", ")"), "\n");
 	tio::tabAdd(true);
-	tio::print(true, "Function Signature:\n");
-	sig->disp(false);
+	tio::print(os, true, "Function Signature:\n");
+	sig->disp(os, false);
 	tio::tabRem();
 
 	tio::tabAdd(false);
-	tio::print(false, "Function Block:\n");
-	blk->disp(false);
+	tio::print(os, false, "Function Block:\n");
+	blk->disp(os, false);
 	tio::tabRem(2);
 }
 
@@ -328,18 +322,18 @@ StmtVarDecl::StmtVarDecl(ModuleLoc loc, const Vector<StmtVar *> &decls)
 	: Stmt(VARDECL, loc), decls(decls)
 {}
 StmtVarDecl::~StmtVarDecl() {}
-StmtVarDecl *StmtVarDecl::create(ListAllocator<Stmt> &allocator, ModuleLoc loc,
+StmtVarDecl *StmtVarDecl::create(Allocator &allocator, ModuleLoc loc,
 				 const Vector<StmtVar *> &decls)
 {
 	return allocator.alloc<StmtVarDecl>(loc, decls);
 }
 
-void StmtVarDecl::disp(bool has_next)
+void StmtVarDecl::disp(OStream &os, bool has_next)
 {
 	tio::tabAdd(has_next);
-	tio::print(has_next, "Variable declarations", attributesToString(" (", ")"), "\n");
+	tio::print(os, has_next, "Variable declarations", attributesToString(" (", ")"), "\n");
 	for(size_t i = 0; i < decls.size(); ++i) {
-		decls[i]->disp(i != decls.size() - 1);
+		decls[i]->disp(os, i != decls.size() - 1);
 	}
 	tio::tabRem();
 }
@@ -358,29 +352,29 @@ StmtCond::StmtCond(ModuleLoc loc, const Vector<Conditional> &conds, bool is_inli
 	: Stmt(COND, loc), conds(conds), is_inline(is_inline)
 {}
 StmtCond::~StmtCond() {}
-StmtCond *StmtCond::create(ListAllocator<Stmt> &allocator, ModuleLoc loc,
-			   Vector<Conditional> &&conds, bool is_inline)
+StmtCond *StmtCond::create(Allocator &allocator, ModuleLoc loc, Vector<Conditional> &&conds,
+			   bool is_inline)
 {
 	return allocator.alloc<StmtCond>(loc, std::move(conds), is_inline);
 }
 
-void StmtCond::disp(bool has_next)
+void StmtCond::disp(OStream &os, bool has_next)
 {
 	tio::tabAdd(has_next);
-	tio::print(has_next, "Conditional [is inline = ", is_inline ? "yes" : "no", "]",
+	tio::print(os, has_next, "Conditional [is inline = ", is_inline ? "yes" : "no", "]",
 		   attributesToString(" (", ")"), "\n");
 	for(size_t i = 0; i < conds.size(); ++i) {
 		tio::tabAdd(i != conds.size() - 1);
-		tio::print(i != conds.size() - 1, "Branch:\n");
+		tio::print(os, i != conds.size() - 1, "Branch:\n");
 		if(conds[i].getCond()) {
 			tio::tabAdd(true);
-			tio::print(true, "Condition:\n");
-			conds[i].getCond()->disp(false);
+			tio::print(os, true, "Condition:\n");
+			conds[i].getCond()->disp(os, false);
 			tio::tabRem();
 		}
 		tio::tabAdd(false);
-		tio::print(false, "Block:\n");
-		conds[i].getBlk()->disp(false);
+		tio::print(os, false, "Block:\n");
+		conds[i].getBlk()->disp(os, false);
 		tio::tabRem(2);
 	}
 	tio::tabRem();
@@ -394,39 +388,39 @@ StmtFor::StmtFor(ModuleLoc loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *b
 	: Stmt(FOR, loc), init(init), cond(cond), incr(incr), blk(blk), is_inline(is_inline)
 {}
 StmtFor::~StmtFor() {}
-StmtFor *StmtFor::create(ListAllocator<Stmt> &allocator, ModuleLoc loc, Stmt *init, Stmt *cond,
-			 Stmt *incr, StmtBlock *blk, bool is_inline)
+StmtFor *StmtFor::create(Allocator &allocator, ModuleLoc loc, Stmt *init, Stmt *cond, Stmt *incr,
+			 StmtBlock *blk, bool is_inline)
 {
 	return allocator.alloc<StmtFor>(loc, init, cond, incr, blk, is_inline);
 }
 
-void StmtFor::disp(bool has_next)
+void StmtFor::disp(OStream &os, bool has_next)
 {
 	tio::tabAdd(has_next);
-	tio::print(has_next, "For/While [is inline = ", is_inline ? "yes" : "no", "]",
+	tio::print(os, has_next, "For/While [is inline = ", is_inline ? "yes" : "no", "]",
 		   attributesToString(" (", ")"), "\n");
 	if(init) {
 		tio::tabAdd(cond || incr || blk);
-		tio::print(cond || incr || blk, "Init:\n");
-		init->disp(false);
+		tio::print(os, cond || incr || blk, "Init:\n");
+		init->disp(os, false);
 		tio::tabRem();
 	}
 	if(cond) {
 		tio::tabAdd(incr || blk);
-		tio::print(incr || blk, "Condition:\n");
-		cond->disp(false);
+		tio::print(os, incr || blk, "Condition:\n");
+		cond->disp(os, false);
 		tio::tabRem();
 	}
 	if(incr) {
 		tio::tabAdd(blk);
-		tio::print(blk != nullptr, "Increment:\n");
-		incr->disp(false);
+		tio::print(os, blk != nullptr, "Increment:\n");
+		incr->disp(os, false);
 		tio::tabRem();
 	}
 	if(blk) {
 		tio::tabAdd(false);
-		tio::print(false, "Block:\n");
-		blk->disp(false);
+		tio::print(os, false, "Block:\n");
+		blk->disp(os, false);
 		tio::tabRem();
 	}
 	tio::tabRem();
@@ -440,13 +434,12 @@ StmtOneWord::StmtOneWord(ModuleLoc loc, Stmt *arg, OneWordType wordty)
 	: Stmt(ONEWORD, loc), arg(arg), wordty(wordty)
 {}
 StmtOneWord::~StmtOneWord() {}
-StmtOneWord *StmtOneWord::create(ListAllocator<Stmt> &allocator, ModuleLoc loc, Stmt *arg,
-				 OneWordType wordty)
+StmtOneWord *StmtOneWord::create(Allocator &allocator, ModuleLoc loc, Stmt *arg, OneWordType wordty)
 {
 	return allocator.alloc<StmtOneWord>(loc, arg, wordty);
 }
 
-void StmtOneWord::disp(bool has_next)
+void StmtOneWord::disp(OStream &os, bool has_next)
 {
 	StringRef wordTyName = "";
 	if(wordty == OneWordType::RETURN) wordTyName = "Return";
@@ -456,14 +449,14 @@ void StmtOneWord::disp(bool has_next)
 	else if(wordty == OneWordType::GOTO) wordTyName = "Goto";
 
 	tio::tabAdd(has_next);
-	tio::print(has_next, wordTyName, attributesToString(" (", ")"), "\n");
+	tio::print(os, has_next, wordTyName, attributesToString(" (", ")"), "\n");
 	if(arg) {
 		tio::tabAdd(false);
-		tio::print(false, "Value:\n");
-		arg->disp(false);
+		tio::print(os, false, "Value:\n");
+		arg->disp(os, false);
 		tio::tabRem();
 	}
 	tio::tabRem();
 }
 
-} // namespace sc::AST
+} // namespace sc::ast

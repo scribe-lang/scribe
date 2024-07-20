@@ -2,8 +2,9 @@
 
 #include "AST/Stmts.hpp"
 
-namespace sc::AST
+namespace sc::ast
 {
+
 class Pass
 {
 protected:
@@ -50,21 +51,37 @@ public:
 	inline size_t getPassID() { return passid; }
 };
 
-template<typename T> T *as(Pass *t) { return static_cast<T *>(t); }
+template<typename T> T *as(Pass *p) { return static_cast<T *>(p); }
 
 class PassManager
 {
+	// Must be a vector to be able to use push_back()
 	Vector<Pass *> passes;
 
 public:
 	PassManager();
 	PassManager(const PassManager &pm) = delete;
 	~PassManager();
-	template<class T, typename... Args>
+
+	bool visit(Stmt *&ptree);
+
+	template<typename T, typename... Args>
 	typename std::enable_if<std::is_base_of<Pass, T>::value, void>::type add(Args... args)
 	{
 		passes.push_back(new T(args...));
 	}
-	bool visit(Stmt *&ptree);
+
+	template<typename T>
+	typename std::enable_if<std::is_base_of<Pass, T>::value, T>::type *getPass()
+	{
+		Pass *res = nullptr;
+		for(auto &p : passes) {
+			if(!p->isPass<T>()) continue;
+			res = p;
+			break;
+		}
+		return as<T>(res);
+	}
 };
-} // namespace sc::AST
+
+} // namespace sc::ast
