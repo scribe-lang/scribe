@@ -6,15 +6,14 @@ namespace sc::lex
 {
 
 const char *TokStrs[_LAST] = {
-"nil",
+// Special data/types (nil, true, false, void, any, type, etc.) fall under iden
 "INT",
 "FLT",
 "STR",
 "CHAR",
-"true",
-"false",
-"void",
 "IDEN",
+
+// Special
 "ATTRS",
 
 // Keywords
@@ -32,8 +31,6 @@ const char *TokStrs[_LAST] = {
 "return",
 "continue",
 "break",
-"any",
-"type",
 "or",
 "static",
 "const",
@@ -427,12 +424,6 @@ TokType classifyStr(StringRef str)
 	if(str == TokStrs[RETURN]) return RETURN;
 	if(str == TokStrs[CONTINUE]) return CONTINUE;
 	if(str == TokStrs[BREAK]) return BREAK;
-	if(str == TokStrs[NIL]) return NIL;
-	if(str == TokStrs[TRUE]) return TRUE;
-	if(str == TokStrs[FALSE]) return FALSE;
-	if(str == TokStrs[VOID]) return VOID;
-	if(str == TokStrs[ANY]) return ANY;
-	if(str == TokStrs[TYPE]) return TYPE;
 	if(str == TokStrs[OR]) return OR;
 	if(str == TokStrs[STATIC]) return STATIC;
 	if(str == TokStrs[CONST]) return CONST;

@@ -6,13 +6,13 @@ namespace sc
 Value::Value(ModuleLoc loc, Values valty) : loc(loc), valty(valty) {}
 Value::~Value() {}
 
-StringRef Value::getAttributeValue(StringRef name)
+StringRef Value::getAttributeValue(StringRef name) const
 {
 	auto loc = attrs.find(name);
 	if(loc != attrs.end()) return loc->second;
 	return "";
 }
-String Value::attributesToString(StringRef prefix, StringRef suffix)
+String Value::attributesToString(StringRef prefix, StringRef suffix) const
 {
 	if(attrs.empty()) return "";
 	String res(prefix);
@@ -30,9 +30,6 @@ String Value::attributesToString(StringRef prefix, StringRef suffix)
 	return res;
 }
 
-SimpleValue::SimpleValue(ModuleLoc loc, SimpleValues simplevalty)
-	: Value(loc, Values::SIMPLE), simplevalty(simplevalty), data(0)
-{}
 SimpleValue::SimpleValue(ModuleLoc loc, SimpleValues simplevalty, char data)
 	: Value(loc, Values::SIMPLE), simplevalty(simplevalty), data(data)
 {}
@@ -47,18 +44,51 @@ SimpleValue::SimpleValue(ModuleLoc loc, SimpleValues simplevalty, StringRef data
 {}
 SimpleValue::~SimpleValue() {}
 
+SimpleValue *SimpleValue::create(Allocator &allocator, ModuleLoc loc, SimpleValues simplevalty,
+				 char data)
+{
+	return allocator.alloc<SimpleValue>(loc, simplevalty, data);
+}
+SimpleValue *SimpleValue::create(Allocator &allocator, ModuleLoc loc, SimpleValues simplevalty,
+				 int64_t data)
+{
+	return allocator.alloc<SimpleValue>(loc, simplevalty, data);
+}
+SimpleValue *SimpleValue::create(Allocator &allocator, ModuleLoc loc, SimpleValues simplevalty,
+				 long double data)
+{
+	return allocator.alloc<SimpleValue>(loc, simplevalty, data);
+}
+SimpleValue *SimpleValue::create(Allocator &allocator, ModuleLoc loc, SimpleValues simplevalty,
+				 StringRef data)
+{
+	return allocator.alloc<SimpleValue>(loc, simplevalty, data);
+}
+
 String SimpleValue::toString() const
 {
 	String res;
 	switch(simplevalty) {
-	case SimpleValues::NIL: res += "nil";
-	case SimpleValues::TRUE: res += "true";
-	case SimpleValues::FALSE: res += "false";
-	case SimpleValues::INT: res += "INT, "; res += utils::toString(getDataInt());
-	case SimpleValues::FLT: res += "FLT, "; res += utils::toString(getDataFlt());
-	case SimpleValues::CHAR: res += "CHAR, "; res += getDataStr();
-	case SimpleValues::STR: res += "STR, "; res += getDataStr();
-	case SimpleValues::IDEN: res += "IDEN, "; res += getDataStr();
+	case SimpleValues::INT:
+		res += "INT, ";
+		res += utils::toString(getDataInt());
+		break;
+	case SimpleValues::FLT:
+		res += "FLT, ";
+		res += utils::toString(getDataFlt());
+		break;
+	case SimpleValues::CHAR:
+		res += "CHAR, ";
+		res += getDataStr();
+		break;
+	case SimpleValues::STR:
+		res += "STR, ";
+		res += getDataStr();
+		break;
+	case SimpleValues::IDEN:
+		res += "IDEN, ";
+		res += getDataStr();
+		break;
 	default: break;
 	}
 	return res;

@@ -793,8 +793,8 @@ bool Parser::parseExpr01(Stmt *&expr, bool disable_brace_after_iden)
 	bool is_intrinsic = false;
 
 	// prefixed/suffixed literals
-	if(p.accept(lex::IDEN) && p.peek(1).isLiteral() ||
-	   p.peek().isLiteral() && p.peekt(1) == lex::IDEN)
+	if((p.accept(lex::IDEN) && p.peek(1).isLiteral()) ||
+	   (p.peek().isLiteral() && p.peekt(1) == lex::IDEN))
 	{
 		return parsePrefixedSuffixedLiteral(expr);
 	}
@@ -1096,7 +1096,7 @@ post_args:
 		return false;
 	}
 	if(!rettype) {
-		lex::Lexeme voideme = lex::Lexeme(p.peek(-1).getLoc(), lex::VOID, "void");
+		lex::Lexeme voideme = lex::Lexeme(p.peek(-1).getLoc(), lex::IDEN, "void");
 		StmtSimple *voidsim = StmtSimple::create(allocator, voideme.getLoc(), voideme);
 		rettype		    = StmtType::create(allocator, voidsim->getLoc(), voidsim);
 	}

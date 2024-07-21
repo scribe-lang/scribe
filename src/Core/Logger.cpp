@@ -49,7 +49,8 @@ void Logger::logInternal(LogLevels lvl, StringRef data)
 {
 	namespace chrono = std::chrono;
 	String timebuf =
-	std::format("{:%H:%M:%S}", chrono::current_zone()->to_local(chrono::system_clock::now()));
+	std::format("{:%Y-%m-%dT%H:%M:%S%Z}",
+		    chrono::time_point_cast<chrono::milliseconds>(chrono::system_clock::now()));
 
 	for(auto &s : sinks) {
 		if(s.with_col) {

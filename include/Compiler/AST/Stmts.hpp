@@ -68,6 +68,7 @@ public:
 		using namespace std;
 		swap(attrs, _attrs);
 	}
+	inline const StringMap<String> &getAttributes() const { return attrs; }
 	StringRef getAttributeValue(StringRef name);
 	String attributesToString(StringRef prefix = "", StringRef suffix = "");
 };
@@ -82,11 +83,11 @@ namespace sc::err
 {
 template<typename... Args> void out(ast::Stmt *stmt, Args &&...args)
 {
-	out(&stmt->getLoc(), std::forward<Args>(args)...);
+	out(stmt->getLoc(), std::forward<Args>(args)...);
 }
 template<typename... Args> void outw(ast::Stmt *stmt, Args &&...args)
 {
-	outw(&stmt->getLoc(), std::forward<Args>(args)...);
+	outw(stmt->getLoc(), std::forward<Args>(args)...);
 }
 } // namespace sc::err
 
@@ -122,8 +123,6 @@ public:
 	void disp(OStream &os, bool has_next);
 
 	inline Stmt *&getExpr() { return expr; }
-
-	inline bool isSignature() const { return expr && expr->getStmtType() == SIGNATURE; }
 
 	bool isMetaType() const;
 };

@@ -29,7 +29,7 @@ public:
 
 	inline const ModuleLoc &getLoc() const { return loc; }
 
-	inline bool hasAttribute(StringRef name) { return attrs.find(name) != attrs.end(); }
+	inline bool hasAttribute(StringRef name) const { return attrs.find(name) != attrs.end(); }
 	inline void addAttribute(StringRef name, StringRef val = "") { attrs[String(name)] = val; }
 	inline void setAttributes(const StringMap<String> &_attrs) { attrs = _attrs; }
 	inline void setAttributes(StringMap<String> &&_attrs)
@@ -37,21 +37,18 @@ public:
 		using namespace std;
 		swap(attrs, _attrs);
 	}
-	StringRef getAttributeValue(StringRef name);
-	String attributesToString(StringRef prefix = "", StringRef suffix = "");
+	StringRef getAttributeValue(StringRef name) const;
+	String attributesToString(StringRef prefix = "", StringRef suffix = "") const;
 };
 
 template<typename T> T *as(Value *data) { return static_cast<T *>(data); }
 
 enum class SimpleValues
 {
-	NIL,
-	TRUE,
-	FALSE,
 	INT,
 	FLT,
-	CHAR,
 	STR,
+	CHAR,
 	IDEN,
 };
 class SimpleValue : public Value
@@ -60,20 +57,25 @@ class SimpleValue : public Value
 	Variant<String, int64_t, long double> data;
 
 public:
-	SimpleValue(ModuleLoc loc, SimpleValues simplevalty);
 	SimpleValue(ModuleLoc loc, SimpleValues simplevalty, char data);
 	SimpleValue(ModuleLoc loc, SimpleValues simplevalty, int64_t data);
 	SimpleValue(ModuleLoc loc, SimpleValues simplevalty, long double data);
 	SimpleValue(ModuleLoc loc, SimpleValues simplevalty, StringRef data);
 	~SimpleValue();
 
+	static SimpleValue *create(Allocator &allocator, ModuleLoc loc, SimpleValues simplevalty,
+				   char data);
+	static SimpleValue *create(Allocator &allocator, ModuleLoc loc, SimpleValues simplevalty,
+				   int64_t data);
+	static SimpleValue *create(Allocator &allocator, ModuleLoc loc, SimpleValues simplevalty,
+				   long double data);
+	static SimpleValue *create(Allocator &allocator, ModuleLoc loc, SimpleValues simplevalty,
+				   StringRef data);
+
 	String toString() const override;
 
 #define isSimpleValueX(X, ENUMVAL) \
 	inline bool is##X() { return simplevalty == SimpleValues::ENUMVAL; }
-	isSimpleValueX(Nil, NIL);
-	isSimpleValueX(True, TRUE);
-	isSimpleValueX(False, FALSE);
 	isSimpleValueX(Int, INT);
 	isSimpleValueX(Flt, FLT);
 	isSimpleValueX(Char, CHAR);

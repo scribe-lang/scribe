@@ -109,7 +109,8 @@ void StmtType::disp(OStream &os, bool has_next)
 bool StmtType::isMetaType() const
 {
 	return expr && expr->getStmtType() == SIMPLE &&
-	       as<StmtSimple>(expr)->getLexeme().isType(lex::TYPE);
+	       as<StmtSimple>(expr)->getLexeme().isType(lex::IDEN) &&
+	       as<StmtSimple>(expr)->getLexeme().getDataStr() == "type";
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

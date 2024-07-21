@@ -7,6 +7,7 @@
 #include "Builder.hpp"
 #include "FS.hpp"
 #include "Logger.hpp"
+#include "VM/IRBuilder.hpp"
 
 using namespace sc;
 
@@ -158,12 +159,19 @@ bool ParseSource(Allocator &allocator, args::ArgParser &args, StringRef path, St
 	}
 
 	ast::PassManager pm;
-	Vector<Value *> ir;
-	pm.add<ast::IRGenPass>(allocator, ir);
 
+	Vector<Instruction *> ir;
+	IRBuilder irb(allocator, ir);
+
+	pm.add<ast::IRGenPass>(irb);
 	if(!pm.visit((ast::Stmt *&)ptree)) {
 		logger.fatal("Failed to perform passes on AST for file: ", path);
 		return false;
+	}
+	if(args.has("ir")) {
+		std::cout << "====================== IR for: " << path
+			  << " ======================\n";
+		IRBuilder::dumpIR(std::cout, ir);
 	}
 
 	// IR is ready now

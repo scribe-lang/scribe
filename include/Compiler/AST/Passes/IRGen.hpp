@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Base.hpp"
+#include "VM/IRBuilder.hpp"
 
 namespace sc
 {
@@ -12,11 +13,10 @@ namespace ast
 
 class IRGenPass : public Pass
 {
-	Allocator &allocator;
-	Vector<Value *> &ir;
+	IRBuilder &b;
 
 public:
-	IRGenPass(Allocator &allocator, Vector<Value *> &ir);
+	IRGenPass(IRBuilder &b);
 	~IRGenPass();
 
 	bool visit(Stmt *stmt, Stmt **source) override;

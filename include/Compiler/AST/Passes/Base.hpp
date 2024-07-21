@@ -66,9 +66,9 @@ public:
 	bool visit(Stmt *&ptree);
 
 	template<typename T, typename... Args>
-	typename std::enable_if<std::is_base_of<Pass, T>::value, void>::type add(Args... args)
+	typename std::enable_if<std::is_base_of<Pass, T>::value, void>::type add(Args &&...args)
 	{
-		passes.push_back(new T(args...));
+		passes.push_back(new T(std::forward<Args>(args)...));
 	}
 
 	template<typename T>

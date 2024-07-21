@@ -8,41 +8,31 @@ namespace sc
 enum class Instructions
 {
 	LOAD,
+	CREATEVAR,
 };
 class Instruction : public Value
 {
 	Instructions instrty;
 
-protected:
-	Vector<Value *> args;
-
 public:
 	Instruction(ModuleLoc loc, Instructions instrty);
-	Instruction(ModuleLoc loc, Instructions instrty, size_t argscapacity);
 	virtual ~Instruction();
 
-	inline void addArg(Value *arg) { args.push_back(arg); }
-	inline Value *getArg(size_t idx) const { return args[idx]; }
-	inline size_t getArgCount() const { return args.size(); }
-	inline bool hasArgs() const { return !args.empty(); }
-	inline Vector<Value *> &getArgs() { return args; }
-	inline void setArgs(const Vector<Value *> &_args) { args = _args; }
-	inline void setArgs(Vector<Value *> &&_args)
-	{
-		using namespace std;
-		swap(args, _args);
-	}
+#define isInstrX(X, ENUMVAL) \
+	inline bool is##X() { return instrty == Instructions::ENUMVAL; }
+	isInstrX(Load, LOAD);
+	isInstrX(CreateVar, CREATEVAR);
 };
 
-// Args:
-// Data: SimpleValue
 class LoadInstruction : public Instruction
 {
+	SimpleValue *data;
+
 public:
 	LoadInstruction(ModuleLoc loc, SimpleValue *data);
 	~LoadInstruction();
 
-	inline String toString() const override;
+	String toString() const override;
 
 	static inline LoadInstruction *create(Allocator &allocator, ModuleLoc loc,
 					      SimpleValue *data)
@@ -50,7 +40,28 @@ public:
 		return allocator.alloc<LoadInstruction>(loc, data);
 	}
 
-	inline SimpleValue *getData() const { return as<SimpleValue>(getArg(0)); }
+	inline SimpleValue *getData() const { return data; }
+};
+
+// Attributes:
+//   inType, type, val, comptime, static, constant, volatile, variadic, reference
+class CreateVarInstruction : public Instruction
+{
+	String name;
+
+public:
+	CreateVarInstruction(ModuleLoc loc, StringRef name);
+	~CreateVarInstruction();
+
+	String toString() const override;
+
+	static inline CreateVarInstruction *create(Allocator &allocator, ModuleLoc loc,
+						   StringRef name)
+	{
+		return allocator.alloc<CreateVarInstruction>(loc, name);
+	}
+
+	inline StringRef getName() const { return name; }
 };
 
 } // namespace sc

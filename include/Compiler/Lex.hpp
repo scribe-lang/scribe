@@ -13,15 +13,14 @@ namespace lex
 // nil => @as(usize, 0)
 enum TokType
 {
-	NIL,
+	// Special data/types (nil, true, false, void, any, type, etc.) fall under iden
 	INT,
 	FLT,
 	STR,
 	CHAR,
-	TRUE,
-	FALSE,
-	VOID,
 	IDEN,
+
+	// Special
 	ATTRS,
 
 	// Keywords
@@ -39,8 +38,6 @@ enum TokType
 	RETURN,
 	CONTINUE,
 	BREAK,
-	ANY,  // type: any
-	TYPE, // type: type
 	OR,
 	STATIC,
 	CONST,
@@ -139,14 +136,13 @@ enum TokType
  */
 extern const char *TokStrs[_LAST];
 
-inline bool isTokLiteral(TokType token) { return token >= NIL && token <= FALSE; }
-inline bool isTokIdentifier(TokType token) { return token == IDEN; }
-inline bool isTokType(TokType token)
-{
-	return (token >= NIL && token <= VOID) || token == ANY || token == TYPE;
-}
 inline bool isTokInt(TokType token) { return token == INT; }
 inline bool isTokFlt(TokType token) { return token == FLT; }
+inline bool isTokLiteral(TokType token)
+{
+	return token == INT || token == FLT || token == CHAR || token == STR;
+}
+inline bool isTokIdentifier(TokType token) { return token == IDEN; }
 inline bool isTokNumeric(TokType token) { return isTokInt(token) || isTokFlt(token); }
 inline bool isTokOper(TokType token) { return token >= ASSN && token <= RBRACK; }
 
@@ -210,14 +206,6 @@ public:
 	inline StringRef getDataStr() const { return std::get<String>(data); }
 	inline int64_t getDataInt() const { return std::get<int64_t>(data); }
 	inline long double getDataFlt() const { return std::get<long double>(data); }
-	inline int64_t getDataAsInt() const
-	{
-		return isTokInt(tokty) ? getDataInt() : (int64_t)std::get<long double>(data);
-	}
-	inline long double getDataAsFlt() const
-	{
-		return isTokFlt(tokty) ? getDataFlt() : (long double)std::get<int64_t>(data);
-	}
 
 	inline TokType getType() const { return tokty; }
 	inline bool isType(TokType ty) const { return tokty == ty; }
@@ -225,11 +213,10 @@ public:
 	inline const ModuleLoc &getLoc() const { return loc; }
 	inline bool containsData() const { return containsdata; }
 
-	inline bool isLiteral() const { return isTokLiteral(tokty) && containsdata; }
-	inline bool isIdentifier() const { return isTokIdentifier(tokty); }
-	inline bool isType() const { return isTokType(tokty); }
 	inline bool isInt() const { return isTokInt(tokty) && containsdata; }
 	inline bool isFlt() const { return isTokFlt(tokty) && containsdata; }
+	inline bool isLiteral() const { return isTokLiteral(tokty) && containsdata; }
+	inline bool isIdentifier() const { return isTokIdentifier(tokty) && containsdata; }
 	inline bool isNumeric() const { return isInt() || isFlt(); }
 	inline bool isOper() const { return isTokOper(tokty); }
 	inline bool isUnaryPre() const { return isTokUnaryPre(tokty); }
@@ -252,11 +239,11 @@ namespace err
 {
 template<typename... Args> void out(const lex::Lexeme &tok, Args &&...args)
 {
-	out(&tok.getLoc(), std::forward<Args>(args)...);
+	out(tok.getLoc(), std::forward<Args>(args)...);
 }
 template<typename... Args> void outw(const lex::Lexeme &tok, Args &&...args)
 {
-	outw(&tok.getLoc(), std::forward<Args>(args)...);
+	outw(tok.getLoc(), std::forward<Args>(args)...);
 }
 } // namespace err
 

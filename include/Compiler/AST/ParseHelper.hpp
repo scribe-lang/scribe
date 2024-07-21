@@ -48,10 +48,7 @@ public:
 		return false;
 	}
 
-	inline bool acceptd()
-	{
-		return peek().isLiteral() || peek().isIdentifier() || peek().isType();
-	}
+	inline bool acceptd() { return peek().isLiteral() || peek().isIdentifier(); }
 
 	inline bool isValid() { return !accept(lex::INVALID, lex::FEOF); }
 
