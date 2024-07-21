@@ -157,14 +157,24 @@ bool Parser::parseType(StmtType *&type)
 		return true;
 	}
 
-	if(p.acceptn(lex::PreVA)) attrs["variadic"] = "";
-
-	while(p.acceptn(lex::MUL)) ++pointerCount;
-
-	if(pointerCount > 0) attrs["pointerCount"] = utils::toString(pointerCount);
-
-	if(p.acceptn(lex::BAND)) attrs["reference"] = "";
-	if(p.acceptn(lex::CONST)) attrs["constant"] = "";
+	// See attributeList.txt for more information on this
+	String modifiers = "";
+	if(p.acceptn(lex::PreVA)) modifiers += 'v';
+	bool isRefDone = false;
+	while(p.accept(lex::MUL, lex::CONST, lex::BAND)) {
+		if(p.acceptn(lex::MUL)) {
+			modifiers += 'p';
+		} else if(p.acceptn(lex::CONST)) {
+			modifiers += 'c';
+		} else if(p.acceptn(lex::BAND)) {
+			if(!isRefDone) modifiers += 'r';
+			isRefDone = true;
+		}
+	}
+	// Now reverse the modifiers string so that forward iteration provides correct order of
+	// modifiers
+	if(modifiers.size() > 1) std::reverse(modifiers.begin(), modifiers.end());
+	attrs["modifiers"] = modifiers;
 
 	if(!parseExpr01(expr, true)) {
 		err::out(p.peek(), "failed to parse type expression");

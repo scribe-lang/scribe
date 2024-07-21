@@ -27,7 +27,6 @@ class Stmt : public IAllocated
 protected:
 	ModuleLoc loc;
 	StringMap<String> attrs;
-	uint16_t derefcount; // number of dereferences to be done while generating code
 	Stmts stype;
 
 public:
@@ -57,8 +56,6 @@ public:
 	inline StringRef getStmtTypeString() const { return getStmtTypeCString(); }
 
 	inline const ModuleLoc &getLoc() { return loc; }
-	inline void setDerefCount(uint16_t count) { derefcount = count; }
-	inline uint16_t getDerefCount() { return derefcount; }
 
 	inline bool hasAttribute(StringRef name) { return attrs.find(name) != attrs.end(); }
 	inline void addAttribute(StringRef name, StringRef val = "") { attrs[String(name)] = val; }

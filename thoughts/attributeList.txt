@@ -1,13 +1,10 @@
-reference
-pointerCount
+Variable:
+- static
+- volatile
+- comptime
+- global
+- inType
 
-comptime
-static
-constant
-inline
-volatile
-global
-variadic
-extern
-
-inType
+Type:
+- modifier=<modifier-list> (something like: [const,ptr,const,ref,variadic,...] => [cpcrv] (reverse order of type's token sequence))
+- extern

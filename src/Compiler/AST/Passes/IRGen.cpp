@@ -42,7 +42,15 @@ bool IRGenPass::visit(StmtBlock *stmt, Stmt **source)
 	}
 	return true;
 }
-bool IRGenPass::visit(StmtType *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtType *stmt, Stmt **source)
+{
+	if(!visit(stmt->getExpr(), &stmt->getExpr())) {
+		err::out(stmt, "failed to generate IR for type expr statement");
+		return false;
+	}
+	b.getLastInst()->setAttributes(stmt->getAttributes());
+	return true;
+}
 bool IRGenPass::visit(StmtSimple *stmt, Stmt **source)
 {
 	lex::Lexeme &l	     = stmt->getLexeme();
@@ -74,7 +82,16 @@ bool IRGenPass::visit(StmtSimple *stmt, Stmt **source)
 
 	return true;
 }
-bool IRGenPass::visit(StmtCallArgs *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtCallArgs *stmt, Stmt **source)
+{
+	for(auto &a : stmt->getArgs()) {
+		if(!visit(a, &a)) {
+			err::out(stmt, "failed to generate IR for call args statement");
+			return false;
+		}
+	}
+	return true;
+}
 bool IRGenPass::visit(StmtExpr *stmt, Stmt **source) { return true; }
 bool IRGenPass::visit(StmtVar *stmt, Stmt **source)
 {

@@ -24,6 +24,7 @@ public:
 	}
 
 	inline Allocator &getAllocator() { return allocator; }
+	inline Instruction *getLastInst() { return ir.back(); }
 
 	static void dumpIR(OStream &os, const Vector<Instruction *> &ir);
 };
