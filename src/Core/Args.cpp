@@ -69,7 +69,6 @@ void ArgParser::parse()
 						 " was not provided");
 		}
 	}
-	return;
 }
 
 void ArgParser::printHelp(OStream &os)

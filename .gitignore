@@ -1,8 +1,15 @@
 # Editor/Compiler files #
 ################
+.vs/
 .vscode/
 .clangd/
+.cache/
+*.swp
 compile_commands.json
+
+# Windows trash #
+##########################
+$null
 
 # TeX intermediate files #
 ##########################
@@ -18,9 +25,9 @@ dockerbuild/
 buildfiles/
 CMakeFiles/
 doxygen/
-flag_cache
-book/book/
 .cache/
+book/book/
+flag_cache
 include/Core/Core.hpp
 
 # Extra data #

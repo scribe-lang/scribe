@@ -11,23 +11,68 @@ if("${DISABLE_INSTALL_MSG}" STREQUAL "true")
 	set(CMAKE_INSTALL_MESSAGE LAZY)
 endif()
 
-if(DEFINED ENV{PREFIX_DIR} AND NOT "$ENV{PREFIX_DIR}" STREQUAL "")
-	set(CMAKE_INSTALL_PREFIX "$ENV{PREFIX_DIR}")
-else()
-	set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.scribe")
+set(SOURCE_VERSION_MAJOR 0)
+set(SOURCE_VERSION_MINOR 0)
+set(SOURCE_VERSION_PATCH 1)
+
+if(NOT DEFINED ENV{PREFIX_DIR} OR "$ENV{PREFIX_DIR}" STREQUAL "")
+	if(WIN32)
+		file(TO_CMAKE_PATH "$ENV{LOCALAPPDATA}/Programs/Feral" TMP_PREFIX)
+		set(ENV{PREFIX_DIR} ${TMP_PREFIX})
+	else()
+		set(ENV{PREFIX_DIR} "$ENV{HOME}/.feral")
+	endif()
 endif()
+set(CMAKE_INSTALL_PREFIX "$ENV{PREFIX_DIR}")
 set(CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX};${CMAKE_BINARY_DIR}")
 add_definitions(-DINSTALL_PREFIX=${CMAKE_INSTALL_PREFIX})
 message("-- Using PREFIX = ${CMAKE_INSTALL_PREFIX}")
 
-# add cmake_modules path
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules")
+set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR TRUE)
+if(WIN32)
+	# This makes the debug information embedded in object file, therefore multiple files can be compiled simultaneously.
+	# If it is not present, cmake defaults to ProgramDatabase which causes all sources in parallel to attempt accessing
+	# a single file which is something like vc143.pdb, therefore causing the compilation to fail.
+	# https://cmake.org/cmake/help/latest/variable/CMAKE_MSVC_DEBUG_INFORMATION_FORMAT.html
+	set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
+	message("-- Set CMake MSVC debug information format to: $<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
+	# Disable deprecated warnings on Windows
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		add_compile_options("-Wno-deprecated-declarations")
+	endif()
+	find_program(CCACHE_PROGRAM sccache)
+else()
+	set(ORIGIN "$ORIGIN")
+	if(APPLE)
+		set(ORIGIN "@loader_path")
+		set(CMAKE_MACOSX_RPATH TRUE)
+	endif()
+	list(APPEND CMAKE_INSTALL_RPATH "${ORIGIN}/../lib/feral" "${ORIGIN}/.." "${ORIGIN}/.")
+	set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+	set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+	find_program(CCACHE_PROGRAM ccache)
+endif()
+if(CCACHE_PROGRAM)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+    message("-- Using ccache: ${CCACHE_PROGRAM}")
+endif()
+# For macOS and BSD
+if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES ".*BSD.*")
+	include_directories(/usr/local/include)
+	if(NOT APPLE)
+		add_definitions(-D_WITH_GETLINE)
+	endif()
+endif()
+# Because Android has issues with dlopen()'s RTLD_GLOBAL; See:
+# https://android.googlesource.com/platform/bionic/+/master/android-changes-for-ndk-developers.md#changes-to-library-search-order
+# https://android.googlesource.com/platform/bionic/+/30b17e32f0b403a97cef7c4d1fcab471fa316340/linker/linker_namespaces.cpp#100
+# https://android-ndk.narkive.com/iNWj05IV/weak-symbol-linking-when-loading-dynamic-libraries
+if(ANDROID)
+	set(EXTRA_LD_FLAGS "-z global")
+endif()
 
-set(COMPILER_VERSION_MAJOR 0)
-set(COMPILER_VERSION_MINOR 0)
-set(COMPILER_VERSION_PATCH 1)
+string(TIMESTAMP BUILD_DATE "%a %b %d, %Y at %H:%M:%S")
 
-execute_process(COMMAND date "+%a %b %d, %Y at %H:%M:%S" OUTPUT_VARIABLE BUILD_DATE OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND git config --get remote.origin.url OUTPUT_VARIABLE REPO_URL OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND git log --format=%H -n 1 OUTPUT_VARIABLE COMMIT_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND git diff --quiet RESULT_VARIABLE ret)
@@ -37,22 +82,7 @@ else()
 	set(TREE_STATUS "Dirty")
 endif()
 
-set(ORIGIN "$ORIGIN")
-if(APPLE)
-	set(ORIGIN "@loader_path")
-endif()
-set(CMAKE_INSTALL_RPATH "${ORIGIN}/../lib/scribe;${ORIGIN}/.")
-set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR TRUE)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_MACOSX_RPATH TRUE)
-
 include(CheckCXXCompilerFlag)
-
-# For libGMP on macOS and BSD
-if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES ".*BSD.*")
-	include_directories(/usr/local/include)
-endif()
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -94,15 +124,6 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
 	endif()
 endif()
 
-# Because Android has issues with dlopen()'s RTLD_GLOBAL; See:
-# https://android.googlesource.com/platform/bionic/+/master/android-changes-for-ndk-developers.md#changes-to-library-search-order
-# https://android.googlesource.com/platform/bionic/+/30b17e32f0b403a97cef7c4d1fcab471fa316340/linker/linker_namespaces.cpp#100
-# https://android-ndk.narkive.com/iNWj05IV/weak-symbol-linking-when-loading-dynamic-libraries
-set(EXTRA_LD_FLAGS "")
-if(ANDROID)
-	set(EXTRA_LD_FLAGS "-z global")
-endif()
-
 if(CMAKE_COMPILER_IS_GNUCXX AND DEFINED WITH_COVERAGE)
     set(WITH_COVERAGE "-D_WITH_COVERAGE")
     include(CodeCoverage)
@@ -112,19 +133,8 @@ endif()
 
 # Finally! The sources!!!!!
 
-# Set Base.hpp.in template
+# Set Core.hpp.in template
 configure_file("${PROJECT_SOURCE_DIR}/include/Core/Core.hpp.in" "${PROJECT_SOURCE_DIR}/include/Core/Core.hpp" @ONLY)
-
-# Install CMake modules
-# install(DIRECTORY "${CMAKE_SOURCE_DIR}/cmake_modules/"
-# 	DESTINATION "${CMAKE_INSTALL_PREFIX}/cmake_modules"
-# )
-
-# Install C++ Includes
-# install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/"
-# 	DESTINATION "${CMAKE_INSTALL_PREFIX}/include/scribe/compiler"
-# 	FILES_MATCHING PATTERN "*.hpp"
-# )
 
 # Install Scribe Sources
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/"

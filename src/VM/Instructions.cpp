@@ -28,4 +28,13 @@ String CreateVarInstruction::toString() const
 	return utils::toString("createVar [", name, "]", attributesToString(" (", ")"));
 }
 
+AttributeInstruction::AttributeInstruction(ModuleLoc loc, StringRef name)
+	: Instruction(loc, Instructions::ATTRIBUTE), name(name)
+{}
+AttributeInstruction::~AttributeInstruction() {}
+
+String AttributeInstruction::toString() const
+{
+	return utils::toString("attribute [", name, "]", attributesToString(" (", ")"));
+}
 } // namespace sc

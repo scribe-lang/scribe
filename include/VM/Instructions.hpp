@@ -9,6 +9,7 @@ enum class Instructions
 {
 	LOAD,
 	CREATEVAR,
+	ATTRIBUTE,
 };
 class Instruction : public Value
 {
@@ -22,6 +23,7 @@ public:
 	inline bool is##X() { return instrty == Instructions::ENUMVAL; }
 	isInstrX(Load, LOAD);
 	isInstrX(CreateVar, CREATEVAR);
+	isInstrX(Attribute, ATTRIBUTE);
 };
 
 class LoadInstruction : public Instruction
@@ -59,6 +61,25 @@ public:
 						   StringRef name)
 	{
 		return allocator.alloc<CreateVarInstruction>(loc, name);
+	}
+
+	inline StringRef getName() const { return name; }
+};
+
+class AttributeInstruction : public Instruction
+{
+	String name; // name of the attribute
+
+public:
+	AttributeInstruction(ModuleLoc loc, StringRef name);
+	~AttributeInstruction();
+
+	String toString() const override;
+
+	static inline AttributeInstruction *create(Allocator &allocator, ModuleLoc loc,
+						   StringRef name)
+	{
+		return allocator.alloc<AttributeInstruction>(loc, name);
 	}
 
 	inline StringRef getName() const { return name; }

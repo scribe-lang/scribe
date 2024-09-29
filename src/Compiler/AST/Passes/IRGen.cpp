@@ -92,7 +92,24 @@ bool IRGenPass::visit(StmtCallArgs *stmt, Stmt **source)
 	}
 	return true;
 }
-bool IRGenPass::visit(StmtExpr *stmt, Stmt **source) { return true; }
+bool IRGenPass::visit(StmtExpr *stmt, Stmt **source)
+{
+	auto *&lhs = stmt->getLHS();
+	auto &op   = stmt->getOper();
+	auto *&rhs = stmt->getRHS();
+	if(!visit(lhs, &lhs)) {
+		err::out(stmt, "failed to generate IR for LHS in expression");
+		return false;
+	}
+	switch(op.getType()) {
+	case lex::DOT: {
+		StringRef attr = as<StmtSimple>(rhs)->getLexeme().getDataStr();
+		b.addInst<AttributeInstruction>(op.getLoc(), attr);
+		return true;
+	}
+	}
+	return true;
+}
 bool IRGenPass::visit(StmtVar *stmt, Stmt **source)
 {
 	Stmt *&vval    = stmt->getVVal();

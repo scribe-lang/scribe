@@ -2,10 +2,9 @@
 
 #include <iostream>
 
-namespace sc
+namespace sc::tio
 {
-namespace tio
-{
+
 Vector<bool> _tabs;
 void applyTab(bool has_next)
 {
@@ -17,5 +16,5 @@ void applyTab(bool has_next)
 		}
 	}
 }
-} // namespace tio
-} // namespace sc
+
+} // namespace sc::tio
