@@ -83,9 +83,9 @@ using StringRef = std::string_view;
 constexpr char const *PROJECT_NAME = "@PROJECT_NAME@";
 
 // clang-format off
-constexpr int COMPILER_MAJOR = @COMPILER_VERSION_MAJOR@;
-constexpr int COMPILER_MINOR = @COMPILER_VERSION_MINOR@;
-constexpr int COMPILER_PATCH = @COMPILER_VERSION_PATCH@;
+constexpr int COMPILER_MAJOR = @SOURCE_VERSION_MAJOR@;
+constexpr int COMPILER_MINOR = @SOURCE_VERSION_MINOR@;
+constexpr int COMPILER_PATCH = @SOURCE_VERSION_PATCH@;
 
 constexpr char const *COMPILER_MAJOR_STR = "@COMPILER_VERSION_MAJOR@";
 constexpr char const *COMPILER_MINOR_STR = "@COMPILER_VERSION_MINOR@";
