@@ -28,7 +28,7 @@ doxygen/
 .cache/
 book/book/
 flag_cache
-include/Core/Core.hpp
+include/Config.inl
 
 # Extra data #
 #######################

@@ -1,7 +1,6 @@
 #include <cstring>
 #include <iostream>
 
-#include "Args.hpp"
 #include "AST/Parser.hpp"
 #include "AST/Passes/IRGen.hpp"
 #include "Builder.hpp"

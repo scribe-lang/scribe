@@ -1,4 +1,4 @@
-#include "Lex.hpp"
+#include "Compiler/Lex.hpp"
 
 #include <charconv>
 
@@ -19,8 +19,6 @@ const char *TokStrs[_LAST] = {
 // Keywords
 "let",
 "fn",
-"struct",
-"union",
 "if",
 "elif",
 "else",

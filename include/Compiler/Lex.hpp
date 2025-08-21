@@ -1,11 +1,8 @@
 #pragma once
 
-#include "Error.hpp"
+#include "Core.hpp"
 
-namespace sc
-{
-
-namespace lex
+namespace sc::lex
 {
 
 // true => @as(i1, 1)
@@ -26,8 +23,6 @@ enum TokType
 	// Keywords
 	LET,
 	FN,
-	STRUCT,
-	UNION,
 	IF,
 	ELIF,
 	ELSE,
@@ -177,17 +172,17 @@ const char *getTokOperCStr(TokType token);
 
 class Lexeme
 {
-	ModuleLoc loc;
+	fs::FileLoc loc;
 	TokType tokty;
 	Variant<String, int64_t, long double> data;
 	bool containsdata;
 
 public:
-	Lexeme(ModuleLoc loc = ModuleLoc());
-	explicit Lexeme(ModuleLoc loc, TokType type);
-	explicit Lexeme(ModuleLoc loc, TokType type, StringRef _data);
-	explicit Lexeme(ModuleLoc loc, TokType type, int64_t _data);
-	explicit Lexeme(ModuleLoc loc, TokType type, long double _data);
+	Lexeme(fs::FileLoc loc = fs::FileLoc());
+	explicit Lexeme(fs::FileLoc loc, TokType type);
+	explicit Lexeme(fs::FileLoc loc, TokType type, StringRef _data);
+	explicit Lexeme(fs::FileLoc loc, TokType type, int64_t _data);
+	explicit Lexeme(fs::FileLoc loc, TokType type, long double _data);
 
 	String str(int64_t pad = 10) const;
 
@@ -210,7 +205,7 @@ public:
 	inline TokType getType() const { return tokty; }
 	inline bool isType(TokType ty) const { return tokty == ty; }
 	inline void setType(TokType ty) { tokty = ty; }
-	inline const ModuleLoc &getLoc() const { return loc; }
+	inline const fs::FileLoc &getLoc() const { return loc; }
 	inline bool containsData() const { return containsdata; }
 
 	inline bool isInt() const { return isTokInt(tokty) && containsdata; }
@@ -233,18 +228,4 @@ public:
 bool tokenize(size_t moduleId, StringRef data, Vector<Lexeme> &toks);
 void dumpTokens(OStream &os, Span<Lexeme> toks);
 
-} // namespace lex
-
-namespace err
-{
-template<typename... Args> void out(const lex::Lexeme &tok, Args &&...args)
-{
-	out(tok.getLoc(), std::forward<Args>(args)...);
-}
-template<typename... Args> void outw(const lex::Lexeme &tok, Args &&...args)
-{
-	outw(tok.getLoc(), std::forward<Args>(args)...);
-}
-} // namespace err
-
-} // namespace sc
+} // namespace sc::lex

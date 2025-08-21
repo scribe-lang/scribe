@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Allocator.hpp"
-#include "Lex.hpp"
+#include "Compiler/Lex.hpp"
 
 namespace sc::ast
 {
@@ -25,12 +24,12 @@ enum Stmts : uint8_t
 class Stmt : public IAllocated
 {
 protected:
-	ModuleLoc loc;
+	fs::FileLoc loc;
 	StringMap<String> attrs;
 	Stmts stype;
 
 public:
-	Stmt(Stmts stmt_type, ModuleLoc loc);
+	Stmt(Stmts stmt_type, fs::FileLoc loc);
 	virtual ~Stmt();
 
 	virtual void disp(OStream &os, bool has_next) = 0;
@@ -55,7 +54,7 @@ public:
 	inline const Stmts &getStmtType() const { return stype; }
 	inline StringRef getStmtTypeString() const { return getStmtTypeCString(); }
 
-	inline const ModuleLoc &getLoc() { return loc; }
+	inline const fs::FileLoc &getLoc() { return loc; }
 
 	inline bool hasAttribute(StringRef name) { return attrs.find(name) != attrs.end(); }
 	inline void addAttribute(StringRef name, StringRef val = "") { attrs[String(name)] = val; }
@@ -97,9 +96,9 @@ class StmtBlock : public Stmt
 	bool is_top;
 
 public:
-	StmtBlock(ModuleLoc loc, const Vector<Stmt *> &stmts, bool is_top);
+	StmtBlock(fs::FileLoc loc, const Vector<Stmt *> &stmts, bool is_top);
 	~StmtBlock();
-	static StmtBlock *create(Allocator &allocator, ModuleLoc loc, const Vector<Stmt *> &stmts,
+	static StmtBlock *create(Allocator &allocator, fs::FileLoc loc, const Vector<Stmt *> &stmts,
 				 bool is_top);
 
 	void disp(OStream &os, bool has_next);
@@ -113,9 +112,9 @@ class StmtType : public Stmt
 	Stmt *expr; // can be func, func call, name, name.x, ... (expr1)
 
 public:
-	StmtType(ModuleLoc loc, Stmt *expr);
+	StmtType(fs::FileLoc loc, Stmt *expr);
 	~StmtType();
-	static StmtType *create(Allocator &allocator, ModuleLoc loc, Stmt *expr);
+	static StmtType *create(Allocator &allocator, fs::FileLoc loc, Stmt *expr);
 
 	void disp(OStream &os, bool has_next);
 
@@ -130,9 +129,9 @@ class StmtSimple : public Stmt
 	lex::Lexeme val;
 
 public:
-	StmtSimple(ModuleLoc loc, const lex::Lexeme &val);
+	StmtSimple(fs::FileLoc loc, const lex::Lexeme &val);
 	~StmtSimple();
-	static StmtSimple *create(Allocator &allocator, ModuleLoc loc, const lex::Lexeme &val);
+	static StmtSimple *create(Allocator &allocator, fs::FileLoc loc, const lex::Lexeme &val);
 
 	void disp(OStream &os, bool has_next);
 
@@ -148,9 +147,9 @@ class StmtCallArgs : public Stmt
 	Vector<Stmt *> args;
 
 public:
-	StmtCallArgs(ModuleLoc loc, const Vector<Stmt *> &args);
+	StmtCallArgs(fs::FileLoc loc, const Vector<Stmt *> &args);
 	~StmtCallArgs();
-	static StmtCallArgs *create(Allocator &allocator, ModuleLoc loc,
+	static StmtCallArgs *create(Allocator &allocator, fs::FileLoc loc,
 				    const Vector<Stmt *> &args);
 
 	void disp(OStream &os, bool has_next);
@@ -171,11 +170,11 @@ class StmtExpr : public Stmt
 	bool is_intrinsic_call;
 
 public:
-	StmtExpr(ModuleLoc loc, size_t commas, Stmt *lhs, const lex::Lexeme &oper, Stmt *rhs,
+	StmtExpr(fs::FileLoc loc, size_t commas, Stmt *lhs, const lex::Lexeme &oper, Stmt *rhs,
 		 bool is_intrinsic_call);
 	~StmtExpr();
 	// or_blk and or_blk_var can be set separately - nullptr/INVALID by default
-	static StmtExpr *create(Allocator &allocator, ModuleLoc loc, size_t commas, Stmt *lhs,
+	static StmtExpr *create(Allocator &allocator, fs::FileLoc loc, size_t commas, Stmt *lhs,
 				const lex::Lexeme &oper, Stmt *rhs, bool is_intrinsic_call);
 
 	void disp(OStream &os, bool has_next);
@@ -203,10 +202,10 @@ class StmtVar : public Stmt
 	Stmt *vval; // either of expr, funcdef, enumdef, or structdef
 
 public:
-	StmtVar(ModuleLoc loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval);
+	StmtVar(fs::FileLoc loc, const lex::Lexeme &name, StmtType *vtype, Stmt *vval);
 	~StmtVar();
 	// at least one of type or val must be present
-	static StmtVar *create(Allocator &allocator, ModuleLoc loc, const lex::Lexeme &name,
+	static StmtVar *create(Allocator &allocator, fs::FileLoc loc, const lex::Lexeme &name,
 			       StmtType *vtype, Stmt *vval);
 
 	void disp(OStream &os, bool has_next);
@@ -233,10 +232,10 @@ class StmtSignature : public Stmt
 	SignatureType sigty;
 
 public:
-	StmtSignature(ModuleLoc loc, Vector<StmtVar *> &args, StmtType *rettype,
+	StmtSignature(fs::FileLoc loc, Vector<StmtVar *> &args, StmtType *rettype,
 		      SignatureType sigty);
 	~StmtSignature();
-	static StmtSignature *create(Allocator &allocator, ModuleLoc loc, Vector<StmtVar *> &args,
+	static StmtSignature *create(Allocator &allocator, fs::FileLoc loc, Vector<StmtVar *> &args,
 				     StmtType *rettype, SignatureType sigty);
 
 	void disp(OStream &os, bool has_next);
@@ -255,9 +254,9 @@ class StmtFnDef : public Stmt
 	StmtBlock *blk;
 
 public:
-	StmtFnDef(ModuleLoc loc, StmtSignature *sig, StmtBlock *blk);
+	StmtFnDef(fs::FileLoc loc, StmtSignature *sig, StmtBlock *blk);
 	~StmtFnDef();
-	static StmtFnDef *create(Allocator &allocator, ModuleLoc loc, StmtSignature *sig,
+	static StmtFnDef *create(Allocator &allocator, fs::FileLoc loc, StmtSignature *sig,
 				 StmtBlock *blk);
 
 	void disp(OStream &os, bool has_next);
@@ -276,10 +275,10 @@ class StmtVarDecl : public Stmt
 	Vector<StmtVar *> decls;
 
 public:
-	StmtVarDecl(ModuleLoc loc, const Vector<StmtVar *> &decls);
+	StmtVarDecl(fs::FileLoc loc, const Vector<StmtVar *> &decls);
 	~StmtVarDecl();
 	// StmtVar can contain any combination of type, in, val(any), or all three
-	static StmtVarDecl *create(Allocator &allocator, ModuleLoc loc,
+	static StmtVarDecl *create(Allocator &allocator, fs::FileLoc loc,
 				   const Vector<StmtVar *> &decls);
 
 	void disp(OStream &os, bool has_next);
@@ -314,10 +313,10 @@ class StmtCond : public Stmt
 	bool is_inline;
 
 public:
-	StmtCond(ModuleLoc loc, Vector<Conditional> &&conds, bool is_inline);
-	StmtCond(ModuleLoc loc, const Vector<Conditional> &conds, bool is_inline);
+	StmtCond(fs::FileLoc loc, Vector<Conditional> &&conds, bool is_inline);
+	StmtCond(fs::FileLoc loc, const Vector<Conditional> &conds, bool is_inline);
 	~StmtCond();
-	static StmtCond *create(Allocator &allocator, ModuleLoc loc, Vector<Conditional> &&conds,
+	static StmtCond *create(Allocator &allocator, fs::FileLoc loc, Vector<Conditional> &&conds,
 				bool is_inline);
 
 	void disp(OStream &os, bool has_next);
@@ -335,10 +334,11 @@ class StmtFor : public Stmt
 	bool is_inline;
 
 public:
-	StmtFor(ModuleLoc loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *blk, bool is_inline);
+	StmtFor(fs::FileLoc loc, Stmt *init, Stmt *cond, Stmt *incr, StmtBlock *blk,
+		bool is_inline);
 	~StmtFor();
 	// init, cond, incr can be nullptr
-	static StmtFor *create(Allocator &allocator, ModuleLoc loc, Stmt *init, Stmt *cond,
+	static StmtFor *create(Allocator &allocator, fs::FileLoc loc, Stmt *init, Stmt *cond,
 			       Stmt *incr, StmtBlock *blk, bool is_inline);
 
 	void disp(OStream &os, bool has_next);
@@ -364,9 +364,9 @@ class StmtOneWord : public Stmt
 	OneWordType wordty;
 
 public:
-	StmtOneWord(ModuleLoc loc, Stmt *arg, OneWordType wordty);
+	StmtOneWord(fs::FileLoc loc, Stmt *arg, OneWordType wordty);
 	~StmtOneWord();
-	static StmtOneWord *create(Allocator &allocator, ModuleLoc loc, Stmt *arg,
+	static StmtOneWord *create(Allocator &allocator, fs::FileLoc loc, Stmt *arg,
 				   OneWordType wordty);
 
 	void disp(OStream &os, bool has_next);

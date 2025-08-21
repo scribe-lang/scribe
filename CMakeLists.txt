@@ -1,19 +1,23 @@
-cmake_minimum_required(VERSION 3.21.1)
+cmake_minimum_required(VERSION 3.31)
 
-project(Scribe C CXX)
+project(Scribe
+	DESCRIPTION "Scribe Programming Language Rescence Compiler"
+	LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(PROJECT_VERSION_MAJOR "0")
+set(PROJECT_VERSION_MINOR "0")
+set(PROJECT_VERSION_PATCH "1")
+
+include(FetchContent)
+include(GNUInstallDirs)
 
 if("${DISABLE_INSTALL_MSG}" STREQUAL "true")
 	message("-- Install messages are now lazily shown")
 	set(CMAKE_INSTALL_MESSAGE LAZY)
 endif()
 
-set(SOURCE_VERSION_MAJOR 0)
-set(SOURCE_VERSION_MINOR 0)
-set(SOURCE_VERSION_PATCH 1)
+# Add external path
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 if(NOT DEFINED ENV{PREFIX_DIR} OR "$ENV{PREFIX_DIR}" STREQUAL "")
 	if(WIN32)
@@ -23,38 +27,34 @@ if(NOT DEFINED ENV{PREFIX_DIR} OR "$ENV{PREFIX_DIR}" STREQUAL "")
 		set(ENV{PREFIX_DIR} "$ENV{HOME}/.scribe")
 	endif()
 endif()
+
 set(CMAKE_INSTALL_PREFIX "$ENV{PREFIX_DIR}")
 set(CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX};${CMAKE_BINARY_DIR}")
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+if(APPLE)
+	set(CMAKE_MACOSX_RPATH TRUE)
+endif()
 add_definitions(-DINSTALL_PREFIX=${CMAKE_INSTALL_PREFIX})
 message("-- Using PREFIX = ${CMAKE_INSTALL_PREFIX}")
 
-set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR TRUE)
 if(WIN32)
-	# This makes the debug information embedded in object file, therefore multiple files can be compiled simultaneously.
-	# If it is not present, cmake defaults to ProgramDatabase which causes all sources in parallel to attempt accessing
-	# a single file which is something like vc143.pdb, therefore causing the compilation to fail.
-	# https://cmake.org/cmake/help/latest/variable/CMAKE_MSVC_DEBUG_INFORMATION_FORMAT.html
-	set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
-	message("-- Set CMake MSVC debug information format to: $<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
 	# Disable deprecated warnings on Windows
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 		add_compile_options("-Wno-deprecated-declarations")
 	endif()
-	find_program(CCACHE_PROGRAM sccache)
-else()
-	set(ORIGIN "$ORIGIN")
-	if(APPLE)
-		set(ORIGIN "@loader_path")
-		set(CMAKE_MACOSX_RPATH TRUE)
+	if("${CCACHE_PROGRAM}" STREQUAL "")
+		find_program(CCACHE_PROGRAM sccache)
 	endif()
-	list(APPEND CMAKE_INSTALL_RPATH "${ORIGIN}/../lib/scribe" "${ORIGIN}/.." "${ORIGIN}/.")
-	set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+else()
 	set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-	find_program(CCACHE_PROGRAM ccache)
+	if("${CCACHE_PROGRAM}" STREQUAL "")
+		find_program(CCACHE_PROGRAM ccache)
+	endif()
 endif()
 if(CCACHE_PROGRAM)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-    message("-- Using ccache: ${CCACHE_PROGRAM}")
+	set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+	set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+	message("-- Using ccache: ${CCACHE_PROGRAM}")
 endif()
 # For macOS and BSD
 if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES ".*BSD.*")
@@ -63,19 +63,12 @@ if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES ".*BSD.*")
 		add_definitions(-D_WITH_GETLINE)
 	endif()
 endif()
-# Because Android has issues with dlopen()'s RTLD_GLOBAL; See:
-# https://android.googlesource.com/platform/bionic/+/master/android-changes-for-ndk-developers.md#changes-to-library-search-order
-# https://android.googlesource.com/platform/bionic/+/30b17e32f0b403a97cef7c4d1fcab471fa316340/linker/linker_namespaces.cpp#100
-# https://android-ndk.narkive.com/iNWj05IV/weak-symbol-linking-when-loading-dynamic-libraries
-if(ANDROID)
-	set(EXTRA_LD_FLAGS "-z global")
-endif()
 
 string(TIMESTAMP BUILD_DATE "%a %b %d, %Y at %H:%M:%S")
 
-execute_process(COMMAND git config --get remote.origin.url OUTPUT_VARIABLE REPO_URL OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND git log --format=%H -n 1 OUTPUT_VARIABLE COMMIT_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND git diff --quiet RESULT_VARIABLE ret)
+execute_process(COMMAND git -C "${CMAKE_SOURCE_DIR}" config --get remote.origin.url OUTPUT_VARIABLE REPO_URL OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git -C "${CMAKE_SOURCE_DIR}" log --format=%H -n 1 OUTPUT_VARIABLE COMMIT_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git -C "${CMAKE_SOURCE_DIR}" diff --quiet RESULT_VARIABLE ret)
 if(ret EQUAL 0)
 	set(TREE_STATUS "Clean")
 else()
@@ -97,23 +90,13 @@ else()
 	set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
 endif()
 
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-    message("-- Using ccache")
-endif()
-
-if(${CMAKE_SYSTEM_NAME} MATCHES ".*BSD.*")
-	add_definitions(-D_WITH_GETLINE)
-endif()
-
 # Generally, disabled for CI purposes
 # Also needed when running valgrind as valgrind does not support instruction bytes for Vector<bool>
 if(NOT DEFINED ENV{DISABLE_MARCH_NATIVE} OR "$ENV{DISABLE_MARCH_NATIVE}" STREQUAL "")
-        check_cxx_compiler_flag(-march=native COMPILER_SUPPORTS_MARCH_NATIVE)
-        if(COMPILER_SUPPORTS_MARCH_NATIVE)
-                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-        endif()
+	check_cxx_compiler_flag(-march=native COMPILER_SUPPORTS_MARCH_NATIVE)
+	if(COMPILER_SUPPORTS_MARCH_NATIVE)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+	endif()
 endif()
 
 # Force DWARF4 as valgrind does not support anything newer (clang-14 defaults to DWARF5).
@@ -125,103 +108,93 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX AND DEFINED WITH_COVERAGE)
-    set(WITH_COVERAGE "-D_WITH_COVERAGE")
-    include(CodeCoverage)
-    APPEND_COVERAGE_COMPILER_FLAGS()
-    setup_target_for_coverage_gcovr_html(NAME scribe_cov EXECUTABLE ${PROJECT_SOURCE_DIR}/codecov.sh ${PROJECT_SOURCE_DIR})
+	set(WITH_COVERAGE "-D_WITH_COVERAGE")
+	include(CodeCoverage)
+	APPEND_COVERAGE_COMPILER_FLAGS()
+	setup_target_for_coverage_gcovr_html(NAME scribe_cov EXECUTABLE ${PROJECT_SOURCE_DIR}/codecov.sh ${PROJECT_SOURCE_DIR})
 endif()
 
 # Finally! The sources!!!!!
 
-# Set Core.hpp.in template
-configure_file("${PROJECT_SOURCE_DIR}/include/Core/Core.hpp.in" "${PROJECT_SOURCE_DIR}/include/Core/Core.hpp" @ONLY)
-
-# Install Scribe Sources
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/"
-	DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/scribe"
-	FILES_MATCHING PATTERN "*.sc"
+# Fetch LibCore
+FetchContent_Declare(
+	LibCore
+	GIT_REPOSITORY https://github.com/Chirag-Khandelwal/LibCore.git
+	GIT_TAG        1.1.0
 )
 
-# Core Library
-file(GLOB_RECURSE COREINCS RELATIVE "${PROJECT_SOURCE_DIR}" "include/Core/*.hpp")
-file(GLOB_RECURSE CORESRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/Core/*.cpp")
-add_library(libcore SHARED ${CORESRCS} ${COREINCS})
-target_include_directories(libcore PUBLIC "${PROJECT_SOURCE_DIR}/include/Core")
-set_target_properties(libcore
-    PROPERTIES
-    PREFIX "" # 'lib' as prefix is not needed on linux since the name is libcore anyway
-    LINK_FLAGS "${EXTRA_LD_FLAGS}"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/scribe/" # for so (non-windows)
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>" # for dll (windows)
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>" # for lib (windows)
-    INSTALL_RPATH_USE_LINK_PATH TRUE
-)
-install(TARGETS libcore
-	LIBRARY
-	  DESTINATION "lib/scribe/"
-	RUNTIME
-	  DESTINATION "bin/$<0:>"
-	ARCHIVE
-	  DESTINATION "bin/$<0:>"
-)
+FetchContent_MakeAvailable(LibCore)
 
-# Scribe VM Library
-file(GLOB_RECURSE VMINCS RELATIVE "${PROJECT_SOURCE_DIR}" "include/VM/*.hpp")
-file(GLOB_RECURSE VMSRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/VM/*.cpp")
-list(REMOVE_ITEM VMSRCS "src/VM/Main.cpp")
-add_library(libvm SHARED ${VMSRCS} ${VMINCS})
-target_include_directories(libvm PRIVATE "${PROJECT_SOURCE_DIR}/include/VM")
-target_link_libraries(libvm libcore)
-set_target_properties(libvm
-    PROPERTIES
-    PREFIX "" # 'lib' as prefix is not needed on linux since the name is libcore anyway
-    LINK_FLAGS "${EXTRA_LD_FLAGS}"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/scribe/" # for so (non-windows)
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>" # for dll (windows)
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>" # for lib (windows)
-    INSTALL_RPATH_USE_LINK_PATH TRUE
-)
-install(TARGETS libvm
-	LIBRARY
-	  DESTINATION "lib/scribe/"
-	RUNTIME
-	  DESTINATION "bin/$<0:>"
-	ARCHIVE
-	  DESTINATION "bin/$<0:>"
-)
+# Set Config.inl.in template
+configure_file("${PROJECT_SOURCE_DIR}/include/Config.inl.in" "${PROJECT_SOURCE_DIR}/include/Config.inl" @ONLY)
 
-# Scribe VM Binary
-add_executable(scribevm "${PROJECT_SOURCE_DIR}/src/VM/Main.cpp" ${VMSRCS} ${VMINCS})
-target_include_directories(scribevm PRIVATE "${PROJECT_SOURCE_DIR}/include/VM")
-target_link_libraries(scribevm libvm)
-set_target_properties(scribevm
+# Scribe Library
+file(GLOB_RECURSE INCS RELATIVE "${PROJECT_SOURCE_DIR}" "include/*.hpp")
+file(GLOB_RECURSE SRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/*.cpp")
+list(REMOVE_ITEM SRCS "src/Main.cpp")
+add_library(libscribe SHARED ${SRCS} ${INCS})
+target_compile_features(libscribe PUBLIC cxx_std_20)
+target_link_libraries(libscribe LibCore::LibCore)
+# For MSVC. It requires externed variables to be specified as __declspec(dllexport/dllimport) depending on
+# if the the DLL is being generated, or is being used.
+target_include_directories(libscribe PRIVATE "${PROJECT_SOURCE_DIR}/include")
+target_compile_definitions(libscribe PRIVATE EXPORT_FOR_DLL=true)
+set_target_properties(libscribe
 	PROPERTIES
+	CXX_STANDARD_REQUIRED ON
+	CXX_EXTENSIONS OFF
+	PREFIX "" # 'lib' as prefix is not needed on linux since the name is libscribe anyway
 	LINK_FLAGS "${EXTRA_LD_FLAGS}"
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>"
-	INSTALL_RPATH_USE_LINK_PATH TRUE
+	ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin$<0:>" # for lib (windows)
+	LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib" # for so (non-windows)
+	RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin$<0:>" # for dll (windows)
 )
-install(TARGETS scribevm
-	RUNTIME
-	  DESTINATION bin
-	  COMPONENT Binaries
-)
+install(TARGETS libscribe)
 
-# Scribe Compiler
-file(GLOB_RECURSE COMPILERINCS RELATIVE "${PROJECT_SOURCE_DIR}" "include/Compiler/*.hpp")
-file(GLOB_RECURSE COMPILERSRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/Compiler/*.cpp")
-list(REMOVE_ITEM COMPILERSRCS "src/Compiler/Main.cpp")
-
-add_executable(scribe "${PROJECT_SOURCE_DIR}/src/Compiler/Main.cpp" ${COMPILERSRCS} ${COMPILERINCS})
-target_include_directories(scribe PRIVATE "${PROJECT_SOURCE_DIR}/include/Compiler" "${PROJECT_SOURCE_DIR}/include")
-target_link_libraries(scribe libvm)
+# Scribe Binary
+add_executable(scribe "${PROJECT_SOURCE_DIR}/src/Main.cpp")
+target_compile_features(scribe PUBLIC cxx_std_20)
+target_include_directories(scribe PRIVATE "${PROJECT_SOURCE_DIR}/include")
+target_link_libraries(scribe libscribe)
 set_target_properties(scribe
 	PROPERTIES
+	CXX_STANDARD_REQUIRED ON
+	CXX_EXTENSIONS OFF
 	LINK_FLAGS "${EXTRA_LD_FLAGS}"
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<0:>"
-	INSTALL_RPATH_USE_LINK_PATH TRUE
+	RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin$<0:>"
 )
 install(TARGETS scribe
 	RUNTIME
 	  DESTINATION bin
 	  COMPONENT Binaries
+)
+set_property(DIRECTORY "${PROJECT_SOURCE_DIR}" PROPERTY VS_STARTUP_PROJECT scribe)
+
+# Install CMake modules
+# install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/"
+# 	DESTINATION "${CMAKE_INSTALL_PREFIX}/external"
+# )
+
+# Copy the lib/*.sc files to the build/lib directory
+file(GLOB_RECURSE libModules RELATIVE "${PROJECT_SOURCE_DIR}/lib" "*.sc")
+foreach(libModule ${libModules})
+	get_filename_component(libModuleDir "${libModule}" DIRECTORY)
+	add_custom_command(TARGET scribe POST_BUILD
+			   COMMAND ${CMAKE_COMMAND} -E make_directory
+			   	"${PROJECT_BINARY_DIR}/lib/scribe/${libModuleDir}"
+			   COMMAND ${CMAKE_COMMAND} -E copy
+				"${PROJECT_SOURCE_DIR}/lib/${libModule}"
+				"${PROJECT_BINARY_DIR}/lib/scribe/${libModule}")
+endforeach()
+
+# Install C++ Includes
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/" "${CMAKE_SOURCE_DIR}/lib/"
+	DESTINATION "${CMAKE_INSTALL_PREFIX}/include/scribe"
+	FILES_MATCHING PATTERN "*.hpp"
+)
+
+# Install Scribe Imports
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/lib/"
+	DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/scribe"
+	FILES_MATCHING PATTERN "*.sc"
 )

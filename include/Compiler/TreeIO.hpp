@@ -3,10 +3,9 @@
 #include "Core.hpp"
 #include "Utils.hpp"
 
-namespace sc
+namespace sc::tio
 {
-namespace tio
-{
+
 extern Vector<bool> _tabs;
 
 void applyTab(bool has_next);
@@ -28,5 +27,5 @@ template<typename... Args> void print(OStream &os, bool has_next, Args &&...args
 	applyTab(has_next);
 	printWithoutTab(os, std::forward<Args>(args)...);
 }
-} // namespace tio
-} // namespace sc
+
+} // namespace sc::tio
